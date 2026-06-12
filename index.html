@@ -1457,7 +1457,7 @@ function update(dt) {
     // bolts intercept enemy fire — shoot the shots down!
     for (const s of G.enemyShots) {
       if (L.dead || s.dead) continue;
-      if (Math.abs(L.x - s.x) < 12 && Math.abs(L.y - s.y) < 18) {
+      if (Math.abs(L.x - s.x) < 17 && Math.abs(L.y - s.y) < 26) {
         L.dead = true; s.dead = true;
         burst(s.x, s.y, '#ffab91', 12, 200, 0.5);
         addFloater(s.x, s.y - 14, 'INTERCEPTED!', '#80d8ff', 11);
@@ -1888,32 +1888,42 @@ function drawProjectiles() {
   for (const L of G.lasers) {
     ctx.save();
     ctx.shadowColor = L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 16;
     ctx.fillStyle = L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
-    roundRect(L.x - 2.5, L.y - 14, 5, 22, 2.5); ctx.fill();
+    roundRect(L.x - 4, L.y - 20, 8, 32, 4); ctx.fill();
+    // bright core
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    roundRect(L.x - 1.5, L.y - 16, 3, 24, 1.5); ctx.fill();
     ctx.restore();
   }
   for (const m of G.missiles) {
     ctx.save();
     ctx.translate(m.x, m.y);
     ctx.rotate(Math.atan2(m.vy, m.vx) + Math.PI / 2);
-    ctx.shadowColor = '#7986cb'; ctx.shadowBlur = 10;
+    ctx.shadowColor = '#7986cb'; ctx.shadowBlur = 14;
     ctx.fillStyle = '#c5cae9';
     ctx.beginPath();
-    ctx.moveTo(0, -10); ctx.lineTo(-5, 8); ctx.lineTo(5, 8);
+    ctx.moveTo(0, -15); ctx.lineTo(-7, 11); ctx.lineTo(7, 11);
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ff8a65';
-    ctx.beginPath(); ctx.arc(0, 10, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 14, 5, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
   for (const s of G.enemyShots) {
     ctx.save();
-    ctx.shadowColor = s.boss ? '#b388ff' : '#ff5252'; ctx.shadowBlur = 12;
-    const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.boss ? 10 : 8);
+    ctx.shadowColor = s.boss ? '#b388ff' : '#ff5252'; ctx.shadowBlur = 20;
+    const r = s.boss ? 14 : 11;
+    // pulsing outer ring makes incoming fire pop
+    const pulse = 1 + 0.15 * Math.sin(G.time * 9);
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = s.boss ? '#e1bee7' : '#ffcdd2'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(s.x, s.y, (r + 5) * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+    const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r + 2);
     if (s.boss) { g.addColorStop(0, '#e1bee7'); g.addColorStop(1, '#7b1fa2'); }
     else { g.addColorStop(0, '#ffcdd2'); g.addColorStop(1, '#d32f2f'); }
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(s.x, s.y, s.boss ? 9 : 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 }
