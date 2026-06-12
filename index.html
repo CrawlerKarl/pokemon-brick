@@ -25,6 +25,7 @@ let W = 0, H = 0, DPR = 1;
 let vignette = null;
 
 function resize() {
+  if (!window.innerWidth || !window.innerHeight) return; // transient 0×0 during load/rotate
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   canvas.width = W * DPR; canvas.height = H * DPR;
@@ -76,17 +77,35 @@ const SLIDERS = [
   { key: 'speed', label: 'GAME SPEED', min: 0.6, max: 1.6,
     fmt: v => v < 0.8 ? 'CHILL' : v < 1.15 ? 'NORMAL' : v < 1.4 ? 'FAST' : 'TURBO' },
 ];
-function presetGeom(i) {
-  const bw = Math.min(128, W * 0.2), gap = 12;
-  const total = bw * 4 + gap * 3;
-  return { x: W / 2 - total / 2 + i * (bw + gap), y: H * 0.43, w: bw, h: 42 };
+// one responsive layout, shared by rendering and hit-testing, so nothing
+// can drift off-screen on small windows or phones
+function menuLayout() {
+  const s = Math.max(0.62, Math.min(1, H / 880, W / 760));
+  const titleSize = Math.min(52, W / 11) * Math.max(0.8, s);
+  const titleY = Math.max(54, H * 0.1);
+  const lineH = 23 * s + 2;
+  const infoY = titleY + titleSize * 1.55 + 14 * s;
+  const chipGap = 10;
+  const chipW = Math.min(126, (W - 48 - chipGap * 3) / 4), chipH = 40 * s + 4;
+  const chipsLabelY = infoY + 5 * lineH + 26 * s;
+  const chipsY = chipsLabelY + 14;
+  const tw = Math.min(420, W * 0.84);
+  const slY = chipsY + chipH + 50 * s;
+  const slGap = 60 * s + 8;
+  const btnW = Math.min(300, W * 0.84), btnH = 52 * s + 6;
+  const btnY = slY + SLIDERS.length * slGap + 4;
+  return {
+    s, titleY, titleSize, infoY, lineH, chipsLabelY,
+    chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
+    slider: i => ({ x: W / 2 - tw / 2, y: slY + i * slGap, w: tw }),
+    start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
+    dex: { x: W / 2 - 170, y: btnY + btnH + 12, w: 340, h: 30 },
+  };
 }
-function sliderGeom(i) {
-  const tw = Math.min(420, W * 0.5);
-  return { x: W / 2 - tw / 2, y: H * 0.55 + i * 70, w: tw };
-}
-function startBtnGeom() { return { x: W / 2 - 150, y: H * 0.55 + SLIDERS.length * 70 + 18, w: 300, h: 58 }; }
-function dexBtnGeom() { const b = startBtnGeom(); return { x: W / 2 - 170, y: b.y + b.h + 16, w: 340, h: 34 }; }
+function presetGeom(i) { return menuLayout().chip(i); }
+function sliderGeom(i) { return menuLayout().slider(i); }
+function startBtnGeom() { return menuLayout().start; }
+function dexBtnGeom() { return menuLayout().dex; }
 let dragSlider = -1;
 
 // ============================================================
@@ -242,6 +261,27 @@ const EFFECTIVE = {
   steel: ['ice', 'rock', 'fairy'],
   fairy: ['fighting', 'dragon', 'dark'],
   normal: [],
+};
+// attacking element → types that RESIST it (half damage)
+const RESIST = {
+  fire: ['fire', 'water', 'rock', 'dragon'],
+  water: ['water', 'grass', 'dragon'],
+  grass: ['fire', 'grass', 'poison', 'flying', 'bug', 'dragon', 'steel'],
+  electric: ['electric', 'grass', 'dragon', 'ground'],
+  ice: ['fire', 'water', 'ice', 'steel'],
+  fighting: ['poison', 'flying', 'psychic', 'bug', 'fairy', 'ghost'],
+  poison: ['poison', 'ground', 'rock', 'ghost', 'steel'],
+  ground: ['grass', 'bug', 'flying'],
+  flying: ['electric', 'rock', 'steel'],
+  psychic: ['psychic', 'steel', 'dark'],
+  bug: ['fire', 'fighting', 'poison', 'flying', 'ghost', 'steel', 'fairy'],
+  rock: ['fighting', 'ground', 'steel'],
+  ghost: ['dark', 'normal'],
+  dragon: ['steel', 'fairy'],
+  dark: ['fighting', 'dark', 'fairy'],
+  steel: ['fire', 'water', 'electric', 'steel'],
+  fairy: ['fire', 'poison', 'steel'],
+  normal: ['rock', 'steel', 'ghost'],
 };
 
 // ============================================================
@@ -585,6 +625,7 @@ const G = {
   time: 0,
   adapt: 1, deathsThisWave: 0,
   mega: 0, megaT: 0,
+  shotsFired: 0, playT: 0,
   ballElement: null,
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
   fx_magnet: null, fx_score: null, fx_draco: null,
@@ -713,6 +754,7 @@ function buildLevel(lvl) {
 function resetRun() {
   const p = preset();
   G.score = 0; G.lives = p.lives; G.level = 1; G.combo = 0;
+  G.shotsFired = 0; G.playT = 0;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.announce = null;
@@ -837,6 +879,7 @@ function primaryAction() {
       });
     } else if (G.blasterCD <= 0) {
       G.blasterCD = 0.45;
+      G.shotsFired++;
       G.lasers.push({ x: G.paddle.x, y: PADDLE_Y() - 16, basic: true, explosive: !!G.fx_fire });
       SFX.blaster();
     }
@@ -872,13 +915,22 @@ function tickEffects(dt) {
 }
 
 function damageBrick(br, dmg, sx, sy, element) {
-  // type effectiveness
-  if (element && dmg < 90 && (EFFECTIVE[element] || []).includes(br.poke.t)) {
-    dmg *= 2;
-    if (G.seCD <= 0) {
-      addFloater(sx, sy - 20, 'SUPER EFFECTIVE!', '#ffd54f', 13);
-      SFX.superFx();
-      G.seCD = 0.45;
+  // type effectiveness: super effective ×2, resisted ×½
+  if (element && dmg < 90) {
+    if ((EFFECTIVE[element] || []).includes(br.poke.t)) {
+      dmg *= 2;
+      if (G.seCD <= 0) {
+        addFloater(sx, sy - 20, 'SUPER EFFECTIVE!', '#ffd54f', 13);
+        SFX.superFx();
+        G.seCD = 0.45;
+      }
+    } else if ((RESIST[element] || []).includes(br.poke.t)) {
+      dmg *= 0.5;
+      if (G.seCD <= 0) {
+        addFloater(sx, sy - 20, 'NOT VERY EFFECTIVE...', '#90a4ae', 11);
+        tone(180, 0.1, 'sine', 0.04, -60);
+        G.seCD = 0.45;
+      }
     }
   }
   br.hp -= dmg;
@@ -902,8 +954,9 @@ function damageBrick(br, dmg, sx, sy, element) {
     const base = br.isBoss ? 1000 : br.maxHp * 25;
     const pts = Math.round(base * scoreMult());
     G.score += pts;
-    addFloater(br.bx + G.fx, br.by + G.fy, '+' + pts, '#fff', br.isBoss ? 26 : 15);
-    if (!br.isBoss && G.combo > 2 && G.combo % 3 === 0) addFloater(br.bx + G.fx, br.by + G.fy - 26, 'COMBO x' + G.combo, '#ffd54f', 18);
+    // only surface the noteworthy numbers — constant +NN spam reads as noise
+    if (br.isBoss || pts >= 150) addFloater(br.bx + G.fx, br.by + G.fy, '+' + pts, '#fff', br.isBoss ? 26 : 15);
+    if (!br.isBoss && G.combo > 2 && G.combo % 5 === 0) addFloater(br.bx + G.fx, br.by + G.fy - 26, 'COMBO x' + G.combo, '#ffd54f', 18);
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
     shatterBrick(br, br.bx + G.fx, br.by + G.fy);
     G.shake = Math.min(G.shake + (br.isBoss ? 14 : 4), 16);
@@ -1015,6 +1068,7 @@ function update(dt) {
   }
 
   tickEffects(dt);
+  if (G.state === 'play') G.playT += dt;
 
   // ---- formation drift ----
   if (G.state === 'play' && G.bossIntro <= 0) {
@@ -1595,18 +1649,53 @@ function drawAnnounce() {
   const fadeOut = a.max - a.t < 0.3 ? (a.max - a.t) / 0.3 : 1;
   const alpha = Math.min(fadeOut, a.t < 0.5 ? a.t / 0.5 : 1);
   ctx.save();
-  ctx.globalAlpha = alpha * 0.95;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const y = H * 0.66;
-  ctx.font = '900 30px Orbitron, sans-serif';
-  ctx.shadowColor = a.color; ctx.shadowBlur = 18;
+  const nameSize = Math.min(30, W / 22);
+  ctx.font = `900 ${nameSize}px Orbitron, sans-serif`;
+  const nameW = ctx.measureText(a.icon + '  ' + a.name).width;
+  ctx.font = '700 14px Orbitron, sans-serif';
+  const descW = ctx.measureText(a.desc).width;
+  const pillW = Math.max(nameW, descW) + 56;
+  // translucent pill behind the text so it reads over any background
+  ctx.globalAlpha = alpha * 0.72;
+  roundRect(W / 2 - pillW / 2, y - 30, pillW, 82, 20);
+  ctx.fillStyle = 'rgba(6,9,24,0.82)'; ctx.fill();
+  ctx.strokeStyle = a.color + '66'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.font = `900 ${nameSize}px Orbitron, sans-serif`;
+  ctx.shadowColor = a.color; ctx.shadowBlur = 16;
   ctx.fillStyle = a.color;
   ctx.fillText(a.icon + '  ' + a.name, W / 2, y);
   ctx.shadowBlur = 0;
-  ctx.font = '700 15px Orbitron, sans-serif';
+  ctx.font = '700 14px Orbitron, sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = alpha * 0.8;
-  ctx.fillText(a.desc, W / 2, y + 34);
+  ctx.globalAlpha = alpha * 0.85;
+  ctx.fillText(a.desc, W / 2, y + 30);
+  ctx.restore();
+}
+
+// transient tutorial hint: shows by the paddle until you've fired a few shots
+function drawShootHint() {
+  if (G.state !== 'play' || G.shotsFired >= 3 || G.playT > 20) return;
+  const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
+  const x = G.paddle.x, y = PADDLE_Y() - 64;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '700 13px Orbitron, sans-serif';
+  const text = '⌖ TAP / CLICK TO SHOOT';
+  const tw = ctx.measureText(text).width + 26;
+  roundRect(x - tw / 2, y - 15, tw, 30, 15);
+  ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
+  ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#b3e5fc';
+  ctx.fillText(text, x, y + 1);
+  // little arrow pointing at the blaster barrel
+  ctx.beginPath();
+  ctx.moveTo(x - 5, y + 15); ctx.lineTo(x + 5, y + 15); ctx.lineTo(x, y + 24);
+  ctx.closePath();
+  ctx.fillStyle = '#80d8ff'; ctx.fill();
   ctx.restore();
 }
 
@@ -1630,7 +1719,7 @@ function drawDangerLine() {
   let lowest = -Infinity;
   for (const br of G.bricks) if (!br.dead) lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
   const prox = (lowest - (DANGER_Y() - 200)) / 200;
-  if (prox <= 0) return;
+  if (prox <= 0.35) return; // only warn when genuinely close — no early-game noise
   const a = Math.min(0.5, prox * 0.5) * (0.6 + 0.4 * Math.sin(G.time * 6));
   ctx.strokeStyle = `rgba(255,82,82,${a})`;
   ctx.setLineDash([14, 10]);
@@ -1654,19 +1743,19 @@ function drawHUD() {
   ctx.font = '500 10px Orbitron, sans-serif';
   ctx.fillStyle = '#90a4ae';
   ctx.fillText('BEST ' + G.best, 20, 46);
-  let infoX = 150;
+  // combo + ball element live just below the bar, clear of the wave title
   if (G.combo > 1) {
     ctx.fillStyle = '#ffd54f';
     ctx.font = '700 13px Orbitron, sans-serif';
-    ctx.fillText('COMBO x' + G.combo, infoX, 22);
+    ctx.fillText('COMBO x' + G.combo, 20, 72);
   }
   if (G.ballElement) {
     ctx.fillStyle = TYPE_COLORS[G.ballElement];
     ctx.font = '700 11px Orbitron, sans-serif';
-    ctx.fillText('⬤ ' + G.ballElement.toUpperCase() + ' BALL', infoX, G.combo > 1 ? 40 : 28);
+    ctx.fillText('⬤ ' + G.ballElement.toUpperCase() + ' BALL', 20, G.combo > 1 ? 90 : 72);
   }
   ctx.textAlign = 'center';
-  ctx.font = '900 16px Orbitron, sans-serif';
+  ctx.font = `900 ${Math.min(16, W / 36)}px Orbitron, sans-serif`;
   ctx.fillStyle = '#e3f2fd';
   const gen = genFor(G.level);
   ctx.fillText('WAVE ' + G.level + '  ·  ' + gen.name, W / 2, G.modifier ? 22 : 28);
@@ -1748,24 +1837,37 @@ function drawHUD() {
   }
 }
 
+// draw centered text, auto-shrinking to fit the viewport width
+function fitText(text, y, baseSize, weight, color, maxW) {
+  let size = baseSize;
+  ctx.font = `${weight} ${size}px Orbitron, sans-serif`;
+  const w = ctx.measureText(text).width;
+  if (w > maxW) {
+    size = Math.max(8.5, size * maxW / w);
+    ctx.font = `${weight} ${size}px Orbitron, sans-serif`;
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(text, W / 2, y);
+}
 function drawMenu() {
   dim(0.55);
+  const L = menuLayout();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title('POKÉMON', H * 0.13, 52, '#ffd54f');
-  title('INVADERS BREAKOUT', H * 0.13 + 52, 26, '#e3f2fd');
-  ctx.font = '500 13px Orbitron, sans-serif';
-  ctx.fillStyle = '#b0bec5';
+  title('POKÉMON', L.titleY, L.titleSize, '#ffd54f');
+  title('INVADERS BREAKOUT', L.titleY + L.titleSize, L.titleSize * 0.5, '#e3f2fd');
+  const maxW = W * 0.92;
   const lines = [
-    'JOURNEY THROUGH ALL 9 REGIONS — A LEGENDARY BOSS GUARDS EVERY WAVE',
-    'Mouse: move · Click/Space: launch + blaster · E: mega evolve · M: music · P: pause',
-    'Pokémon drop power-ups matching their type — your ball takes on that element',
-    'SUPER EFFECTIVE hits do double damage · catch pokéballs to fill your Pokédex',
+    ['JOURNEY THROUGH 9 REGIONS — A LEGENDARY GUARDS EVERY WAVE', '#cfd8dc'],
+    ['MOUSE MOVES · CLICK or SPACE SHOOTS THE BLASTER', '#b0bec5'],
+    ['POWER-UPS MATCH POKÉMON TYPES — YOUR BALL TAKES THAT ELEMENT', '#b0bec5'],
+    ['SUPER EFFECTIVE ×2 DAMAGE · NOT VERY EFFECTIVE ×½', '#b0bec5'],
+    ['CATCH POKÉBALLS FOR YOUR POKÉDEX · E MEGA · M MUSIC · P PAUSE', '#b0bec5'],
   ];
-  lines.forEach((l, i) => ctx.fillText(l, W / 2, H * 0.26 + i * 25));
+  lines.forEach(([l, c], i) => fitText(l, L.infoY + i * L.lineH, 13 * Math.max(0.85, L.s), '500', c, maxW));
   // difficulty presets
   ctx.font = '700 13px Orbitron, sans-serif';
   ctx.fillStyle = '#90a4ae';
-  ctx.fillText('DIFFICULTY', W / 2, presetGeom(0).y - 18);
+  ctx.fillText('DIFFICULTY', W / 2, L.chipsLabelY);
   const keys = Object.keys(PRESETS);
   for (let i = 0; i < keys.length; i++) {
     const pg = presetGeom(i), sel = SETTINGS.preset === keys[i];
@@ -1779,7 +1881,7 @@ function drawMenu() {
     ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = '900 13px Orbitron, sans-serif';
+    ctx.font = `900 ${Math.min(13, pg.w / 8.2)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
     ctx.fillText(PRESETS[keys[i]].label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1);
     ctx.restore();
@@ -1863,6 +1965,13 @@ function drawOverlays() {
   else if (G.state === 'dex') { drawDex(); }
   else if (G.state === 'serve' && !paused) {
     pulse('CLICK TO LAUNCH', H * 0.72);
+    if (G.shotsFired < 3) {
+      ctx.globalAlpha = 0.75;
+      ctx.font = '500 13px Orbitron, sans-serif';
+      ctx.fillStyle = '#90caf9';
+      ctx.fillText('once launched, TAP / CLICK anytime to shoot your blaster', W / 2, H * 0.72 + 28);
+      ctx.globalAlpha = 1;
+    }
   } else if (G.state === 'levelup') {
     dim(0.4);
     const next = genFor(G.level);
@@ -1940,6 +2049,7 @@ function render() {
     drawProjectiles();
     drawBalls();
     if (G.state !== 'gameover') drawPaddle();
+    drawShootHint();
     drawParticles();
     drawAnnounce();
   }
@@ -1957,6 +2067,7 @@ let lastT = performance.now();
 function frame(now) {
   const rdt = Math.min(0.033, (now - lastT) / 1000);
   lastT = now;
+  if (!W && window.innerWidth) { resize(); G.paddle.x = W / 2; } // recover from 0×0 load
   if (G.freeze > 0) { // hit-stop: render but don't simulate
     G.freeze -= rdt;
     render();
