@@ -2,17 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Pokémon Invaders Breakout</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #05060f; }
-  canvas { display: block; width: 100vw; height: 100vh; cursor: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #05060f; overscroll-behavior: none; }
+  canvas { display: block; cursor: none; touch-action: none; }
+  /* probe for the phone's home-indicator / safe-area height */
+  #safe-probe { position: fixed; bottom: 0; height: env(safe-area-inset-bottom, 0px); width: 1px; visibility: hidden; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="safe-probe"></div>
 <script>
 'use strict';
 
@@ -21,20 +24,30 @@
 // ============================================================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-let W = 0, H = 0, DPR = 1;
+let W = 0, H = 0, DPR = 1, SAFE_B = 0;
 let vignette = null;
+const IS_TOUCH = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
 function resize() {
-  if (!window.innerWidth || !window.innerHeight) return; // transient 0×0 during load/rotate
+  // visualViewport = what's actually visible (excludes mobile browser bars);
+  // sizing the canvas style in px keeps touch coords 1:1 with the drawing
+  const vv = window.visualViewport;
+  const w = Math.round(vv ? vv.width : window.innerWidth);
+  const h = Math.round(vv ? vv.height : window.innerHeight);
+  if (!w || !h) return; // transient 0×0 during load/rotate
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth; H = window.innerHeight;
+  W = w; H = h;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   canvas.width = W * DPR; canvas.height = H * DPR;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const probe = document.getElementById('safe-probe');
+  SAFE_B = probe ? Math.round(probe.getBoundingClientRect().height) : 0;
   buildStars();
   buildVignette();
   bgGen = -1;
 }
 window.addEventListener('resize', resize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 function buildVignette() {
   vignette = document.createElement('canvas'); vignette.width = W; vignette.height = H;
   const c = vignette.getContext('2d');
@@ -631,8 +644,11 @@ const G = {
   fx_magnet: null, fx_score: null, fx_draco: null,
   shieldCharges: 0,
 };
-const PADDLE_Y = () => H - 64;
-const DANGER_Y = () => H - 150;
+// FLOOR = bottom of the playable area, above any phone home-indicator;
+// on touch screens the paddle rides higher so fingers don't cover it
+const FLOOR = () => H - SAFE_B;
+const PADDLE_Y = () => FLOOR() - (IS_TOUCH ? 96 : 64);
+const DANGER_Y = () => PADDLE_Y() - 86;
 const ballSp = () => diff().ballSpeed;
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
@@ -846,9 +862,10 @@ function onPress(x, y) {
     for (let i = 0; i < keys.length; i++) {
       if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
     }
+    const grab = IS_TOUCH ? 30 : 20;
     for (let i = 0; i < SLIDERS.length; i++) {
       const gm = sliderGeom(i);
-      if (Math.abs(y - gm.y) < 20 && x > gm.x - 14 && x < gm.x + gm.w + 14) {
+      if (Math.abs(y - gm.y) < grab && x > gm.x - 14 && x < gm.x + gm.w + 14) {
         dragSlider = i; setSliderFromX(i, x); return;
       }
     }
@@ -857,7 +874,7 @@ function onPress(x, y) {
     return;
   }
   // mega meter tap zone (bottom-right) during play
-  if (G.state === 'play' && y > H - 56 && x > W - 210) { tryMega(); return; }
+  if (G.state === 'play' && y > FLOOR() - 56 && x > W - 210) { tryMega(); return; }
   primaryAction();
 }
 function primaryAction() {
@@ -915,7 +932,7 @@ function tickEffects(dt) {
 }
 
 function damageBrick(br, dmg, sx, sy, element) {
-  // type effectiveness: super effective ×2, resisted ×½
+  // type effectiveness: super effective ×2, resisted ×¼
   if (element && dmg < 90) {
     if ((EFFECTIVE[element] || []).includes(br.poke.t)) {
       dmg *= 2;
@@ -925,7 +942,7 @@ function damageBrick(br, dmg, sx, sy, element) {
         G.seCD = 0.45;
       }
     } else if ((RESIST[element] || []).includes(br.poke.t)) {
-      dmg *= 0.5;
+      dmg *= 0.25; // resisted hits barely scratch — switch elements or use the blaster
       if (G.seCD <= 0) {
         addFloater(sx, sy - 20, 'NOT VERY EFFECTIVE...', '#90a4ae', 11);
         tone(180, 0.1, 'sine', 0.04, -60);
@@ -1124,10 +1141,10 @@ function update(dt) {
     if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); SFX.wall(); }
     if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); SFX.wall(); }
     if (b.y < 56 + b.r) { b.y = 56 + b.r; b.vy = Math.abs(b.vy); SFX.wall(); }
-    if (b.y > H - 14 && G.shieldCharges > 0 && b.vy > 0) {
-      b.vy = -Math.abs(b.vy); b.y = H - 14;
+    if (b.y > FLOOR() - 14 && G.shieldCharges > 0 && b.vy > 0) {
+      b.vy = -Math.abs(b.vy); b.y = FLOOR() - 14;
       G.shieldCharges--;
-      burst(b.x, H - 12, '#66bb6a', 20, 220);
+      burst(b.x, FLOOR() - 12, '#66bb6a', 20, 220);
       SFX.shield();
     }
     if (b.y > H + 30) b.dead = true;
@@ -1278,9 +1295,9 @@ function update(dt) {
     s.y += (s.vy || 0) * ts * dt;
     if (s.vx != null) s.x += s.vx * ts * dt;
     else s.x += Math.sin(s.y * 0.03) * 30 * dt;
-    if (s.y > H - 18 && G.shieldCharges > 0) {
+    if (s.y > FLOOR() - 18 && G.shieldCharges > 0) {
       s.dead = true; G.shieldCharges--;
-      burst(s.x, H - 14, '#66bb6a', 14, 180); SFX.shield();
+      burst(s.x, FLOOR() - 14, '#66bb6a', 14, 180); SFX.shield();
     }
     const pw = paddleW(), py = PADDLE_Y();
     if (!s.dead && G.invuln <= 0 && s.y > py - G.paddle.h && s.y < py + G.paddle.h &&
@@ -1438,11 +1455,19 @@ function drawBricks() {
         ctx.fillStyle = hg; ctx.fill();
       }
     } else if (br.maxHp > 1) {
-      for (let i = 0; i < Math.min(br.maxHp, 6); i++) {
-        ctx.beginPath();
-        ctx.arc(x - hw + 12 + i * 11, y - hh + 10, 3.4, 0, Math.PI * 2);
-        ctx.fillStyle = i < br.hp ? '#fff' : '#ffffff33';
-        ctx.fill();
+      if (br.w >= 64) {
+        for (let i = 0; i < Math.min(br.maxHp, 6); i++) {
+          ctx.beginPath();
+          ctx.arc(x - hw + 12 + i * 11, y - hh + 10, 3.4, 0, Math.PI * 2);
+          ctx.fillStyle = i < br.hp ? '#fff' : '#ffffff33';
+          ctx.fill();
+        }
+      } else { // small bricks (phones): slim HP bar instead of crowded pips
+        const bw3 = br.w * 0.6, frac = Math.max(0, br.hp / br.maxHp);
+        ctx.fillStyle = '#ffffff33';
+        ctx.fillRect(x - bw3 / 2, y - hh + 6, bw3, 3);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x - bw3 / 2, y - hh + 6, bw3 * frac, 3);
       }
     }
     ctx.restore();
@@ -1703,14 +1728,15 @@ function drawShield() {
   if (G.shieldCharges <= 0) return;
   ctx.save();
   const a = 0.25 + 0.12 * Math.sin(G.time * 4) + G.shieldCharges * 0.08;
-  const g = ctx.createLinearGradient(0, H - 26, 0, H);
+  const fl = FLOOR();
+  const g = ctx.createLinearGradient(0, fl - 26, 0, fl);
   g.addColorStop(0, 'rgba(102,187,106,0)');
   g.addColorStop(1, `rgba(102,187,106,${a})`);
   ctx.fillStyle = g;
-  ctx.fillRect(0, H - 26, W, 26);
+  ctx.fillRect(0, fl - 26, W, 26);
   ctx.strokeStyle = `rgba(165,214,167,${a + 0.3})`;
   ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.moveTo(0, H - 8); ctx.lineTo(W, H - 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, fl - 8); ctx.lineTo(W, fl - 8); ctx.stroke();
   ctx.restore();
 }
 
@@ -1755,11 +1781,14 @@ function drawHUD() {
     ctx.fillText('⬤ ' + G.ballElement.toUpperCase() + ' BALL', 20, G.combo > 1 ? 90 : 72);
   }
   ctx.textAlign = 'center';
-  ctx.font = `900 ${Math.min(16, W / 36)}px Orbitron, sans-serif`;
+  const narrow = W < 560; // phones: wave title drops to the second HUD row
+  ctx.font = `900 ${Math.min(16, W / 30)}px Orbitron, sans-serif`;
   ctx.fillStyle = '#e3f2fd';
   const gen = genFor(G.level);
-  ctx.fillText('WAVE ' + G.level + '  ·  ' + gen.name, W / 2, G.modifier ? 22 : 28);
-  if (G.modifier) {
+  const waveY = narrow ? 46 : (G.modifier ? 22 : 28);
+  const waveText = 'WAVE ' + G.level + ' · ' + gen.name + (narrow && G.modifier ? ' ' + G.modifier.icon : '');
+  ctx.fillText(waveText, W / 2, waveY);
+  if (G.modifier && !narrow) {
     ctx.font = '700 10px Orbitron, sans-serif';
     ctx.fillStyle = G.modifier.color;
     ctx.fillText(G.modifier.icon + ' ' + G.modifier.name, W / 2, 42);
@@ -1781,7 +1810,7 @@ function drawHUD() {
   for (const [slot, icon] of chips) {
     const fx = G[slot];
     if (!fx) continue;
-    const cy = H - 30;
+    const cy = FLOOR() - 28;
     ctx.save();
     ctx.globalAlpha = fx.t < 2 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 6))) : 1;
     roundRect(cx2, cy - 17, 52, 34, 9);
@@ -1799,7 +1828,7 @@ function drawHUD() {
     cx2 += 60;
   }
   if (G.shieldCharges > 0) {
-    const cy = H - 30;
+    const cy = FLOOR() - 28;
     roundRect(cx2, cy - 17, 52, 34, 9);
     ctx.fillStyle = 'rgba(102,187,106,0.15)'; ctx.fill();
     ctx.strokeStyle = '#66bb6a'; ctx.stroke();
@@ -1811,7 +1840,7 @@ function drawHUD() {
   }
   // ---- MEGA meter (bottom-right) ----
   if (G.state === 'play' || G.state === 'serve') {
-    const mw = 160, mh = 12, mx = W - mw - 20, my = H - 30;
+    const mw = 160, mh = 12, mx = W - mw - 20, my = FLOOR() - 28;
     ctx.textAlign = 'left';
     ctx.font = '900 11px Orbitron, sans-serif';
     const ready = G.mega >= 1 && G.megaT <= 0;
@@ -1860,7 +1889,7 @@ function drawMenu() {
     ['JOURNEY THROUGH 9 REGIONS — A LEGENDARY GUARDS EVERY WAVE', '#cfd8dc'],
     ['MOUSE MOVES · CLICK or SPACE SHOOTS THE BLASTER', '#b0bec5'],
     ['POWER-UPS MATCH POKÉMON TYPES — YOUR BALL TAKES THAT ELEMENT', '#b0bec5'],
-    ['SUPER EFFECTIVE ×2 DAMAGE · NOT VERY EFFECTIVE ×½', '#b0bec5'],
+    ['SUPER EFFECTIVE ×2 DAMAGE · NOT VERY EFFECTIVE ×¼', '#b0bec5'],
     ['CATCH POKÉBALLS FOR YOUR POKÉDEX · E MEGA · M MUSIC · P PAUSE', '#b0bec5'],
   ];
   lines.forEach(([l, c], i) => fitText(l, L.infoY + i * L.lineH, 13 * Math.max(0.85, L.s), '500', c, maxW));
@@ -2024,6 +2053,7 @@ function pulse(text, y) {
 }
 
 function drawCursor() {
+  if (IS_TOUCH) return; // a cursor ring under a finger just looks misaligned
   if (G.state === 'play' || G.state === 'serve') return;
   ctx.strokeStyle = 'rgba(255,255,255,0.8)';
   ctx.lineWidth = 1.5;
