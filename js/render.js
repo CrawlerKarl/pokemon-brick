@@ -50,6 +50,7 @@ function drawBricks() {
     if (br.isBoss) y += introOff;
     const col = TYPE_COLORS[br.poke.t];
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
+    const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
     br.flash = Math.max(0, br.flash - 0.08);
     ctx.save();
     const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(G.time * 6) : 1; // Lunala fades out
@@ -192,7 +193,8 @@ function drawBricks() {
     }
     // HP dial: ring + number, mirroring the type badge — corner-anchored so
     // it never covers the Pokémon. Small cards: tiny, bottom-left corner.
-    if (!br.isBoss && br.maxHp > 1) {
+    // Horde-sized cards skip it — the damage dimming carries the info.
+    if (!br.isBoss && br.maxHp > 1 && !tinyCard) {
       const cRad = smallCard ? 6.5 : Math.min(10, br.h * 0.22);
       const cX = x - hw + cRad + (smallCard ? 3 : 5);
       const cY = smallCard ? y + hh - cRad - 3 : y - hh + cRad + 5;
@@ -214,7 +216,7 @@ function drawBricks() {
     // so they never sit over the Pokémon's face, and the 2× tag is skipped —
     // the pulsing gold ring carries that signal alone.
     if (br.poke.id !== -1) {
-      const bR = br.isBoss ? 12 : smallCard ? 6.5 : Math.min(10, br.h * 0.22);
+      const bR = br.isBoss ? 12 : tinyCard ? 4.5 : smallCard ? 6.5 : Math.min(10, br.h * 0.22);
       const bx2 = x + hw - bR - (smallCard ? 3 : 5);
       const by2 = smallCard && !br.isBoss ? y + hh - bR - 3 : y - hh + bR + 5;
       const elem = G.ballElement;
@@ -303,17 +305,95 @@ function drawPaddle() {
   }
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : (G.fx_laser ? '#ffd54f' : (G.starter ? TYPE_COLORS[G.starter] : '#42a5f5'));
   ctx.shadowBlur = mega ? 26 : 18;
+  // hull palette matches the starter — the paddle IS your partner's rig
+  const HULLS = {
+    fire:  ['#ffe0b2', '#ff8a50', '#bf360c'],
+    water: ['#e1f5fe', '#4fc3f7', '#01579b'],
+    grass: ['#dcedc8', '#81c784', '#1b5e20'],
+  };
+  const hull = HULLS[G.starter] || ['#e3f2fd', '#64b5f6', '#1565c0'];
   const g = ctx.createLinearGradient(x, py - 10, x, py + 10);
   if (mega) {
     g.addColorStop(0, '#fff9c4'); g.addColorStop(0.5, `hsl(${(G.time * 160) % 360},85%,62%)`); g.addColorStop(1, '#7b1fa2');
   } else {
-    g.addColorStop(0, '#e3f2fd'); g.addColorStop(0.5, '#64b5f6'); g.addColorStop(1, '#1565c0');
+    g.addColorStop(0, hull[0]); g.addColorStop(0.5, hull[1]); g.addColorStop(1, hull[2]);
   }
   roundRect(x - pwv / 2, py - ph / 2, pwv, ph, 9);
   ctx.fillStyle = g; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = G.blasterCD > 0 ? '#546e7a' : '#cfd8dc';
-  roundRect(x - 3.5, py - 24, 7, 12, 3); ctx.fill();
+  // ---- starter styling: the rig grows more elaborate at each evolution ----
+  const sLvl = G.starterLvl;
+  if (G.starter === 'fire') {
+    // flickering flame tips on both ends; a crest row at final form
+    for (const dir of [-1, 1]) {
+      for (let f = 0; f < sLvl; f++) {
+        const fx2 = x + dir * (pwv / 2 - 2 - f * 7);
+        const flick = 1 + 0.3 * Math.sin(G.time * 11 + f * 2 + dir);
+        const fh = (9 + sLvl * 2.5) * flick;
+        ctx.fillStyle = f % 2 ? '#ffd54f' : '#ff7043';
+        ctx.beginPath();
+        ctx.moveTo(fx2 - 3.5, py - ph / 2 + 1);
+        ctx.quadraticCurveTo(fx2 + dir * 2.5, py - ph / 2 - fh * 0.6, fx2, py - ph / 2 - fh);
+        ctx.quadraticCurveTo(fx2 - dir * 2.5, py - ph / 2 - fh * 0.5, fx2 + 3.5, py - ph / 2 + 1);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  } else if (G.starter === 'water') {
+    // shell end-caps; at final form the Blastoise cannons come out
+    ctx.fillStyle = '#b3e5fc';
+    for (const dir of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(x + dir * (pwv / 2 - 4), py, ph * (0.6 + sLvl * 0.1), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (sLvl >= 3) {
+      ctx.fillStyle = '#90a4ae';
+      for (const dir of [-1, 1]) {
+        ctx.save();
+        ctx.translate(x + dir * pwv * 0.3, py - ph / 2);
+        ctx.rotate(dir * 0.25);
+        roundRect(-4, -16, 8, 16, 3); ctx.fill();
+        ctx.fillStyle = '#eceff1'; ctx.fillRect(-3, -16, 6, 3); ctx.fillStyle = '#90a4ae';
+        ctx.restore();
+      }
+    } else if (sLvl >= 2) { // water-jet nubs
+      ctx.fillStyle = '#4fc3f7';
+      for (const dir of [-1, 1]) roundRect(x + dir * pwv * 0.3 - 3, py - ph / 2 - 7, 6, 8, 2), ctx.fill();
+    }
+  } else if (G.starter === 'grass') {
+    // leaf tips; petals at 2; a swaying frond crest at final form
+    ctx.fillStyle = '#81c784';
+    for (const dir of [-1, 1]) {
+      for (let f = 0; f < Math.min(2, sLvl); f++) {
+        const lx2 = x + dir * (pwv / 2 - 3 - f * 8);
+        ctx.save();
+        ctx.translate(lx2, py - ph / 2);
+        ctx.rotate(dir * (0.5 + f * 0.3) + Math.sin(G.time * 2 + f) * 0.12);
+        ctx.beginPath(); ctx.ellipse(0, -7, 3.5, 8 + sLvl * 1.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+    if (sLvl >= 3) { // Venusaur frond crest behind the core
+      ctx.fillStyle = '#66bb6a';
+      for (let f = -2; f <= 2; f++) {
+        ctx.save();
+        ctx.translate(x + f * 9, py - ph / 2);
+        ctx.rotate(f * 0.35 + Math.sin(G.time * 1.6 + f) * 0.1);
+        ctx.beginPath(); ctx.ellipse(0, -11, 4, 12, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+  // ---- the cannon grows with your ARSENAL path (Phoenix-style) ----
+  const arsenal = pathLvl('arsenal');
+  const barrelW = 7 + arsenal * 1.4, barrelH = 12 + arsenal * 2;
+  const barrels = upgN('twin') ? [-10, 10] : [0];
+  for (const off of barrels) {
+    if (upgN('hyper')) { ctx.shadowColor = '#ff5cf0'; ctx.shadowBlur = 10; }
+    ctx.fillStyle = G.blasterCD > 0 ? '#546e7a' : (upgN('hyper') ? '#f3aaff' : '#cfd8dc');
+    roundRect(x + off - barrelW / 2, py - 12 - barrelH, barrelW, barrelH, 3); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
   if (G.muzzle > 0) { // muzzle flash on blaster fire
     const m = G.muzzle / 0.12;
     const fg = ctx.createRadialGradient(x, py - 28, 0, x, py - 28, 14 * m);
@@ -573,7 +653,9 @@ function drawProjectiles() {
     ctx.shadowColor = L.hyper ? '#ff5cf0' : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
     ctx.shadowBlur = L.hyper ? 22 : 16;
     ctx.fillStyle = L.hyper ? '#f8bbf3' : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
-    roundRect(L.x - 4, L.y - 20, 8, 32, 4); ctx.fill();
+    // bolts visibly beef up with your ARSENAL level — Phoenix-style firepower
+    const bw4 = 8 + (L.basic ? pathLvl('arsenal') * 1.4 : 0);
+    roundRect(L.x - bw4 / 2, L.y - 20, bw4, 32, 4); ctx.fill();
     // bright core
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     roundRect(L.x - 1.5, L.y - 16, 3, 24, 1.5); ctx.fill();
@@ -888,6 +970,22 @@ function drawHUD() {
     ctx.fillStyle = TYPE_COLORS[G.ballElement];
     ctx.font = '700 11px Orbitron, sans-serif';
     ctx.fillText('⬤ ' + G.ballElement.toUpperCase() + ' BALL', 20, G.combo > 1 ? 90 : 72);
+  }
+  // skill tree at a glance — Phoenix-style: your build is always visible
+  {
+    const treeY = (G.ballElement ? (G.combo > 1 ? 110 : 92) : (G.combo > 1 ? 92 : 74));
+    let tx3 = 26;
+    for (const pk of PATH_KEYS) {
+      const lvl = pathLvl(pk);
+      if (!lvl) continue;
+      const P = PATHS[pk];
+      drawGlyph(ctx, P.tiers[lvl - 1].icon, tx3, treeY, 6.5, P.color);
+      ctx.font = '700 10px Orbitron, sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = lvl >= 4 ? P.color : '#90a4ae';
+      ctx.fillText(lvl + '/4', tx3 + 11, treeY + 1);
+      tx3 += 48;
+    }
   }
   ctx.textAlign = 'center';
   const narrow = W < 560; // phones: wave title drops to the second HUD row

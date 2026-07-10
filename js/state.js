@@ -161,8 +161,10 @@ function buildLevel(lvl) {
   // board size grows with the journey: more columns and rows deeper in, so
   // late regions are denser campaigns rather than just faster ones
   const regionsIn = Math.floor((lvl - 1) / STAGES);
+  // the armada swells hard with the journey: ~10 columns in Kanto growing to
+  // 26 by Paldea (width permitting) — late waves are true invader hordes
   const baseCols = Math.max(6, Math.min(10, Math.floor(W / 115)));
-  const cols = Math.max(6, Math.min(12, Math.floor(W / 66), baseCols + Math.min(3, Math.floor(regionsIn / 2))));
+  const cols = Math.max(6, Math.min(26, Math.floor(W / 34), baseCols + regionsIn * 2));
   // wide side margins leave the formation real room to MARCH — the broad
   // Galaxian sweeps need somewhere to sweep to
   const margin = Math.max(40, W * 0.13);
@@ -199,8 +201,8 @@ function buildLevel(lvl) {
     : stage === 0 && Math.random() < 0.45 ? MILD_FORMS[Math.floor(Math.random() * MILD_FORMS.length)]
     : null;
   const maxRows = Math.max(2, Math.floor((H * 0.58 - gridTop) / pitchY));
-  const baseRows = 3 + Math.min(4, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
-  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : baseRows, 8, maxRows);
+  const baseRows = 3 + Math.min(5, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
+  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : baseRows, 10, maxRows);
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
@@ -218,7 +220,7 @@ function buildLevel(lvl) {
       // Space Junkie entrance: ranks pour in from off-screen, swooping along
       // a curve into their slot — alternating sides per row, staggered
       const entry = {
-        t: 0.25 + r * 0.28 + c * 0.05,
+        t: 0.25 + r * 0.28 + c * 0.04,
         dur: 0.85,
         sx: r % 2 ? -70 : W + 70,
         sy: -50 - r * 26,
@@ -257,8 +259,9 @@ function buildLevel(lvl) {
   const styles = ['march', 'serpent'];
   if (regionsIn >= 1) styles.push('colwave', 'serpent');
   if (regionsIn >= 2) styles.push('split');
-  if (regionsIn >= 4) styles.push('breathe', 'split');
-  if (regionsIn >= 5) styles.push('swirl');
+  if (regionsIn >= 3) styles.push('free'); // Phoenix swarm — full independence
+  if (regionsIn >= 4) styles.push('breathe', 'split', 'free');
+  if (regionsIn >= 5) styles.push('swirl', 'free');
   G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
   G.marchDir = Math.random() < 0.5 ? -1 : 1;
   G.gridCols = cols;

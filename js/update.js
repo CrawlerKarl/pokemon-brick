@@ -465,11 +465,12 @@ function update(dt) {
       const lo = 8 - minX, hi = W - 8 - maxX;
       const marchV = (26 + d.descent * 6) * thin;
       G.fx += G.marchDir * marchV * ts * dt;
-      const stepDown = Math.min(G.brickH * 0.5, 10 + d.descent * 1.1);
+      // gentle steps: pressure builds over minutes, not seconds
+      const stepDown = Math.min(G.brickH * 0.35, 6 + d.descent * 0.6);
       if (G.fx >= hi && G.marchDir > 0) { G.fx = hi; G.marchDir = -1; G.fy += stepDown; tone(70, 0.1, 'sine', 0.045); }
       else if (G.fx <= lo && G.marchDir < 0) { G.fx = lo; G.marchDir = 1; G.fy += stepDown; tone(70, 0.1, 'sine', 0.045); }
     }
-    G.fy += d.descent * 0.2 * thin * ts * dt; // whisper of constant pressure
+    G.fy += d.descent * 0.07 * thin * ts * dt; // whisper of constant pressure
     // ---- choreography rides ON TOP of the march. Boss guards instead
     // ripple in rings around their legendary, who patrols its arena.
     if (boss) {
@@ -511,39 +512,48 @@ function update(dt) {
         oy = Math.sin(G.swayT * 1.5 - dist * 0.02) * Math.min(11, br.h * 0.2);
         if (mt >= 2) ox = Math.sin(G.swayT * 0.8 + br.row * 0.9) * Math.min(14, br.w * 0.16);
       } else if (style === 'serpent') { // rows slide hard against each other
-        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(34, br.w * 0.45);
+        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(38, G.brickW * 0.8);
       } else if (style === 'colwave') { // vertical wave rolls across columns
-        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(24, br.w * 0.3);
-        oy = Math.sin(G.swayT * 1.5 - br.col * 0.65) * Math.min(16, br.h * 0.3);
+        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(28, G.brickW * 0.6);
+        oy = Math.sin(G.swayT * 1.5 - br.col * 0.65) * Math.min(18, G.brickH * 0.5);
       } else if (style === 'split') { // the halves shear apart and rejoin
-        ox = Math.sin(G.swayT * 0.8) * Math.min(44, br.w * 0.55) * (br.col < G.gridCols / 2 ? 1 : -1);
-        oy = Math.sin(G.swayT * 1.6 + br.row) * 5;
+        ox = Math.sin(G.swayT * 0.8) * Math.min(52, G.brickW * 1.1) * (br.col < G.gridCols / 2 ? 1 : -1);
+        oy = Math.sin(G.swayT * 1.6 + br.row) * 6;
       } else if (style === 'breathe') { // the formation inhales and exhales
-        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(16, br.w * 0.2)
-          + (br.hx - W / 2) * Math.sin(G.swayT * 0.5) * 0.1;
-        oy = Math.sin(G.swayT * 0.7 + (br.row + br.col) * 0.6) * 9;
+        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(18, G.brickW * 0.4)
+          + (br.hx - W / 2) * Math.sin(G.swayT * 0.5) * 0.12;
+        oy = Math.sin(G.swayT * 0.7 + (br.row + br.col) * 0.6) * 10;
       } else if (style === 'swirl') { // rolling circular shimmer
         const ph = G.swayT * 1.1 + (br.row + br.col) * 0.7;
-        ox = Math.cos(ph) * Math.min(20, br.w * 0.26);
-        oy = Math.sin(ph) * Math.min(12, br.h * 0.24);
+        ox = Math.cos(ph) * Math.min(24, G.brickW * 0.55);
+        oy = Math.sin(ph) * Math.min(14, G.brickH * 0.4);
+      } else if (style === 'free') { // PHOENIX SWARM: every block on its own orbit
+        const ph = G.swayT * (0.6 + (br.wobble % 1) * 0.9) + br.wobble * 7;
+        ox = Math.cos(ph) * Math.min(34, G.brickW * (0.5 + (br.wobble % 0.7)));
+        oy = Math.sin(ph * 1.3) * Math.min(20, G.brickH * 0.55);
       }
       br.bx = br.hx + ox;
       br.by = br.hy + oy;
     }
-    // Galaga peel-offs: from mid-journey on, enemies dive at you
+    // Galaga peel-offs: from mid-journey on, enemies dive at you.
+    // Deeper in the journey, several break formation AT ONCE.
     if (G.divers) {
       G.diveCD -= dt * ts;
       if (G.diveCD <= 0) {
         const regionsIn2 = Math.floor((G.level - 1) / STAGES);
-        G.diveCD = Math.max(3, 8 - regionsIn2 * 0.5) * (0.75 + Math.random() * 0.5);
-        const pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive);
-        if (pool2.length) {
-          const dvb = pool2[Math.floor(Math.random() * pool2.length)];
-          dvb.dive = {
-            t: 0, dur: 2.9, dir: Math.random() < 0.5 ? -1 : 1,
-            tx: Math.max(60, Math.min(W - 60, G.paddle.x - G.fx + (Math.random() - 0.5) * 160)),
-          };
-          tone(320, 0.2, 'sawtooth', 0.045, 220); // peel-off screech
+        const maxDivers = 1 + Math.floor(regionsIn2 / 3);
+        const diving = G.bricks.filter(b => !b.dead && b.dive).length;
+        G.diveCD = Math.max(2.2, 7 - regionsIn2 * 0.5) * (0.7 + Math.random() * 0.5);
+        if (diving < maxDivers) {
+          const pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive);
+          if (pool2.length) {
+            const dvb = pool2[Math.floor(Math.random() * pool2.length)];
+            dvb.dive = {
+              t: 0, dur: 2.9, dir: Math.random() < 0.5 ? -1 : 1,
+              tx: Math.max(60, Math.min(W - 60, G.paddle.x - G.fx + (Math.random() - 0.5) * 160)),
+            };
+            tone(320, 0.2, 'sawtooth', 0.045, 220); // peel-off screech
+          }
         }
       }
     }
