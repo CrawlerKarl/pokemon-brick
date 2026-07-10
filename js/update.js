@@ -171,7 +171,7 @@ function awardRally(b, x, y) {
   b.rally = (b.rally || 0) + 1;
   G.bestRally = Math.max(G.bestRally, b.rally);
   if (b.rally < 3) return;
-  const bonus = Math.round(b.rally * 15 * scoreMult());
+  const bonus = Math.round(b.rally * 15 * scoreMult() * (upgN('rally') ? 1.5 : 1));
   G.score += bonus;
   if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.0035); // rallies feed Mega
   if (b.rally === 3 || b.rally % 3 === 0) {
@@ -283,6 +283,25 @@ function loseLife() {
   G.shake = 16; G.flashT = 0.35;
   G.fx_fire = G.fx_laser = G.fx_draco = null;
   if (G.lives <= 0) {
+    // WHITE OUT: the skill tree absorbs the defeat. Burn two tree levels,
+    // refill lives, and retry this wave — the run only truly ends once
+    // there's no tree left to burn.
+    if (totalPathLevels() > 0) {
+      const lost = [];
+      for (let i = 0; i < 2 && totalPathLevels() > 0; i++) {
+        const owned = PATH_KEYS.filter(k => pathLvl(k) > 0);
+        const t = regressPath(owned[Math.floor(Math.random() * owned.length)]);
+        if (t) lost.push(t.name);
+      }
+      G.lives = preset().lives;
+      G.shieldCharges = Math.min(G.shieldCharges, shieldCap());
+      SFX.gameOver();
+      buildLevel(G.level);
+      serve();
+      setAnnounce('alert', '#ff8a65', 'WHITED OUT!',
+        'THE TREE ABSORBED IT — LOST: ' + lost.join(' · '), 3.6, 'RETRYING THE WAVE WITH FULL LIVES');
+      return;
+    }
     G.state = 'gameover'; G.stateT = 0;
     SFX.gameOver();
     if (!G.trial && G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
@@ -350,6 +369,18 @@ function update(dt) {
   if (G.state === 'play') G.playT += dt;
   // held FIRE keeps shooting — the heat lockout is the only governor
   if (fireHeld && G.state === 'play') fireAction(true);
+  // SUPER SHIELD capstone: a floor-shield charge regrows on a timer
+  if (G.state === 'play' && upgN('aegisX')) {
+    if (G.shieldCharges < shieldCap()) {
+      G.shieldRegenT -= dt;
+      if (G.shieldRegenT <= 0) {
+        G.shieldRegenT = 10;
+        G.shieldCharges++;
+        SFX.shield();
+        addFloater(G.paddle.x, PADDLE_Y() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
+      }
+    } else G.shieldRegenT = 10;
+  }
 
   // one-time callout the first time the mega meter fills
   if (G.mega >= 1 && G.megaT <= 0 && !G.megaCalloutDone && G.state === 'play') {
@@ -620,7 +651,7 @@ function update(dt) {
         } else if (G.starter === 'water') { // Torrent: rhythm builds a shield
           if (++G.torrentCount >= 6 - G.starterLvl) {
             G.torrentCount = 0;
-            if (G.shieldCharges < 3) {
+            if (G.shieldCharges < shieldCap()) {
               G.shieldCharges++;
               addFloater(G.paddle.x, py - 34, 'TORRENT SHIELD!', '#4dd0e1', 13);
               SFX.shield();
@@ -632,7 +663,7 @@ function update(dt) {
       // returning to the paddle banks the rally — celebrate a good one
       if (b.rally >= 5) addFloater(G.paddle.x, PADDLE_Y() - 32, 'NICE RALLY ×' + b.rally + '!', '#80d8ff', 15);
       b.rally = 0;
-      b.zoneSaves = 2; // fresh possession recharges the rally barrier
+      b.zoneSaves = barrierCharges(); // fresh possession recharges the rally barrier
     }
     for (const br of G.bricks) {
       if (br.dead || br.phaseT > 0) continue; // Lunala's Phantom Phase: intangible
@@ -648,7 +679,7 @@ function update(dt) {
           // with brief contact i-frames so a surviving block isn't melted
           // frame-by-frame as the ball ghosts through it
           if (br.flash <= 0.5) {
-            damageBrick(br, G.fx_fire ? 99 : 3, b.x, b.y, G.ballElement);
+            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 5 : 3), b.x, b.y, G.ballElement);
             if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
             awardRally(b, b.x, b.y);
           }
@@ -658,7 +689,7 @@ function update(dt) {
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
           // Blaze embers from the last paddle return add burn damage
-          let dmg = pierce ? 3 : 1;
+          let dmg = pierce ? (upgN('megaX') ? 5 : 3) : 1;
           if (b.ember > 0) {
             b.ember--;
             dmg += G.starterLvl >= 3 ? 2 : 1;
@@ -719,11 +750,18 @@ function update(dt) {
       }
     }
     for (const br of G.bricks) {
-      if (br.dead || br.phaseT > 0 || L.dead) continue;
+      if (br.dead || br.phaseT > 0 || L.dead || L.lastHit === br) continue;
       const bx = br.bx + G.fx, by = br.by + G.fy;
       if (Math.abs(L.x - bx) < br.w / 2 && Math.abs(L.y - by) < br.h / 2) {
-        L.dead = true;
-        damageBrick(br, 1, L.x, L.y, L.basic ? null : 'electric'); // base blaster is type-neutral
+        // HYPER CANNON capstone: bolts drill through up to 3 blocks at 2 dmg
+        if (L.hyper) {
+          L.lastHit = br;
+          L.bhits = (L.bhits || 0) + 1;
+          if (L.bhits >= 3) L.dead = true;
+        } else {
+          L.dead = true;
+        }
+        damageBrick(br, L.hyper ? 2 : 1, L.x, L.y, L.basic ? null : 'electric'); // base blaster is type-neutral
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
       }
     }
@@ -898,13 +936,20 @@ function update(dt) {
     G.clearedStage = clearedStage;
     G.score += Math.round((300 + clearedStage * 250) * (G.fx_score ? 2 : 1));
     if (G.deathsThisWave === 0) G.adapt = Math.min(1.15, G.adapt * 1.04); // flawless → push back
-    // offer three draftable upgrades (skip any already maxed)
-    const pool = UPGRADES.filter(u => upgN(u.key) < u.max);
+    // Poké Revive capstone: every region you finish grants a life
+    if (clearedStage === 2 && upgN('revive')) {
+      G.lives++;
+      addFloater(W / 2, H * 0.42, 'POKÉ REVIVE — +1 LIFE', '#ec407a', 20);
+    }
+    // draft: advance one of up to three paths (skip maxed ones)
+    const pool = PATH_KEYS.filter(k => pathLvl(k) < 4);
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    G.upgradeChoices = pool.length ? pool.slice(0, 3) : null;
+    G.upgradeChoices = pool.length
+      ? pool.slice(0, 3).map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }))
+      : null;
     SFX.levelUp();
     // confetti!
     const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];

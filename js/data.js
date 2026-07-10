@@ -415,19 +415,58 @@ const MODIFIERS = [
 ];
 
 // ============================================================
-//  RUN UPGRADES — draft one of three after every wave
+//  SKILL TREE — four paths, four tiers each. Every wave-clear draft
+//  advances a path; commit hard to one and its tier-4 CAPSTONE is a
+//  run-defining superweapon. Levels are permanent... unless you white
+//  out, which burns tree levels instead of ending the run.
 // ============================================================
-const UPGRADES = [
-  { key: 'blaze',     icon: 'fire',     color: '#ff7043', max: 3, name: 'BLAZE CORE',      desc: 'FIRE EXPLOSIONS 35% LARGER' },
-  { key: 'intercept', icon: 'target',   color: '#80d8ff', max: 2, name: 'INTERCEPTOR',     desc: 'BLASTER BOLTS PIERCE +1 ENEMY SHOT' },
-  { key: 'momentum',  icon: 'mega',     color: '#ffd54f', max: 3, name: 'MOMENTUM',        desc: 'PADDLE RETURNS CHARGE MEGA +2%' },
-  { key: 'bond',      icon: 'pokeball', color: '#ef5350', max: 2, name: "TRAINER'S BOND",  desc: 'EACH CATCH: PERMANENT +6% SCORE' },
-  { key: 'wide',      icon: 'wide',     color: '#42a5f5', max: 2, name: 'LONG FRAME',      desc: 'PADDLE PERMANENTLY 10% WIDER' },
-  { key: 'coolant',   icon: 'slow',     color: '#4dd0e1', max: 2, name: 'COOLANT',         desc: 'BLASTER HEAT PER SHOT −30%' },
-  { key: 'magnetize', icon: 'magnet',   color: '#ec407a', max: 2, name: 'ITEM MAGNET',     desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE' },
-  { key: 'guard',     icon: 'shield',   color: '#66bb6a', max: 2, name: 'HOME GUARD',      desc: 'START EVERY WAVE WITH A SHIELD CHARGE' },
-];
+const PATHS = {
+  arsenal: { name: 'ARSENAL', color: '#80d8ff', tiers: [
+    { key: 'intercept', icon: 'target', name: 'INTERCEPTOR',  desc: 'BLASTER BOLTS PIERCE +1 ENEMY SHOT' },
+    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',      desc: 'BLASTER HEAT PER SHOT −30%' },
+    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON',  desc: 'THE BLASTER FIRES TWO BOLTS' },
+    { key: 'hyper',     icon: 'laser',  name: 'HYPER CANNON', desc: 'BOLTS PIERCE THROUGH BLOCKS · DOUBLE DAMAGE' },
+  ]},
+  aegis: { name: 'AEGIS', color: '#66bb6a', tiers: [
+    { key: 'guard',     icon: 'shield', name: 'HOME GUARD',   desc: 'START EVERY WAVE WITH A SHIELD CHARGE' },
+    { key: 'bulwark',   icon: 'shield', name: 'BULWARK',      desc: 'SHIELD CAPACITY 3 → 5' },
+    { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 12% WIDER' },
+    { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS' },
+  ]},
+  surge: { name: 'SURGE', color: '#ffd54f', tiers: [
+    { key: 'momentum',  icon: 'mega',   name: 'MOMENTUM',     desc: 'PADDLE RETURNS CHARGE MEGA +2%' },
+    { key: 'rally',     icon: 'star',   name: 'RALLY MASTER', desc: 'RALLY BARRIER +1 CHARGE · RALLY POINTS +50%' },
+    { key: 'blaze',     icon: 'fire',   name: 'BLAZE CORE',   desc: 'FIRE EXPLOSIONS 35% LARGER' },
+    { key: 'megaX',     icon: 'mega',   name: 'APEX MEGA',    desc: 'MEGA LASTS 8s AND PUNCHES FOR 5' },
+  ]},
+  bond: { name: 'BOND', color: '#ec407a', tiers: [
+    { key: 'magnetize', icon: 'magnet',   name: 'ITEM MAGNET',    desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE' },
+    { key: 'bond',      icon: 'pokeball', name: "TRAINER'S BOND", desc: 'EACH CATCH: PERMANENT +6% SCORE' },
+    { key: 'fortune',   icon: 'coin',     name: 'FORTUNE',        desc: 'POWER-UP DROP CHANCE +60%' },
+    { key: 'revive',    icon: 'heart',    name: 'POKÉ REVIVE',    desc: '+1 LIFE NOW · +1 LIFE EVERY REGION CLEARED' },
+  ]},
+};
+const PATH_KEYS = Object.keys(PATHS);
 function upgN(k) { return G.upg[k] || 0; }
+function pathLvl(p) { return (G.path && G.path[p]) || 0; }
+function totalPathLevels() { return PATH_KEYS.reduce((a, k) => a + pathLvl(k), 0); }
+function advancePath(p) {
+  const lvl = pathLvl(p);
+  if (lvl >= 4) return null;
+  const tier = PATHS[p].tiers[lvl];
+  G.path[p] = lvl + 1;
+  G.upg[tier.key] = 1;
+  if (tier.key === 'revive') G.lives++;
+  return tier;
+}
+function regressPath(p) {
+  const lvl = pathLvl(p);
+  if (lvl <= 0) return null;
+  const tier = PATHS[p].tiers[lvl - 1];
+  G.path[p] = lvl - 1;
+  delete G.upg[tier.key];
+  return tier;
+}
 
 // ============================================================
 //  GENERATION JOURNEY — roster, boss & region theme per gen

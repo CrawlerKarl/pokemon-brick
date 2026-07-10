@@ -11,7 +11,7 @@ function touchButtons() {
   const fl = FLOOR();
   return {
     fire:  { x: W - 52, y: fl - 48, r: 42 },
-    mega:  { x: W - 52, y: fl - 148, r: 30 },
+    mega:  { x: W - 136, y: fl - 44, r: 30 }, // beside FIRE — paddle rides above both
     pause: { x: W - 28, y: 84, r: 20 },
     sound: { x: W - 72, y: 82, r: 18 },
   };
@@ -187,18 +187,22 @@ function upgradeLayout() {
   return { stacked, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: H * 0.4, w: cw, h: ch }) };
 }
 function pickUpgrade(i) {
-  const u = G.upgradeChoices && G.upgradeChoices[i];
-  if (!u) return;
-  G.upg[u.key] = upgN(u.key) + 1;
+  const c = G.upgradeChoices && G.upgradeChoices[i];
+  if (!c) return;
+  const tier = advancePath(c.pathKey);
   G.upgradeChoices = null;
   SFX.power();
+  const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);
   serve();
   // confirm AFTER buildLevel so the stage banner doesn't swallow it —
   // unless the partner just evolved, which is the bigger moment
   if (G.justEvolved) { G.justEvolved = false; return; }
-  setAnnounce(u.icon, u.color, u.name + (upgN(u.key) > 1 ? ' ' + romanTier(upgN(u.key)) : ''),
-    u.desc, 2.2, genFor(G.level).name + ' ' + (stageIdx(G.level) + 1) + '/3 — ' + STAGE_NAMES[stageIdx(G.level)]);
+  setAnnounce(tier.icon, c.path.color,
+    (capped ? '★ ' : '') + tier.name + (capped ? ' ★' : ''),
+    tier.desc, capped ? 3 : 2.2,
+    c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
+  if (capped) SFX.mega();
 }
 function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
 function onPress(x, y) {
@@ -318,7 +322,14 @@ function fireAction(auto = false) {
     addFloater(G.paddle.x, PADDLE_Y() - 44, 'OVERHEATED!', '#ff7043', 15);
     noiseBurst(0.3, 0.09);
   }
-  G.lasers.push({ x: G.paddle.x, y: PADDLE_Y() - 16, basic: true, explosive: !!G.fx_fire });
+  const nBolts = upgN('twin') ? 2 : 1;
+  for (let i = 0; i < nBolts; i++) {
+    G.lasers.push({
+      x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
+      y: PADDLE_Y() - 16, basic: true,
+      explosive: !!G.fx_fire, hyper: !!upgN('hyper'),
+    });
+  }
   SFX.blaster();
 }
 function primaryAction() {
@@ -330,7 +341,7 @@ function primaryAction() {
 }
 function tryMega() {
   if (G.state !== 'play' || G.megaT > 0 || G.mega < 1) return;
-  G.megaT = MEGA_DUR; G.mega = 0;
+  G.megaT = megaDur(); G.mega = 0;
   G.shake = 14;
   SFX.mega();
   setAnnounce('mega', '#ffd54f', 'MEGA EVOLUTION!', 'PIERCING BALLS · AUTO-LASERS', 2.5);

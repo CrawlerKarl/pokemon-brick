@@ -33,7 +33,8 @@ function diff() {
     shotSpeed: p.shotSpeed * speedScale(),
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
-      * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1), // Overgrowth
+      * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
+      * (1 + 0.6 * upgN('fortune')), // Bond path tier 3
     catchChance: 0.07,
   };
 }

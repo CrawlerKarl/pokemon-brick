@@ -3,6 +3,10 @@
 //  GAME STATE
 // ============================================================
 const MEGA_DUR = 5;      // Mega Evolution duration in seconds
+// skill-tree-aware caps (capstones raise them)
+function shieldCap() { return 3 + 2 * upgN('bulwark'); }
+function megaDur() { return upgN('megaX') ? 8 : MEGA_DUR; }
+function barrierCharges() { return 2 + (upgN('rally') ? 1 : 0); }
 const OVERHEAT_DUR = 2.8; // blaster lockout after overheating, in seconds
 const G = {
   state: 'menu',
@@ -36,7 +40,8 @@ const G = {
   shieldCharges: 0,
   // blaster heat: firing builds it, paddle returns vent it, 100% = overheat
   heat: 0, overheat: 0,
-  upg: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
+  upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
+  shieldRegenT: 10,
   telegraphs: [],           // pre-shot warning markers
   gustT: 0, timeWarpT: 0,   // Lugia / Dialga signature effects
   columnStrikes: [],        // Zekrom / Eternatus warned beams
@@ -45,7 +50,8 @@ let dexScroll = 0, dexDragY = null, dexDragStart = 0;
 // FLOOR = bottom of the playable area, above any phone home-indicator;
 // on touch screens the paddle rides higher so fingers don't cover it
 const FLOOR = () => H - SAFE_B;
-const PADDLE_Y = () => FLOOR() - (IS_TOUCH ? 96 : 64);
+// on touch the paddle rides well ABOVE the corner buttons — no overlap
+const PADDLE_Y = () => FLOOR() - (IS_TOUCH ? 124 : 64);
 const DANGER_Y = () => PADDLE_Y() - 86;
 const ballSp = () => diff().ballSpeed;
 
@@ -72,7 +78,7 @@ function applyPower(p, srcType) {
     case 'star':   bump('fx_score', 15); break;
     case 'draco':  bump('fx_draco', 10); break;
     case 'shield':
-      G.shieldCharges = Math.min(3, G.shieldCharges + 1);
+      G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + 1);
       tier = G.shieldCharges;
       SFX.shield();
       break;
@@ -81,7 +87,7 @@ function applyPower(p, srcType) {
         if (b.dead) continue;
         b.phasing = true; b.stuck = false;
         b.vx = 0; b.vy = -ballSp();
-        b.zoneSaves = 2; // arrive with a full barrier
+        b.zoneSaves = barrierCharges(); // arrive with a full barrier
       }
       G.shake = Math.min(G.shake + 5, 10);
       tone(500, 0.25, 'sine', 0.06, 600);
@@ -119,7 +125,7 @@ function applyPower(p, srcType) {
 function makeBall(x, y, angle, overrideAngle) {
   const sp = ballSp();
   const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (Math.random() - 0.5) * 0.6);
-  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: 2, ember: 0 };
+  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: barrierCharges(), ember: 0 };
 }
 
 // formations — pinball-shaped layouts drawn from at random, so runs differ.
@@ -293,8 +299,8 @@ function resetRun(startLevel = 1, trial = false) {
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.announce = null;
-  G.upg = {}; G.catchBonus = 0; G.upgradeChoices = null;
-  G.heat = 0; G.overheat = 0;
+  G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
+  G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
@@ -302,14 +308,13 @@ function resetRun(startLevel = 1, trial = false) {
   G.torrentCount = 0; G.justEvolved = false;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
-  // starting deep? bank the upgrade drafts you'd have earned along the way
+  // starting deep? bank the skill-tree advances you'd have earned on the way
   let granted = 0;
   if (startLevel > 1) {
     for (let i = 1; i < startLevel; i++) {
-      const pool = UPGRADES.filter(u => upgN(u.key) < u.max);
-      if (!pool.length) break;
-      const u = pool[Math.floor(Math.random() * pool.length)];
-      G.upg[u.key] = upgN(u.key) + 1;
+      const eligible = PATH_KEYS.filter(k => pathLvl(k) < 4);
+      if (!eligible.length) break;
+      advancePath(eligible[Math.floor(Math.random() * eligible.length)]);
       granted++;
     }
   }

@@ -565,9 +565,9 @@ function drawTelegraphs() {
 function drawProjectiles() {
   for (const L of G.lasers) {
     ctx.save();
-    ctx.shadowColor = L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
+    ctx.shadowColor = L.hyper ? '#ff5cf0' : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
+    ctx.shadowBlur = L.hyper ? 22 : 16;
+    ctx.fillStyle = L.hyper ? '#f8bbf3' : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
     roundRect(L.x - 4, L.y - 20, 8, 32, 4); ctx.fill();
     // bright core
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -959,7 +959,7 @@ function drawHUD() {
       ctx.fillText(G.megaT > 0 ? 'MEGA!' : ready ? 'MEGA READY — E' : 'MEGA', mx, my - 12);
       roundRect(mx, my - 4, mw, mh, 6);
       ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
-      const frac = G.megaT > 0 ? G.megaT / MEGA_DUR : G.mega;
+      const frac = G.megaT > 0 ? G.megaT / megaDur() : G.mega;
       if (frac > 0) {
         roundRect(mx, my - 4, mw * Math.min(1, frac), mh, 6);
         const mg = ctx.createLinearGradient(mx, 0, mx + mw, 0);
@@ -1008,7 +1008,7 @@ function drawTouchControls() {
   // MEGA — the button IS the meter (fills as a ring)
   const m = B.mega;
   const ready = G.mega >= 1 && G.megaT <= 0;
-  const mfrac = G.megaT > 0 ? G.megaT / MEGA_DUR : G.mega;
+  const mfrac = G.megaT > 0 ? G.megaT / megaDur() : G.mega;
   ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(10,16,38,0.72)'; ctx.fill();
   ctx.lineWidth = 2;
@@ -1434,46 +1434,79 @@ function drawOverlays() {
       ctx.font = '700 14px Orbitron, sans-serif';
       ctx.fillStyle = '#e3f2fd';
       const L = upgradeLayout();
-      ctx.fillText('CHOOSE AN UPGRADE', W / 2, L.card(0).y - 26);
+      ctx.fillText('ADVANCE A PATH', W / 2, L.card(0).y - 26);
+      // ---- the whole tree, so you can see where each path is heading ----
+      if (!L.stacked) {
+        const tw2 = Math.min(760, W * 0.86), colW = tw2 / 4;
+        const ty = L.card(0).y - 96;
+        for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+          const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk);
+          const cx3 = W / 2 - tw2 / 2 + colW * pi + colW / 2;
+          ctx.font = '900 11px Orbitron, sans-serif';
+          ctx.fillStyle = P.color;
+          ctx.fillText(P.name, cx3, ty);
+          for (let d = 0; d < 4; d++) { // tier pips
+            ctx.beginPath(); ctx.arc(cx3 - 21 + d * 14, ty + 15, 4, 0, Math.PI * 2);
+            ctx.fillStyle = d < lvl ? P.color : 'rgba(255,255,255,0.16)';
+            ctx.fill();
+          }
+          ctx.font = '500 8.5px Orbitron, sans-serif';
+          ctx.fillStyle = lvl >= 4 ? P.color : '#78909c';
+          ctx.fillText((lvl >= 4 ? '★ ' : '→ ') + P.tiers[3].name, cx3, ty + 32, colW - 10);
+        }
+      }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
-        const u = G.upgradeChoices[i], r = L.card(i);
+        const c = G.upgradeChoices[i], r = L.card(i);
+        const col = c.path.color, tier = c.tier;
+        const isCap = c.tierIdx === 3;
         const hov = inRect(mouseX, lastMouseY, r);
         ctx.save();
-        if (hov) { ctx.shadowColor = u.color; ctx.shadowBlur = 22; }
+        if (hov || isCap) { ctx.shadowColor = col; ctx.shadowBlur = isCap ? 26 : 22; }
         roundRect(r.x, r.y, r.w, r.h, 14);
         ctx.fillStyle = hov ? 'rgba(20,28,58,0.97)' : 'rgba(10,15,36,0.93)';
         ctx.fill();
-        ctx.lineWidth = hov ? 2.5 : 1.5;
-        ctx.strokeStyle = hov ? u.color : u.color + '77';
+        ctx.lineWidth = hov || isCap ? 2.5 : 1.5;
+        ctx.strokeStyle = hov || isCap ? col : col + '77';
         ctx.stroke();
         ctx.shadowBlur = 0;
-        const owned = upgN(u.key);
-        if (L.stacked) { // phone: icon left, text right
-          drawGlyph(ctx, u.icon, r.x + 34, r.y + r.h / 2, 17, u.color);
-          ctx.textAlign = 'left';
-          ctx.font = '900 14px Orbitron, sans-serif';
-          ctx.fillStyle = u.color;
-          ctx.fillText(u.name + (owned ? ' ' + romanTier(owned + 1) : ''), r.x + 64, r.y + r.h / 2 - 13);
-          ctx.font = '500 10.5px Orbitron, sans-serif';
-          ctx.fillStyle = '#b0bec5';
-          wrapText(u.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + r.h / 2 + 6 + li * 14));
-        } else { // desktop: tall card
-          drawGlyph(ctx, u.icon, r.x + r.w / 2, r.y + 56, 26, u.color);
-          ctx.textAlign = 'center';
-          ctx.font = '900 15px Orbitron, sans-serif';
-          ctx.fillStyle = u.color;
-          ctx.fillText(u.name, r.x + r.w / 2, r.y + 106, r.w - 20);
-          if (owned) {
-            ctx.font = '700 10px Orbitron, sans-serif';
-            ctx.fillStyle = '#90a4ae';
-            ctx.fillText('OWNED ' + romanTier(owned) + ' → ' + romanTier(owned + 1), r.x + r.w / 2, r.y + 124);
+        const pips = (px2, py2) => {
+          for (let d = 0; d < 4; d++) {
+            ctx.beginPath(); ctx.arc(px2 - 21 + d * 14, py2, 4, 0, Math.PI * 2);
+            ctx.fillStyle = d < c.tierIdx ? col : d === c.tierIdx ? '#fff' : 'rgba(255,255,255,0.16)';
+            ctx.fill();
           }
+        };
+        if (L.stacked) { // phone: icon left, text right
+          drawGlyph(ctx, tier.icon, r.x + 34, r.y + r.h / 2, 17, col);
+          ctx.textAlign = 'left';
+          ctx.font = '900 9px Orbitron, sans-serif';
+          ctx.fillStyle = col;
+          ctx.fillText(c.path.name + ' PATH · TIER ' + (c.tierIdx + 1) + '/4' + (isCap ? ' — CAPSTONE!' : ''), r.x + 64, r.y + 15);
+          ctx.font = '900 14px Orbitron, sans-serif';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(tier.name, r.x + 64, r.y + 33);
+          ctx.font = '500 9.5px Orbitron, sans-serif';
+          ctx.fillStyle = '#b0bec5';
+          wrapText(tier.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
+        } else { // desktop: tall card
+          ctx.textAlign = 'center';
+          ctx.font = '900 10px Orbitron, sans-serif';
+          ctx.fillStyle = col;
+          ctx.fillText(c.path.name + ' PATH', r.x + r.w / 2, r.y + 20);
+          pips(r.x + r.w / 2, r.y + 36);
+          drawGlyph(ctx, tier.icon, r.x + r.w / 2, r.y + 72, 24, col);
+          ctx.font = '900 15px Orbitron, sans-serif';
+          ctx.fillStyle = isCap ? col : '#fff';
+          ctx.fillText((isCap ? '★ ' : '') + tier.name + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 112, r.w - 20);
           ctx.font = '500 11px Orbitron, sans-serif';
           ctx.fillStyle = '#b0bec5';
-          wrapText(u.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 148 + li * 16));
-          ctx.font = '700 11px Orbitron, sans-serif';
+          wrapText(tier.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 16));
+          ctx.font = '700 9.5px Orbitron, sans-serif';
+          ctx.fillStyle = isCap ? col : '#546e7a';
+          ctx.fillText(isCap ? 'THE PATH COMPLETES HERE' : '→ LEADS TO: ' + c.path.tiers[3].name, r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
           ctx.fillStyle = '#546e7a';
-          ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 18);
+          ctx.font = '700 11px Orbitron, sans-serif';
+          ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 16);
         }
         ctx.restore();
       }
