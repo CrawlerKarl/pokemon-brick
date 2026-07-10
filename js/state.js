@@ -32,7 +32,8 @@ const G = {
   trial: false,
   // starter partner: which one, its ability tier, Torrent's return counter
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
-  motionTier: 0, motionStyle: 'classic',
+  motionTier: 0, motionStyle: 'march',
+  marchDir: 1, divers: false, diveCD: 6, gridCols: 10,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
@@ -160,9 +161,11 @@ function buildLevel(lvl) {
   // board size grows with the journey: more columns and rows deeper in, so
   // late regions are denser campaigns rather than just faster ones
   const regionsIn = Math.floor((lvl - 1) / STAGES);
-  const baseCols = Math.max(6, Math.min(11, Math.floor(W / 105)));
-  const cols = Math.max(6, Math.min(13, Math.floor(W / 62), baseCols + Math.min(3, Math.floor(regionsIn / 2))));
-  const margin = Math.min(60, W * 0.05);
+  const baseCols = Math.max(6, Math.min(10, Math.floor(W / 115)));
+  const cols = Math.max(6, Math.min(12, Math.floor(W / 66), baseCols + Math.min(3, Math.floor(regionsIn / 2))));
+  // wide side margins leave the formation real room to MARCH — the broad
+  // Galaxian sweeps need somewhere to sweep to
+  const margin = Math.max(40, W * 0.13);
   const bw = (W - margin * 2) / cols;
   // brick height also scales with VIEWPORT height — short laptop windows must
   // still leave the lower half of the screen as playable space
@@ -249,13 +252,19 @@ function buildLevel(lvl) {
   // serpentine rows, traveling waves, and breathing formations late-game
   G.motionTier = Math.min(3, Math.floor(regionsIn / 2) + (stage === 1 ? 1 : 0));
   // Space Junkie's signature: every wave rolls its OWN behavior from the
-  // pool unlocked so far — consecutive waves genuinely act differently
-  const styles = ['classic'];
-  if (regionsIn >= 1 || stage === 1) styles.push('serpent');
-  if (regionsIn >= 2) styles.push('colwave', 'serpent');
-  if (regionsIn >= 4) styles.push('breathe', 'colwave');
+  // pool unlocked so far — consecutive waves genuinely act differently.
+  // Everything rides on the Galaxian march; these add per-brick motion.
+  const styles = ['march', 'serpent'];
+  if (regionsIn >= 1) styles.push('colwave', 'serpent');
+  if (regionsIn >= 2) styles.push('split');
+  if (regionsIn >= 4) styles.push('breathe', 'split');
   if (regionsIn >= 5) styles.push('swirl');
   G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
+  G.marchDir = Math.random() < 0.5 ? -1 : 1;
+  G.gridCols = cols;
+  // Galaga peel-off dives: hinted on early challenge stages, constant later
+  G.divers = regionsIn >= 2 || (regionsIn >= 1 && stage >= 1);
+  G.diveCD = 6;
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
   G.modifier = stage === 1 && lvl >= 2

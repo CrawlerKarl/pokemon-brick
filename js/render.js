@@ -49,6 +49,7 @@ function drawBricks() {
     let y = br.by + G.fy + Math.sin(G.time * 2 + br.wobble) * (br.isBoss ? 4 : 2.5);
     if (br.isBoss) y += introOff;
     const col = TYPE_COLORS[br.poke.t];
+    const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
     br.flash = Math.max(0, br.flash - 0.08);
     ctx.save();
     const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(G.time * 6) : 1; // Lunala fades out
@@ -189,39 +190,43 @@ function drawBricks() {
         }
       }
     }
-    // HP dial (top-left corner): ring + number, mirroring the type badge —
-    // corner-anchored so it never covers the Pokémon like the old bars did
+    // HP dial: ring + number, mirroring the type badge — corner-anchored so
+    // it never covers the Pokémon. Small cards: tiny, bottom-left corner.
     if (!br.isBoss && br.maxHp > 1) {
-      const cRad = Math.min(10, br.h * 0.22);
-      const cX = x - hw + cRad + 5, cY = y - hh + cRad + 5;
+      const cRad = smallCard ? 6.5 : Math.min(10, br.h * 0.22);
+      const cX = x - hw + cRad + (smallCard ? 3 : 5);
+      const cY = smallCard ? y + hh - cRad - 3 : y - hh + cRad + 5;
       const frac = Math.max(0, br.hp / br.maxHp);
       const hCol = aCol || '#9be7ff';
       ctx.beginPath(); ctx.arc(cX, cY, cRad, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(6,9,24,0.78)'; ctx.fill();
+      ctx.fillStyle = smallCard ? 'rgba(6,9,24,0.6)' : 'rgba(6,9,24,0.78)'; ctx.fill();
       ctx.beginPath(); ctx.arc(cX, cY, cRad - 1.6, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
-      ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+      ctx.lineWidth = smallCard ? 1.8 : 2.4; ctx.lineCap = 'round';
       ctx.strokeStyle = hCol;
       ctx.stroke();
-      ctx.font = `900 ${Math.max(7.5, cRad * 0.95)}px Orbitron, sans-serif`;
+      ctx.font = `900 ${Math.max(6.5, cRad * 0.95)}px Orbitron, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fff';
       ctx.fillText(Math.ceil(br.hp), cX, cY + 0.5);
     }
-    // type badge (top-right corner): symbol + color, so matchups don't rely
-    // on card color alone — it lights up when your ball element is strong here
+    // type badge: symbol + color, so matchups don't rely on card color alone.
+    // On small (mobile) cards the chips shrink and drop to the BOTTOM corners
+    // so they never sit over the Pokémon's face, and the 2× tag is skipped —
+    // the pulsing gold ring carries that signal alone.
     if (br.poke.id !== -1) {
-      const bR = br.isBoss ? 12 : Math.min(10, br.h * 0.22);
-      const bx2 = x + hw - bR - 5, by2 = y - hh + bR + 5;
+      const bR = br.isBoss ? 12 : smallCard ? 6.5 : Math.min(10, br.h * 0.22);
+      const bx2 = x + hw - bR - (smallCard ? 3 : 5);
+      const by2 = smallCard && !br.isBoss ? y + hh - bR - 3 : y - hh + bR + 5;
       const elem = G.ballElement;
       const strong = elem && (EFFECTIVE[elem] || []).includes(br.poke.t);
       const weak = elem && (RESIST[elem] || []).includes(br.poke.t);
       ctx.beginPath(); ctx.arc(bx2, by2, bR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(6,9,24,0.78)'; ctx.fill();
+      ctx.fillStyle = smallCard ? 'rgba(6,9,24,0.6)' : 'rgba(6,9,24,0.78)'; ctx.fill();
       ctx.lineWidth = strong ? 2 : 1.4;
       ctx.strokeStyle = strong ? `rgba(255,213,79,${0.65 + 0.35 * Math.sin(G.time * 6)})` : weak ? 'rgba(120,130,140,0.9)' : col;
       ctx.stroke();
       drawGlyph(ctx, br.poke.t, bx2, by2, bR * 0.58, weak ? '#78909c' : col);
-      if (strong) { // 2× tag pulses over super-effective targets
+      if (strong && !smallCard) { // 2× tag pulses over super-effective targets
         ctx.font = `900 ${Math.max(8, bR * 0.9)}px Orbitron, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ffd54f';
@@ -458,7 +463,7 @@ function drawRallyZone() {
   for (const br of G.bricks) {
     if (br.dead) continue;
     if (br.armored) wallTop = Math.min(wallTop, br.by + G.fy - br.h / 2);
-    if (!br.isBoss) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
+    if (!br.isBoss && !br.dive) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
   }
   rallyFloor += 14;
   if (rallyFloor <= -Infinity) return;
