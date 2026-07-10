@@ -192,9 +192,9 @@ function drawBricks() {
       }
     }
     // HP dial: ring + number, mirroring the type badge — corner-anchored so
-    // it never covers the Pokémon. Small cards: tiny, bottom-left corner.
-    // Horde-sized cards skip it — the damage dimming carries the info.
-    if (!br.isBoss && br.maxHp > 1 && !tinyCard) {
+    // it never covers the Pokémon. Small cards only show it once damaged;
+    // horde-sized cards never do (the damage dimming carries the info).
+    if (!br.isBoss && br.maxHp > 1 && !tinyCard && !(smallCard && br.hp >= br.maxHp)) {
       const cRad = smallCard ? 6.5 : Math.min(10, br.h * 0.22);
       const cX = x - hw + cRad + (smallCard ? 3 : 5);
       const cY = smallCard ? y + hh - cRad - 3 : y - hh + cRad + 5;
@@ -216,12 +216,15 @@ function drawBricks() {
     // so they never sit over the Pokémon's face, and the 2× tag is skipped —
     // the pulsing gold ring carries that signal alone.
     if (br.poke.id !== -1) {
-      const bR = br.isBoss ? 12 : tinyCard ? 4.5 : smallCard ? 6.5 : Math.min(10, br.h * 0.22);
-      const bx2 = x + hw - bR - (smallCard ? 3 : 5);
-      const by2 = smallCard && !br.isBoss ? y + hh - bR - 3 : y - hh + bR + 5;
       const elem = G.ballElement;
       const strong = elem && (EFFECTIVE[elem] || []).includes(br.poke.t);
       const weak = elem && (RESIST[elem] || []).includes(br.poke.t);
+      // small cards keep the Pokémon CLEAN: the badge only appears when it
+      // actually says something (your element is strong or weak here)
+      if (smallCard && !br.isBoss && !strong && !weak) { ctx.restore(); continue; }
+      const bR = br.isBoss ? 12 : tinyCard ? 4.5 : smallCard ? 6.5 : Math.min(10, br.h * 0.22);
+      const bx2 = x + hw - bR - (smallCard ? 3 : 5);
+      const by2 = smallCard && !br.isBoss ? y + hh - bR - 3 : y - hh + bR + 5;
       ctx.beginPath(); ctx.arc(bx2, by2, bR, 0, Math.PI * 2);
       ctx.fillStyle = smallCard ? 'rgba(6,9,24,0.6)' : 'rgba(6,9,24,0.78)'; ctx.fill();
       ctx.lineWidth = strong ? 2 : 1.4;

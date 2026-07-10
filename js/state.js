@@ -33,7 +33,7 @@ const G = {
   // starter partner: which one, its ability tier, Torrent's return counter
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
   motionTier: 0, motionStyle: 'march',
-  marchDir: 1, divers: false, diveCD: 6, gridCols: 10,
+  marchDir: 1, divers: false, diveCD: 6, gridCols: 10, pathSpeed: 0.04,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
@@ -161,10 +161,10 @@ function buildLevel(lvl) {
   // board size grows with the journey: more columns and rows deeper in, so
   // late regions are denser campaigns rather than just faster ones
   const regionsIn = Math.floor((lvl - 1) / STAGES);
-  // the armada swells hard with the journey: ~10 columns in Kanto growing to
-  // 26 by Paldea (width permitting) — late waves are true invader hordes
+  // the armada grows with the journey, but sprites stay READABLE: bricks
+  // never shrink below ~52px slots, capping the horde at 18 columns
   const baseCols = Math.max(6, Math.min(10, Math.floor(W / 115)));
-  const cols = Math.max(6, Math.min(26, Math.floor(W / 34), baseCols + regionsIn * 2));
+  const cols = Math.max(6, Math.min(18, Math.floor(W / 52), baseCols + regionsIn));
   // wide side margins leave the formation real room to MARCH — the broad
   // Galaxian sweeps need somewhere to sweep to
   const margin = Math.max(40, W * 0.13);
@@ -201,8 +201,8 @@ function buildLevel(lvl) {
     : stage === 0 && Math.random() < 0.45 ? MILD_FORMS[Math.floor(Math.random() * MILD_FORMS.length)]
     : null;
   const maxRows = Math.max(2, Math.floor((H * 0.58 - gridTop) / pitchY));
-  const baseRows = 3 + Math.min(5, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
-  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : baseRows, 10, maxRows);
+  const baseRows = 3 + Math.min(4, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
+  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : baseRows, 8, maxRows);
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
@@ -253,16 +253,64 @@ function buildLevel(lvl) {
   // motion choreography ramps with the journey: static ranks at first, then
   // serpentine rows, traveling waves, and breathing formations late-game
   G.motionTier = Math.min(3, Math.floor(regionsIn / 2) + (stage === 1 ? 1 : 0));
-  // Space Junkie's signature: every wave rolls its OWN behavior from the
-  // pool unlocked so far — consecutive waves genuinely act differently.
-  // Everything rides on the Galaxian march; these add per-brick motion.
-  const styles = ['march', 'serpent'];
-  if (regionsIn >= 1) styles.push('colwave', 'serpent');
-  if (regionsIn >= 2) styles.push('split');
-  if (regionsIn >= 3) styles.push('free'); // Phoenix swarm — full independence
-  if (regionsIn >= 4) styles.push('breathe', 'split', 'free');
-  if (regionsIn >= 5) styles.push('swirl', 'free');
+  // The journey is a difficulty ARC: Kanto plays like relaxed brick breaker,
+  // patterns creep in through the middle regions, and by the last regions
+  // you're basically playing Space Junkie — blocks cycling closed paths
+  // (rings, figure-eights, Olympic rings), following each other nose to
+  // tail, with attackers spinning off.
+  let styles;
+  if (regionsIn === 0) styles = stage === 0 ? ['march'] : ['march', 'march', 'serpent'];
+  else if (regionsIn === 1) styles = ['march', 'serpent', 'colwave'];
+  else if (regionsIn === 2) styles = ['serpent', 'colwave', 'split', 'ring'];
+  else if (regionsIn === 3) styles = ['colwave', 'split', 'ring', 'infinity'];
+  else if (regionsIn === 4) styles = ['split', 'ring', 'infinity', 'olympic', 'free'];
+  else if (regionsIn === 5) styles = ['ring', 'infinity', 'olympic', 'free', 'swirl'];
+  else styles = ['infinity', 'olympic', 'ring', 'infinity', 'olympic', 'free'];
   G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
+  // cycle speed ramps gently with the journey — flowing, never frantic
+  G.pathSpeed = 0.035 + regionsIn * 0.005;
+  // ---- path assignment: everything below the armored wall rides the curve ----
+  if (!hasBoss && (G.motionStyle === 'ring' || G.motionStyle === 'infinity' || G.motionStyle === 'olympic')) {
+    const members = G.bricks.filter(b => !b.armored && !b.isBoss);
+    const n = members.length;
+    const usable = W - margin * 2;
+    const cy0 = gridTop + pitchY + rows * pitchY * 0.5 + 20;
+    const ryA = Math.max(70, rows * pitchY * 0.5);
+    if (G.motionStyle === 'olympic') {
+      // interlocking rings side by side, alternating heights
+      const nR = n >= 40 ? 3 : 2;
+      const counts = Array(nR).fill(0);
+      members.forEach((b, i) => counts[i % nR]++);
+      const seen = Array(nR).fill(0);
+      members.forEach((b, i) => {
+        const k = i % nR;
+        b.path = {
+          cx: W / 2 + (k - (nR - 1) / 2) * usable * 0.31,
+          cy: cy0 + (k % 2 ? 36 : -12),
+          rx: usable * 0.17, ry: ryA * 0.85,
+          phase: seen[k]++ / counts[k], dir: k % 2 ? -1 : 1, fig8: false,
+        };
+      });
+    } else {
+      // one grand loop (or concentric layers when the horde is large),
+      // every block trailing the one ahead of it
+      const layers = Math.max(1, Math.ceil(n / 30));
+      const counts = Array(layers).fill(0);
+      members.forEach((b, i) => counts[i % layers]++);
+      const seen = Array(layers).fill(0);
+      members.forEach((b, i) => {
+        const k = i % layers;
+        const scale = 1 - k * 0.28;
+        b.path = {
+          cx: W / 2, cy: cy0,
+          rx: usable * 0.4 * scale,
+          ry: (G.motionStyle === 'infinity' ? ryA * 0.6 : ryA) * scale,
+          phase: seen[k]++ / counts[k], dir: k % 2 ? -1 : 1,
+          fig8: G.motionStyle === 'infinity',
+        };
+      });
+    }
+  }
   G.marchDir = Math.random() < 0.5 ? -1 : 1;
   G.gridCols = cols;
   // Galaga peel-off dives: hinted on early challenge stages, constant later

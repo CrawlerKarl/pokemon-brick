@@ -429,6 +429,25 @@ function update(dt) {
   // ---- Space Junkie entrances: ranks pour in from off-screen, swooping on a
   // curve into their formation slot. They animate even during the serve, and
   // they're fair game to shoot mid-flight.
+  // ---- path-cycling waves: slots ride closed curves (rings, figure-eights,
+  // Olympic rings), every block following the one ahead of it. The slot
+  // itself moves, so entries swoop onto the moving train and divers rejoin
+  // it wherever it's got to.
+  if (G.state === 'play' || G.state === 'serve') {
+    for (const br of G.bricks) {
+      if (br.dead || !br.path) continue;
+      const P = br.path;
+      const th = (P.phase + G.swayT * G.pathSpeed * (P.dir || 1)) * Math.PI * 2;
+      if (P.fig8) {
+        br.hx = P.cx + Math.sin(th) * P.rx;
+        br.hy = P.cy + Math.sin(th) * Math.cos(th) * P.ry * 1.9;
+      } else {
+        br.hx = P.cx + Math.cos(th) * P.rx;
+        br.hy = P.cy + Math.sin(th) * P.ry;
+      }
+      if (!br.entry && !br.dive) { br.bx = br.hx; br.by = br.hy; }
+    }
+  }
   if (G.state === 'play' || G.state === 'serve') {
     for (const br of G.bricks) {
       if (br.dead || !br.entry) continue;
@@ -463,7 +482,8 @@ function update(dt) {
     }
     if (minX < Infinity) {
       const lo = 8 - minX, hi = W - 8 - maxX;
-      const marchV = (26 + d.descent * 6) * thin;
+      // capped so late-game never turns into a blur; path waves drift gentler
+      const marchV = Math.min(105, (24 + d.descent * 4.5) * Math.min(thin, 2)) * (G.bricks.some(b => b.path && !b.dead) ? 0.45 : 1);
       G.fx += G.marchDir * marchV * ts * dt;
       // gentle steps: pressure builds over minutes, not seconds
       const stepDown = Math.min(G.brickH * 0.35, 6 + d.descent * 0.6);
@@ -506,6 +526,7 @@ function update(dt) {
         if (p >= 1) { br.dive = null; br.bx = br.hx; br.by = br.hy; }
         continue;
       }
+      if (br.path) continue; // path riders are positioned by their curve
       let ox = 0, oy = 0;
       if (boss && mt >= 1) { // rings radiating from the boss
         const dist = Math.hypot(br.hx - boss.bx, br.hy - boss.hy);
