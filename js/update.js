@@ -164,6 +164,53 @@ function fireballExplosion(x, y, tier) {
   }
 }
 
+// is this block out of its box and flying a pattern?
+function flying(br) { return !!(br.flight && br.flight.state >= 1); }
+
+// ---- the flight pattern library: a dozen closed curves the free-flying
+// Pokémon cycle around, nose to tail (Space Junkie / Galaga canon) ----
+function flightPos(F, tAbs) {
+  const th = (F.phase + tAbs * (F.dir || 1)) * Math.PI * 2;
+  const c = Math.cos(th), s = Math.sin(th);
+  switch (F.kind) {
+    case 'inf': // horizontal figure-eight
+      return { x: F.cx + s * F.rx, y: F.cy + s * c * F.ry * 1.9 };
+    case 'falls': // vertical figure-eight
+      return { x: F.cx + s * c * F.rx * 1.9, y: F.cy + s * F.ry * 0.9 };
+    case 'liss': // 3:2 Lissajous pretzel
+      return { x: F.cx + Math.sin(th * 3) * F.rx * 0.85, y: F.cy + Math.sin(th * 2) * F.ry * 0.9 };
+    case 'rose': // four-petal flower
+      return { x: F.cx + Math.cos(th * 2) * c * F.rx, y: F.cy + Math.cos(th * 2) * s * F.ry };
+    case 'diamond': // diamond circuit
+      return { x: F.cx + Math.sign(c) * c * c * F.rx, y: F.cy + Math.sign(s) * s * s * F.ry };
+    case 'pulsar': { // breathing ring — swells and shrinks while turning
+      const rr = 0.55 + 0.45 * Math.sin(tAbs * Math.PI * 4);
+      return { x: F.cx + c * F.rx * rr, y: F.cy + s * F.ry * rr };
+    }
+    case 'helix': { // two-strand conveyor weave, wrapping across the field
+      const u = ((F.phase + tAbs * (F.dir || 1)) % 1 + 1) % 1;
+      const x = F.cx - F.rx + u * F.rx * 2;
+      return { x, y: F.cy + Math.sin(x * 0.02 + F.strand * Math.PI) * F.ry * 0.7 };
+    }
+    case 'pend': { // swinging pendulum chain
+      const a = Math.sin(th) * 1.15;
+      return { x: F.cx + Math.sin(a) * F.rx, y: F.cy - F.ry * 0.9 + Math.cos(a) * F.ry * 1.4 };
+    }
+    case 'epi': // loop-the-loop riding a great circle
+      return {
+        x: F.cx + c * F.rx + Math.cos(th * 5) * F.rx * 0.22,
+        y: F.cy + s * F.ry + Math.sin(th * 5) * F.ry * 0.3,
+      };
+    case 'snake': { // serpentine sweep, wrapping like a conveyor
+      const u = ((F.phase + tAbs * (F.dir || 1)) % 1 + 1) % 1;
+      const x = F.cx - F.rx + u * F.rx * 2;
+      return { x, y: F.cy + (F.strand ? 30 : -30) + Math.sin(u * Math.PI * 6) * F.ry * 0.45 };
+    }
+    default: // 'ring' / 'olympic': the smooth circle
+      return { x: F.cx + c * F.rx, y: F.cy + s * F.ry };
+  }
+}
+
 // reward keeping the ball alive up top — the classic breakout thrill.
 // rally = brick contacts since this ball last touched the paddle; it resets
 // on a paddle return, so long rallies mean skilful top-of-screen play.
@@ -429,21 +476,32 @@ function update(dt) {
   // ---- Space Junkie entrances: ranks pour in from off-screen, swooping on a
   // curve into their formation slot. They animate even during the serve, and
   // they're fair game to shoot mid-flight.
-  // ---- path-cycling waves: slots ride closed curves (rings, figure-eights,
-  // Olympic rings), every block following the one ahead of it. The slot
-  // itself moves, so entries swoop onto the moving train and divers rejoin
-  // it wherever it's got to.
+  // ---- FLYERS: Pokémon that break out of their boxes and fly one of a
+  // dozen patterns, each following the one ahead of it. Their moving slot
+  // means divers rejoin the train wherever it's cycled to.
   if (G.state === 'play' || G.state === 'serve') {
+    const tAbs = G.swayT * G.pathSpeed;
     for (const br of G.bricks) {
-      if (br.dead || !br.path) continue;
-      const P = br.path;
-      const th = (P.phase + G.swayT * G.pathSpeed * (P.dir || 1)) * Math.PI * 2;
-      if (P.fig8) {
-        br.hx = P.cx + Math.sin(th) * P.rx;
-        br.hy = P.cy + Math.sin(th) * Math.cos(th) * P.ry * 1.9;
+      if (br.dead || !br.flight) continue;
+      const F = br.flight;
+      if (F.state === 0) { // still boxed in the formation, waiting
+        if (G.state === 'play' && G.swayT >= F.launch) {
+          F.state = 1; F.t = 0; F.sx = br.bx; F.sy = br.by;
+          burst(br.bx + G.fx, br.by + G.fy, TYPE_COLORS[br.poke.t], 14, 200, 0.5); // the box shatters
+          tone(560, 0.12, 'triangle', 0.04, 260);
+        }
+        continue;
+      }
+      const pos = flightPos(F, tAbs);
+      if (F.state === 1) { // breaking out: glide from the wall onto the pattern
+        F.t += dt * ts;
+        const p = Math.min(1, F.t / 1.1);
+        const q = 1 - Math.pow(1 - p, 2);
+        br.hx = F.sx + (pos.x - F.sx) * q;
+        br.hy = F.sy + (pos.y - F.sy) * q;
+        if (p >= 1) F.state = 2;
       } else {
-        br.hx = P.cx + Math.cos(th) * P.rx;
-        br.hy = P.cy + Math.sin(th) * P.ry;
+        br.hx = pos.x; br.hy = pos.y;
       }
       if (!br.entry && !br.dive) { br.bx = br.hx; br.by = br.hy; }
     }
@@ -476,14 +534,14 @@ function update(dt) {
     // wall. Thinning ranks march faster, classic-style.
     let minX = Infinity, maxX = -Infinity;
     for (const br of G.bricks) {
-      if (br.dead || br.isBoss || br.dive || br.entry) continue;
+      if (br.dead || br.isBoss || br.dive || br.entry || flying(br)) continue;
       minX = Math.min(minX, br.hx - br.w / 2);
       maxX = Math.max(maxX, br.hx + br.w / 2);
     }
     if (minX < Infinity) {
       const lo = 8 - minX, hi = W - 8 - maxX;
-      // capped so late-game never turns into a blur; path waves drift gentler
-      const marchV = Math.min(105, (24 + d.descent * 4.5) * Math.min(thin, 2)) * (G.bricks.some(b => b.path && !b.dead) ? 0.45 : 1);
+      // capped so late-game never turns into a blur
+      const marchV = Math.min(105, (24 + d.descent * 4.5) * Math.min(thin, 2));
       G.fx += G.marchDir * marchV * ts * dt;
       // gentle steps: pressure builds over minutes, not seconds
       const stepDown = Math.min(G.brickH * 0.35, 6 + d.descent * 0.6);
@@ -526,7 +584,7 @@ function update(dt) {
         if (p >= 1) { br.dive = null; br.bx = br.hx; br.by = br.hy; }
         continue;
       }
-      if (br.path) continue; // path riders are positioned by their curve
+      if (flying(br)) continue; // flyers are positioned by their pattern
       let ox = 0, oy = 0;
       if (boss && mt >= 1) { // rings radiating from the boss
         const dist = Math.hypot(br.hx - boss.bx, br.hy - boss.hy);
@@ -579,7 +637,7 @@ function update(dt) {
       }
     }
     let lowest = -Infinity;
-    for (const br of G.bricks) if (!br.dead && !br.dive) lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
+    for (const br of G.bricks) if (!br.dead && !br.dive && !flying(br)) lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
     if (lowest > DANGER_Y()) {
       G.fy -= G.brickH * 3.5;
       if (!G.dangerWarned) { // first crossing per wave is a free warning
@@ -606,7 +664,7 @@ function update(dt) {
   for (const br of G.bricks) {
     if (br.dead) continue;
     if (br.armored) wallTop = Math.min(wallTop, br.by + G.fy - br.h / 2);
-    if (!br.isBoss && !br.dive) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
+    if (!br.isBoss && !br.dive && !flying(br)) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
   }
   rallyFloor += 14; // strung a little below the deepest rank
   for (const b of G.balls) {
@@ -689,7 +747,7 @@ function update(dt) {
       } else if (b.aboveWall && b.vy > 0 && b.y - b.r > rallyFloor) {
         // only catch in a truly empty column — if a block is (partially)
         // overhead the ball plays off it physically instead
-        const gapColumn = !G.bricks.some(br => !br.dead && !br.isBoss && !br.dive && Math.abs(b.x - (br.bx + G.fx)) < br.w / 2 + b.r);
+        const gapColumn = !G.bricks.some(br => !br.dead && !br.isBoss && !br.dive && !flying(br) && Math.abs(b.x - (br.bx + G.fx)) < br.w / 2 + b.r);
         if (gapColumn && b.zoneSaves > 0) {
           b.zoneSaves--;
           // preserve speed, pop mostly upward (≤~30° tilt) — no sideways flings
@@ -1018,8 +1076,13 @@ function update(dt) {
   }
   G.powerups = G.powerups.filter(p => !p.dead);
 
-  // ---- level clear → draft an upgrade, then on to the next stage ----
+  // ---- level clear → reinforcements first, then draft and move on ----
   if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead)) {
+    if (G.reinforce > 0) {
+      G.reinforce--;
+      spawnReinforcement();
+      return;
+    }
     const clearedStage = stageIdx(G.level);
     G.level++;
     G.state = 'upgrade'; G.stateT = 0;

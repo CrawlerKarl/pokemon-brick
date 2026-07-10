@@ -52,6 +52,36 @@ function drawBricks() {
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
     const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
     br.flash = Math.max(0, br.flash - 0.08);
+    // ---- FREE-FLYING ALIEN: broke out of its box — just the Pokémon,
+    // banking through its pattern with a type-colored aura underneath
+    if (br.flight && br.flight.state >= 1 && !br.isBoss) {
+      const img2 = getSprite(br.poke.id, br.shiny);
+      ctx.save();
+      const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1);
+      const ag = ctx.createRadialGradient(x, y, 2, x, y, s2 * 0.62);
+      ag.addColorStop(0, col + '55'); ag.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = ag;
+      ctx.beginPath(); ctx.arc(x, y, s2 * 0.62, 0, Math.PI * 2); ctx.fill();
+      if (img2.complete && img2.naturalWidth) {
+        // bank into the direction of travel
+        const tilt = Math.max(-0.35, Math.min(0.35, (br.bx - (br.pbx ?? br.bx)) * 0.06));
+        br.pbx = br.bx;
+        ctx.translate(x, y); ctx.rotate(tilt);
+        ctx.drawImage(img2, -s2 / 2, -s2 / 2, s2, s2);
+        ctx.rotate(-tilt); ctx.translate(-x, -y);
+      } else {
+        drawGlyph(ctx, 'pokeball', x, y, br.h * 0.4, '#ffffff33');
+      }
+      if (br.flash > 0.35) { // hit flash: white overlay pop on the sprite
+        ctx.globalAlpha = (br.flash - 0.35) * 0.9;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(x, y, s2 * 0.45, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, y - s2 * 0.4, 5, '#ffd700');
+      ctx.restore();
+      continue;
+    }
     ctx.save();
     const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(G.time * 6) : 1; // Lunala fades out
     ctx.globalAlpha = phased;

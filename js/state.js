@@ -34,6 +34,7 @@ const G = {
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
   motionTier: 0, motionStyle: 'march',
   marchDir: 1, divers: false, diveCD: 6, gridCols: 10, pathSpeed: 0.04,
+  reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
@@ -215,7 +216,8 @@ function buildLevel(lvl) {
     const [id, t] = pool[Math.floor(Math.random() * pool.length)];
     for (let c = 0; c < cols; c++) {
       if (form && form.skip(r, c, rows, cols)) continue;
-      let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp));
+      // late-game blocks are tougher so waves don't melt in seconds
+      let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
       if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
       // Space Junkie entrance: ranks pour in from off-screen, swooping along
       // a curve into their slot — alternating sides per row, staggered
@@ -253,64 +255,63 @@ function buildLevel(lvl) {
   // motion choreography ramps with the journey: static ranks at first, then
   // serpentine rows, traveling waves, and breathing formations late-game
   G.motionTier = Math.min(3, Math.floor(regionsIn / 2) + (stage === 1 ? 1 : 0));
-  // The journey is a difficulty ARC: Kanto plays like relaxed brick breaker,
-  // patterns creep in through the middle regions, and by the last regions
-  // you're basically playing Space Junkie — blocks cycling closed paths
-  // (rings, figure-eights, Olympic rings), following each other nose to
-  // tail, with attackers spinning off.
-  let styles;
-  if (regionsIn === 0) styles = stage === 0 ? ['march'] : ['march', 'march', 'serpent'];
-  else if (regionsIn === 1) styles = ['march', 'serpent', 'colwave'];
-  else if (regionsIn === 2) styles = ['serpent', 'colwave', 'split', 'ring'];
-  else if (regionsIn === 3) styles = ['colwave', 'split', 'ring', 'infinity'];
-  else if (regionsIn === 4) styles = ['split', 'ring', 'infinity', 'olympic', 'free'];
-  else if (regionsIn === 5) styles = ['ring', 'infinity', 'olympic', 'free', 'swirl'];
-  else styles = ['infinity', 'olympic', 'ring', 'infinity', 'olympic', 'free'];
+  // ---- FLYERS: the Space Junkie heart of the game. Boxed blocks are
+  // bricks; Pokémon that BREAK OUT of their boxes become free-flying
+  // aliens riding one of a dozen flight patterns, nose to tail. A few
+  // break out starting in world 2; by the last regions nearly the whole
+  // wave flies — brick breaker slowly becomes Space Junkie.
+  const styles = regionsIn === 0 ? ['march']
+    : regionsIn <= 2 ? ['march', 'serpent']
+    : regionsIn <= 4 ? ['march', 'serpent', 'colwave']
+    : ['serpent', 'colwave', 'split'];
   G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
-  // cycle speed ramps gently with the journey — flowing, never frantic
-  G.pathSpeed = 0.035 + regionsIn * 0.005;
-  // ---- path assignment: everything below the armored wall rides the curve ----
-  if (!hasBoss && (G.motionStyle === 'ring' || G.motionStyle === 'infinity' || G.motionStyle === 'olympic')) {
-    const members = G.bricks.filter(b => !b.armored && !b.isBoss);
-    const n = members.length;
-    const usable = W - margin * 2;
-    const cy0 = gridTop + pitchY + rows * pitchY * 0.5 + 20;
-    const ryA = Math.max(70, rows * pitchY * 0.5);
-    if (G.motionStyle === 'olympic') {
-      // interlocking rings side by side, alternating heights
-      const nR = n >= 40 ? 3 : 2;
+  G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
+  if (!hasBoss && regionsIn >= 1) {
+    // unlocked flight patterns grow region by region
+    const kinds = ['ring'];
+    if (regionsIn >= 2) kinds.push('inf', 'snake');
+    if (regionsIn >= 3) kinds.push('falls', 'diamond');
+    if (regionsIn >= 4) kinds.push('olympic', 'liss');
+    if (regionsIn >= 5) kinds.push('rose', 'helix');
+    if (regionsIn >= 6) kinds.push('pend', 'epi', 'pulsar');
+    const kind = kinds[Math.floor(Math.random() * kinds.length)];
+    // how much of the wave breaks out: a few at Johto → nearly all late
+    const frac = Math.min(1, 0.18 + (regionsIn - 1) * 0.13 + (stage === 1 ? 0.08 : 0));
+    const pool2 = G.bricks.filter(b => !b.armored && !b.isBoss);
+    for (let i = pool2.length - 1; i > 0; i--) { // shuffle
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool2[i], pool2[j]] = [pool2[j], pool2[i]];
+    }
+    const flyers = pool2.slice(0, Math.round(pool2.length * frac));
+    const n = flyers.length;
+    if (n >= 3) {
+      const usable = W - margin * 2;
+      const cy0 = gridTop + pitchY + rows * pitchY * 0.55 + 24;
+      const ryA = Math.max(75, rows * pitchY * 0.55);
+      const nR = kind === 'olympic' ? (n >= 24 ? 3 : 2) : Math.max(1, Math.ceil(n / 26));
       const counts = Array(nR).fill(0);
-      members.forEach((b, i) => counts[i % nR]++);
+      flyers.forEach((b, i) => counts[i % nR]++);
       const seen = Array(nR).fill(0);
-      members.forEach((b, i) => {
+      flyers.forEach((b, i) => {
         const k = i % nR;
-        b.path = {
-          cx: W / 2 + (k - (nR - 1) / 2) * usable * 0.31,
-          cy: cy0 + (k % 2 ? 36 : -12),
-          rx: usable * 0.17, ry: ryA * 0.85,
-          phase: seen[k]++ / counts[k], dir: k % 2 ? -1 : 1, fig8: false,
-        };
-      });
-    } else {
-      // one grand loop (or concentric layers when the horde is large),
-      // every block trailing the one ahead of it
-      const layers = Math.max(1, Math.ceil(n / 30));
-      const counts = Array(layers).fill(0);
-      members.forEach((b, i) => counts[i % layers]++);
-      const seen = Array(layers).fill(0);
-      members.forEach((b, i) => {
-        const k = i % layers;
-        const scale = 1 - k * 0.28;
-        b.path = {
-          cx: W / 2, cy: cy0,
-          rx: usable * 0.4 * scale,
-          ry: (G.motionStyle === 'infinity' ? ryA * 0.6 : ryA) * scale,
-          phase: seen[k]++ / counts[k], dir: k % 2 ? -1 : 1,
-          fig8: G.motionStyle === 'infinity',
+        const scale = kind === 'olympic' ? 1 : 1 - k * 0.26;
+        b.flight = {
+          kind, state: 0, // 0 = still boxed in the wall, breaks out later
+          launch: 2 + i * 0.22, // they peel out of the bricks one by one
+          cx: kind === 'olympic' ? W / 2 + (k - (nR - 1) / 2) * usable * 0.3 : W / 2,
+          cy: cy0 + (kind === 'olympic' && k % 2 ? 34 : 0),
+          rx: (kind === 'olympic' ? usable * 0.17 : usable * 0.4) * scale,
+          ry: ryA * (kind === 'inf' ? 0.6 : 1) * scale,
+          phase: seen[k]++ / counts[k],
+          dir: k % 2 ? -1 : 1,
+          strand: i % 2, // for helix / snake row offsets
         };
       });
     }
   }
+  // late rounds shouldn't melt: reinforcement flights extend each wave,
+  // arriving as pure flyers once the first formation falls
+  G.reinforce = !hasBoss && regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0;
   G.marchDir = Math.random() < 0.5 ? -1 : 1;
   G.gridCols = cols;
   // Galaga peel-off dives: hinted on early challenge stages, constant later
@@ -348,6 +349,42 @@ function buildLevel(lvl) {
         sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
     }
   }
+}
+
+// a fresh attack flight arrives after the main formation falls — pure
+// flyers, swooping in and going straight into a pattern (late-game only)
+function spawnReinforcement() {
+  const lvl = G.level, rIdx = regionIdx(lvl), regionsIn = Math.floor((lvl - 1) / STAGES);
+  const gen = genFor(lvl);
+  const p = preset();
+  const n = Math.min(26, 10 + regionsIn * 2);
+  const usable = W * 0.76;
+  const kinds = ['ring', 'inf', 'diamond', 'liss', 'epi', 'rose'];
+  const kind = kinds[Math.floor(Math.random() * Math.min(kinds.length, 2 + regionsIn - 2))];
+  const bw = G.brickW || 80, bh = G.brickH || 56;
+  const cy0 = 150 + Math.max(70, bh * 3);
+  for (let i = 0; i < n; i++) {
+    const pool = gen.tiers[i % 3 === 0 ? 3 : 2];
+    const [id, t] = pool[Math.floor(Math.random() * pool.length)];
+    const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp));
+    G.bricks.push({
+      bx: i % 2 ? -70 : W + 70, by: -50 - (i % 5) * 24,
+      hx: W / 2, hy: cy0, row: 0, col: i,
+      w: bw - Math.max(8, bw * 0.15), h: bh,
+      hp, maxHp: hp,
+      poke: { id, t },
+      flash: 0, wobble: Math.random() * Math.PI * 2,
+      entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
+      flight: {
+        kind, state: 2, launch: 0,
+        cx: W / 2, cy: cy0, rx: usable * 0.4, ry: Math.max(80, H * 0.14),
+        phase: i / n, dir: 1, strand: i % 2,
+      },
+    });
+  }
+  G.fy = 0; G.fx = 0;
+  SFX.roar();
+  setAnnounce('swift', gen.accent, 'REINFORCEMENTS!', 'A FRESH FLIGHT SWOOPS IN — FINISH THEM', 2.6);
 }
 
 function resetRun(startLevel = 1, trial = false) {
