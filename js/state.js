@@ -147,6 +147,20 @@ const FORMATIONS = [
   { name: 'CANYONS',      mild: true, skip: (r, c) => c % 3 === 2 },
 ];
 const MILD_FORMS = FORMATIONS.filter(f => f.mild);
+// where a squad's flight curve lives on the field. Wrapping kinds span past
+// BOTH edges — riders exit one side and pour back in on the other, one
+// continuous stream. Orbit circles the boxed core like a guard ring.
+function flightGeom(kind, geo, s, nS) {
+  const wrap = kind === 'snake' || kind === 'helix' || kind === 'swoop';
+  if (kind === 'orbit')
+    return { cx: W / 2, cy: geo.gridCy, rx: geo.usable * 0.47, ry: geo.coreRy, spd: 0.75 };
+  const cy = geo.cy0 + (s % 2) * Math.min(56, geo.ryA * 0.45);
+  if (wrap)
+    return { cx: W / 2, cy, rx: W / 2 + 90, ry: Math.min(geo.ryA, 120), spd: 1.7 };
+  const cx = nS > 1 ? W / 2 + (s - (nS - 1) / 2) * geo.usable * 0.22 : W / 2;
+  const rx = geo.usable * (nS > 1 ? 0.26 : 0.4);
+  return { cx, cy, rx, ry: geo.ryA * (kind === 'inf' ? 0.6 : 1) * (nS > 1 ? 0.85 : 1), spd: kind === 'lane' ? 1.3 : 1 };
+}
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = [];
@@ -203,7 +217,10 @@ function buildLevel(lvl) {
     : null;
   const maxRows = Math.max(2, Math.floor((H * 0.58 - gridTop) / pitchY));
   const baseRows = 3 + Math.min(4, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
-  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : baseRows, 8, maxRows);
+  // later regions open with FEWER boxed ranks — the missing ranks arrive
+  // already broken out, streaming in from off-screen (STREAMS block below)
+  const streamSquads = !hasBoss && regionsIn >= 3 ? (regionsIn >= 6 ? 2 : 1) : 0;
+  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : Math.max(2, baseRows - streamSquads), 8, maxRows);
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
@@ -268,13 +285,12 @@ function buildLevel(lvl) {
   G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
   if (!hasBoss && regionsIn >= 1) {
     // unlocked flight patterns grow region by region
-    const kinds = ['ring'];
-    if (regionsIn >= 2) kinds.push('inf', 'snake');
-    if (regionsIn >= 3) kinds.push('falls', 'diamond');
+    const kinds = ['ring', 'lane'];
+    if (regionsIn >= 2) kinds.push('inf', 'snake', 'orbit');
+    if (regionsIn >= 3) kinds.push('falls', 'diamond', 'swoop');
     if (regionsIn >= 4) kinds.push('olympic', 'liss');
     if (regionsIn >= 5) kinds.push('rose', 'helix');
     if (regionsIn >= 6) kinds.push('pend', 'epi', 'pulsar');
-    const kind = kinds[Math.floor(Math.random() * kinds.length)];
     // how much of the wave breaks out: a few at Johto → nearly all late
     const frac = Math.min(1, 0.18 + (regionsIn - 1) * 0.13 + (stage === 1 ? 0.08 : 0));
     const pool2 = G.bricks.filter(b => !b.armored && !b.isBoss);
@@ -283,30 +299,70 @@ function buildLevel(lvl) {
       [pool2[i], pool2[j]] = [pool2[j], pool2[i]];
     }
     const flyers = pool2.slice(0, Math.round(pool2.length * frac));
-    const n = flyers.length;
-    if (n >= 3) {
-      const usable = W - margin * 2;
-      const cy0 = gridTop + pitchY + rows * pitchY * 0.55 + 24;
-      const ryA = Math.max(75, rows * pitchY * 0.55);
-      const nR = kind === 'olympic' ? (n >= 24 ? 3 : 2) : Math.max(1, Math.ceil(n / 26));
-      const counts = Array(nR).fill(0);
-      flyers.forEach((b, i) => counts[i % nR]++);
-      const seen = Array(nR).fill(0);
-      flyers.forEach((b, i) => {
-        const k = i % nR;
-        const scale = kind === 'olympic' ? 1 : 1 - k * 0.26;
-        b.flight = {
-          kind, state: 0, // 0 = still boxed in the wall, breaks out later
-          launch: 2 + i * 0.22, // they peel out of the bricks one by one
-          cx: kind === 'olympic' ? W / 2 + (k - (nR - 1) / 2) * usable * 0.3 : W / 2,
-          cy: cy0 + (kind === 'olympic' && k % 2 ? 34 : 0),
-          rx: (kind === 'olympic' ? usable * 0.17 : usable * 0.4) * scale,
-          ry: ryA * (kind === 'inf' ? 0.6 : 1) * scale,
-          phase: seen[k]++ / counts[k],
-          dir: k % 2 ? -1 : 1,
-          strand: i % 2, // for helix / snake row offsets
-        };
-      });
+    const usable = W - margin * 2;
+    const geo = {
+      usable,
+      cy0: gridTop + pitchY + rows * pitchY * 0.55 + 24,
+      ryA: Math.max(75, rows * pitchY * 0.55),
+      // ORBIT geometry: a ring of bare flyers circling the boxed core
+      gridCy: gridTop + rows * pitchY * 0.5,
+      coreRy: Math.max(90, Math.min(rows * pitchY * 0.62 + 60, PADDLE_Y() - 170 - (gridTop + rows * pitchY * 0.5))),
+      // orbit needs a boxed core left to circle
+      hasCore: G.bricks.length - flyers.length >= 4,
+    };
+    let orbitUsed = false;
+    const pickKind = () => {
+      let k = kinds[Math.floor(Math.random() * kinds.length)];
+      if (k === 'orbit' && (orbitUsed || !geo.hasCore)) k = 'ring';
+      if (k === 'orbit') orbitUsed = true;
+      return k;
+    };
+    // ---- WALL SQUADS: flyers break out a whole SQUAD at a time — the
+    // flock pops its boxes within a beat of each other and threads onto
+    // its OWN pattern (each squad gets a shape, a center, a direction)
+    if (flyers.length >= 3) {
+      const nS = Math.max(1, Math.min(4, Math.round(flyers.length / 7)));
+      for (let s = 0; s < nS; s++) {
+        const members = flyers.filter((_, i) => i % nS === s);
+        const kind = pickKind();
+        const g = flightGeom(kind, geo, s, nS);
+        members.forEach((b, j) => {
+          b.flight = {
+            kind, state: 0, // 0 = still boxed in the wall, breaks out later
+            launch: 2.2 + s * 2.8 + j * 0.15, // squadmates burst out together
+            cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
+            phase: j / members.length, // nose-to-tail around the curve
+            dir: s % 2 ? -1 : 1,
+            strand: j % 2, // for helix / snake row offsets
+          };
+        });
+      }
+    }
+    // ---- STREAMS: the ranks the smaller grid gave up arrive ALREADY
+    // broken out — a trailing line pours in from off-screen and threads
+    // straight into its pattern, one behind the other
+    for (let s = 0; s < streamSquads; s++) {
+      const kind = pickKind();
+      const g = flightGeom(kind, geo, s, streamSquads);
+      const count = Math.min(14, 6 + regionsIn);
+      const tierPool = gen.tiers[2];
+      const [id, t] = tierPool[Math.floor(Math.random() * tierPool.length)]; // one species — reads as a flock
+      const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp));
+      const edge = Math.random() < 0.34 ? 'top' : Math.random() < 0.5 ? 'left' : 'right';
+      for (let j = 0; j < count; j++) {
+        const sx = edge === 'top' ? g.cx + (j % 2 ? -1 : 1) * 40 : edge === 'left' ? -60 - j * 44 : W + 60 + j * 44;
+        const sy = edge === 'top' ? -46 - j * 44 : 84 + s * 48 + (j % 2) * 18;
+        G.bricks.push({
+          bx: sx, by: sy, hx: sx, hy: sy, row: 0, col: j,
+          w: bw - gapX, h: bh, hp, maxHp: hp,
+          poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
+          flight: {
+            kind, state: 1, t: -(0.4 + j * 0.16), sx, sy, // negative t = holds off-screen, then glides on
+            cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
+            phase: j / count, dir: s % 2 ? -1 : 1, strand: j % 2,
+          },
+        });
+      }
     }
   }
   // late rounds shouldn't melt: reinforcement flights extend each wave,
@@ -359,8 +415,9 @@ function spawnReinforcement() {
   const p = preset();
   const n = Math.min(26, 10 + regionsIn * 2);
   const usable = W * 0.76;
-  const kinds = ['ring', 'inf', 'diamond', 'liss', 'epi', 'rose'];
-  const kind = kinds[Math.floor(Math.random() * Math.min(kinds.length, 2 + regionsIn - 2))];
+  const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose'];
+  const kind = kinds[Math.floor(Math.random() * Math.min(kinds.length, 3 + regionsIn - 2))];
+  const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
   const cy0 = 150 + Math.max(70, bh * 3);
   for (let i = 0; i < n; i++) {
@@ -377,7 +434,8 @@ function spawnReinforcement() {
       entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
       flight: {
         kind, state: 2, launch: 0,
-        cx: W / 2, cy: cy0, rx: usable * 0.4, ry: Math.max(80, H * 0.14),
+        cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * 0.4, ry: Math.max(80, H * 0.14),
+        spd: wrap ? 1.7 : 1,
         phase: i / n, dir: 1, strand: i % 2,
       },
     });
@@ -449,21 +507,25 @@ function burst(x, y, color, n = 18, speed = 260, life = 0.7) {
 function addFloater(x, y, text, color, size = 16) {
   G.floaters.push({ x, y, text, color, size, life: 1.1 });
 }
+// the box ALONE shatters — four tumbling corner fragments, no fainting
+// sprite. Used when a Pokémon breaks out of its brick and flies on.
+function shatterBox(br, x, y) {
+  if (G.fragments.length >= 80) return;
+  const col = TYPE_COLORS[br.poke.t];
+  const hw = br.w / 2, hh = br.h / 2;
+  for (const [ox, oy] of [[-hw / 2, -hh / 2], [hw / 2, -hh / 2], [-hw / 2, hh / 2], [hw / 2, hh / 2]]) {
+    G.fragments.push({
+      x: x + ox, y: y + oy, w: hw, h: hh,
+      vx: ox * 6 + (Math.random() - 0.5) * 120,
+      vy: oy * 6 - 140 - Math.random() * 120,
+      rot: 0, vr: (Math.random() - 0.5) * 12,
+      color: col, life: 0.85, maxLife: 0.85,
+    });
+  }
+}
 // 3D card-shatter: four tumbling corner fragments + the sprite "fainting"
 function shatterBrick(br, x, y) {
-  if (G.fragments.length < 80) {
-    const col = TYPE_COLORS[br.poke.t];
-    const hw = br.w / 2, hh = br.h / 2;
-    for (const [ox, oy] of [[-hw / 2, -hh / 2], [hw / 2, -hh / 2], [-hw / 2, hh / 2], [hw / 2, hh / 2]]) {
-      G.fragments.push({
-        x: x + ox, y: y + oy, w: hw, h: hh,
-        vx: ox * 6 + (Math.random() - 0.5) * 120,
-        vy: oy * 6 - 140 - Math.random() * 120,
-        rot: 0, vr: (Math.random() - 0.5) * 12,
-        color: col, life: 0.85, maxLife: 0.85,
-      });
-    }
-  }
+  shatterBox(br, x, y);
   if (G.ghosts.length < 14 && br.poke.id > 0) {
     G.ghosts.push({ id: br.poke.id, shiny: br.shiny, x, y, s: br.h * (br.isBoss ? 1.1 : 1.3), vr: (Math.random() - 0.5) * 3, rot: 0, life: 0.6, maxLife: 0.6 });
   }

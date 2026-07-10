@@ -67,20 +67,34 @@ This is the heart and the most-iterated system. Assigned per-wave in
   sweeps that only step DOWN at walls (capped speed, gentle descent).
 - **`br.flight`** — individual Pokémon that **break out of their boxes** and
   fly. `buildLevel` marks a fraction of non-armored bricks (0% Kanto → ~18%
-  Johto → ~40% mid → 100% Paldea) with a `flight` object. They start
-  `state:0` (boxed), peel out one by one at `swayT >= launch` (`state:1`,
-  gliding onto the curve), then `state:2` (cycling). `flying(br)` gates them
-  out of march/rally/danger-line logic.
-- **`flightPos(F, tAbs)`** (update.js ~172) — the **12-pattern library**:
-  `ring, inf, falls, liss, rose, diamond, pulsar, helix, pend, epi, snake`,
-  plus `olympic` (interlocking rings). Flyers ride nose-to-tail via `phase`;
-  big hordes split into counter-rotating layers.
+  Johto → ~40% mid → 100% Paldea) with a `flight` object, carved into
+  **squads** of ~7: each squad pops its boxes together (within ~a second)
+  and threads onto its **own pattern** — own shape, center, direction
+  (`flightGeom` in state.js picks the geometry). They start `state:0`
+  (boxed), the box **visibly shatters** (`shatterBox`) at `swayT >= launch`
+  (`state:1`, gliding onto the curve), then `state:2` (cycling). `flying(br)`
+  gates them out of march/rally/danger-line logic.
+- **Streams** — from region 4 on, waves field 1–2 fewer boxed rows and the
+  difference arrives **already broken out**: a trailing line pours in from
+  off-screen (left/right/top; `flight.state:1` with negative `t` = holding
+  off-screen for its turn) straight into its pattern.
+- **`flightPos(F, tAbs)`** (update.js ~172) — the **15-pattern library**:
+  `ring, inf, falls, liss, rose, diamond, pulsar, helix, pend, epi, snake,
+  olympic`, plus `orbit` (a ring of bare flyers circling the boxed core),
+  `lane` (bobbing vertical lanes, a wave travels across them) and `swoop`
+  (wrapping dive-run). Wrapping kinds (`snake/helix/swoop`) span past BOTH
+  edges — riders exit one side and re-enter the other in one continuous
+  stream (the wrap jump happens fully off-screen; off-screen flyers are
+  excluded from enemy-shot selection and de-prioritized by `nearestBrick`).
+  Flyers ride nose-to-tail via `phase`; `F.spd` scales per-squad speed.
 - **`br.dive`** — Galaga peel-offs: a flyer/brick swoops at the paddle,
   fires one aimed shot at the bottom, loops home. Up to 3 concurrent
-  late-game. Rendered as bare sprite; excluded from formation logic.
-- **Rendered:** boxed bricks are cards (render.js `drawBricks`); flyers are
-  bare sprites with a type-colored aura (render.js, the `if (br.flight ...)`
-  block near the top of the per-brick loop).
+  late-game. A boxed brick that dives **shatters its box first** and stays
+  `br.bare` (rendered as a bare sprite even back in formation) — nothing
+  ever attacks as a full framed brick.
+- **Rendered:** boxed bricks are cards (render.js `drawBricks`); flyers,
+  divers and `bare` blocks are bare sprites with a type-colored aura
+  (render.js, the first `if` block in the per-brick loop).
 
 ### Skill tree (`PATHS` in data.js ~423)
 Four paths × four tiers, **permanent**, drafted between waves. Advancing is

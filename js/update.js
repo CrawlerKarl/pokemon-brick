@@ -170,7 +170,8 @@ function flying(br) { return !!(br.flight && br.flight.state >= 1); }
 // ---- the flight pattern library: a dozen closed curves the free-flying
 // Pokémon cycle around, nose to tail (Space Junkie / Galaga canon) ----
 function flightPos(F, tAbs) {
-  const th = (F.phase + tAbs * (F.dir || 1)) * Math.PI * 2;
+  const t = tAbs * (F.spd || 1) * (F.dir || 1); // streams ride faster curves
+  const th = (F.phase + t) * Math.PI * 2;
   const c = Math.cos(th), s = Math.sin(th);
   switch (F.kind) {
     case 'inf': // horizontal figure-eight
@@ -188,10 +189,18 @@ function flightPos(F, tAbs) {
       return { x: F.cx + c * F.rx * rr, y: F.cy + s * F.ry * rr };
     }
     case 'helix': { // two-strand conveyor weave, wrapping across the field
-      const u = ((F.phase + tAbs * (F.dir || 1)) % 1 + 1) % 1;
+      const u = ((F.phase + t) % 1 + 1) % 1;
       const x = F.cx - F.rx + u * F.rx * 2;
       return { x, y: F.cy + Math.sin(x * 0.02 + F.strand * Math.PI) * F.ry * 0.7 };
     }
+    case 'swoop': { // wrapping dive-run: off one edge, back in the other,
+      // plunging through a deep valley mid-crossing
+      const u = ((F.phase + t) % 1 + 1) % 1;
+      return { x: F.cx - F.rx + u * F.rx * 2, y: F.cy + Math.sin(u * Math.PI * 2) * F.ry };
+    }
+    case 'lane': // each rider bobs in its own vertical lane; the phase
+      // offsets make a wave travel across the rank of lanes
+      return { x: F.cx + (F.phase - 0.5) * F.rx * 2, y: F.cy + Math.sin(th) * F.ry };
     case 'pend': { // swinging pendulum chain
       const a = Math.sin(th) * 1.15;
       return { x: F.cx + Math.sin(a) * F.rx, y: F.cy - F.ry * 0.9 + Math.cos(a) * F.ry * 1.4 };
@@ -202,11 +211,11 @@ function flightPos(F, tAbs) {
         y: F.cy + s * F.ry + Math.sin(th * 5) * F.ry * 0.3,
       };
     case 'snake': { // serpentine sweep, wrapping like a conveyor
-      const u = ((F.phase + tAbs * (F.dir || 1)) % 1 + 1) % 1;
+      const u = ((F.phase + t) % 1 + 1) % 1;
       const x = F.cx - F.rx + u * F.rx * 2;
       return { x, y: F.cy + (F.strand ? 30 : -30) + Math.sin(u * Math.PI * 6) * F.ry * 0.45 };
     }
-    default: // 'ring' / 'olympic': the smooth circle
+    default: // 'ring' / 'olympic' / 'orbit': the smooth circle
       return { x: F.cx + c * F.rx, y: F.cy + s * F.ry };
   }
 }
@@ -361,7 +370,9 @@ function nearestBrick(x, y) {
   let best = null, bd = Infinity;
   for (const br of G.bricks) {
     if (br.dead || br.entry) continue; // ignore ranks still flying in
-    const d = Math.hypot(br.bx + G.fx - x, br.by + G.fy - y);
+    const bx = br.bx + G.fx;
+    let d = Math.hypot(bx - x, br.by + G.fy - y);
+    if (bx < -10 || bx > W + 10) d += 600; // off-screen flyers are poor targets
     if (d < bd) { bd = d; best = br; }
   }
   return best;
@@ -487,7 +498,8 @@ function update(dt) {
       if (F.state === 0) { // still boxed in the formation, waiting
         if (G.state === 'play' && G.swayT >= F.launch) {
           F.state = 1; F.t = 0; F.sx = br.bx; F.sy = br.by;
-          burst(br.bx + G.fx, br.by + G.fy, TYPE_COLORS[br.poke.t], 14, 200, 0.5); // the box shatters
+          shatterBox(br, br.bx + G.fx, br.by + G.fy); // the box VISIBLY shatters
+          burst(br.bx + G.fx, br.by + G.fy, TYPE_COLORS[br.poke.t], 14, 200, 0.5);
           tone(560, 0.12, 'triangle', 0.04, 260);
         }
         continue;
@@ -495,7 +507,8 @@ function update(dt) {
       const pos = flightPos(F, tAbs);
       if (F.state === 1) { // breaking out: glide from the wall onto the pattern
         F.t += dt * ts;
-        const p = Math.min(1, F.t / 1.1);
+        // negative t = a stream rider still holding off-screen for its turn
+        const p = Math.max(0, Math.min(1, F.t / 1.1));
         const q = 1 - Math.pow(1 - p, 2);
         br.hx = F.sx + (pos.x - F.sx) * q;
         br.hy = F.sy + (pos.y - F.sy) * q;
@@ -627,6 +640,12 @@ function update(dt) {
           const pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive);
           if (pool2.length) {
             const dvb = pool2[Math.floor(Math.random() * pool2.length)];
+            if (!flying(dvb) && !dvb.bare) {
+              // the peel-off SHATTERS its box — nothing dives as a full brick
+              dvb.bare = true;
+              shatterBox(dvb, dvb.bx + G.fx, dvb.by + G.fy);
+              burst(dvb.bx + G.fx, dvb.by + G.fy, TYPE_COLORS[dvb.poke.t], 12, 190, 0.5);
+            }
             dvb.dive = {
               t: 0, dur: 2.9, dir: Math.random() < 0.5 ? -1 : 1,
               tx: Math.max(60, Math.min(W - 60, G.paddle.x - G.fx + (Math.random() - 0.5) * 160)),
@@ -991,7 +1010,9 @@ function update(dt) {
       G.enemyShotCD -= dt * ts;
       if (G.enemyShotCD <= 0) {
         G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6);
-        const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive);
+        // off-screen flyers (wrapping patterns / streams) can't fire
+        const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive
+          && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
         if (alive.length) {
           const shooter = alive[Math.floor(Math.random() * alive.length)];
           G.telegraphs.push({ br: shooter, boss: false, t: 0.5, max: 0.5 });

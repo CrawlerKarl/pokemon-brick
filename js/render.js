@@ -53,8 +53,10 @@ function drawBricks() {
     const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
     br.flash = Math.max(0, br.flash - 0.08);
     // ---- FREE-FLYING ALIEN: broke out of its box — just the Pokémon,
-    // banking through its pattern with a type-colored aura underneath
-    if (br.flight && br.flight.state >= 1 && !br.isBoss) {
+    // banking through its pattern with a type-colored aura underneath.
+    // Divers and once-dived (bare) blocks shattered their box too: NOTHING
+    // attacks or flies as a full framed brick.
+    if ((br.bare || br.dive || (br.flight && br.flight.state >= 1)) && !br.isBoss) {
       const img2 = getSprite(br.poke.id, br.shiny);
       ctx.save();
       const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1);
