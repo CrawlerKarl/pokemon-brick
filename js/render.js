@@ -18,14 +18,26 @@ function drawBackground() {
   ctx.drawImage(bgSky, 0, 0, W, H);
   const par = (G.paddle.x - W / 2) / (W / 2); // parallax from paddle position
   for (const s of stars) {
-    const tw = 0.55 + 0.45 * Math.sin(G.time * 2 + s.tw);
-    ctx.globalAlpha = s.z * tw * 0.8;
+    // slow, gentle twinkle — fast flicker on the title screen reads as glitching
+    const tw = 0.75 + 0.25 * Math.sin(G.time * 1.2 + s.tw);
+    ctx.globalAlpha = s.z * tw * 0.75;
     ctx.fillStyle = '#cfd8ff';
     ctx.fillRect(s.x - par * s.z * 14, s.y, s.z * 2.2, s.z * 2.2);
   }
   ctx.globalAlpha = 1;
   ctx.drawImage(bgScenery, -par * 12 - W * 0.015, 0, W * 1.03, H);
   drawAmbient(genIdx);
+}
+
+// armored "guardian wall" bricks shift colour as you whittle their plating down,
+// fresh (cyan) → cracked (red), so their remaining hits read at a glance
+const ARMOR_STEPS = ['#37e0ff', '#5cffb0', '#c6ff5a', '#ffe14d', '#ff9d3d', '#ff5a5a'];
+function armorColor(br) {
+  const dmg = br.maxHp - br.hp;
+  const idx = br.maxHp <= ARMOR_STEPS.length
+    ? Math.min(ARMOR_STEPS.length - 1, Math.floor(dmg))
+    : Math.min(ARMOR_STEPS.length - 1, Math.round(dmg / br.maxHp * (ARMOR_STEPS.length - 1)));
+  return ARMOR_STEPS[idx];
 }
 
 function drawBricks() {
@@ -71,15 +83,17 @@ function drawBricks() {
     ctx.moveTo(x - hw + rad, y - hh + 1.5);
     ctx.lineTo(x + hw - rad, y - hh + 1.5);
     ctx.stroke();
-    ctx.lineWidth = br.isBoss ? 3 : 2;
-    ctx.strokeStyle = br.flash > 0 ? '#ffffff' : br.shiny ? '#ffd700' : (br.isBoss && br.phase === 2 ? '#ff8a80' : col);
+    const aCol = br.armored ? armorColor(br) : null;
+    ctx.lineWidth = br.armored ? 2.6 : br.isBoss ? 3 : 2;
+    ctx.strokeStyle = br.flash > 0 ? '#ffffff' : br.shiny ? '#ffd700' : aCol ? aCol : (br.isBoss && br.phase === 2 ? '#ff8a80' : col);
     ctx.globalAlpha = 0.9 * phased;
     roundRect(x - hw, y - hh, br.w, br.h, rad);
     ctx.stroke();
     ctx.globalAlpha = phased;
     if (br.hp < br.maxHp && !br.isBoss) {
+      // gentle dimming only — the HP dial carries the info, the Pokémon stays visible
       roundRect(x - hw, y - hh, br.w, br.h, rad);
-      ctx.fillStyle = `rgba(0,0,0,${Math.min(0.5, 0.18 * (br.maxHp - br.hp))})`;
+      ctx.fillStyle = `rgba(0,0,0,${Math.min(0.28, 0.1 * (br.maxHp - br.hp))})`;
       ctx.fill();
     }
     if (br.poke.id === -1) { // MISSINGNO. — glitched static block
@@ -95,8 +109,21 @@ function drawBricks() {
       const img = getSprite(br.poke.id, br.shiny);
       if (img.complete && img.naturalWidth) {
         const pop = 1 + br.flash * 0.08;
-        const s = br.h * (br.isBoss ? 1.12 : 1.32) * pop;
-        ctx.drawImage(img, x - s / 2, y - s / 2 - 6, s, s);
+        if (br.isBoss) {
+          // the boss is a standalone centerpiece — let it overflow dramatically
+          const s = br.h * 1.12 * pop;
+          ctx.drawImage(img, x - s / 2, y - s / 2 - 6, s, s);
+        } else {
+          // grid sprites sit fully INSIDE their card with breathing room —
+          // like a rank of invaders, not artwork spilling over a frame.
+          // (clip kept as a safety net for the flash "pop" scale-up)
+          const s = Math.min(br.w * 0.76, br.h * 1.02) * pop;
+          ctx.save();
+          roundRect(x - hw + 2, y - hh + 2, br.w - 4, br.h - 4, Math.max(4, rad - 2));
+          ctx.clip();
+          ctx.drawImage(img, x - s / 2, y - s / 2 - br.h * 0.02, s, s);
+          ctx.restore();
+        }
       } else { // still loading: gently pulsing pokéball placeholder
         const pa = 0.16 + 0.08 * Math.sin(G.time * 3 + br.wobble);
         ctx.save();
@@ -138,21 +165,47 @@ function drawBricks() {
         hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
         ctx.fillStyle = hg; ctx.fill();
       }
-    } else if (br.maxHp > 1) {
-      if (br.w >= 64) {
-        for (let i = 0; i < Math.min(br.maxHp, 6); i++) {
-          ctx.beginPath();
-          ctx.arc(x - hw + 12 + i * 11, y - hh + 10, 3.4, 0, Math.PI * 2);
-          ctx.fillStyle = i < br.hp ? '#fff' : '#ffffff33';
-          ctx.fill();
-        }
-      } else { // small bricks (phones): slim HP bar instead of crowded pips
-        const bw3 = br.w * 0.6, frac = Math.max(0, br.hp / br.maxHp);
-        ctx.fillStyle = '#ffffff33';
-        ctx.fillRect(x - hw + 6, y - hh + 6, bw3, 3);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x - hw + 6, y - hh + 6, bw3 * frac, 3);
+    } else if (br.armored) {
+      // ---- armored plating: colour-shifting tint, corner rivets, cracks ----
+      // (HP itself lives in the corner dial below, off the artwork)
+      roundRect(x - hw, y - hh, br.w, br.h, rad);
+      ctx.fillStyle = aCol + '22'; ctx.fill();
+      ctx.fillStyle = aCol;
+      const rv = Math.max(1.6, br.h * 0.045);
+      for (const [ox, oy] of [[1, -1], [-1, 1], [1, 1]]) { // top-left corner hosts the dial
+        ctx.beginPath(); ctx.arc(x + ox * (hw - 7), y + oy * (hh - 7), rv, 0, Math.PI * 2); ctx.fill();
       }
+      const dmg = br.maxHp - br.hp; // cracks radiate from the centre, one per hit
+      if (dmg > 0) {
+        ctx.strokeStyle = 'rgba(8,10,22,0.55)'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+        for (let i = 0; i < Math.min(dmg, 4); i++) {
+          const a = br.wobble * 3 + i * 2.399;
+          const ox = Math.cos(a), oy = Math.sin(a);
+          ctx.beginPath();
+          ctx.moveTo(x + ox * hw * 0.14, y + oy * hh * 0.14);
+          ctx.lineTo(x + ox * hw * 0.55 - oy * 5, y + oy * hh * 0.55 + ox * 5);
+          ctx.lineTo(x + ox * hw * 0.92, y + oy * hh * 0.92);
+          ctx.stroke();
+        }
+      }
+    }
+    // HP dial (top-left corner): ring + number, mirroring the type badge —
+    // corner-anchored so it never covers the Pokémon like the old bars did
+    if (!br.isBoss && br.maxHp > 1) {
+      const cRad = Math.min(10, br.h * 0.22);
+      const cX = x - hw + cRad + 5, cY = y - hh + cRad + 5;
+      const frac = Math.max(0, br.hp / br.maxHp);
+      const hCol = aCol || '#9be7ff';
+      ctx.beginPath(); ctx.arc(cX, cY, cRad, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(6,9,24,0.78)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cX, cY, cRad - 1.6, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+      ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+      ctx.strokeStyle = hCol;
+      ctx.stroke();
+      ctx.font = `900 ${Math.max(7.5, cRad * 0.95)}px Orbitron, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(Math.ceil(br.hp), cX, cY + 0.5);
     }
     // type badge (top-right corner): symbol + color, so matchups don't rely
     // on card color alone — it lights up when your ball element is strong here
@@ -334,8 +387,109 @@ function drawBalls() {
         ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 3.5 + closeness * 2, 0, Math.PI * 2); ctx.stroke();
       }
     }
+    // sky warp: comet mode while phasing up through the blocks
+    if (b.phasing) {
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 0.8;
+      ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(b.x, b.y + b.r + 4); ctx.lineTo(b.x, b.y + b.r + 26); ctx.stroke();
+      ctx.globalAlpha = 0.9;
+      drawGlyph(ctx, 'warp', b.x, b.y - b.r - 12, 7, '#80d8ff');
+      ctx.globalAlpha = 1;
+    }
+    // rally aura + live counter — the visible incentive to keep the ball up top
+    if (!b.stuck && b.rally >= 3) {
+      ctx.shadowBlur = 0;
+      const rc = b.rally >= 9 ? '#ff7043' : '#ffd54f';
+      const pulse = 0.5 + 0.5 * Math.sin(G.time * 8);
+      ctx.globalAlpha = 0.5 + 0.4 * pulse;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = rc;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 4 + pulse * 3, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.font = `900 ${13 + Math.min(9, b.rally)}px Orbitron, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = rc;
+      ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+      ctx.fillText('×' + b.rally, b.x, b.y - b.r - 13);
+      ctx.shadowBlur = 0;
+    }
     ctx.restore();
   }
+}
+
+// dotted launch guide during serve — matches serveAngle() exactly
+function drawServeGuide() {
+  if (G.state !== 'serve' || paused) return;
+  const b = G.balls.find(x => x.stuck);
+  if (!b) return;
+  const a = serveAngle();
+  ctx.save();
+  ctx.globalAlpha = 0.6 + 0.12 * Math.sin(G.time * 3);
+  ctx.fillStyle = '#9fd8ff';
+  const len = 120;
+  for (let d = 22; d < len; d += 16) {
+    ctx.beginPath();
+    ctx.arc(b.x + Math.cos(a) * d, b.y + Math.sin(a) * d, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // arrowhead
+  const tx = b.x + Math.cos(a) * (len + 8), ty = b.y + Math.sin(a) * (len + 8);
+  ctx.translate(tx, ty); ctx.rotate(a + Math.PI / 2);
+  ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(-6, 3); ctx.lineTo(6, 3); ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// golden shimmer along the ceiling + the barrier net under the formation
+function drawRallyZone() {
+  if (G.state !== 'play') return;
+  let wallTop = Infinity, rallyFloor = -Infinity;
+  for (const br of G.bricks) {
+    if (br.dead) continue;
+    if (br.armored) wallTop = Math.min(wallTop, br.by + G.fy - br.h / 2);
+    if (!br.isBoss) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
+  }
+  rallyFloor += 14;
+  if (rallyFloor <= -Infinity) return;
+  const ballUp = G.balls.find(b => !b.dead && !b.stuck && b.aboveWall);
+  if (!ballUp) return;
+  const glow = 0.5 + 0.5 * Math.sin(G.time * 6);
+  // ceiling shimmer marks the pinball zone
+  const g = ctx.createLinearGradient(0, 56, 0, 56 + 46);
+  g.addColorStop(0, `rgba(255,213,79,${0.16 + glow * 0.1})`);
+  g.addColorStop(1, 'rgba(255,213,79,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 56, W, 46);
+  ctx.fillStyle = `rgba(255,224,130,${0.5 + glow * 0.4})`;
+  ctx.fillRect(0, 56, W, 2);
+  // the net hangs BELOW the whole formation — it fills in for missing blocks,
+  // so the ball can play off lower ranks and only gets caught at the bottom.
+  // gold with charge pips while healthy, flashing red on the last, gone at 0
+  const saves = ballUp.zoneSaves || 0;
+  ctx.save();
+  if (saves > 0) {
+    const low = saves === 1;
+    const a = low ? 0.35 + 0.55 * Math.abs(Math.sin(G.time * 10)) : 0.4 + glow * 0.25;
+    ctx.setLineDash([12, 9]);
+    ctx.lineDashOffset = -G.time * 46;
+    ctx.lineWidth = low ? 2 : 2.5;
+    ctx.strokeStyle = low ? `rgba(255,110,90,${a})` : `rgba(255,213,79,${a})`;
+    ctx.beginPath(); ctx.moveTo(0, rallyFloor); ctx.lineTo(W, rallyFloor); ctx.stroke();
+    ctx.setLineDash([]);
+    // remaining charges as diamonds on the net
+    for (let i = 0; i < saves; i++) {
+      const px = W / 2 + (i - (saves - 1) / 2) * 26;
+      drawGlyph(ctx, 'fairy', px, rallyFloor, 6, low ? '#ff8a65' : '#ffd54f');
+    }
+    if (low) {
+      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = `rgba(255,138,101,${0.5 + 0.5 * Math.abs(Math.sin(G.time * 10))})`;
+      ctx.fillText('BARRIER LOW', W / 2, rallyFloor + 18);
+    }
+  }
+  ctx.restore();
 }
 
 // warning lines before enemy fire + Zekrom/Eternatus column beams
@@ -467,9 +621,19 @@ function drawProjectiles() {
 function drawPowerups() {
   for (const pu of G.powerups) {
     ctx.save();
-    ctx.translate(pu.x, pu.y);
-    ctx.rotate(Math.sin(pu.rot) * 0.25);
-    if (pu.p.key === 'pokeball') {
+    // gentle bob + slight tilt — calmer than the old spin
+    ctx.translate(pu.x, pu.y + Math.sin(pu.rot * 1.6) * 2);
+    ctx.rotate(Math.sin(pu.rot) * 0.1);
+    if (pu.p.key === 'element') {
+      // element orb: small glassy sphere holding a type symbol
+      const col = TYPE_COLORS[pu.p.t];
+      ctx.shadowColor = col; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(8,12,30,0.85)'; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
+      ctx.shadowBlur = 0;
+      drawGlyph(ctx, pu.p.t, 0, 0, 7.5, col);
+    } else if (pu.p.key === 'pokeball') {
       ctx.shadowColor = pu.shiny ? '#ffd700' : '#ef5350'; ctx.shadowBlur = pu.shiny ? 20 : 14;
       ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
       ctx.beginPath(); ctx.arc(0, 0, 14, Math.PI, 0, true); ctx.fillStyle = pu.shiny ? '#ffd700' : '#ef5350'; ctx.fill();
@@ -480,12 +644,24 @@ function drawPowerups() {
       ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(14, 0); ctx.stroke();
     } else {
-      ctx.shadowColor = pu.p.color; ctx.shadowBlur = 16;
-      roundRect(-19, -19, 38, 38, 11);
-      ctx.fillStyle = pu.p.color + '33'; ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = pu.p.color; ctx.stroke();
+      // power-up capsule: gradient body, glass highlight, white glyph
+      const col = pu.p.color;
+      ctx.shadowColor = col; ctx.shadowBlur = 13 + 4 * Math.sin(G.time * 4 + pu.rot);
+      roundRect(-17, -17, 34, 34, 10);
+      const cg = ctx.createLinearGradient(0, -17, 0, 17);
+      cg.addColorStop(0, col + 'd9');
+      cg.addColorStop(0.55, col + '55');
+      cg.addColorStop(1, 'rgba(8,12,30,0.92)');
+      ctx.fillStyle = cg; ctx.fill();
+      ctx.lineWidth = 1.8; ctx.strokeStyle = col;
+      roundRect(-17, -17, 34, 34, 10); ctx.stroke();
       ctx.shadowBlur = 0;
-      drawGlyph(ctx, pu.p.icon, 0, 0, 11, pu.p.color);
+      // glass sheen across the top
+      ctx.globalAlpha = 0.32;
+      roundRect(-13, -14, 26, 9, 4.5);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.globalAlpha = 1;
+      drawGlyph(ctx, pu.p.icon, 0, 2.5, 10, '#fff');
     }
     ctx.restore();
     if (pu.hint) { // first-ever drops: tell the player to catch them
@@ -705,7 +881,7 @@ function drawHUD() {
   const gen = genFor(G.level);
   const stg = stageIdx(G.level);
   const waveY = narrow ? 46 : (G.modifier ? 22 : 28);
-  const waveText = gen.name + ' ' + (stg + 1) + '/3 · ' + STAGE_NAMES[stg];
+  const waveText = (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + STAGE_NAMES[stg];
   ctx.fillText(waveText, W / 2, waveY);
   if (G.modifier && !narrow) {
     ctx.font = '700 10px Orbitron, sans-serif';
@@ -939,7 +1115,7 @@ function drawMenu() {
   const b = startBtnGeom();
   const hover = inRect(mouseX, lastMouseY, b);
   ctx.save();
-  ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = hover ? 28 : 14 + Math.sin(G.time * 3) * 4;
+  ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = hover ? 28 : 16;
   roundRect(b.x, b.y, b.w, b.h, 14);
   const bg = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
   bg.addColorStop(0, hover ? '#ffe082' : '#ffd54f'); bg.addColorStop(1, '#f9a825');
@@ -956,10 +1132,88 @@ function drawMenu() {
   ctx.textAlign = 'center';
   ctx.fillStyle = inRect(mouseX, lastMouseY, db) ? '#ffd54f' : '#90a4ae';
   ctx.fillText('◓  POKÉDEX: ' + DEX.size + ' CAUGHT — VIEW', W / 2, db.y + db.h / 2);
+  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.fillStyle = inRect(mouseX, lastMouseY, L.trial) ? '#ffd54f' : '#80d8ff';
+  ctx.fillText('▶  TRIAL MODE — JUMP TO ANY REGION', W / 2, L.trial.y + L.trial.h / 2);
   ctx.font = '700 12px Orbitron, sans-serif';
   ctx.fillStyle = inRect(mouseX, lastMouseY, L.adv) ? '#ffd54f' : '#78909c';
   ctx.fillText('⚙  ADVANCED SETTINGS', W / 2, L.adv.y + L.adv.h / 2);
   if (advOpen) drawAdvanced();
+  if (trialOpen) drawTrial();
+}
+
+// trial mode: pick a region + stage, dive straight in (nothing persists)
+function drawTrial() {
+  dim(0.6);
+  const T = trialLayout();
+  ctx.save();
+  roundRect(T.px, T.py, T.pw, T.ph, 18);
+  ctx.fillStyle = 'rgba(8,12,30,0.96)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(128,216,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 18px Orbitron, sans-serif';
+  ctx.fillStyle = '#80d8ff';
+  ctx.fillText('TRIAL MODE', T.px + T.pw / 2, T.py + 30);
+  ctx.font = '500 10.5px Orbitron, sans-serif';
+  ctx.fillStyle = '#90a4ae';
+  ctx.fillText('JUMP INTO ANY REGION · SCORE & CATCHES NOT SAVED', T.px + T.pw / 2, T.py + 54, T.pw - 40);
+  // close ✕
+  const cb = T.close;
+  ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cb.x + 10, cb.y + 10); ctx.lineTo(cb.x + cb.w - 10, cb.y + cb.h - 10);
+  ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
+  ctx.stroke();
+  // region grid — each chip shows the region and its legendary
+  for (let i = 0; i < GENS.length; i++) {
+    const g = GENS[i], r = T.region(i), sel = trialSel.region === i;
+    const hov = inRect(mouseX, lastMouseY, r);
+    ctx.save();
+    if (sel) { ctx.shadowColor = g.accent; ctx.shadowBlur = 12; }
+    roundRect(r.x, r.y, r.w, r.h, 10);
+    ctx.fillStyle = sel ? g.accent + '33' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+    ctx.fill();
+    ctx.lineWidth = sel ? 2 : 1;
+    ctx.strokeStyle = sel ? g.accent : 'rgba(255,255,255,0.22)';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `900 ${Math.min(13, r.w / 8)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
+    ctx.fillText(g.name, r.x + r.w / 2, r.y + r.h / 2 - 8);
+    ctx.font = '500 9px Orbitron, sans-serif';
+    ctx.fillStyle = sel ? g.accent : '#78909c';
+    ctx.fillText(g.boss.n.toUpperCase(), r.x + r.w / 2, r.y + r.h / 2 + 10, r.w - 10);
+    ctx.restore();
+  }
+  // stage picker
+  for (let i = 0; i < STAGES; i++) {
+    const r = T.stage(i), sel = trialSel.stage === i;
+    const hov = inRect(mouseX, lastMouseY, r);
+    roundRect(r.x, r.y, r.w, r.h, 9);
+    ctx.fillStyle = sel ? 'rgba(255,213,79,0.22)' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+    ctx.fill();
+    ctx.lineWidth = sel ? 2 : 1;
+    ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.22)';
+    ctx.stroke();
+    ctx.font = `900 ${Math.min(11, r.w / 10)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
+    ctx.fillText((i + 1) + '/3 ' + STAGE_NAMES[i], r.x + r.w / 2, r.y + r.h / 2 + 1, r.w - 8);
+  }
+  // start button
+  const b = T.start;
+  const hov = inRect(mouseX, lastMouseY, b);
+  ctx.save();
+  ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hov ? 22 : 10;
+  roundRect(b.x, b.y, b.w, b.h, 12);
+  const bg = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+  bg.addColorStop(0, hov ? '#b3e5fc' : '#80d8ff'); bg.addColorStop(1, '#0288d1');
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.font = '900 16px Orbitron, sans-serif';
+  ctx.fillStyle = '#03202e';
+  ctx.fillText('START TRIAL', b.x + b.w / 2, b.y + b.h / 2 + 1);
+  ctx.restore();
+  ctx.restore();
 }
 
 function drawAdvanced() {
@@ -1114,14 +1368,12 @@ function drawOverlays() {
   if (G.state === 'menu') { drawMenu(); }
   else if (G.state === 'dex') { drawDex(); }
   else if (G.state === 'serve' && !paused) {
-    pulse(IS_TOUCH ? 'TAP TO LAUNCH' : 'CLICK TO LAUNCH', H * 0.72);
-    // interactive first-wave tutorial: contextual, one hint at a time
-    if (G.level === 1 && G.playT < 1) {
-      ctx.globalAlpha = 0.75;
-      ctx.font = '500 13px Orbitron, sans-serif';
-      ctx.fillStyle = '#90caf9';
-      ctx.fillText(IS_TOUCH ? 'drag anywhere to move your paddle' : 'move the mouse to steer your paddle', W / 2, H * 0.72 + 28);
-      ctx.globalAlpha = 1;
+    pulse(IS_TOUCH ? 'TAP TO LAUNCH' : 'CLICK TO LAUNCH', H * 0.7);
+    // interactive first-wave tutorial: contextual hints
+    if (G.level === 1) {
+      hintPill(IS_TOUCH ? 'DRAG ANYWHERE — MOVE PADDLE · SLIDE WHILE LAUNCHING TO AIM'
+        : 'MOVE THE MOUSE — PADDLE FOLLOWS · SLIDE WHILE LAUNCHING TO AIM', H * 0.7 + 46);
+      hintPill('GET THE BALL ABOVE THE ARMORED WALL — A GOLDEN NET KEEPS IT RALLYING UP THERE', H * 0.7 + 82, '#ffd54f');
     }
   } else if (G.state === 'upgrade') {
     dim(0.55);
@@ -1197,9 +1449,14 @@ function drawOverlays() {
     ctx.font = '500 15px Orbitron, sans-serif';
     ctx.fillStyle = '#b0bec5';
     ctx.fillText('JOURNEY ENDED IN ' + genFor(G.level).name + '  ·  STAGE ' + (stageIdx(G.level) + 1) + '/3  ·  WAVE ' + G.level, W / 2, H * 0.52, W * 0.94);
-    ctx.fillText('MAX COMBO x' + G.maxCombo + '  ·  ' + G.caughtRun + ' CAUGHT THIS RUN  ·  POKÉDEX ' + DEX.size, W / 2, H * 0.565, W * 0.94);
-    ctx.fillStyle = G.score >= G.best && G.score > 0 ? '#ffd54f' : '#90a4ae';
-    ctx.fillText(G.score >= G.best && G.score > 0 ? '★ NEW BEST ★' : 'BEST  ' + G.best, W / 2, H * 0.62);
+    ctx.fillText('MAX COMBO x' + G.maxCombo + '  ·  BEST RALLY ×' + G.bestRally + '  ·  ' + G.caughtRun + ' CAUGHT  ·  POKÉDEX ' + DEX.size, W / 2, H * 0.565, W * 0.94);
+    if (G.trial) {
+      ctx.fillStyle = '#80d8ff';
+      ctx.fillText('TRIAL RUN — SCORE & CATCHES NOT SAVED', W / 2, H * 0.62, W * 0.9);
+    } else {
+      ctx.fillStyle = G.score >= G.best && G.score > 0 ? '#ffd54f' : '#90a4ae';
+      ctx.fillText(G.score >= G.best && G.score > 0 ? '★ NEW BEST ★' : 'BEST  ' + G.best, W / 2, H * 0.62);
+    }
     pulse(IS_TOUCH ? 'TAP FOR TITLE SCREEN' : 'CLICK FOR TITLE SCREEN', H * 0.7);
   }
   if (paused) {
@@ -1239,12 +1496,41 @@ function title(text, y, size, color) {
   ctx.fillText(text, W / 2, y);
   ctx.shadowBlur = 0;
 }
+// primary prompt: big, backed by a pill, glowing — impossible to miss
 function pulse(text, y) {
-  ctx.globalAlpha = 0.6 + 0.4 * Math.sin(G.time * 4);
-  ctx.font = '700 18px Orbitron, sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.fillText(text, W / 2, y);
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const size = Math.min(26, W / 18);
+  ctx.font = `900 ${size}px Orbitron, sans-serif`;
+  const tw = Math.min(ctx.measureText(text).width, W * 0.88) + 48;
+  const th = size + 24;
+  roundRect(W / 2 - tw / 2, y - th / 2, tw, th, th / 2);
+  ctx.fillStyle = 'rgba(6,10,26,0.78)'; ctx.fill();
+  // only the border breathes, gently — the text and glow stay steady so the
+  // prompt doesn't read as a full-screen flicker
+  ctx.globalAlpha = 0.55 + 0.2 * Math.sin(G.time * 2.5);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(159,216,255,0.7)';
+  roundRect(W / 2 - tw / 2, y - th / 2, tw, th, th / 2);
+  ctx.stroke();
   ctx.globalAlpha = 1;
+  ctx.shadowColor = '#7fd4ff'; ctx.shadowBlur = 14;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(text, W / 2, y + 1, W * 0.84);
+  ctx.restore();
+}
+// secondary hint: smaller pill, still clearly readable over any scene
+function hintPill(text, y, color = '#a9d4ff') {
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const size = Math.min(15, W / 30);
+  ctx.font = `700 ${size}px Orbitron, sans-serif`;
+  const tw = Math.min(ctx.measureText(text).width, W * 0.88) + 32;
+  roundRect(W / 2 - tw / 2, y - 15, tw, 30, 15);
+  ctx.fillStyle = 'rgba(6,10,26,0.68)'; ctx.fill();
+  ctx.fillStyle = color;
+  ctx.fillText(text, W / 2, y + 1, W * 0.84);
+  ctx.restore();
 }
 
 function drawCursor() {
@@ -1268,6 +1554,7 @@ function render() {
   drawBackground();
   if (G.state !== 'menu' && G.state !== 'dex') {
     drawDangerLine();
+    drawRallyZone();
     drawTelegraphs();
     drawBricks();
     drawFragments();
@@ -1275,6 +1562,7 @@ function render() {
     drawPowerups();
     drawProjectiles();
     drawBalls();
+    drawServeGuide();
     if (G.state !== 'gameover' && G.state !== 'upgrade') drawPaddle();
     drawShootHint();
     drawParticles();

@@ -94,6 +94,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyQ') quitToMenu();
   if (e.code === 'Escape') {
     if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
+    else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
     else if (paused) quitToMenu(); // paused + Esc = leave the run
     else togglePause();
@@ -119,7 +120,7 @@ function togglePause() { if (G.state === 'play' || G.state === 'serve') paused =
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
   if (G.state !== 'play' && G.state !== 'serve' && !paused) return;
-  if (G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
+  if (!G.trial && G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
   paused = false;
   G.state = 'menu';
   dexScroll = 0;
@@ -175,6 +176,24 @@ function onPress(x, y) {
     return;
   }
   if (G.state === 'menu') {
+    if (trialOpen) {
+      const T = trialLayout();
+      if (inRect(x, y, T.close) || !inRect(x, y, { x: T.px, y: T.py, w: T.pw, h: T.ph })) {
+        trialOpen = false; return;
+      }
+      for (let i = 0; i < GENS.length; i++) {
+        if (inRect(x, y, T.region(i))) { trialSel.region = i; SFX.wall(); return; }
+      }
+      for (let i = 0; i < STAGES; i++) {
+        if (inRect(x, y, T.stage(i))) { trialSel.stage = i; SFX.wall(); return; }
+      }
+      if (inRect(x, y, T.start)) {
+        trialOpen = false;
+        resetRun(trialSel.region * STAGES + trialSel.stage + 1, true);
+        return;
+      }
+      return;
+    }
     if (advOpen) {
       const A = advLayout();
       if (inRect(x, y, A.close) || !inRect(x, y, { x: A.px, y: A.py, w: A.pw, h: A.ph })) {
@@ -205,6 +224,7 @@ function onPress(x, y) {
     }
     if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }
+    if (inRect(x, y, L.trial)) { trialOpen = true; return; }
     if (inRect(x, y, L.adv)) { advOpen = true; return; }
     return;
   }
@@ -216,11 +236,16 @@ function onPress(x, y) {
   if (!IS_TOUCH && G.state === 'play' && y > FLOOR() - 56 && x > W - 210) { tryMega(); return; }
   primaryAction();
 }
+// serve aim: a still paddle launches straight up; sliding sideways while you
+// launch tilts the shot. The dotted guide shows it before you commit.
+function serveAngle() {
+  return -Math.PI / 2 + Math.max(-0.45, Math.min(0.45, G.paddle.speed * 0.0004));
+}
 // launch stuck balls / fire the blaster — shared by click, Space and the FIRE button
 function fireAction() {
   if (paused) { paused = false; return; }
   if (G.state === 'serve') {
-    G.balls.forEach(b => { if (b.stuck) { b.stuck = false; const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.5; const sp = ballSp(); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; } });
+    G.balls.forEach(b => { if (b.stuck) { b.stuck = false; const a = serveAngle(); const sp = ballSp(); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; } });
     G.state = 'play';
     return;
   }
@@ -253,7 +278,7 @@ function fireAction() {
 }
 function primaryAction() {
   audio();
-  if (G.state === 'menu') { if (!advOpen) resetRun(); return; }
+  if (G.state === 'menu') { if (!advOpen && !trialOpen) resetRun(); return; }
   if (G.state === 'gameover') { G.state = 'menu'; return; }
   if (G.state === 'upgrade') return;
   fireAction();

@@ -253,6 +253,12 @@ function drawGlyph(c, key, x, y, r, col = '#fff', lw = null) {
       c.moveTo(s * 0.05, -s * 0.6); c.lineTo(s * 0.7, 0); c.lineTo(s * 0.05, s * 0.6);
       c.stroke();
       break;
+    case 'warp': // double chevron pointing UP — straight to the high ground
+      c.beginPath();
+      c.moveTo(-s * 0.6, -s * 0.05); c.lineTo(0, -s * 0.65); c.lineTo(s * 0.6, -s * 0.05);
+      c.moveTo(-s * 0.6, s * 0.65); c.lineTo(0, s * 0.05); c.lineTo(s * 0.6, s * 0.65);
+      c.stroke();
+      break;
     case 'coin': // coin
       c.beginPath(); c.arc(0, 0, s * 0.8, 0, Math.PI * 2); c.stroke();
       c.beginPath(); c.arc(0, 0, s * 0.5, 0, Math.PI * 2); c.stroke();
@@ -299,6 +305,7 @@ const POWERS = {
   magnet: { key: 'magnet', icon: 'magnet', name: 'MAGNET',         desc: 'BALLS STICK — FIRE TO AIM',  color: '#ec407a' },
   star:   { key: 'star',   icon: 'star',   name: 'SCORE x2',       desc: 'POINTS ARE DOUBLED',         color: '#ffee58' },
   draco:  { key: 'draco',  icon: 'draco',  name: 'DRACO MISSILES', desc: 'HOMING MISSILES LAUNCH',     color: '#5c6bc0' },
+  warp:   { key: 'warp',   icon: 'warp',   name: 'SKY WARP',       desc: 'BALLS PHASE UP TO THE HIGH GROUND', color: '#80d8ff' },
 };
 const POWER_BY_TYPE = {
   fire: 'fire',
@@ -308,7 +315,8 @@ const POWER_BY_TYPE = {
   grass: 'shield', bug: 'shield',
   psychic: 'magnet', fairy: 'magnet',
   rock: 'wide', ground: 'wide', fighting: 'wide', steel: 'wide',
-  normal: 'star', flying: 'star',
+  normal: 'star',
+  flying: 'warp', // bird ranks carry you to the high ground
   dragon: 'draco',
 };
 // attacking element → types it is super-effective against
@@ -546,10 +554,12 @@ function getSprite(id, shiny) {
   }
   return spriteCache[key];
 }
-// dark silhouette of a sprite (uncaught dex entries) — cached offscreen canvases
+// flat-tinted silhouette of a sprite — used for uncaught dex entries (dark navy)
+// and for the distant Pokémon drifting through region skies (dusky tints).
 const silCache = {};
-function getSilhouette(id) {
-  if (silCache[id]) return silCache[id];
+function getSilhouette(id, color = '#141a33') {
+  const key = id + '|' + color;
+  if (silCache[key]) return silCache[key];
   const img = getSprite(id);
   if (!img.complete || !img.naturalWidth) return null;
   try {
@@ -558,9 +568,9 @@ function getSilhouette(id) {
     const cc = c.getContext('2d');
     cc.drawImage(img, 0, 0, 96, 96);
     cc.globalCompositeOperation = 'source-in';
-    cc.fillStyle = '#141a33';
+    cc.fillStyle = color;
     cc.fillRect(0, 0, 96, 96);
-    silCache[id] = c;
+    silCache[key] = c;
     return c;
   } catch (e) { return null; } // tainted canvas fallback: caller draws a placeholder
 }

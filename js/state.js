@@ -23,6 +23,9 @@ const G = {
   mega: 0, megaT: 0,
   shotsFired: 0, playT: 0,
   maxCombo: 0, caughtRun: 0, dropHint: 0, megaCalloutDone: false,
+  rallyHintDone: false, bestRally: 0, barrierHintDone: false,
+  highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
+  trial: false,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
@@ -59,7 +62,7 @@ function applyPower(p, srcType) {
   };
   switch (p.key) {
     case 'fire':   bump('fx_fire', 10); break;
-    case 'laser':  bump('fx_laser', 12); break;
+    case 'laser':  bump('fx_laser', 9); break;
     case 'wide':   bump('fx_wide', 14); break;
     case 'slow':   bump('fx_slow', 8); break;
     case 'magnet': bump('fx_magnet', 12); break;
@@ -69,6 +72,16 @@ function applyPower(p, srcType) {
       G.shieldCharges = Math.min(3, G.shieldCharges + 1);
       tier = G.shieldCharges;
       SFX.shield();
+      break;
+    case 'warp': // every ball phases straight up through the blocks
+      for (const b of G.balls) {
+        if (b.dead) continue;
+        b.phasing = true; b.stuck = false;
+        b.vx = 0; b.vy = -ballSp();
+        b.zoneSaves = 3; // arrive with a full barrier
+      }
+      G.shake = Math.min(G.shake + 5, 10);
+      tone(500, 0.25, 'sine', 0.06, 600);
       break;
     case 'multi': {
       const cur = G.balls.filter(b => !b.dead);
@@ -103,16 +116,26 @@ function applyPower(p, srcType) {
 function makeBall(x, y, angle, overrideAngle) {
   const sp = ballSp();
   const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (Math.random() - 0.5) * 0.6);
-  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [] };
+  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: 3 };
 }
 
-// challenge-stage formations — themed layouts instead of a plain grid
+// formations — pinball-shaped layouts drawn from at random, so runs differ.
+// "mild" ones keep enough coverage to headline an arrival wave too.
 const FORMATIONS = [
-  { name: 'CHECKERBOARD', skip: (r, c) => (r + c) % 2 === 1 },
+  { name: 'CHECKERBOARD', mild: true, skip: (r, c) => (r + c) % 2 === 1 },
   { name: 'DIAMOND',      skip: (r, c, rows, cols) => Math.abs(c - (cols - 1) / 2) + Math.abs(r - (rows - 1) / 2) > Math.max(rows, cols) / 2 + 0.6 },
   { name: 'TWIN PILLARS', skip: (r, c, rows, cols) => { const q = cols / 4; return Math.abs(c - q) > q * 0.8 && Math.abs(c - 3 * q) > q * 0.8; } },
-  { name: 'FORTRESS',     skip: (r, c, rows, cols) => r > 0 && r < rows - 1 && c > 0 && c < cols - 1 && (r + c) % 2 === 0 },
+  { name: 'FORTRESS',     mild: true, skip: (r, c, rows, cols) => r > 0 && r < rows - 1 && c > 0 && c < cols - 1 && (r + c) % 2 === 0 },
+  // wedge pointing up — a classic invader vanguard
+  { name: 'VANGUARD',     skip: (r, c, rows, cols) => Math.abs(c - (cols - 1) / 2) > (r + 0.5) * cols / (rows * 2) + 0.4 },
+  // diagonal raiding stripes
+  { name: 'SIDEWINDER',   mild: true, skip: (r, c) => (c + r * 2) % 4 >= 2 },
+  // hollow ring — the middle is a pinball chamber
+  { name: 'ARENA',        skip: (r, c, rows, cols) => r > 0 && r < rows - 1 && c > 1 && c < cols - 2 },
+  // vertical canyons — clean shafts up to the high ground
+  { name: 'CANYONS',      mild: true, skip: (r, c) => c % 3 === 2 },
 ];
+const MILD_FORMS = FORMATIONS.filter(f => f.mild);
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = [];
@@ -125,15 +148,19 @@ function buildLevel(lvl) {
   const p = preset();
   const cycle = Math.floor((lvl - 1) / (GENS.length * STAGES)); // full-journey loops
   // 4-5 columns on phones, up to 11 on wide desktops — cards stay readable
-  const cols = Math.max(4, Math.min(11, Math.floor(W / 110)));
-  const margin = Math.min(60, W * 0.04);
+  const cols = Math.max(4, Math.min(10, Math.floor(W / 120)));
+  const margin = Math.min(60, W * 0.05);
   const bw = (W - margin * 2) / cols;
   // brick height also scales with VIEWPORT height — short laptop windows must
   // still leave the lower half of the screen as playable space
-  const bh = Math.min(86, bw * 0.78, H * 0.075);
+  const bh = Math.min(80, bw * 0.72, H * 0.07);
+  const gapX = Math.max(10, bw * 0.16); // invader-style daylight between columns
+  const pitchY = bh + 13;
   G.brickW = bw; G.brickH = bh;
   const hasBoss = stage === 2;
-  let gridTop = 96;
+  // formation spawns with real headroom above it — the high-ground rally zone
+  // is a playable space from the first serve, not something you wait for
+  let gridTop = Math.max(110, Math.min(190, Math.round(H * 0.15)));
   // ---- BOSS (legendary stage only — the finale of each region) ----
   if (hasBoss) {
     const bossW = Math.min(bw * 2.1, W * 0.46), bossH = bh * 1.85;
@@ -149,8 +176,12 @@ function buildLevel(lvl) {
     gridTop = bossY + bossH / 2 + 26;
   }
   // ---- grid ----
-  const form = stage === 1 ? FORMATIONS[(rIdx + cycle) % FORMATIONS.length] : null;
-  const maxRows = Math.max(2, Math.floor((H * 0.55 - gridTop) / (bh + 8)));
+  // challenge waves always pull a random formation; arrivals often do too
+  // (a mild one), so no two journeys through a region play quite the same
+  const form = stage === 1 ? FORMATIONS[Math.floor(Math.random() * FORMATIONS.length)]
+    : stage === 0 && Math.random() < 0.45 ? MILD_FORMS[Math.floor(Math.random() * MILD_FORMS.length)]
+    : null;
+  const maxRows = Math.max(2, Math.floor((H * 0.55 - gridTop) / pitchY));
   const baseRows = 3 + Math.floor(rIdx / 3) + cycle + (stage === 1 ? 1 : 0);
   const rows = Math.min(hasBoss ? 2 + Math.floor(rIdx / 4) : baseRows, 6, maxRows);
   for (let r = 0; r < rows; r++) {
@@ -158,15 +189,20 @@ function buildLevel(lvl) {
     const tier = hasBoss ? 3
       : r < Math.ceil(rows / 3) ? Math.min(3, 2 + stage) : r < Math.ceil(rows * 2 / 3) ? 2 : 1;
     const pool = gen.tiers[tier];
+    // the very top row of a non-boss wave is an armored "guardian wall" —
+    // multi-hit bricks the ball can rally against (see awardRally)
+    const armored = !hasBoss && r === 0 && rows >= 2;
+    // space-invaders style: every rank marches as ONE species
+    const [id, t] = pool[Math.floor(Math.random() * pool.length)];
     for (let c = 0; c < cols; c++) {
       if (form && form.skip(r, c, rows, cols)) continue;
-      const [id, t] = pool[Math.floor(Math.random() * pool.length)];
-      const hp = Math.max(1, Math.round((tier + cycle) * p.brickHp));
+      let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp));
+      if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
       const brick = {
         bx: margin + c * bw + bw / 2,
-        by: gridTop + r * (bh + 8) + bh / 2,
-        w: bw - 8, h: bh,
-        hp, maxHp: hp,
+        by: gridTop + r * pitchY + bh / 2,
+        w: bw - gapX, h: bh,
+        hp, maxHp: hp, armored,
         poke: { id, t },
         flash: 0, wobble: Math.random() * Math.PI * 2,
       };
@@ -183,6 +219,7 @@ function buildLevel(lvl) {
   G.deathsThisWave = 0;
   G.dangerWarned = false;
   G.heat = 0; G.overheat = 0;
+  G.highGroundDone = false; G.waveFirstKill = false; G.elementOrbCD = 9;
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
   G.modifier = stage === 1 && lvl >= 2
@@ -194,27 +231,31 @@ function buildLevel(lvl) {
     G.bossIntro = 1.6;
     SFX.roar();
   } else if (stage === 0) {
-    setAnnounce(null, gen.accent, gen.name, 'STAGE 1/3 — ARRIVAL', 2.6);
+    setAnnounce(null, gen.accent, gen.name, 'STAGE 1/3 — ARRIVAL', 2.6, form ? form.name + ' FORMATION' : null);
   } else if (G.modifier) {
     const m = G.modifier;
     setAnnounce(m.icon, m.color, m.name, m.desc, 3.2, form ? gen.name + ' 2/3 — ' + form.name + ' FORMATION' : null);
   } else {
-    setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4);
+    setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4, form ? form.name + ' FORMATION' : null);
   }
 }
 
-function resetRun() {
+function resetRun(startLevel = 1, trial = false) {
   const p = preset();
-  G.score = 0; G.lives = p.lives; G.level = 1; G.combo = 0;
+  G.score = 0; G.lives = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.megaCalloutDone = false;
+  G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.announce = null;
   G.upg = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.heat = 0; G.overheat = 0;
-  buildLevel(1);
+  // trial runs are a sandbox: best score and Pokédex catches don't persist
+  G.trial = trial;
+  buildLevel(startLevel);
   serve();
+  if (trial) setAnnounce('swift', '#80d8ff', 'TRIAL MODE', genFor(startLevel).name + ' · ' + STAGE_NAMES[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3);
 }
 function serve() {
   G.balls = [makeBall(G.paddle.x, PADDLE_Y() - 24)];

@@ -31,7 +31,7 @@ function diff() {
     bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
     shotSpeed: p.shotSpeed * speedScale(),
-    dropChance: 0.24 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1),
+    dropChance: 0.1 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1),
     catchChance: 0.07,
   };
 }
@@ -79,7 +79,8 @@ function menuLayout() {
     chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
     start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
     dex: { x: W / 2 - 170, y: btnY + btnH + 14, w: 340, h: 30 },
-    adv: { x: W / 2 - 130, y: btnY + btnH + 48, w: 260, h: 28 },
+    trial: { x: W / 2 - 170, y: btnY + btnH + 48, w: 340, h: 28 },
+    adv: { x: W / 2 - 130, y: btnY + btnH + 80, w: 260, h: 28 },
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)
@@ -92,6 +93,23 @@ function advLayout() {
     px, py, pw, ph,
     slider: i => ({ x: px + 36, y: py + 88 + i * rowH, w: pw - 72 }),
     toggle: i => ({ x: px + 30, y: py + 74 + SLIDERS.length * rowH + i * togH, w: pw - 60, h: togH - 8 }),
+    close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
+  };
+}
+// trial mode overlay: 3×3 region grid + stage picker + start
+let trialOpen = false;
+const trialSel = { region: 0, stage: 0 };
+function trialLayout() {
+  const pw = Math.min(470, W * 0.94);
+  const chipW = (pw - 60 - 20) / 3, chipH = 48, stageH = 38;
+  const gridY = 96;
+  const ph = gridY + 3 * (chipH + 10) + 30 + stageH + 84;
+  const px = W / 2 - pw / 2, py = Math.max(16, H / 2 - ph / 2);
+  return {
+    px, py, pw, ph,
+    region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + 10), w: chipW, h: chipH }),
+    stage: i => ({ x: px + 30 + i * (chipW + 10), y: py + gridY + 3 * (chipH + 10) + 24, w: chipW, h: stageH }),
+    start: { x: px + pw / 2 - 110, y: py + ph - 60, w: 220, h: 44 },
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };
 }

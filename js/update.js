@@ -76,7 +76,7 @@ function damageBrick(br, dmg, sx, sy, element) {
   const col = TYPE_COLORS[br.poke.t];
   if (br.isBoss && br.hp > 0) {
     SFX.bossHit();
-    G.mega = Math.min(1, G.mega + 0.008);
+    G.mega = Math.min(1, G.mega + 0.004);
     // ---- boss enrage phase ----
     if (br.phase === 1 && br.hp <= br.maxHp / 2) {
       br.phase = 2;
@@ -89,7 +89,8 @@ function damageBrick(br, dmg, sx, sy, element) {
     br.dead = true;
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
-    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.022));
+    // tuned so Mega comes online roughly once per region (3 waves)
+    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008));
     if (br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
     if (br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
       setAnnounce('▒', '#b0bec5', 'MISSINGNO.', 'ITEM DUPLICATION! ×3 POWER-UPS', 2.2);
@@ -120,11 +121,19 @@ function damageBrick(br, dmg, sx, sy, element) {
     G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
     if (br.isBoss) { SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30); }
     else SFX.brick();
+    // every region's arrival wave seeds a Sky Warp on the first kill —
+    // an early invitation up to the high ground
+    if (!G.waveFirstKill) {
+      G.waveFirstKill = true;
+      if (stageIdx(G.level) === 0 && !br.isBoss) {
+        G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 95, p: POWERS.warp, rot: 0, hint: G.level === 1 });
+      }
+    }
     // drops: power-up tied to type, or a catchable pokéball
     const d = diff();
     if (br.isBoss) {
       const p = POWERS[POWER_BY_TYPE[br.poke.t] || 'star'];
-      for (let i = 0; i < 3; i++) G.powerups.push({ x: br.bx + G.fx + (i - 1) * 48, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
+      for (let i = 0; i < 2; i++) G.powerups.push({ x: br.bx + G.fx + (i ? 28 : -28), y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 40, vy: 110, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
     } else if (br.poke.id > 0 && Math.random() < d.dropChance) {
       const p = POWERS[POWER_BY_TYPE[br.poke.t] || 'star'];
@@ -152,6 +161,61 @@ function fireballExplosion(x, y, tier) {
     if (br.dead) continue;
     const bx = br.bx + G.fx, by = br.by + G.fy;
     if (Math.hypot(bx - x, by - y) < radius + br.w / 2) damageBrick(br, 1, bx, by, 'fire');
+  }
+}
+
+// reward keeping the ball alive up top — the classic breakout thrill.
+// rally = brick contacts since this ball last touched the paddle; it resets
+// on a paddle return, so long rallies mean skilful top-of-screen play.
+function awardRally(b, x, y) {
+  b.rally = (b.rally || 0) + 1;
+  G.bestRally = Math.max(G.bestRally, b.rally);
+  if (b.rally < 3) return;
+  const bonus = Math.round(b.rally * 15 * scoreMult());
+  G.score += bonus;
+  if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.0035); // rallies feed Mega
+  if (b.rally === 3 || b.rally % 3 === 0) {
+    const hot = b.rally >= 9;
+    addFloater(x, y - 22, 'RALLY ×' + b.rally + '  +' + bonus, hot ? '#ff7043' : '#ffd54f', 13 + Math.min(9, b.rally));
+    tone(480 + Math.min(b.rally, 18) * 45, 0.08, 'square', 0.05);
+    if (b.rally >= 6 && !SETTINGS.reduceShake) G.shake = Math.min(G.shake + 2, 8);
+  }
+  if (!G.rallyHintDone) { // teach the mechanic the first time it triggers
+    G.rallyHintDone = true;
+    setAnnounce('star', '#ffd54f', 'RALLY x3!', 'ESCALATING POINTS · EVERY RALLY HIT CHARGES YOUR MEGA METER', 3);
+  }
+}
+
+// apply a falling pickup's payload — shared by paddle catches and blaster snags
+function collectPickup(pu) {
+  if (pu.p.key === 'element') {
+    // pure element swap — no other effect, just fixes your matchup
+    G.ballElement = pu.p.t;
+    G.ballElementT = 30;
+    G.resistStreak = 0;
+    SFX.power();
+    burst(pu.x, pu.y, TYPE_COLORS[pu.p.t], 16, 200);
+    const strong = (EFFECTIVE[pu.p.t] || []).slice(0, 3).join(', ').toUpperCase();
+    setAnnounce(pu.p.t, TYPE_COLORS[pu.p.t], pu.p.t.toUpperCase() + ' BALL',
+      strong ? '2× vs ' + strong : 'ELEMENT CHANGED', 1.8);
+  } else if (pu.p.key === 'pokeball') {
+    // trial runs are a sandbox — catches don't touch the real Pokédex
+    const isNew = !G.trial && addToDex(pu.dexId, pu.shiny);
+    G.caughtRun++;
+    SFX.gotcha();
+    burst(pu.x, pu.y, pu.shiny ? '#ffd700' : '#ef5350', 18, 220);
+    if (upgN('bond')) {
+      G.catchBonus += 0.06 * upgN('bond');
+      addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
+    }
+    setAnnounce(pu.shiny ? 'fairy' : 'pokeball', pu.shiny ? '#ffd700' : '#ef5350',
+      pu.shiny ? 'SHINY GOTCHA!' : 'GOTCHA!',
+      G.trial ? 'TRIAL — CATCH NOT REGISTERED · +250 PTS'
+        : isNew ? 'NEW POKÉMON REGISTERED TO POKÉDEX' : 'ALREADY REGISTERED · +250 PTS', 1.8);
+    G.score += isNew ? 100 : 250;
+  } else {
+    applyPower(pu.p, pu.srcType);
+    burst(pu.x, pu.y, pu.p.color, 16, 200);
   }
 }
 
@@ -220,7 +284,7 @@ function loseLife() {
   if (G.lives <= 0) {
     G.state = 'gameover'; G.stateT = 0;
     SFX.gameOver();
-    if (G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
+    if (!G.trial && G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
   } else {
     serve();
   }
@@ -300,6 +364,33 @@ function update(dt) {
     }
   }
 
+  // ---- element orbs: a calm, reliable way to fix a bad type matchup ----
+  // they drift down slowly and only change your ball's element. When most of
+  // the field resists your current element, one arrives quickly; otherwise
+  // they show up now and then with something useful.
+  G.elementOrbCD -= dt;
+  if (G.elementOrbCD <= 0 && G.state === 'play' && !G.powerups.some(p => p.p.key === 'element')) {
+    const alive = G.bricks.filter(b => !b.dead && b.poke.id > 0);
+    if (alive.length >= 4) {
+      const resisted = G.ballElement ? alive.filter(b => (RESIST[G.ballElement] || []).includes(b.poke.t)).length : 0;
+      const struggling = G.ballElement && resisted >= alive.length * 0.5;
+      // orbs are a rescue mechanic, not a scheduled shower: quick when you're
+      // genuinely walled off, otherwise scarce
+      G.elementOrbCD = struggling ? 8 : 28 + Math.random() * 16;
+      if (struggling || Math.random() < 0.3) {
+        // offer an element that's super effective against the dominant type
+        const counts = {};
+        for (const b of alive) counts[b.poke.t] = (counts[b.poke.t] || 0) + 1;
+        const domType = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+        const cands = Object.keys(EFFECTIVE).filter(el => EFFECTIVE[el].includes(domType) && el !== G.ballElement);
+        const el = cands.length ? cands[Math.floor(Math.random() * cands.length)] : 'normal';
+        G.powerups.push({ x: 50 + Math.random() * (W - 100), y: -20, vy: 62, p: { key: 'element', t: el }, rot: Math.random() * 6, orb: true });
+      }
+    } else {
+      G.elementOrbCD = 8;
+    }
+  }
+
   // ---- formation drift ----
   if (G.state === 'play' && G.bossIntro <= 0) {
     G.swayT += dt * ts;
@@ -331,9 +422,37 @@ function update(dt) {
   const windy = G.modifier?.key === 'winds' || G.gustT > 0; // Lugia gusts reuse the wind physics
   const bts = ts * ballTimeScale();
   const aliveCnt = G.bricks.filter(x => !x.dead).length;
+  // rally-zone geometry: arm by getting above the wall's top; the net itself
+  // hangs UNDER the whole formation, so a ball inside is free to pinball off
+  // any block tops in the gaps — the net only matters where no block is left
+  let wallTop = Infinity, rallyFloor = -Infinity;
+  for (const br of G.bricks) {
+    if (br.dead) continue;
+    if (br.armored) wallTop = Math.min(wallTop, br.by + G.fy - br.h / 2);
+    if (!br.isBoss) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
+  }
+  rallyFloor += 14; // strung a little below the deepest rank
   for (const b of G.balls) {
     if (b.dead) continue;
     if (b.stuck) { b.x = G.paddle.x + (b.holdOff || 0); b.y = PADDLE_Y() - G.paddle.h / 2 - b.r - 2; continue; }
+    // SKY WARP: the ball phases straight up through every block, then pops
+    // out in the high-ground zone with a rally-friendly sideways angle
+    if (b.phasing) {
+      b.trail.unshift({ x: b.x, y: b.y });
+      if (b.trail.length > 16) b.trail.length = 16;
+      b.y -= ballSp() * 1.3 * bts * dt;
+      const stopY = wallTop < Infinity ? Math.max(56 + b.r + 8, wallTop - 44) : 56 + b.r + 70;
+      if (b.y <= stopY) {
+        b.phasing = false;
+        b.y = stopY;
+        const sp = ballSp();
+        const a = -Math.PI / 2 + (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.3);
+        b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp;
+        burst(b.x, b.y, '#80d8ff', 18, 240, 0.55);
+        tone(1100, 0.12, 'triangle', 0.06);
+      }
+      continue;
+    }
     b.trail.unshift({ x: b.x, y: b.y });
     const tl = 10 + Math.min(10, G.combo); // trail charges up with your combo
     if (b.trail.length > tl) b.trail.length = tl;
@@ -355,7 +474,15 @@ function update(dt) {
     b.x += b.vx * bts * dt; b.y += b.vy * bts * dt;
     if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); SFX.wall(); }
     if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); SFX.wall(); }
-    if (b.y < 56 + b.r) { b.y = 56 + b.r; b.vy = Math.abs(b.vy); SFX.wall(); }
+    if (b.y < 56 + b.r) {
+      b.y = 56 + b.r; b.vy = Math.abs(b.vy); SFX.wall();
+      // reaching the very top is a skill beat — reward it (points + a little Mega)
+      if (G.state === 'play' && !b.stuck) {
+        G.score += Math.round(12 * scoreMult());
+        if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.0015);
+        burst(b.x, 56 + b.r, '#ffd54f', 3, 90, 0.3);
+      }
+    }
     if (b.y > FLOOR() - 14 && G.shieldCharges > 0 && b.vy > 0) {
       b.vy = -Math.abs(b.vy); b.y = FLOOR() - 14;
       G.shieldCharges--;
@@ -363,6 +490,51 @@ function update(dt) {
       SFX.shield();
     }
     if (b.y > H + 30) b.dead = true;
+    // RALLY BARRIER — earning the high ground keeps you there for a bit.
+    // Getting above the wall arms the net (3 charges per paddle possession).
+    // The ball then pinballs freely off any block tops inside the formation;
+    // only when it would fall out the BOTTOM through an empty column does the
+    // net catch it and pop it back up — costing a charge. Spent net = it drops.
+    if (rallyFloor > -Infinity && !b.stuck) {
+      if (wallTop < Infinity && b.y < wallTop - b.r - 2) {
+        if (!b.aboveWall) {
+          b.aboveWall = true;
+          // first trip up top each wave is celebrated — this is the fun zone
+          if (!G.highGroundDone && G.state === 'play') {
+            G.highGroundDone = true;
+            const bo = Math.round(150 * scoreMult());
+            G.score += bo;
+            addFloater(b.x, b.y + 20, 'HIGH GROUND! +' + bo, '#ffd54f', 17);
+            if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.03);
+            tone(880, 0.14, 'triangle', 0.06, 200);
+          }
+        }
+      } else if (b.aboveWall && b.vy > 0 && b.y - b.r > rallyFloor) {
+        // only catch in a truly empty column — if a block is (partially)
+        // overhead the ball plays off it physically instead
+        const gapColumn = !G.bricks.some(br => !br.dead && !br.isBoss && Math.abs(b.x - (br.bx + G.fx)) < br.w / 2 + b.r);
+        if (gapColumn && b.zoneSaves > 0) {
+          b.zoneSaves--;
+          // preserve speed, pop mostly upward (≤~30° tilt) — no sideways flings
+          const sp2 = Math.hypot(b.vx, b.vy);
+          let tilt = Math.atan2(b.vx, Math.abs(b.vy));
+          tilt = Math.max(-0.52, Math.min(0.52, tilt + (Math.random() - 0.5) * 0.4));
+          b.vx = Math.sin(tilt) * sp2;
+          b.vy = -Math.cos(tilt) * sp2;
+          b.y = rallyFloor - 2;
+          burst(b.x, rallyFloor, '#ffd54f', 12, 180, 0.45);
+          tone(720 + b.zoneSaves * 140, 0.09, 'triangle', 0.05);
+          if (b.zoneSaves === 1) addFloater(b.x, rallyFloor - 20, 'BARRIER LOW!', '#ff8a65', 13);
+          else if (b.zoneSaves === 0) { addFloater(b.x, rallyFloor - 20, 'BARRIER SPENT!', '#ff5252', 14); noiseBurst(0.14, 0.06); }
+          if (!G.barrierHintDone) {
+            G.barrierHintDone = true;
+            addFloater(b.x, rallyFloor - 40, 'RALLY BARRIER!', '#ffd54f', 16);
+          }
+        } else {
+          b.aboveWall = false; // spent, or it slipped out under a block
+        }
+      }
+    }
     const pw = paddleW(), py = PADDLE_Y();
     if (b.vy > 0 && b.y + b.r > py - G.paddle.h / 2 && b.y - b.r < py + G.paddle.h / 2 &&
         b.x > G.paddle.x - pw / 2 - b.r && b.x < G.paddle.x + pw / 2 + b.r) {
@@ -387,6 +559,10 @@ function update(dt) {
         if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.02 * upgN('momentum'));
       }
       G.combo = 0;
+      // returning to the paddle banks the rally — celebrate a good one
+      if (b.rally >= 5) addFloater(G.paddle.x, PADDLE_Y() - 32, 'NICE RALLY ×' + b.rally + '!', '#80d8ff', 15);
+      b.rally = 0;
+      b.zoneSaves = 3; // fresh possession recharges the rally barrier
     }
     for (const br of G.bricks) {
       if (br.dead || br.phaseT > 0) continue; // Lunala's Phantom Phase: intangible
@@ -398,15 +574,22 @@ function update(dt) {
       if (dx * dx + dy * dy < b.r * b.r) {
         const pierce = G.fx_fire || G.megaT > 0;
         if (pierce && !br.isBoss) {
-          damageBrick(br, 99, b.x, b.y, G.ballElement);
-          fireballExplosion(b.x, b.y, G.fx_fire ? G.fx_fire.tier : 1);
+          // Fireball torches blocks outright; bare Mega punches through for 3
+          // with brief contact i-frames so a surviving block isn't melted
+          // frame-by-frame as the ball ghosts through it
+          if (br.flash <= 0.5) {
+            damageBrick(br, G.fx_fire ? 99 : 3, b.x, b.y, G.ballElement);
+            if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
+            awardRally(b, b.x, b.y);
+          }
         } else {
           const ox = (hw + b.r) - Math.abs(b.x - bx);
           const oy = (hh + b.r) - Math.abs(b.y - by);
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
           damageBrick(br, pierce ? 3 : 1, b.x, b.y, G.ballElement);
-          if (pierce) fireballExplosion(b.x, b.y, G.fx_fire ? G.fx_fire.tier : 1);
+          if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
+          awardRally(b, b.x, b.y);
         }
         break;
       }
@@ -420,8 +603,10 @@ function update(dt) {
   if (laserActive && G.state === 'play') {
     G.laserCD -= dt;
     if (G.laserCD <= 0) {
-      const tier = Math.max(G.fx_laser ? G.fx_laser.tier : 0, G.megaT > 0 ? 2 : 0);
-      G.laserCD = tier >= 2 ? 0.22 : 0.35;
+      // slowed down — lasers support the ball, they don't replace it.
+      // Mega grants only tier-1 support fire now.
+      const tier = Math.max(G.fx_laser ? G.fx_laser.tier : 0, G.megaT > 0 ? 1 : 0);
+      G.laserCD = tier >= 3 ? 0.3 : tier >= 2 ? 0.42 : 0.6;
       const pw = paddleW();
       const xs = tier >= 3 ? [-pw / 2, -pw / 6, pw / 6, pw / 2] : [-pw / 2 + 8, pw / 2 - 8];
       xs.forEach(off => G.lasers.push({ x: G.paddle.x + off, y: PADDLE_Y() - 14, explosive: !!G.fx_fire || G.megaT > 0 }));
@@ -442,6 +627,18 @@ function update(dt) {
         addFloater(s.x, s.y - 14, 'INTERCEPTED!', '#80d8ff', 11);
         tone(740, 0.08, 'square', 0.05, -300);
         G.score += 25;
+      }
+    }
+    // manual blaster bolts can also snag falling pickups out of the air —
+    // a skill shot for drops you can't reach with the paddle
+    if (L.basic) {
+      for (const pu of G.powerups) {
+        if (L.dead || pu.dead) continue;
+        if (Math.abs(L.x - pu.x) < 20 && Math.abs(L.y - pu.y) < 26) {
+          pu.dead = true; L.dead = true;
+          addFloater(pu.x, pu.y - 16, 'SNAGGED!', '#80d8ff', 12);
+          collectPickup(pu);
+        }
       }
     }
     for (const br of G.bricks) {
@@ -596,9 +793,10 @@ function update(dt) {
   }
   G.enemyShots = G.enemyShots.filter(s => !s.dead);
 
-  // ---- falling pickups (power-ups + pokéballs) ----
+  // ---- falling pickups (power-ups + pokéballs + element orbs) ----
   for (const pu of G.powerups) {
     pu.y += pu.vy * ts * dt; pu.rot += dt * 3;
+    if (pu.orb) pu.x += Math.sin(pu.rot * 0.9) * 26 * dt; // orbs waft down gently
     if (upgN('magnetize')) { // Item Magnet: pickups drift toward the paddle
       const dx = G.paddle.x - pu.x;
       pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 75 * upgN('magnetize')) * dt;
@@ -606,23 +804,7 @@ function update(dt) {
     const pw = paddleW(), py = PADDLE_Y();
     if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + 18) {
       pu.dead = true;
-      if (pu.p.key === 'pokeball') {
-        const isNew = addToDex(pu.dexId, pu.shiny);
-        G.caughtRun++;
-        SFX.gotcha();
-        burst(pu.x, pu.y, pu.shiny ? '#ffd700' : '#ef5350', 18, 220);
-        if (upgN('bond')) {
-          G.catchBonus += 0.06 * upgN('bond');
-          addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
-        }
-        setAnnounce(pu.shiny ? 'fairy' : 'pokeball', pu.shiny ? '#ffd700' : '#ef5350',
-          pu.shiny ? 'SHINY GOTCHA!' : 'GOTCHA!',
-          isNew ? 'NEW POKÉMON REGISTERED TO POKÉDEX' : 'ALREADY REGISTERED · +250 PTS', 1.8);
-        G.score += isNew ? 100 : 250;
-      } else {
-        applyPower(pu.p, pu.srcType);
-        burst(pu.x, pu.y, pu.p.color, 16, 200);
-      }
+      collectPickup(pu);
     }
     if (pu.y > H + 30) pu.dead = true;
   }

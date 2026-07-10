@@ -16,7 +16,11 @@ function resize() {
   const w = Math.round(vv ? vv.width : window.innerWidth);
   const h = Math.round(vv ? vv.height : window.innerHeight);
   if (!w || !h) return; // transient 0×0 during load/rotate
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // no-op guard: setting canvas.width blanks the canvas for a frame, so
+  // spurious resize events (scrollbars, zoom, focus) must not rebuild anything
+  if (w === W && h === H && dpr === DPR && canvas.width === w * dpr) return;
+  DPR = dpr;
   W = w; H = h;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   canvas.width = W * DPR; canvas.height = H * DPR;
