@@ -1092,28 +1092,42 @@ function drawMenu() {
     ctx.shadowBlur = 0;
     if (mon) {
       const img = getSprite(mon.ids[0]);
-      const sp = Math.min(34, pg.h * 0.62);
+      const sp = Math.min(38, pg.h * 0.7);
       if (img.complete && img.naturalWidth) ctx.drawImage(img, pg.x + 4, pg.y + pg.h / 2 - sp / 2, sp, sp);
       else drawGlyph(ctx, st.key, pg.x + 6 + sp / 2, pg.y + pg.h / 2, 8, col);
-      const tx = pg.x + sp + 6 + (pg.w - sp - 10) / 2;
-      ctx.font = `900 ${Math.min(9.5, pg.w / 12)}px Orbitron, sans-serif`;
+      const tx = pg.x + sp + 4 + (pg.w - sp - 8) / 2;
+      ctx.font = `900 ${Math.min(11, pg.w / 11)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText(st.label, tx, pg.y + pg.h / 2 - 12, pg.w - sp - 12);
-      ctx.font = '900 8px Orbitron, sans-serif';
+      ctx.fillText(st.label, tx, pg.y + pg.h / 2 - 9, pg.w - sp - 10);
+      ctx.font = `900 ${Math.min(9.5, pg.w / 13)}px Orbitron, sans-serif`;
       ctx.fillStyle = col;
-      ctx.fillText(mon.ability, tx, pg.y + pg.h / 2 + 1, pg.w - sp - 12);
-      ctx.font = '500 6.5px Orbitron, sans-serif';
-      ctx.fillStyle = sel ? '#cfd8dc' : '#78909c';
-      ctx.fillText(mon.blurb, tx, pg.y + pg.h / 2 + 13, pg.w - sp - 12);
+      ctx.fillText(mon.ability, tx, pg.y + pg.h / 2 + 9, pg.w - sp - 10);
     } else {
       ctx.font = `900 ${Math.min(12, pg.w / 8.2)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 - 5);
-      ctx.font = '500 7px Orbitron, sans-serif';
+      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 - 8);
+      ctx.font = '500 8px Orbitron, sans-serif';
       ctx.fillStyle = '#78909c';
-      ctx.fillText('NO PARTNER', pg.x + pg.w / 2, pg.y + pg.h / 2 + 12);
+      ctx.fillText('NO PARTNER', pg.x + pg.w / 2, pg.y + pg.h / 2 + 10);
     }
     ctx.restore();
+  }
+  // what the SELECTED partner actually does — full-size, readable
+  {
+    const selMon = STARTER_MON[SETTINGS.starter];
+    const selCol = selMon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
+    const narrowM = W < 560;
+    if (selMon) {
+      fitText(selMon.ability + ' — ' + selMon.tiers[0], L.starterInfoY, 13 * Math.max(0.85, L.s), '700', selCol, maxW);
+      fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
+        : 'YOUR PARTNER RIDES THE PADDLE · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
+        L.starterInfoY + 19, 10.5 * Math.max(0.85, L.s), '500', '#90a4ae', maxW);
+    } else {
+      fitText(narrowM ? 'NO PARTNER — PLAIN PADDLE' : 'NO PARTNER — A PLAIN PADDLE AND NO SERVE ELEMENT',
+        L.starterInfoY, 13 * Math.max(0.85, L.s), '700', '#90a4ae', maxW);
+      fitText(narrowM ? 'POWER-UPS STILL CHANGE BALL TYPE' : 'POWER-UPS AND ELEMENT ORBS STILL CHANGE YOUR BALL TYPE MID-RUN',
+        L.starterInfoY + 19, 10.5 * Math.max(0.85, L.s), '500', '#78909c', maxW);
+    }
   }
   // difficulty presets
   ctx.font = '700 13px Orbitron, sans-serif';

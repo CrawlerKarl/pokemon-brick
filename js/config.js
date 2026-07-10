@@ -72,12 +72,13 @@ function menuLayout() {
   const starterH = 58 * s + 6; // taller: partner sprite + ability line
   const startLabelY = infoY + 2 * lineH + 22 * s;
   const startY = startLabelY + 14;
-  const chipsLabelY = startY + starterH + 28 * s;
+  const starterInfoY = startY + starterH + 16; // readable ability detail lines
+  const chipsLabelY = starterInfoY + 34 + 12 * s;
   const chipsY = chipsLabelY + 14;
   const btnW = Math.min(300, W * 0.84), btnH = 54 * s + 8;
   const btnY = chipsY + chipH + 44 * s;
   return {
-    s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY,
+    s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY,
     starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
     chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
     start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
