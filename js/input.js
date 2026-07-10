@@ -12,7 +12,7 @@ function touchButtons() {
   return {
     fire:  { x: W - 52, y: fl - 48, r: 42 },
     mega:  { x: W - 52, y: fl - 148, r: 30 },
-    pause: { x: W - 26, y: 82, r: 18 },
+    pause: { x: W - 28, y: 84, r: 20 },
     sound: { x: W - 72, y: 82, r: 18 },
   };
 }
@@ -23,25 +23,43 @@ window.addEventListener('mousemove', e => {
   if (dragSlider >= 0) setSliderFromX(dragSlider, e.clientX);
 });
 window.addEventListener('mouseup', () => { if (dragSlider >= 0) { dragSlider = -1; saveSettings(); } });
-window.addEventListener('mousedown', e => onPress(e.clientX, e.clientY));
+// mobile browsers replay taps as synthetic mouse events ~300ms later — that
+// ghost click was instantly UN-pausing right after the pause button paused.
+// Any recent touch mutes the mouse path entirely.
+let lastTouchT = -9999;
+// Space Junkie firing: hold the button and the blaster keeps firing until
+// the heat lockout stops you — release, vent on a return, resume
+let fireHeld = false, fireTouchId = null;
+const uiTouchIds = new Set(); // touches claimed by on-screen buttons
+window.addEventListener('mousedown', e => {
+  if (performance.now() - lastTouchT < 900) return;
+  fireHeld = true;
+  onPress(e.clientX, e.clientY);
+});
+window.addEventListener('mouseup', () => { fireHeld = false; });
 window.addEventListener('wheel', e => {
   if (G.state === 'dex') dexScroll = Math.max(0, dexScroll + e.deltaY);
 }, { passive: true });
 
 window.addEventListener('touchstart', e => {
   audio();
+  lastTouchT = performance.now();
   for (const t of e.changedTouches) {
     const x = t.clientX, y = t.clientY;
     if (G.state === 'play' || G.state === 'serve') {
       if (paused) { // pause screen is modal: quit button, else tap resumes
         if (inRect(x, y, pauseQuitGeom())) quitToMenu(); else paused = false;
+        uiTouchIds.add(t.identifier);
         continue;
       }
       const B = touchButtons();
-      if (inCircle(x, y, B.fire)) { fireAction(); continue; }
-      if (inCircle(x, y, B.mega)) { tryMega(); continue; }
-      if (inCircle(x, y, B.pause)) { togglePause(); continue; }
-      if (inCircle(x, y, B.sound)) { toggleMusic(); continue; }
+      // touches that land on a button are UI touches — they must never be
+      // adopted as paddle control, even if the finger wiggles (that was
+      // yanking the paddle to the FIRE button's side of the screen)
+      if (inCircle(x, y, B.fire)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.mega)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.pause)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.sound)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
       // everything else is paddle control — and launches during serve
       paddleTouchId = t.identifier;
       mouseX = x; lastMouseY = y;
@@ -58,6 +76,7 @@ window.addEventListener('touchstart', e => {
 let onPressDexTapPending = null;
 window.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
+    if (uiTouchIds.has(t.identifier)) continue; // button touches never steer
     if (G.state === 'dex' && dexDragY != null) {
       dexScroll = Math.max(0, dexScroll - (t.clientY - dexDragY));
       dexDragY = t.clientY;
@@ -71,14 +90,28 @@ window.addEventListener('touchmove', e => {
   e.preventDefault();
 }, { passive: false });
 window.addEventListener('touchend', e => {
+  lastTouchT = performance.now();
   for (const t of e.changedTouches) {
+    uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
+    if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
     if (G.state === 'dex' && onPressDexTapPending && Math.abs(t.clientY - dexDragStart) < 10) {
       onPress(onPressDexTapPending.x, onPressDexTapPending.y);
     }
   }
   onPressDexTapPending = null; dexDragY = null;
   if (dragSlider >= 0) { dragSlider = -1; saveSettings(); }
+});
+// a system gesture can cancel touches without a touchend — release everything
+// so autofire and paddle control can't get stuck
+window.addEventListener('touchcancel', e => {
+  lastTouchT = performance.now();
+  for (const t of e.changedTouches) {
+    uiTouchIds.delete(t.identifier);
+    if (t.identifier === paddleTouchId) paddleTouchId = null;
+    if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
+  }
+  onPressDexTapPending = null; dexDragY = null;
 });
 function toggleMusic() {
   MUSIC.on = !MUSIC.on;
@@ -154,7 +187,9 @@ function pickUpgrade(i) {
   SFX.power();
   buildLevel(G.level);
   serve();
-  // confirm AFTER buildLevel so the stage banner doesn't swallow it
+  // confirm AFTER buildLevel so the stage banner doesn't swallow it —
+  // unless the partner just evolved, which is the bigger moment
+  if (G.justEvolved) { G.justEvolved = false; return; }
   setAnnounce(u.icon, u.color, u.name + (upgN(u.key) > 1 ? ' ' + romanTier(upgN(u.key)) : ''),
     u.desc, 2.2, genFor(G.level).name + ' ' + (stageIdx(G.level) + 1) + '/3 — ' + STAGE_NAMES[stageIdx(G.level)]);
 }
@@ -241,8 +276,9 @@ function onPress(x, y) {
 function serveAngle() {
   return -Math.PI / 2 + Math.max(-0.45, Math.min(0.45, G.paddle.speed * 0.0004));
 }
-// launch stuck balls / fire the blaster — shared by click, Space and the FIRE button
-function fireAction() {
+// launch stuck balls / fire the blaster — shared by click, Space and the FIRE
+// button. `auto` marks held-button repeat fire (no denial beep spam).
+function fireAction(auto = false) {
   if (paused) { paused = false; return; }
   if (G.state === 'serve') {
     G.balls.forEach(b => { if (b.stuck) { b.stuck = false; const a = serveAngle(); const sp = ballSp(); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; } });
@@ -260,14 +296,16 @@ function fireAction() {
     });
     return;
   }
-  if (G.overheat > 0) { tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
+  if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
   G.blasterCD = 0.55;
   G.shotsFired++;
   G.muzzle = 0.12;
   // heat: the blaster is a finishing tool, not a primary weapon — ~3 shots
   // overheat it. paddle returns vent it, so real breakout play keeps it cool.
-  G.heat = Math.min(1, G.heat + 0.4 * (1 - 0.3 * upgN('coolant')));
+  // (a water partner's Torrent keeps the barrel cooler still)
+  const torrent = G.starter === 'water' ? 0.75 - 0.05 * (G.starterLvl - 1) : 1;
+  G.heat = Math.min(1, G.heat + 0.4 * (1 - 0.3 * upgN('coolant')) * torrent);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, PADDLE_Y() - 44, 'OVERHEATED!', '#ff7043', 15);

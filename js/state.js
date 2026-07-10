@@ -26,6 +26,9 @@ const G = {
   rallyHintDone: false, bestRally: 0, barrierHintDone: false,
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
   trial: false,
+  // starter partner: which one, its ability tier, Torrent's return counter
+  starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
+  motionTier: 0, motionStyle: 'classic',
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
@@ -116,7 +119,7 @@ function applyPower(p, srcType) {
 function makeBall(x, y, angle, overrideAngle) {
   const sp = ballSp();
   const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (Math.random() - 0.5) * 0.6);
-  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: 3 };
+  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: 3, ember: 0 };
 }
 
 // formations — pinball-shaped layouts drawn from at random, so runs differ.
@@ -148,14 +151,18 @@ function buildLevel(lvl) {
   const p = preset();
   const cycle = Math.floor((lvl - 1) / (GENS.length * STAGES)); // full-journey loops
   // 4-5 columns on phones, up to 11 on wide desktops — cards stay readable
-  const cols = Math.max(4, Math.min(10, Math.floor(W / 120)));
+  // board size grows with the journey: more columns and rows deeper in, so
+  // late regions are denser campaigns rather than just faster ones
+  const regionsIn = Math.floor((lvl - 1) / STAGES);
+  const baseCols = Math.max(6, Math.min(11, Math.floor(W / 105)));
+  const cols = Math.max(6, Math.min(13, Math.floor(W / 62), baseCols + Math.min(3, Math.floor(regionsIn / 2))));
   const margin = Math.min(60, W * 0.05);
   const bw = (W - margin * 2) / cols;
   // brick height also scales with VIEWPORT height — short laptop windows must
   // still leave the lower half of the screen as playable space
   const bh = Math.min(80, bw * 0.72, H * 0.07);
-  const gapX = Math.max(10, bw * 0.16); // invader-style daylight between columns
-  const pitchY = bh + 13;
+  const gapX = Math.max(8, bw * 0.15); // invader-style daylight between columns
+  const pitchY = bh + Math.max(9, Math.min(13, bh * 0.3));
   G.brickW = bw; G.brickH = bh;
   const hasBoss = stage === 2;
   // formation spawns with real headroom above it — the high-ground rally zone
@@ -168,6 +175,7 @@ function buildLevel(lvl) {
     const bossHp = Math.max(6, Math.round((14 + rIdx * 7 + cycle * 26) * p.bossHp));
     G.bricks.push({
       bx: W / 2, by: bossY, w: bossW, h: bossH,
+      hx: W / 2, hy: bossY, row: -1, col: -1,
       hp: bossHp, maxHp: bossHp, phase: 1,
       poke: { id: gen.boss.id, n: gen.boss.n, t: gen.boss.t },
       isBoss: true, flash: 0, wobble: Math.random() * Math.PI * 2,
@@ -181,9 +189,9 @@ function buildLevel(lvl) {
   const form = stage === 1 ? FORMATIONS[Math.floor(Math.random() * FORMATIONS.length)]
     : stage === 0 && Math.random() < 0.45 ? MILD_FORMS[Math.floor(Math.random() * MILD_FORMS.length)]
     : null;
-  const maxRows = Math.max(2, Math.floor((H * 0.55 - gridTop) / pitchY));
-  const baseRows = 3 + Math.floor(rIdx / 3) + cycle + (stage === 1 ? 1 : 0);
-  const rows = Math.min(hasBoss ? 2 + Math.floor(rIdx / 4) : baseRows, 6, maxRows);
+  const maxRows = Math.max(2, Math.floor((H * 0.58 - gridTop) / pitchY));
+  const baseRows = 3 + Math.min(4, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
+  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : baseRows, 8, maxRows);
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
@@ -198,9 +206,20 @@ function buildLevel(lvl) {
       if (form && form.skip(r, c, rows, cols)) continue;
       let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp));
       if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
+      // Space Junkie entrance: ranks pour in from off-screen, swooping along
+      // a curve into their slot — alternating sides per row, staggered
+      const entry = {
+        t: 0.25 + r * 0.28 + c * 0.05,
+        dur: 0.85,
+        sx: r % 2 ? -70 : W + 70,
+        sy: -50 - r * 26,
+      };
       const brick = {
-        bx: margin + c * bw + bw / 2,
-        by: gridTop + r * pitchY + bh / 2,
+        bx: entry.sx,
+        by: entry.sy,
+        hx: margin + c * bw + bw / 2,
+        hy: gridTop + r * pitchY + bh / 2,
+        row: r, col: c, entry,
         w: bw - gapX, h: bh,
         hp, maxHp: hp, armored,
         poke: { id, t },
@@ -220,6 +239,17 @@ function buildLevel(lvl) {
   G.dangerWarned = false;
   G.heat = 0; G.overheat = 0;
   G.highGroundDone = false; G.waveFirstKill = false; G.elementOrbCD = 9;
+  // motion choreography ramps with the journey: static ranks at first, then
+  // serpentine rows, traveling waves, and breathing formations late-game
+  G.motionTier = Math.min(3, Math.floor(regionsIn / 2) + (stage === 1 ? 1 : 0));
+  // Space Junkie's signature: every wave rolls its OWN behavior from the
+  // pool unlocked so far — consecutive waves genuinely act differently
+  const styles = ['classic'];
+  if (regionsIn >= 1 || stage === 1) styles.push('serpent');
+  if (regionsIn >= 2) styles.push('colwave', 'serpent');
+  if (regionsIn >= 4) styles.push('breathe', 'colwave');
+  if (regionsIn >= 5) styles.push('swirl');
+  G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
   G.modifier = stage === 1 && lvl >= 2
@@ -238,6 +268,20 @@ function buildLevel(lvl) {
   } else {
     setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4, form ? form.name + ' FORMATION' : null);
   }
+  // ---- starter evolution: the partner grows with the journey ----
+  const sm = STARTER_MON[G.starter];
+  if (sm) {
+    const sLvl = starterStage(lvl);
+    if (sLvl > G.starterLvl) {
+      G.starterLvl = sLvl;
+      G.justEvolved = true; // outranks the stage banner this wave
+      getSprite(sm.ids[sLvl - 1]);
+      SFX.mega();
+      setAnnounce(G.starter, TYPE_COLORS[G.starter],
+        sm.names[sLvl - 2] + ' EVOLVED INTO ' + sm.names[sLvl - 1] + '!',
+        sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
+    }
+  }
 }
 
 function resetRun(startLevel = 1, trial = false) {
@@ -251,18 +295,36 @@ function resetRun(startLevel = 1, trial = false) {
   G.shieldCharges = 0; G.announce = null;
   G.upg = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.heat = 0; G.overheat = 0;
+  // starter partner locks in at run start; its ability tier matches how far
+  // into the journey this run begins
+  G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
+  G.starterLvl = starterStage(startLevel);
+  G.torrentCount = 0; G.justEvolved = false;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
+  // starting deep? bank the upgrade drafts you'd have earned along the way
+  let granted = 0;
+  if (startLevel > 1) {
+    for (let i = 1; i < startLevel; i++) {
+      const pool = UPGRADES.filter(u => upgN(u.key) < u.max);
+      if (!pool.length) break;
+      const u = pool[Math.floor(Math.random() * pool.length)];
+      G.upg[u.key] = upgN(u.key) + 1;
+      granted++;
+    }
+  }
   buildLevel(startLevel);
   serve();
-  if (trial) setAnnounce('swift', '#80d8ff', 'TRIAL MODE', genFor(startLevel).name + ' · ' + STAGE_NAMES[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3);
+  if (trial) setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
+    genFor(startLevel).name + ' · ' + STAGE_NAMES[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
+    granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
 }
 function serve() {
   G.balls = [makeBall(G.paddle.x, PADDLE_Y() - 24)];
   G.balls[0].stuck = true;
-  // starter element: your chosen type rides the ball from every serve
-  if (SETTINGS.starter !== 'none' && !G.ballElement) {
-    G.ballElement = SETTINGS.starter;
+  // starter partner: its type rides the ball from every serve
+  if (G.starter && !G.ballElement) {
+    G.ballElement = G.starter;
     G.ballElementT = 9999;
   }
   G.state = 'serve'; G.stateT = 0;

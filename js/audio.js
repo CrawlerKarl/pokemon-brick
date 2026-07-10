@@ -70,26 +70,58 @@ const SFX = {
 const MUSIC = { on: JSON.parse(localStorage.getItem('pkbrk-music') ?? 'true'), nextT: 0, step: 0 };
 const GEN_ROOTS = [0, 2, 3, 5, 7, 8, 10, 1, 4];  // semitones above A2 per region
 const GEN_TEMPO = [0.135, 0.15, 0.13, 0.155, 0.12, 0.14, 0.125, 0.118, 0.128];
+// i – VI – III – VII in natural minor: the progression every bar leans on,
+// so the music moves somewhere instead of looping one texture forever
+const PROG = [0, 8, 3, 10];
 let melPat = null, bassPat = null, melGen = -1;
 function buildPattern(genIdx) {
   const r = sRand(genIdx * 999 + 5);
-  const scale = [0, 3, 5, 7, 10, 12, 15, 17];
+  const scale = [0, 2, 3, 5, 7, 8, 10];
   melPat = []; bassPat = [];
-  for (let i = 0; i < 64; i++) {
-    // A section sparser, B section busier — a little song structure
-    const density = i < 32 ? 0.38 : 0.52;
-    melPat.push(r() < density ? scale[Math.floor(r() * scale.length)] + 12 : null);
+  // 8 bars × 16 steps = 128-step phrase; melody follows the chord of the bar
+  for (let bar = 0; bar < 8; bar++) {
+    const chordRoot = PROG[bar % 4];
+    const chord = [chordRoot, chordRoot + 3, chordRoot + 7];
+    for (let s = 0; s < 16; s++) {
+      const density = bar % 4 === 3 ? 0.4 : 0.26; // turnaround bars get busier
+      if (r() >= density) { melPat.push(null); continue; }
+      // chord tones on strong beats, scale wanderings between
+      const pool = s % 4 === 0 ? chord : scale;
+      melPat.push(pool[Math.floor(r() * pool.length)] + (r() < 0.22 ? 24 : 12));
+    }
   }
-  for (let i = 0; i < 8; i++) bassPat.push(r() < 0.7 ? [0, 0, 3, 5, 7, 10][Math.floor(r() * 6)] : null);
+  for (let bar = 0; bar < 8; bar++) {
+    const rt = PROG[bar % 4];
+    for (let s = 0; s < 16; s++) {
+      bassPat.push(s % 8 === 0 ? rt : s % 8 === 4 && r() < 0.5 ? rt + (r() < 0.5 ? 7 : 12) : null);
+    }
+  }
   melGen = genIdx;
 }
-function playAt(f, t, dur, type, vol) {
+// shared music bus: warm lowpass + a gentle echo so notes hang in the air
+let musicBus = null, musicEcho = null;
+function musicOut() {
+  if (!musicBus) {
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+    lp.connect(AC.destination);
+    musicBus = AC.createGain(); musicBus.gain.value = 1;
+    musicBus.connect(lp);
+    musicEcho = AC.createDelay(0.8); musicEcho.delayTime.value = 0.29;
+    const fb = AC.createGain(); fb.gain.value = 0.34;
+    const wet = AC.createGain(); wet.gain.value = 0.24;
+    musicEcho.connect(fb); fb.connect(musicEcho);
+    musicEcho.connect(wet); wet.connect(lp);
+  }
+  return musicBus;
+}
+function playAt(f, t, dur, type, vol, echo = false) {
   vol *= SETTINGS.music; if (vol <= 0.0003) return;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.value = f;
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(AC.destination);
+  o.connect(g); g.connect(musicOut());
+  if (echo) g.connect(musicEcho);
   o.start(t); o.stop(t + dur);
 }
 function drumAt(buf, t, vol, hp) {
@@ -97,7 +129,7 @@ function drumAt(buf, t, vol, hp) {
   const src = AC.createBufferSource(); src.buffer = buf;
   const g = AC.createGain(); g.gain.value = vol;
   const f = AC.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp;
-  src.connect(f); f.connect(g); g.connect(AC.destination); src.start(t);
+  src.connect(f); f.connect(g); g.connect(musicOut()); src.start(t);
 }
 function kickAt(t) {
   if (SETTINGS.music <= 0.01) return;
@@ -105,9 +137,9 @@ function kickAt(t) {
   o.type = 'sine';
   o.frequency.setValueAtTime(120, t);
   o.frequency.exponentialRampToValueAtTime(38, t + 0.11);
-  g.gain.setValueAtTime(0.07 * SETTINGS.music, t);
+  g.gain.setValueAtTime(0.062 * SETTINGS.music, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
-  o.connect(g); g.connect(AC.destination);
+  o.connect(g); g.connect(musicOut());
   o.start(t); o.stop(t + 0.14);
 }
 function musicTick() {
@@ -116,23 +148,29 @@ function musicTick() {
   if (melGen !== genIdx) buildPattern(genIdx);
   if (MUSIC.nextT < AC.currentTime - 0.4) { MUSIC.nextT = AC.currentTime + 0.05; }
   const root = 110 * Math.pow(2, GEN_ROOTS[genIdx] / 12);
-  const stepDur = GEN_TEMPO[genIdx];
-  // intensity layer: enraged boss or mega evolution doubles the energy
+  const stepDur = GEN_TEMPO[genIdx] * 1.06;
+  // intensity layer: enraged boss or mega evolution turns the energy up
   const intense = G.megaT > 0 || G.bricks.some(b => b.isBoss && !b.dead && b.phase === 2);
   while (MUSIC.nextT < AC.currentTime + 0.3) {
     const s = MUSIC.step, t = MUSIC.nextT;
-    if (s % 8 === 0 || (intense && s % 8 === 6)) kickAt(t);
-    if (s % 8 === 4 && snareBuf) drumAt(snareBuf, t, 0.028, 1600);
-    if ((s % 2 === 1 || intense) && hatBuf) drumAt(hatBuf, t, intense ? 0.013 : 0.008, 6000);
-    const b = bassPat[s % 8];
-    if (b != null) playAt(root / 2 * Math.pow(2, b / 12), t, stepDur * 1.4, 'square', 0.022);
+    const chordRoot = PROG[Math.floor(s / 32) % 4];
+    // drums: halftime feel, the kick sits out the last bar of each phrase
+    if (s % 8 === 0 && !(s % 128 >= 120 && !intense)) kickAt(t);
+    if (intense && s % 8 === 6) kickAt(t);
+    if (s % 16 === 8 && snareBuf) drumAt(snareBuf, t, 0.02, 1600);
+    if ((s % 4 === 2 || (intense && s % 2 === 1)) && hatBuf) drumAt(hatBuf, t, intense ? 0.01 : 0.005, 6000);
+    const b = bassPat[s];
+    if (b != null) playAt(root / 2 * Math.pow(2, b / 12), t, stepDur * 2.2, 'triangle', 0.03);
     const m = melPat[s];
     if (m != null) {
-      playAt(root * 2 * Math.pow(2, m / 12), t, stepDur, 'triangle', 0.017);
-      if (intense) playAt(root * 4 * Math.pow(2, m / 12), t, stepDur * 0.8, 'square', 0.006);
+      playAt(root * 2 * Math.pow(2, m / 12), t, stepDur * 1.3, 'triangle', 0.015, true);
+      if (intense) playAt(root * 4 * Math.pow(2, m / 12), t, stepDur * 0.8, 'square', 0.005, true);
     }
-    if (s % 32 === 0) [0, 3, 7].forEach(iv => playAt(root * Math.pow(2, iv / 12), t, stepDur * 14, 'sine', 0.006));
-    MUSIC.step = (MUSIC.step + 1) % 64;
+    // pads breathe with the progression — a slow chord under everything
+    if (s % 32 === 0) {
+      [0, 3, 7].forEach(iv => playAt(root * Math.pow(2, (chordRoot + iv) / 12), t, stepDur * 30, 'sine', 0.0048));
+    }
+    MUSIC.step = (MUSIC.step + 1) % 128;
     MUSIC.nextT += stepDur;
   }
 }

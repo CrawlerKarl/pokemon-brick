@@ -229,7 +229,8 @@ function bossAbility(boss) {
     case 150: { // Mewtwo: teleport across the arena
       burst(bx, by, '#ec407a', 34, 340, 0.7);
       const lim = boss.w / 2 + 20;
-      boss.bx = lim + Math.random() * (W - lim * 2) - G.fx;
+      boss.hx = lim + Math.random() * (W - lim * 2) - G.fx;
+      boss.bx = boss.hx;
       boss.flash = 1;
       burst(boss.bx + G.fx, by, '#ec407a', 34, 340, 0.7);
       tone(880, 0.18, 'sine', 0.06, -400);
@@ -293,7 +294,7 @@ function loseLife() {
 function nearestBrick(x, y) {
   let best = null, bd = Infinity;
   for (const br of G.bricks) {
-    if (br.dead) continue;
+    if (br.dead || br.entry) continue; // ignore ranks still flying in
     const d = Math.hypot(br.bx + G.fx - x, br.by + G.fy - y);
     if (d < bd) { bd = d; best = br; }
   }
@@ -347,6 +348,8 @@ function update(dt) {
 
   tickEffects(dt);
   if (G.state === 'play') G.playT += dt;
+  // held FIRE keeps shooting — the heat lockout is the only governor
+  if (fireHeld && G.state === 'play') fireAction(true);
 
   // one-time callout the first time the mega meter fills
   if (G.mega >= 1 && G.megaT <= 0 && !G.megaCalloutDone && G.state === 'play') {
@@ -392,11 +395,64 @@ function update(dt) {
   }
 
   // ---- formation drift ----
+  // ---- Space Junkie entrances: ranks pour in from off-screen, swooping on a
+  // curve into their formation slot. They animate even during the serve, and
+  // they're fair game to shoot mid-flight.
+  if (G.state === 'play' || G.state === 'serve') {
+    for (const br of G.bricks) {
+      if (br.dead || !br.entry) continue;
+      const e = br.entry;
+      e.t -= dt * ts;
+      if (e.t > 0) { br.bx = e.sx; br.by = e.sy; continue; }
+      const p = Math.min(1, -e.t / e.dur);
+      const q = 1 - Math.pow(1 - p, 2.2); // ease out into the slot
+      const u = 1 - q;
+      const cx2 = (e.sx + br.hx) / 2, cy2 = br.hy - 150; // swoop over the top
+      br.bx = u * u * e.sx + 2 * u * q * cx2 + q * q * br.hx;
+      br.by = u * u * e.sy + 2 * u * q * cy2 + q * q * br.hy;
+      if (p >= 1) br.entry = null;
+    }
+  }
   if (G.state === 'play' && G.bossIntro <= 0) {
     G.swayT += dt * ts;
     const boss = G.bricks.find(b => b.isBoss && !b.dead);
-    const swayAmp = Math.min(50, W * 0.04) * (boss?.phase === 2 ? 1.5 : 1);
+    const mt = G.motionTier;
+    const style = G.motionStyle;
+    // global sway softens once individual choreography takes over
+    const swayAmp = Math.min(50, W * 0.04) * (boss?.phase === 2 ? 1.5 : 1) * (style !== 'classic' ? 0.5 : 1);
     G.fx = Math.sin(G.swayT * 0.7) * swayAmp;
+    // ---- motion choreography: each wave rolls one behavior from the pool
+    // its region has unlocked. Boss guards instead ripple in rings around
+    // their legendary, who patrols its arena.
+    if (boss) {
+      boss.bx = boss.hx + (mt >= 1 ? Math.sin(G.swayT * 0.45) * Math.min(90, W * 0.07) : 0);
+    }
+    if (style !== 'classic' || (boss && mt >= 1)) {
+      for (const br of G.bricks) {
+        if (br.dead || br.isBoss || br.entry) continue;
+        let ox = 0, oy = 0;
+        if (boss && mt >= 1) { // rings radiating from the boss
+          const dist = Math.hypot(br.hx - boss.bx, br.hy - boss.hy);
+          oy = Math.sin(G.swayT * 1.5 - dist * 0.02) * Math.min(11, br.h * 0.2);
+          if (mt >= 2) ox = Math.sin(G.swayT * 0.8 + br.row * 0.9) * Math.min(14, br.w * 0.16);
+        } else if (style === 'serpent') { // rows slide against each other
+          ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(16, br.w * 0.18);
+        } else if (style === 'colwave') { // vertical wave rolls across columns
+          ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(12, br.w * 0.14);
+          oy = Math.sin(G.swayT * 1.5 - br.col * 0.65) * Math.min(12, br.h * 0.24);
+        } else if (style === 'breathe') { // the formation inhales and exhales
+          ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(10, br.w * 0.12)
+            + (br.hx - W / 2) * Math.sin(G.swayT * 0.5) * 0.07;
+          oy = Math.sin(G.swayT * 0.7 + (br.row + br.col) * 0.6) * 7;
+        } else if (style === 'swirl') { // rolling circular shimmer
+          const ph = G.swayT * 1.1 + (br.row + br.col) * 0.7;
+          ox = Math.cos(ph) * Math.min(14, br.w * 0.16);
+          oy = Math.sin(ph) * Math.min(9, br.h * 0.18);
+        }
+        br.bx = br.hx + ox;
+        br.by = br.hy + oy;
+      }
+    }
     const alive = G.bricks.filter(b => !b.dead).length;
     const total = G.bricks.length;
     const thin = total > 0 ? 1 + (1 - alive / total) * 2.2 * preset().descent : 1;
@@ -557,6 +613,20 @@ function update(dt) {
         // a clean return vents blaster heat and (with Momentum) charges Mega
         if (G.overheat <= 0) G.heat = Math.max(0, G.heat - 0.5);
         if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.02 * upgN('momentum'));
+        // ---- starter partner abilities trigger on clean returns ----
+        if (G.starter === 'fire') { // Blaze: the return ignites the ball
+          b.ember = G.starterLvl;
+          burst(b.x, py - 14, '#ffab66', 6, 130, 0.35);
+        } else if (G.starter === 'water') { // Torrent: rhythm builds a shield
+          if (++G.torrentCount >= 6 - G.starterLvl) {
+            G.torrentCount = 0;
+            if (G.shieldCharges < 3) {
+              G.shieldCharges++;
+              addFloater(G.paddle.x, py - 34, 'TORRENT SHIELD!', '#4dd0e1', 13);
+              SFX.shield();
+            }
+          }
+        }
       }
       G.combo = 0;
       // returning to the paddle banks the rally — celebrate a good one
@@ -587,7 +657,14 @@ function update(dt) {
           const oy = (hh + b.r) - Math.abs(b.y - by);
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
-          damageBrick(br, pierce ? 3 : 1, b.x, b.y, G.ballElement);
+          // Blaze embers from the last paddle return add burn damage
+          let dmg = pierce ? 3 : 1;
+          if (b.ember > 0) {
+            b.ember--;
+            dmg += G.starterLvl >= 3 ? 2 : 1;
+            burst(b.x, b.y, '#ffab66', 8, 160, 0.4);
+          }
+          damageBrick(br, dmg, b.x, b.y, G.ballElement);
           if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
           awardRally(b, b.x, b.y);
         }
@@ -708,11 +785,12 @@ function update(dt) {
         }
       }
       // sweep motion (Rayquaza crossing / Koraidon charging)
-      if (boss.sweep) {
-        boss.bx += boss.sweep.dir * (boss.sweep.fast ? 460 : 280) * ts * dt;
+      if (boss.sweep) { // sweeps move the boss's HOME so patrol/rings track it
+        boss.hx += boss.sweep.dir * (boss.sweep.fast ? 460 : 280) * ts * dt;
         const lim = boss.w / 2 + 14;
-        if (boss.bx < lim) { boss.bx = lim; boss.sweep.dir = 1; }
-        if (boss.bx > W - lim) { boss.bx = W - lim; boss.sweep.dir = -1; }
+        if (boss.hx < lim) { boss.hx = lim; boss.sweep.dir = 1; }
+        if (boss.hx > W - lim) { boss.hx = W - lim; boss.sweep.dir = -1; }
+        boss.bx = boss.hx;
         boss.sweep.t -= dt * ts;
         if (boss.sweep.t <= 0) boss.sweep = null;
       }
@@ -727,7 +805,7 @@ function update(dt) {
       G.enemyShotCD -= dt * ts;
       if (G.enemyShotCD <= 0) {
         G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6);
-        const alive = G.bricks.filter(b => !b.dead && !b.isBoss);
+        const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry);
         if (alive.length) {
           const shooter = alive[Math.floor(Math.random() * alive.length)];
           G.telegraphs.push({ br: shooter, boss: false, t: 0.5, max: 0.5 });
@@ -802,7 +880,9 @@ function update(dt) {
       pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 75 * upgN('magnetize')) * dt;
     }
     const pw = paddleW(), py = PADDLE_Y();
-    if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + 18) {
+    // Overgrowth (grass partner) widens the pickup catch envelope
+    const reach = 18 + (G.starter === 'grass' ? 10 + 6 * G.starterLvl : 0);
+    if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + reach) {
       pu.dead = true;
       collectPickup(pu);
     }

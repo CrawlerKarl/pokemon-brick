@@ -307,6 +307,48 @@ const POWERS = {
   draco:  { key: 'draco',  icon: 'draco',  name: 'DRACO MISSILES', desc: 'HOMING MISSILES LAUNCH',     color: '#5c6bc0' },
   warp:   { key: 'warp',   icon: 'warp',   name: 'SKY WARP',       desc: 'BALLS PHASE UP TO THE HIGH GROUND', color: '#80d8ff' },
 };
+// ---- starter Pokémon: a partner that rides your paddle for the whole run.
+// Each bakes in a paddle ability that grows as you clear regions, and the
+// partner itself evolves at regions 4 and 7 — so every run plays differently
+// from the first serve depending on who you picked.
+const STARTER_MON = {
+  fire: {
+    ids: [4, 5, 6], names: ['CHARMANDER', 'CHARMELEON', 'CHARIZARD'],
+    ability: 'BLAZE',
+    blurb: 'RETURNS IGNITE THE BALL',
+    tiers: [
+      'PADDLE RETURNS IGNITE THE BALL — NEXT HIT +1 DAMAGE',
+      'IGNITES THE NEXT 2 HITS',
+      'IGNITES THE NEXT 3 HITS AT +2 DAMAGE',
+    ],
+  },
+  water: {
+    ids: [7, 8, 9], names: ['SQUIRTLE', 'WARTORTLE', 'BLASTOISE'],
+    ability: 'TORRENT',
+    blurb: 'COOL BLASTER · SHIELDS',
+    tiers: [
+      'BLASTER RUNS 25% COOLER · EVERY 5 RETURNS RAISE A SHIELD',
+      '30% COOLER · SHIELD EVERY 4 RETURNS',
+      '35% COOLER · SHIELD EVERY 3 RETURNS',
+    ],
+  },
+  grass: {
+    ids: [1, 2, 3], names: ['BULBASAUR', 'IVYSAUR', 'VENUSAUR'],
+    ability: 'OVERGROWTH',
+    blurb: 'MORE DROPS · EASY CATCHES',
+    tiers: [
+      '+20% DROPS · WIDER PICKUP CATCH',
+      '+35% DROPS · WIDER CATCH',
+      '+50% DROPS · HUGE CATCH RANGE',
+    ],
+  },
+};
+// partner ability level: grows with total regions cleared (evolves at 4 & 7)
+function starterStage(level) {
+  const regionsIn = Math.floor((level - 1) / STAGES);
+  return regionsIn >= 6 ? 3 : regionsIn >= 3 ? 2 : 1;
+}
+
 const POWER_BY_TYPE = {
   fire: 'fire',
   electric: 'laser',

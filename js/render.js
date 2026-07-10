@@ -286,7 +286,17 @@ function drawPaddle() {
   const ph = G.paddle.h * sq, pwv = pw * (2 - sq);
   ctx.save();
   const mega = G.megaT > 0;
-  ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : (G.fx_laser ? '#ffd54f' : '#42a5f5');
+  const sMon = STARTER_MON[G.starter];
+  // the partner rides the left end of the paddle, growing as it evolves
+  if (sMon && G.state !== 'menu') {
+    const img = getSprite(sMon.ids[G.starterLvl - 1]);
+    if (img.complete && img.naturalWidth) {
+      const s = 26 + G.starterLvl * 5;
+      const bob = Math.sin(G.time * 3) * 2;
+      ctx.drawImage(img, x - pw / 2 - s * 0.35, py - s + 4 + bob, s, s);
+    }
+  }
+  ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : (G.fx_laser ? '#ffd54f' : (G.starter ? TYPE_COLORS[G.starter] : '#42a5f5'));
   ctx.shadowBlur = mega ? 26 : 18;
   const g = ctx.createLinearGradient(x, py - 10, x, py + 10);
   if (mega) {
@@ -359,7 +369,7 @@ function drawBalls() {
     for (let i = 0; i < b.trail.length; i++) {
       const t = b.trail[i], a = (1 - i / b.trail.length) * 0.35;
       ctx.globalAlpha = a;
-      ctx.fillStyle = G.fx_fire ? '#ff7043' : (elemCol || '#90caf9');
+      ctx.fillStyle = G.fx_fire ? '#ff7043' : (b.ember > 0 ? '#ffab66' : (elemCol || '#90caf9'));
       ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (1 - i / b.trail.length * 0.6), 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -785,7 +795,7 @@ function drawShootHint() {
   ctx.font = '700 13px Orbitron, sans-serif';
   if (IS_TOUCH) {
     const B = touchButtons().fire;
-    const text = 'SHOOT WITH FIRE';
+    const text = 'HOLD FIRE TO SHOOT';
     const tw = ctx.measureText(text).width + 26;
     const x = B.x - B.r - tw / 2 - 14, y = B.y - 6;
     roundRect(x - tw / 2, y - 15, tw, 30, 15);
@@ -800,7 +810,7 @@ function drawShootHint() {
     ctx.fillStyle = '#80d8ff'; ctx.fill();
   } else {
     const x = G.paddle.x, y = PADDLE_Y() - 72;
-    const text = 'CLICK / SPACE TO SHOOT';
+    const text = 'HOLD CLICK TO SHOOT — MIND THE HEAT';
     const tw = ctx.measureText(text).width + 26;
     roundRect(x - tw / 2, y - 15, tw, 30, 15);
     ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
@@ -1062,14 +1072,15 @@ function drawMenu() {
     ['CATCH POKÉMON · EXPLOIT TYPE MATCHUPS · DRAFT UPGRADES BETWEEN WAVES', '#b0bec5'],
   ];
   lines.forEach(([l, c], i) => fitText(l, L.infoY + i * L.lineH, 13 * Math.max(0.85, L.s), '500', c, maxW));
-  // starter element
+  // starter Pokémon — a partner whose paddle ability grows all game
   ctx.font = '700 13px Orbitron, sans-serif';
   ctx.fillStyle = '#90a4ae';
-  ctx.fillText('STARTER ELEMENT', W / 2, L.startLabelY);
+  ctx.fillText('STARTER POKÉMON', W / 2, L.startLabelY);
   for (let i = 0; i < STARTERS.length; i++) {
     const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
     const hov = inRect(mouseX, lastMouseY, pg);
     const col = st.key === 'none' ? '#90a4ae' : TYPE_COLORS[st.key];
+    const mon = STARTER_MON[st.key];
     ctx.save();
     if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 14; }
     roundRect(pg.x, pg.y, pg.w, pg.h, 10);
@@ -1079,13 +1090,28 @@ function drawMenu() {
     ctx.strokeStyle = sel ? col : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(12, pg.w / 8.2)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-    if (st.key !== 'none') {
-      drawGlyph(ctx, st.key, pg.x + pg.w / 2 - ctx.measureText(st.label).width / 2 - 12, pg.y + pg.h / 2, 7, col);
-      ctx.fillText(st.label, pg.x + pg.w / 2 + 8, pg.y + pg.h / 2 + 1);
+    if (mon) {
+      const img = getSprite(mon.ids[0]);
+      const sp = Math.min(34, pg.h * 0.62);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, pg.x + 4, pg.y + pg.h / 2 - sp / 2, sp, sp);
+      else drawGlyph(ctx, st.key, pg.x + 6 + sp / 2, pg.y + pg.h / 2, 8, col);
+      const tx = pg.x + sp + 6 + (pg.w - sp - 10) / 2;
+      ctx.font = `900 ${Math.min(9.5, pg.w / 12)}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
+      ctx.fillText(st.label, tx, pg.y + pg.h / 2 - 12, pg.w - sp - 12);
+      ctx.font = '900 8px Orbitron, sans-serif';
+      ctx.fillStyle = col;
+      ctx.fillText(mon.ability, tx, pg.y + pg.h / 2 + 1, pg.w - sp - 12);
+      ctx.font = '500 6.5px Orbitron, sans-serif';
+      ctx.fillStyle = sel ? '#cfd8dc' : '#78909c';
+      ctx.fillText(mon.blurb, tx, pg.y + pg.h / 2 + 13, pg.w - sp - 12);
     } else {
-      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1);
+      ctx.font = `900 ${Math.min(12, pg.w / 8.2)}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
+      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 - 5);
+      ctx.font = '500 7px Orbitron, sans-serif';
+      ctx.fillStyle = '#78909c';
+      ctx.fillText('NO PARTNER', pg.x + pg.w / 2, pg.y + pg.h / 2 + 12);
     }
     ctx.restore();
   }

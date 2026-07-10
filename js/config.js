@@ -31,7 +31,8 @@ function diff() {
     bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
     shotSpeed: p.shotSpeed * speedScale(),
-    dropChance: 0.1 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1),
+    dropChance: 0.1 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
+      * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1), // Overgrowth
     catchChance: 0.07,
   };
 }
@@ -52,9 +53,9 @@ const TOGGLES = [
 ];
 const STARTERS = [
   { key: 'none', label: 'NONE' },
-  { key: 'fire', label: 'FIRE' },
-  { key: 'water', label: 'WATER' },
-  { key: 'grass', label: 'GRASS' },
+  { key: 'fire', label: 'CHARMANDER' },
+  { key: 'water', label: 'SQUIRTLE' },
+  { key: 'grass', label: 'BULBASAUR' },
 ];
 let advOpen = false; // advanced settings panel
 // one responsive layout, shared by rendering and hit-testing, so nothing
@@ -67,15 +68,16 @@ function menuLayout() {
   const infoY = titleY + titleSize * 1.55 + 14 * s;
   const chipGap = 10;
   const chipW = Math.min(126, (W - 40 - chipGap * 3) / 4), chipH = 40 * s + 4;
+  const starterH = 58 * s + 6; // taller: partner sprite + ability line
   const startLabelY = infoY + 2 * lineH + 22 * s;
   const startY = startLabelY + 14;
-  const chipsLabelY = startY + chipH + 30 * s;
+  const chipsLabelY = startY + starterH + 28 * s;
   const chipsY = chipsLabelY + 14;
   const btnW = Math.min(300, W * 0.84), btnH = 54 * s + 8;
   const btnY = chipsY + chipH + 44 * s;
   return {
     s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY,
-    starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: chipH }),
+    starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
     chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
     start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
     dex: { x: W / 2 - 170, y: btnY + btnH + 14, w: 340, h: 30 },
