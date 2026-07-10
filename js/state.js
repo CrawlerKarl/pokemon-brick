@@ -81,7 +81,7 @@ function applyPower(p, srcType) {
         if (b.dead) continue;
         b.phasing = true; b.stuck = false;
         b.vx = 0; b.vy = -ballSp();
-        b.zoneSaves = 3; // arrive with a full barrier
+        b.zoneSaves = 2; // arrive with a full barrier
       }
       G.shake = Math.min(G.shake + 5, 10);
       tone(500, 0.25, 'sine', 0.06, 600);
@@ -119,7 +119,7 @@ function applyPower(p, srcType) {
 function makeBall(x, y, angle, overrideAngle) {
   const sp = ballSp();
   const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (Math.random() - 0.5) * 0.6);
-  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: 3, ember: 0 };
+  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: 2, ember: 0 };
 }
 
 // formations — pinball-shaped layouts drawn from at random, so runs differ.

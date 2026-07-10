@@ -31,7 +31,8 @@ function diff() {
     bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
     shotSpeed: p.shotSpeed * speedScale(),
-    dropChance: 0.1 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
+    // drops are rare on purpose — each one should feel like an event
+    dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
       * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1), // Overgrowth
     catchChance: 0.07,
   };

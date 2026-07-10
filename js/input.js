@@ -56,10 +56,17 @@ window.addEventListener('touchstart', e => {
       // touches that land on a button are UI touches — they must never be
       // adopted as paddle control, even if the finger wiggles (that was
       // yanking the paddle to the FIRE button's side of the screen)
-      if (inCircle(x, y, B.fire)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
-      if (inCircle(x, y, B.mega)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
-      if (inCircle(x, y, B.pause)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
-      if (inCircle(x, y, B.sound)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.fire, 22)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.mega, 12)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.pause, 10)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.sound, 10)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
+      // near-miss dead zone: a fumbled tap AROUND a button is swallowed
+      // outright — under no circumstances does it become paddle control
+      if (inCircle(x, y, B.fire, 64) || inCircle(x, y, B.mega, 42) ||
+          inCircle(x, y, B.pause, 30) || inCircle(x, y, B.sound, 30)) {
+        uiTouchIds.add(t.identifier);
+        continue;
+      }
       // everything else is paddle control — and launches during serve
       paddleTouchId = t.identifier;
       mouseX = x; lastMouseY = y;

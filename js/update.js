@@ -133,7 +133,7 @@ function damageBrick(br, dmg, sx, sy, element) {
     const d = diff();
     if (br.isBoss) {
       const p = POWERS[POWER_BY_TYPE[br.poke.t] || 'star'];
-      for (let i = 0; i < 2; i++) G.powerups.push({ x: br.bx + G.fx + (i ? 28 : -28), y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
+      G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 40, vy: 110, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
     } else if (br.poke.id > 0 && Math.random() < d.dropChance) {
       const p = POWERS[POWER_BY_TYPE[br.poke.t] || 'star'];
@@ -379,8 +379,8 @@ function update(dt) {
       const struggling = G.ballElement && resisted >= alive.length * 0.5;
       // orbs are a rescue mechanic, not a scheduled shower: quick when you're
       // genuinely walled off, otherwise scarce
-      G.elementOrbCD = struggling ? 8 : 28 + Math.random() * 16;
-      if (struggling || Math.random() < 0.3) {
+      G.elementOrbCD = struggling ? 8 : 34 + Math.random() * 20;
+      if (struggling || Math.random() < 0.22) {
         // offer an element that's super effective against the dominant type
         const counts = {};
         for (const b of alive) counts[b.poke.t] = (counts[b.poke.t] || 0) + 1;
@@ -632,7 +632,7 @@ function update(dt) {
       // returning to the paddle banks the rally — celebrate a good one
       if (b.rally >= 5) addFloater(G.paddle.x, PADDLE_Y() - 32, 'NICE RALLY ×' + b.rally + '!', '#80d8ff', 15);
       b.rally = 0;
-      b.zoneSaves = 3; // fresh possession recharges the rally barrier
+      b.zoneSaves = 2; // fresh possession recharges the rally barrier
     }
     for (const br of G.bricks) {
       if (br.dead || br.phaseT > 0) continue; // Lunala's Phantom Phase: intangible
