@@ -59,7 +59,9 @@ sometimes doesn't fire — trigger manually with
 
 ### Motion — the brick-breaker → Space Junkie arc
 This is the heart and the most-iterated system. Assigned per-wave in
-`buildLevel` (state.js ~line 250–314), executed in `update.js` (~line 425–540).
+`buildLevel` (state.js ~200) via `flightGeom`/`flyerRoom` (state.js ~155–210);
+executed in `update.js` — `flightPos` pattern math (~175) and the per-frame
+motion/march block (~495–650).
 
 - **Static wall + moving Pokémon (the core rule).** Boxed bricks are an
   **anchored wall** — `G.blocksStatic` (set `!hasBoss` in `buildLevel`) skips
@@ -123,7 +125,7 @@ pips and each card's "→ LEADS TO". A **HUD build strip** (top-left, render.js
 `drawHUD`) shows owned paths always. Caps read via `shieldCap`/`megaDur`/
 `barrierCharges` (state.js). `upgN(key)` = does the player own that tier.
 
-### White-out (not game-over) — `loseLife()` update.js ~330
+### White-out (not game-over) — `loseLife()` update.js ~351
 Losing all lives **burns 2 random tree levels** (`regressPath`), refills
 lives, and **retries the wave**. Real game-over only when the tree is empty.
 
@@ -154,10 +156,14 @@ Trial runs never save best score or Pokédex catches (`G.trial` flag).
 - **Difficulty presets:** `PRESETS` in config.js (descent/shotRate/ballSpeed/etc.)
 - **The one curve:** `diff()` in config.js — reads presets × level × adapt × modifier
 - **Drop rarity:** `dropChance` in `diff()` (currently `0.06`)
-- **Columns/rows/hp per region:** `buildLevel` in state.js (`cols` capped 18 w/
-  ~52px floor; late-game +hp at regions 5/8)
-- **Flight breakout fraction & pattern unlocks:** `buildLevel` state.js ~250–305
-- **Cycle speed:** `G.pathSpeed` (state.js), march speed cap (update.js ~486)
+- **Density budget (readability):** `buildLevel` in state.js (`cols` width-
+  driven & capped 10; `flyerBudget` hard-caps moving flyers ≤20; `boxedBudget`
+  shrinks the wall region by region; late-game +hp at regions 5/8)
+- **Flyer patterns & non-overlap zoning:** `flightGeom`/`clampOpen` (state.js
+  ~155–210), pattern math in `flightPos` (update.js ~175); `kinds` unlock list
+  in `buildLevel`
+- **Cycle speed:** `G.pathSpeed` (state.js). Blocks are static
+  (`G.blocksStatic`); the march (update.js) runs only on boss waves
 - **Mega/heat/barrier:** `MEGA_DUR`, `OVERHEAT_DUR`, heat-per-shot (input.js
   `fireAction`), `barrierCharges` (state.js)
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
