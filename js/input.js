@@ -9,12 +9,15 @@ let paddleTouchId = null;
 // FIRE shoots, MEGA unleashes, plus pause & sound in the top corner
 function touchButtons() {
   const fl = FLOOR();
-  return {
+  const b = {
     fire:  { x: W - 52, y: fl - 48, r: 42 },
     mega:  { x: W - 136, y: fl - 44, r: 30 }, // beside FIRE — paddle rides above both
     pause: { x: W - 28, y: 84, r: 20 },
     sound: { x: W - 72, y: 82, r: 18 },
   };
+  // BLASTER mode: a CHARGE pad in the far bottom-left, for the other thumb
+  if (G.mode === 'blaster') b.charge = { x: 56, y: fl - 48, r: 40 };
+  return b;
 }
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
 
@@ -30,13 +33,28 @@ let lastTouchT = -9999;
 // Space Junkie firing: hold the button and the blaster keeps firing until
 // the heat lockout stops you — release, vent on a return, resume
 let fireHeld = false, fireTouchId = null;
+let chargeHeld = false, chargeTouchId = null; // BLASTER mode: hold to charge a shot
 const uiTouchIds = new Set(); // touches claimed by on-screen buttons
 window.addEventListener('mousedown', e => {
   if (performance.now() - lastTouchT < 900) return;
+  if (e.button === 2) { // right button = CHARGE (blaster mode)
+    chargeHeld = true; audio();
+    return;
+  }
   fireHeld = true;
   onPress(e.clientX, e.clientY);
 });
-window.addEventListener('mouseup', () => { fireHeld = false; });
+window.addEventListener('mouseup', e => {
+  if (e.button === 2) { chargeHeld = false; return; }
+  fireHeld = false;
+});
+// right-click charges instead of opening the context menu during play
+window.addEventListener('contextmenu', e => {
+  if (G.state === 'play' || G.state === 'serve') e.preventDefault();
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') chargeHeld = false;
+});
 window.addEventListener('wheel', e => {
   if (G.state === 'dex') dexScroll = Math.max(0, dexScroll + e.deltaY);
 }, { passive: true });
@@ -57,12 +75,14 @@ window.addEventListener('touchstart', e => {
       // adopted as paddle control, even if the finger wiggles (that was
       // yanking the paddle to the FIRE button's side of the screen)
       if (inCircle(x, y, B.fire, 22)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
+      if (B.charge && inCircle(x, y, B.charge, 20)) { chargeHeld = true; chargeTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.mega, 12)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.pause, 10)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.sound, 10)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
       // near-miss dead zone: a fumbled tap AROUND a button is swallowed
       // outright — under no circumstances does it become paddle control
       if (inCircle(x, y, B.fire, 64) || inCircle(x, y, B.mega, 42) ||
+          (B.charge && inCircle(x, y, B.charge, 60)) ||
           inCircle(x, y, B.pause, 30) || inCircle(x, y, B.sound, 30)) {
         uiTouchIds.add(t.identifier);
         continue;
@@ -102,6 +122,7 @@ window.addEventListener('touchend', e => {
     uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
+    if (t.identifier === chargeTouchId) { chargeTouchId = null; chargeHeld = false; }
     if (G.state === 'dex' && onPressDexTapPending && Math.abs(t.clientY - dexDragStart) < 10) {
       onPress(onPressDexTapPending.x, onPressDexTapPending.y);
     }
@@ -117,6 +138,7 @@ window.addEventListener('touchcancel', e => {
     uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
+    if (t.identifier === chargeTouchId) { chargeTouchId = null; chargeHeld = false; }
   }
   onPressDexTapPending = null; dexDragY = null;
 });
@@ -128,6 +150,7 @@ const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'Ar
 let konamiIdx = 0;
 window.addEventListener('keydown', e => {
   if (e.code === 'Space') { primaryAction(); e.preventDefault(); }
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') chargeHeld = true; // charge shot
   if (e.code === 'KeyE') tryMega();
   if (e.code === 'KeyM') toggleMusic();
   if (e.code === 'KeyP') togglePause();
@@ -268,6 +291,9 @@ function onPress(x, y) {
     for (let i = 0; i < keys.length; i++) {
       if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
     }
+    for (let i = 0; i < MODES.length; i++) {
+      if (inRect(x, y, L.mode(i))) { SETTINGS.mode = MODES[i].key; saveSettings(); SFX.power(); return; }
+    }
     if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }
     if (inRect(x, y, L.trial)) { trialOpen = true; return; }
@@ -332,6 +358,21 @@ function fireAction(auto = false) {
     });
   }
   SFX.blaster();
+}
+// BLASTER mode heavy shot — a fat, piercing bolt scaled by how long you held
+// the charge (c in 0..1). Distinct fat visual + a deeper report.
+function fireCharge(c) {
+  if (G.state !== 'play') return;
+  const power = 1 + Math.round(c * 4);   // 1..5 damage
+  const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
+  G.lasers.push({
+    x: G.paddle.x, y: PADDLE_Y() - 18, basic: true, charged: true,
+    power, pierce, r: 12 + c * 22, explosive: !!G.fx_fire,
+  });
+  G.muzzle = 0.18;
+  G.shake = Math.min(G.shake + 2 + c * 4, 12);
+  SFX.blaster();
+  tone(170 + c * 320, 0.2, 'sawtooth', 0.06, 300);
 }
 function primaryAction() {
   audio();

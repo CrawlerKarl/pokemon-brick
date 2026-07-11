@@ -35,6 +35,13 @@ Live at https://crawlerkarl.github.io/pokemon-brick/. The user tests on a real
 phone — flag anything only verifiable there.
 
 ## Design invariants (current — don't regress these without being asked)
+- **Two modes** (`SETTINGS.mode` / `G.mode`, picked on the menu): `classic`
+  (ball + blaster brick-breaker) and `blaster` (ball-less pure shooter). In
+  `blaster`, `serve()` spawns NO ball, the "0 balls → loseLife" gate is
+  skipped (you only die to enemy fire), enemies fire ~2× and from wave 1, and
+  a held CHARGE (right-click / Shift / touch CHARGE pad) winds up a fat
+  piercing shot (`fireCharge`). Keep both modes working when touching fire,
+  serve, or the loss condition.
 - **Blocks are static; only the Pokémon move.** `G.blocksStatic` (set
   `!hasBoss` in `buildLevel`) skips the march/descent/sway. Don't re-introduce
   a marching wall on normal waves — the march now runs only on boss waves.

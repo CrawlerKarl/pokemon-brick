@@ -35,6 +35,8 @@ const G = {
   motionTier: 0, motionStyle: 'march',
   marchDir: 1, divers: false, diveCD: 6, gridCols: 10, pathSpeed: 0.04,
   blocksStatic: false, // boxed bricks are anchored; only the Pokémon move
+  mode: 'classic',     // 'classic' (ball) or 'blaster' (ball-less pure shooter)
+  charge: 0, chargeCD: 0, // BLASTER mode: hold to charge a heavy shot
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -515,6 +517,8 @@ function resetRun(startLevel = 1, trial = false) {
   G.shieldCharges = 0; G.announce = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
+  G.charge = 0; G.chargeCD = 0;
+  G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
@@ -539,13 +543,21 @@ function resetRun(startLevel = 1, trial = false) {
     granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
 }
 function serve() {
-  G.balls = [makeBall(G.paddle.x, PADDLE_Y() - 24)];
-  G.balls[0].stuck = true;
-  // starter partner: its type rides the ball from every serve
+  // starter partner: its type rides the ball (or the blaster) from the start
   if (G.starter && !G.ballElement) {
     G.ballElement = G.starter;
     G.ballElementT = 9999;
   }
+  // BLASTER mode: no ball at all — the wave is live immediately, the blaster
+  // is the whole game
+  if (G.mode === 'blaster') {
+    G.balls = [];
+    G.charge = 0;
+    G.state = 'play'; G.stateT = 0;
+    return;
+  }
+  G.balls = [makeBall(G.paddle.x, PADDLE_Y() - 24)];
+  G.balls[0].stuck = true;
   G.state = 'serve'; G.stateT = 0;
 }
 

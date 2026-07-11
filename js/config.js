@@ -10,9 +10,16 @@ const PRESETS = {
 };
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
-    reduceShake: false, reduceFlash: false, hcBall: false },
+    reduceShake: false, reduceFlash: false, hcBall: false, mode: 'classic' },
   JSON.parse(localStorage.getItem('pkbrk-settings') || '{}'));
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
+// game MODE: the classic brick-breaker, or a ball-less pure shooter (Space
+// Junkies flavour) where the blaster is everything and you can charge shots
+const MODES = [
+  { key: 'classic', label: 'CLASSIC', desc: 'BALL + BLASTER · BRICK BREAKER' },
+  { key: 'blaster', label: 'BLASTER', desc: 'NO BALL · PURE SHOOTER · HOLD TO CHARGE' },
+];
+if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'classic';
 function saveSettings() { localStorage.setItem('pkbrk-settings', JSON.stringify(SETTINGS)); }
 function preset() { return PRESETS[SETTINGS.preset]; }
 // physics scale with the playfield — phones get a proportionally slower ball
@@ -76,12 +83,18 @@ function menuLayout() {
   const starterInfoY = startY + starterH + 16; // readable ability detail lines
   const chipsLabelY = starterInfoY + 34 + 12 * s;
   const chipsY = chipsLabelY + 14;
+  // MODE row (Classic / Blaster) sits between difficulty and START
+  const modeLabelY = chipsY + chipH + 15 * s;
+  const modeY = modeLabelY + 12;
+  const modeH = 32 * s + 4;
+  const modeW = Math.min(196, (W - 40 - chipGap) / 2);
   const btnW = Math.min(300, W * 0.84), btnH = 54 * s + 8;
-  const btnY = chipsY + chipH + 44 * s;
+  const btnY = modeY + modeH + 26 * s;
   return {
-    s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY,
+    s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY, modeLabelY,
     starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
     chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
+    mode: i => ({ x: W / 2 - modeW - chipGap / 2 + i * (modeW + chipGap), y: modeY, w: modeW, h: modeH }),
     start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
     dex: { x: W / 2 - 170, y: btnY + btnH + 14, w: 340, h: 30 },
     trial: { x: W / 2 - 170, y: btnY + btnH + 48, w: 340, h: 28 },

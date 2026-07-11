@@ -55,6 +55,19 @@ sometimes doesn't fire — trigger manually with
 
 ---
 
+## Game modes (`SETTINGS.mode`, picked on the menu)
+- **CLASSIC** — the ball + blaster brick-breaker described below.
+- **BLASTER** — a ball-less pure shooter (Space-Junkies flavour). `serve()`
+  spawns no ball and drops you straight into play; you clear the wall and the
+  flyers by shooting. You only lose to enemy fire (the "0 balls → loseLife"
+  gate is skipped), enemies fire ~2× as often and from the first wave, bolts
+  render as sleek cyan energy darts, and holding **CHARGE** (right-click /
+  Shift on desktop, the CHARGE pad on touch) winds up a fat piercing shot
+  (`fireCharge`, damage/pierce scale with hold time). Mega, catches, drops,
+  and the skill tree all still work. Wiring: `G.mode`, `G.charge` (state.js);
+  charge build/release + enemy-fire boost (update.js); charge input + touch
+  pad (input.js); bolt/charge visuals (render.js `drawProjectiles`).
+
 ## The core systems (where to look, what they do)
 
 ### Motion — the brick-breaker → Space Junkie arc

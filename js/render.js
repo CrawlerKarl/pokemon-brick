@@ -727,6 +727,31 @@ function drawTelegraphs() {
 function drawProjectiles() {
   for (const L of G.lasers) {
     ctx.save();
+    // CHARGED shot: a fat plasma slug with a white-hot core
+    if (L.charged) {
+      const r = L.r || 20;
+      ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 28;
+      const g = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, r);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, '#4dd0e1'); g.addColorStop(1, 'rgba(38,198,218,0.12)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(L.x, L.y, r * 0.62, r, 0, 0, Math.PI * 2); ctx.fill();
+      // leading spark
+      ctx.fillStyle = '#e0ffff';
+      ctx.beginPath(); ctx.arc(L.x, L.y - r * 0.7, r * 0.24, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      continue;
+    }
+    // BLASTER-mode basic bolts read as sleek energy darts (vs the classic slug)
+    if (G.mode === 'blaster' && L.basic) {
+      const bw4 = 5 + pathLvl('arsenal') * 1.2;
+      ctx.shadowColor = '#26c6da'; ctx.shadowBlur = 15;
+      ctx.fillStyle = '#4dd0e1';
+      roundRect(L.x - bw4 / 2, L.y - 26, bw4, 42, bw4 / 2); ctx.fill();
+      ctx.fillStyle = '#e0ffff';
+      roundRect(L.x - 1.3, L.y - 22, 2.6, 32, 1.3); ctx.fill();
+      ctx.restore();
+      continue;
+    }
     ctx.shadowColor = L.hyper ? '#ff5cf0' : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
     ctx.shadowBlur = L.hyper ? 22 : 16;
     ctx.fillStyle = L.hyper ? '#f8bbf3' : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
@@ -736,6 +761,23 @@ function drawProjectiles() {
     // bright core
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     roundRect(L.x - 1.5, L.y - 16, 3, 24, 1.5); ctx.fill();
+    ctx.restore();
+  }
+  // BLASTER charge tell: a growing plasma orb at the barrel as you wind up
+  if (G.charge > 0 && (G.state === 'play')) {
+    const cx = G.paddle.x, cy = PADDLE_Y() - 20, r = 4 + G.charge * 20;
+    ctx.save();
+    ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 10 + G.charge * 20;
+    const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#4dd0e1'); g.addColorStop(1, 'rgba(38,198,218,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    // a ring that snaps bright at full charge
+    if (G.charge >= 1) {
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(G.time * 12);
+      ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
   }
   for (const m of G.missiles) {
@@ -978,7 +1020,7 @@ function drawShootHint() {
   ctx.font = '700 13px Orbitron, sans-serif';
   if (IS_TOUCH) {
     const B = touchButtons().fire;
-    const text = 'HOLD FIRE TO SHOOT';
+    const text = G.mode === 'blaster' ? 'FIRE · HOLD CHARGE FOR A BIG SHOT' : 'HOLD FIRE TO SHOOT';
     const tw = ctx.measureText(text).width + 26;
     const x = B.x - B.r - tw / 2 - 14, y = B.y - 6;
     roundRect(x - tw / 2, y - 15, tw, 30, 15);
@@ -993,7 +1035,7 @@ function drawShootHint() {
     ctx.fillStyle = '#80d8ff'; ctx.fill();
   } else {
     const x = G.paddle.x, y = PADDLE_Y() - 72;
-    const text = 'HOLD CLICK TO SHOOT — MIND THE HEAT';
+    const text = G.mode === 'blaster' ? 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT';
     const tw = ctx.measureText(text).width + 26;
     roundRect(x - tw / 2, y - 15, tw, 30, 15);
     ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
@@ -1234,6 +1276,26 @@ function drawTouchControls() {
   ctx.font = '900 8px Orbitron, sans-serif';
   ctx.fillStyle = ready ? '#ffd54f' : '#90a4ae';
   ctx.fillText('MEGA', m.x, m.y + 13);
+  // CHARGE pad (blaster mode) — the ring fills as you hold, flares at full
+  if (B.charge) {
+    const c = B.charge, full = G.charge >= 1;
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.fillStyle = chargeHeld ? 'rgba(20,80,90,0.78)' : 'rgba(10,16,38,0.72)'; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = full ? '#e0ffff' : '#4dd0e1'; ctx.stroke();
+    if (G.charge > 0.02) {
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r - 5, -Math.PI / 2, -Math.PI / 2 + Math.min(1, G.charge) * Math.PI * 2);
+      ctx.lineWidth = 4; ctx.strokeStyle = full ? '#e0ffff' : '#80deea'; ctx.stroke();
+    }
+    if (full) {
+      ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 12 + Math.sin(G.time * 10) * 6;
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    drawGlyph(ctx, 'warp', c.x, c.y - 5, 10, full ? '#e0ffff' : '#b2ebf2');
+    ctx.font = '900 9px Orbitron, sans-serif'; ctx.fillStyle = full ? '#e0ffff' : '#80deea';
+    ctx.textAlign = 'center';
+    ctx.fillText('CHARGE', c.x, c.y + 14);
+  }
   // pause + sound, top-right under the lives
   for (const [b, icon, on] of [[B.pause, 'pause', true], [B.sound, 'sound', MUSIC.on]]) {
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
@@ -1353,6 +1415,32 @@ function drawMenu() {
     ctx.font = `900 ${Math.min(13, pg.w / 8.2)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
     ctx.fillText(PRESETS[keys[i]].label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1);
+    ctx.restore();
+  }
+  // ---- MODE: classic brick-breaker vs the ball-less pure shooter ----
+  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.fillStyle = '#90a4ae';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('MODE', W / 2, L.modeLabelY);
+  for (let i = 0; i < MODES.length; i++) {
+    const mg = L.mode(i), sel = SETTINGS.mode === MODES[i].key;
+    const hov = inRect(mouseX, lastMouseY, mg);
+    const mcol = MODES[i].key === 'blaster' ? '#4dd0e1' : '#ffd54f';
+    ctx.save();
+    if (sel) { ctx.shadowColor = mcol; ctx.shadowBlur = 14; }
+    roundRect(mg.x, mg.y, mg.w, mg.h, 9);
+    ctx.fillStyle = sel ? mcol + '2e' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+    ctx.fill();
+    ctx.lineWidth = sel ? 2 : 1;
+    ctx.strokeStyle = sel ? mcol : 'rgba(255,255,255,0.25)';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `900 ${Math.min(13, mg.w / 8)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? mcol : '#cfd8dc';
+    ctx.fillText(MODES[i].label, mg.x + mg.w / 2, mg.y + mg.h / 2 - 6);
+    ctx.font = `600 ${Math.min(8.5, mg.w / 24)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? '#cfd8dc' : '#78909c';
+    ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h / 2 + 9, mg.w - 10);
     ctx.restore();
   }
   // start button — the one big obvious thing on the screen
