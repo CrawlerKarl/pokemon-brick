@@ -264,10 +264,12 @@ function collectPickup(pu) {
       G.catchBonus += 0.06 * upgN('bond');
       addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
     }
-    setAnnounce(pu.shiny ? 'fairy' : 'pokeball', pu.shiny ? '#ffd700' : '#ef5350',
-      pu.shiny ? 'SHINY GOTCHA!' : 'GOTCHA!',
+    const nm = (NAMES[pu.dexId] || 'POKÉMON').toUpperCase();
+    setAnnounce(null, pu.shiny ? '#ffd700' : isNew ? '#66bb6a' : '#ef5350',
+      (pu.shiny ? 'SHINY ' : '') + nm + ' CAUGHT!',
       G.trial ? 'TRIAL — CATCH NOT REGISTERED · +250 PTS'
-        : isNew ? 'NEW POKÉMON REGISTERED TO POKÉDEX' : 'ALREADY REGISTERED · +250 PTS', 1.8);
+        : isNew ? 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS' : 'ALREADY IN YOUR POKÉDEX · +250 PTS',
+      2.2, null, pu.dexId);
     G.score += isNew ? 100 : 250;
   } else {
     applyPower(pu.p, pu.srcType);
@@ -497,24 +499,28 @@ function update(dt) {
       const F = br.flight;
       if (F.state === 0) { // still boxed in the formation, waiting
         if (G.state === 'play' && G.swayT >= F.launch) {
-          F.state = 1; F.t = 0; F.sx = br.bx; F.sy = br.by;
+          F.state = 1; F.t = 0;
+          F.sx = br.bx + G.fx; F.sy = br.by + G.fy; // capture SCREEN pos at breakout
           shatterBox(br, br.bx + G.fx, br.by + G.fy); // the box VISIBLY shatters
           burst(br.bx + G.fx, br.by + G.fy, TYPE_COLORS[br.poke.t], 14, 200, 0.5);
           tone(560, 0.12, 'triangle', 0.04, 260);
         }
         continue;
       }
+      // flightPos is absolute SCREEN space; strip the formation transform back
+      // out so flyers ride their pattern in screen coords — immune to the
+      // march's downward creep, so the breathing-room floor actually holds
       const pos = flightPos(F, tAbs);
       if (F.state === 1) { // breaking out: glide from the wall onto the pattern
         F.t += dt * ts;
         // negative t = a stream rider still holding off-screen for its turn
         const p = Math.max(0, Math.min(1, F.t / 1.1));
         const q = 1 - Math.pow(1 - p, 2);
-        br.hx = F.sx + (pos.x - F.sx) * q;
-        br.hy = F.sy + (pos.y - F.sy) * q;
+        br.hx = (F.sx + (pos.x - F.sx) * q) - G.fx;
+        br.hy = (F.sy + (pos.y - F.sy) * q) - G.fy;
         if (p >= 1) F.state = 2;
       } else {
-        br.hx = pos.x; br.hy = pos.y;
+        br.hx = pos.x - G.fx; br.hy = pos.y - G.fy;
       }
       if (!br.entry && !br.dive) { br.bx = br.hx; br.by = br.hy; }
     }

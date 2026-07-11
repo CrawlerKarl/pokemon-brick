@@ -78,6 +78,13 @@ This is the heart and the most-iterated system. Assigned per-wave in
   difference arrives **already broken out**: a trailing line pours in from
   off-screen (left/right/top; `flight.state:1` with negative `t` = holding
   off-screen for its turn) straight into its pattern.
+- **Breathing room** — every flight curve is clamped by `clampBand` into the
+  airspace between the top wall and a **breathing-room floor** (`flyerRoom` in
+  state.js) well above the paddle. The floor is generous (`~0.30·H`) for most
+  of the journey and only collapses (to ~58px) in the **final region of a
+  cycle** for a real difficulty spike. Flyers ride in **screen space** —
+  update.js strips `G.fx/G.fy` back out so the formation's downward march
+  never drags them onto the paddle (the floor would be meaningless otherwise).
 - **`flightPos(F, tAbs)`** (update.js ~172) — the **15-pattern library**:
   `ring, inf, falls, liss, rose, diamond, pulsar, helix, pend, epi, snake,
   olympic`, plus `orbit` (a ring of bare flyers circling the boxed core),

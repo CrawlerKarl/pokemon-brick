@@ -328,6 +328,26 @@ function drawPaddle() {
   const ph = G.paddle.h * sq, pwv = pw * (2 - sq);
   ctx.save();
   const mega = G.megaT > 0;
+  // MEGA READY cue: a soft golden halo that breathes under the paddle plus a
+  // slow ring "ping" — right where your eyes already are, so a full meter is
+  // impossible to miss, yet gold + low-alpha + slow keeps it in the scenery
+  const megaReady = !mega && G.mega >= 1 && (G.state === 'play' || G.state === 'serve');
+  if (megaReady) {
+    const pulse = 0.5 + 0.5 * Math.sin(G.time * 3);
+    const hr = pwv * 0.7 + 16 + 8 * pulse;
+    const hg = ctx.createRadialGradient(x, py, 6, x, py, hr);
+    hg.addColorStop(0, `rgba(255,213,79,${0.15 + 0.12 * pulse})`);
+    hg.addColorStop(0.6, `rgba(255,213,79,${0.05 + 0.05 * pulse})`);
+    hg.addColorStop(1, 'rgba(255,213,79,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.ellipse(x, py, hr, hr * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+    const tp = (G.time % 1.6) / 1.6; // one ping every 1.6s, grows and fades
+    const rr = pwv * 0.5 + tp * 48;
+    ctx.globalAlpha = (1 - tp) * 0.4;
+    ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x, py, rr, rr * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   const sMon = STARTER_MON[G.starter];
   // the partner rides the left end of the paddle, growing as it evolves
   if (sMon && G.state !== 'menu') {
@@ -902,6 +922,25 @@ function drawAnnounce() {
     ctx.fillStyle = '#90a4ae';
     ctx.globalAlpha = alpha * 0.8;
     subLines.forEach((l, i) => ctx.fillText(l, W / 2, y + 28 + descH + 8 + i * 16));
+  }
+  // a caught Pokémon rides a round portrait badge straddling the pill's top
+  if (a.spriteId) {
+    const spr = getSprite(a.spriteId);
+    if (spr.complete && spr.naturalWidth) {
+      const r = Math.min(34, W / 12);
+      const bx = W / 2, by = y - 32 - r * 0.5;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(6,9,24,0.95)'; ctx.fill();
+      ctx.save();
+      ctx.beginPath(); ctx.arc(bx, by, r - 2.5, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(spr, bx - r, by - r, r * 2, r * 2);
+      ctx.restore();
+      ctx.lineWidth = 2.5; ctx.strokeStyle = a.color;
+      ctx.shadowColor = a.color; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
   }
   ctx.restore();
 }

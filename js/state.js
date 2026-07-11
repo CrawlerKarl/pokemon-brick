@@ -58,8 +58,8 @@ const DANGER_Y = () => PADDLE_Y() - 86;
 const ballSp = () => diff().ballSpeed;
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
-function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null) {
-  G.announce = { icon, color, name, desc, sub, t: dur, max: dur };
+function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null) {
+  G.announce = { icon, color, name, desc, sub, t: dur, max: dur, spriteId };
 }
 
 function applyPower(p, srcType) {
@@ -147,19 +147,44 @@ const FORMATIONS = [
   { name: 'CANYONS',      mild: true, skip: (r, c) => c % 3 === 2 },
 ];
 const MILD_FORMS = FORMATIONS.filter(f => f.mild);
+// vertical BREATHING ROOM the flyers must leave above the paddle. Generous
+// for most of the journey so patterns stay up high; only the final region of
+// a cycle crowds the paddle for a real difficulty spike (flyers never trip
+// the danger line, so a low pattern is intense but still fair).
+function flyerRoom(lvl) {
+  const regionInCycle = Math.floor((lvl - 1) / STAGES) % GENS.length;
+  const t = Math.max(0, Math.min(1, (regionInCycle - 6) / 2)); // 0 until region 7, →1 by the last
+  return Math.max(58, H * (0.30 - 0.25 * t));
+}
 // where a squad's flight curve lives on the field. Wrapping kinds span past
 // BOTH edges — riders exit one side and pour back in on the other, one
-// continuous stream. Orbit circles the boxed core like a guard ring.
+// continuous stream. Orbit circles the boxed core like a guard ring. Every
+// pattern is finally clamped into the airspace ABOVE the breathing-room
+// floor so nothing drifts down onto the paddle (until the endgame).
 function flightGeom(kind, geo, s, nS) {
   const wrap = kind === 'snake' || kind === 'helix' || kind === 'swoop';
-  if (kind === 'orbit')
-    return { cx: W / 2, cy: geo.gridCy, rx: geo.usable * 0.47, ry: geo.coreRy, spd: 0.75 };
-  const cy = geo.cy0 + (s % 2) * Math.min(56, geo.ryA * 0.45);
-  if (wrap)
-    return { cx: W / 2, cy, rx: W / 2 + 90, ry: Math.min(geo.ryA, 120), spd: 1.7 };
-  const cx = nS > 1 ? W / 2 + (s - (nS - 1) / 2) * geo.usable * 0.22 : W / 2;
-  const rx = geo.usable * (nS > 1 ? 0.26 : 0.4);
-  return { cx, cy, rx, ry: geo.ryA * (kind === 'inf' ? 0.6 : 1) * (nS > 1 ? 0.85 : 1), spd: kind === 'lane' ? 1.3 : 1 };
+  let g;
+  if (kind === 'orbit') {
+    g = { cx: W / 2, cy: geo.gridCy, rx: geo.usable * 0.47, ry: geo.coreRy, spd: 0.75 };
+  } else {
+    const cy = geo.cy0 + (s % 2) * Math.min(56, geo.ryA * 0.45);
+    if (wrap) {
+      g = { cx: W / 2, cy, rx: W / 2 + 90, ry: Math.min(geo.ryA, 120), spd: 1.7 };
+    } else {
+      const cx = nS > 1 ? W / 2 + (s - (nS - 1) / 2) * geo.usable * 0.22 : W / 2;
+      const rx = geo.usable * (nS > 1 ? 0.26 : 0.4);
+      g = { cx, cy, rx, ry: geo.ryA * (kind === 'inf' ? 0.6 : 1) * (nS > 1 ? 0.85 : 1), spd: kind === 'lane' ? 1.3 : 1 };
+    }
+  }
+  clampBand(g, geo.topY, geo.floorY);
+  return g;
+}
+// slide a pattern's band up until its lowest point clears floorY; if the band
+// is simply taller than the airspace, shrink it and center it there
+function clampBand(g, topY, floorY) {
+  const band = floorY - topY;
+  if (g.ry * 2 > band) g.ry = band / 2;
+  g.cy = Math.max(topY + g.ry, Math.min(floorY - g.ry, g.cy));
 }
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
@@ -306,7 +331,11 @@ function buildLevel(lvl) {
       ryA: Math.max(75, rows * pitchY * 0.55),
       // ORBIT geometry: a ring of bare flyers circling the boxed core
       gridCy: gridTop + rows * pitchY * 0.5,
-      coreRy: Math.max(90, Math.min(rows * pitchY * 0.62 + 60, PADDLE_Y() - 170 - (gridTop + rows * pitchY * 0.5))),
+      coreRy: Math.max(90, rows * pitchY * 0.62 + 60),
+      // the airspace flyers live in: just under the top wall, down to the
+      // breathing-room floor above the paddle (clampBand keeps them inside)
+      topY: 84,
+      floorY: PADDLE_Y() - flyerRoom(lvl),
       // orbit needs a boxed core left to circle
       hasCore: G.bricks.length - flyers.length >= 4,
     };
@@ -419,7 +448,10 @@ function spawnReinforcement() {
   const kind = kinds[Math.floor(Math.random() * Math.min(kinds.length, 3 + regionsIn - 2))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
-  const cy0 = 150 + Math.max(70, bh * 3);
+  // keep reinforcement patterns in the same breathing-room airspace
+  const ry = Math.max(80, H * 0.14);
+  const floorY = PADDLE_Y() - flyerRoom(lvl);
+  const cy0 = Math.max(84 + ry, Math.min(floorY - ry, 150 + Math.max(70, bh * 3)));
   for (let i = 0; i < n; i++) {
     const pool = gen.tiers[i % 3 === 0 ? 3 : 2];
     const [id, t] = pool[Math.floor(Math.random() * pool.length)];
@@ -434,7 +466,7 @@ function spawnReinforcement() {
       entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
       flight: {
         kind, state: 2, launch: 0,
-        cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * 0.4, ry: Math.max(80, H * 0.14),
+        cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * 0.4, ry,
         spd: wrap ? 1.7 : 1,
         phase: i / n, dir: 1, strand: i % 2,
       },
