@@ -58,8 +58,8 @@ const DANGER_Y = () => PADDLE_Y() - 86;
 const ballSp = () => diff().ballSpeed;
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
-function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null) {
-  G.announce = { icon, color, name, desc, sub, t: dur, max: dur, spriteId };
+function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false) {
+  G.announce = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny };
 }
 
 function applyPower(p, srcType) {
@@ -201,10 +201,11 @@ function buildLevel(lvl) {
   // board size grows with the journey: more columns and rows deeper in, so
   // late regions are denser campaigns rather than just faster ones
   const regionsIn = Math.floor((lvl - 1) / STAGES);
-  // the armada grows with the journey, but sprites stay READABLE: bricks
-  // never shrink below ~52px slots, capping the horde at 18 columns
-  const baseCols = Math.max(6, Math.min(10, Math.floor(W / 115)));
-  const cols = Math.max(6, Math.min(18, Math.floor(W / 52), baseCols + regionsIn));
+  // columns are READABILITY-driven, NOT region-driven: the board stays legible
+  // so the ball is never lost among the cards. The journey adds pressure by
+  // trading boxed bricks for free-flyers (see the density budget below), never
+  // by piling on more and more columns.
+  const cols = Math.max(6, Math.min(10, Math.floor(W / 122)));
   // wide side margins leave the formation real room to MARCH — the broad
   // Galaxian sweeps need somewhere to sweep to
   const margin = Math.max(40, W * 0.13);
@@ -241,11 +242,20 @@ function buildLevel(lvl) {
     : stage === 0 && Math.random() < 0.45 ? MILD_FORMS[Math.floor(Math.random() * MILD_FORMS.length)]
     : null;
   const maxRows = Math.max(2, Math.floor((H * 0.58 - gridTop) / pitchY));
-  const baseRows = 3 + Math.min(4, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0);
-  // later regions open with FEWER boxed ranks — the missing ranks arrive
-  // already broken out, streaming in from off-screen (STREAMS block below)
-  const streamSquads = !hasBoss && regionsIn >= 3 ? (regionsIn >= 6 ? 2 : 1) : 0;
-  const rows = Math.min(hasBoss ? 2 + Math.min(3, Math.floor(regionsIn / 3)) : Math.max(2, baseRows - streamSquads), 8, maxRows);
+  // ---- DENSITY BUDGET: keep the board readable so the ball is never lost.
+  // Free-FLYERS (moving, individual Pokémon) are HARD-CAPPED, and the BOXED
+  // wall SHRINKS as the journey shifts toward flyers — always a balance,
+  // never a wall AND a swarm at once. Streams (below) are pure flyers that
+  // spend part of the flyer budget, arriving already broken out.
+  const streamSquads = !hasBoss && regionsIn >= 4 ? (regionsIn >= 7 ? 2 : 1) : 0;
+  const streamPer = Math.min(7, 4 + Math.floor(regionsIn / 2));
+  const flyerBudget = hasBoss ? 0 : Math.min(20, regionsIn === 0 ? 0 : Math.round(4 + regionsIn * 1.8));
+  const gridFlyerBudget = Math.max(0, flyerBudget - streamSquads * streamPer);
+  // boxed bricks: a generous wall early, thinning region by region
+  const boxedBudget = Math.max(cols, Math.round(cols * (2.6 - regionsIn * 0.2)));
+  const rows = hasBoss
+    ? Math.min(2 + Math.min(3, Math.floor(regionsIn / 3)), 8, maxRows)
+    : Math.max(2, Math.min(Math.round((boxedBudget + gridFlyerBudget) / cols) + (stage === 1 ? 1 : 0), 6, maxRows));
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
@@ -316,14 +326,14 @@ function buildLevel(lvl) {
     if (regionsIn >= 4) kinds.push('olympic', 'liss');
     if (regionsIn >= 5) kinds.push('rose', 'helix');
     if (regionsIn >= 6) kinds.push('pend', 'epi', 'pulsar');
-    // how much of the wave breaks out: a few at Johto → nearly all late
-    const frac = Math.min(1, 0.18 + (regionsIn - 1) * 0.13 + (stage === 1 ? 0.08 : 0));
+    // how many break out of the wall is set by the density budget (above),
+    // never a runaway fraction — the boxed wall keeps a real presence
     const pool2 = G.bricks.filter(b => !b.armored && !b.isBoss);
     for (let i = pool2.length - 1; i > 0; i--) { // shuffle
       const j = Math.floor(Math.random() * (i + 1));
       [pool2[i], pool2[j]] = [pool2[j], pool2[i]];
     }
-    const flyers = pool2.slice(0, Math.round(pool2.length * frac));
+    const flyers = pool2.slice(0, Math.min(pool2.length, gridFlyerBudget));
     const usable = W - margin * 2;
     const geo = {
       usable,
@@ -373,7 +383,7 @@ function buildLevel(lvl) {
     for (let s = 0; s < streamSquads; s++) {
       const kind = pickKind();
       const g = flightGeom(kind, geo, s, streamSquads);
-      const count = Math.min(14, 6 + regionsIn);
+      const count = streamPer;
       const tierPool = gen.tiers[2];
       const [id, t] = tierPool[Math.floor(Math.random() * tierPool.length)]; // one species — reads as a flock
       const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp));
@@ -442,10 +452,10 @@ function spawnReinforcement() {
   const lvl = G.level, rIdx = regionIdx(lvl), regionsIn = Math.floor((lvl - 1) / STAGES);
   const gen = genFor(lvl);
   const p = preset();
-  const n = Math.min(26, 10 + regionsIn * 2);
+  const n = Math.min(16, 8 + regionsIn);
   const usable = W * 0.76;
   const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose'];
-  const kind = kinds[Math.floor(Math.random() * Math.min(kinds.length, 3 + regionsIn - 2))];
+  const kind = kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn)))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
   // keep reinforcement patterns in the same breathing-room airspace
@@ -555,10 +565,29 @@ function shatterBox(br, x, y) {
     });
   }
 }
-// 3D card-shatter: four tumbling corner fragments + the sprite "fainting"
-function shatterBrick(br, x, y) {
-  shatterBox(br, x, y);
+// a KO effect. A BOXED brick shatters its card (tumbling corner fragments) and
+// the sprite faints. A BARE free-flyer has no box to break — it just FAINTS:
+// the sprite spins away in an arc with a puff of sparks, no card fragments.
+function shatterBrick(br, x, y, bare) {
+  if (!bare) shatterBox(br, x, y);
   if (G.ghosts.length < 14 && br.poke.id > 0) {
-    G.ghosts.push({ id: br.poke.id, shiny: br.shiny, x, y, s: br.h * (br.isBoss ? 1.1 : 1.3), vr: (Math.random() - 0.5) * 3, rot: 0, life: 0.6, maxLife: 0.6 });
+    G.ghosts.push({
+      id: br.poke.id, shiny: br.shiny, x, y,
+      s: br.h * (br.isBoss ? 1.1 : 1.3),
+      vr: (Math.random() - 0.5) * (bare ? 7 : 3), rot: 0,
+      life: bare ? 0.5 : 0.6, maxLife: bare ? 0.5 : 0.6,
+      faint: bare, vy: bare ? -150 : 0,
+    });
+  }
+  if (bare) { // a puff of white/gold sparks reads as a KO, not a broken block
+    for (let i = 0; i < 12; i++) {
+      if (G.particles.length > 450) break;
+      const a = Math.random() * Math.PI * 2, s = 130 + Math.random() * 200;
+      G.particles.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60,
+        life: 0.35 + Math.random() * 0.3, maxLife: 0.65,
+        color: i % 2 ? '#ffffff' : '#fff59d', r: 1.4 + Math.random() * 2,
+      });
+    }
   }
 }

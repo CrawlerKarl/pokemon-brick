@@ -56,7 +56,7 @@ function drawBricks() {
     // banking through its pattern with a type-colored aura underneath.
     // Divers and once-dived (bare) blocks shattered their box too: NOTHING
     // attacks or flies as a full framed brick.
-    if ((br.bare || br.dive || (br.flight && br.flight.state >= 1)) && !br.isBoss) {
+    if (bareMon(br)) {
       const img2 = getSprite(br.poke.id, br.shiny);
       ctx.save();
       const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1);
@@ -505,6 +505,11 @@ function drawPaddle() {
 
 function drawBalls() {
   const elemCol = G.ballElement ? TYPE_COLORS[G.ballElement] : null;
+  // as the board fills with cards + flyers, brighten the ball so it never gets
+  // lost in the crowd: the glow swells and a soft halo grows with the clutter
+  let clutter = 0;
+  for (const b of G.bricks) if (!b.dead) clutter++;
+  const bright = SETTINGS.hcBall ? 0 : Math.min(1, Math.max(0, (clutter - 16) / 44));
   for (const b of G.balls) {
     for (let i = 0; i < b.trail.length; i++) {
       const t = b.trail[i], a = (1 - i / b.trail.length) * 0.35;
@@ -514,8 +519,20 @@ function drawBalls() {
     }
     ctx.globalAlpha = 1;
     ctx.save();
+    // clutter halo — a soft disc of the ball's own colour behind it, growing
+    // with how much is on screen so a busy board can't swallow the ball
+    if (bright > 0.04 && !b.phasing) {
+      const hr = b.r + 6 + bright * 13;
+      const hc = G.fx_fire ? '#ffcc80' : (elemCol || '#c5e1ff');
+      const hg = ctx.createRadialGradient(b.x, b.y, b.r * 0.4, b.x, b.y, hr);
+      hg.addColorStop(0, hc); hg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.globalAlpha = 0.12 + bright * 0.34;
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(b.x, b.y, hr, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     ctx.shadowColor = G.fx_fire ? '#ff5722' : (elemCol || '#90caf9');
-    ctx.shadowBlur = SETTINGS.hcBall ? 0 : 16;
+    ctx.shadowBlur = SETTINGS.hcBall ? 0 : 16 + bright * 20;
     const g = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, b.r);
     if (SETTINGS.hcBall) { g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#ffffff'); }
     else if (G.fx_fire) { g.addColorStop(0, '#fff3e0'); g.addColorStop(0.5, '#ffb74d'); g.addColorStop(1, '#e64a19'); }
@@ -925,7 +942,7 @@ function drawAnnounce() {
   }
   // a caught Pokémon rides a round portrait badge straddling the pill's top
   if (a.spriteId) {
-    const spr = getSprite(a.spriteId);
+    const spr = getSprite(a.spriteId, a.spriteShiny);
     if (spr.complete && spr.naturalWidth) {
       const r = Math.min(34, W / 12);
       const bx = W / 2, by = y - 32 - r * 0.5;

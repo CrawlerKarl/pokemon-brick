@@ -99,9 +99,21 @@ This is the heart and the most-iterated system. Assigned per-wave in
   late-game. A boxed brick that dives **shatters its box first** and stays
   `br.bare` (rendered as a bare sprite even back in formation) — nothing
   ever attacks as a full framed brick.
+- **`bareMon(br)`** (update.js) — the single source of truth for "is this a
+  bare Pokémon" (flyer/diver/`bare`), used by both the renderer and the
+  death effect. A boxed brick **card-shatters** (`shatterBrick` → tumbling
+  fragments); a bare mon **faints** instead — no card, just the sprite
+  arcing away with a spark puff (`faint` ghosts get an up-then-fall `vy`).
+- **Density budget** (`buildLevel`, state.js) — the board is kept readable so
+  the ball is never lost. `cols` is **width-driven, not region-driven**;
+  free-flyers are **hard-capped** (`flyerBudget`, ≤20) and the boxed wall
+  **shrinks** region by region (`boxedBudget`). Total on-screen holds ~22–32
+  the whole journey (was 15→118). Streams spend part of the flyer budget.
+  The ball's glow + halo scale with on-screen `clutter` (render.js
+  `drawBalls`) so a busy board can't swallow it.
 - **Rendered:** boxed bricks are cards (render.js `drawBricks`); flyers,
   divers and `bare` blocks are bare sprites with a type-colored aura
-  (render.js, the first `if` block in the per-brick loop).
+  (render.js, the first `if (bareMon(br))` block in the per-brick loop).
 
 ### Skill tree (`PATHS` in data.js ~423)
 Four paths × four tiers, **permanent**, drafted between waves. Advancing is

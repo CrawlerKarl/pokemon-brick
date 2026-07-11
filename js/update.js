@@ -116,7 +116,7 @@ function damageBrick(br, dmg, sx, sy, element) {
     if (br.isBoss || pts >= 150) addFloater(br.bx + G.fx, br.by + G.fy, '+' + pts, '#fff', br.isBoss ? 26 : 15);
     if (!br.isBoss && G.combo > 2 && G.combo % 5 === 0) addFloater(br.bx + G.fx, br.by + G.fy - 26, 'COMBO x' + G.combo, '#ffd54f', 18);
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
-    shatterBrick(br, br.bx + G.fx, br.by + G.fy);
+    shatterBrick(br, br.bx + G.fx, br.by + G.fy, bareMon(br));
     G.shake = Math.min(G.shake + (br.isBoss ? 14 : 4), 16);
     G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
     if (br.isBoss) { SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30); }
@@ -166,6 +166,9 @@ function fireballExplosion(x, y, tier) {
 
 // is this block out of its box and flying a pattern?
 function flying(br) { return !!(br.flight && br.flight.state >= 1); }
+// is this a BARE Pokémon (no box around it) — flyer, diver, or once-dived?
+// bare mons faint when killed instead of shattering a card.
+function bareMon(br) { return !br.isBoss && !!(br.bare || br.dive || (br.flight && br.flight.state >= 1)); }
 
 // ---- the flight pattern library: a dozen closed curves the free-flying
 // Pokémon cycle around, nose to tail (Space Junkie / Galaga canon) ----
@@ -269,7 +272,7 @@ function collectPickup(pu) {
       (pu.shiny ? 'SHINY ' : '') + nm + ' CAUGHT!',
       G.trial ? 'TRIAL — CATCH NOT REGISTERED · +250 PTS'
         : isNew ? 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS' : 'ALREADY IN YOUR POKÉDEX · +250 PTS',
-      2.2, null, pu.dexId);
+      2.2, null, pu.dexId, pu.shiny);
     G.score += isNew ? 100 : 250;
   } else {
     applyPower(pu.p, pu.srcType);
@@ -414,7 +417,10 @@ function update(dt) {
     f.vy += 900 * dt; f.rot += f.vr * dt;
   }
   G.fragments = G.fragments.filter(f => f.life > 0);
-  for (const gh of G.ghosts) { gh.life -= dt; gh.s += dt * 60; gh.rot += gh.vr * dt; }
+  for (const gh of G.ghosts) {
+    gh.life -= dt; gh.s += dt * (gh.faint ? 26 : 60); gh.rot += gh.vr * dt;
+    if (gh.faint) { gh.y += gh.vy * dt; gh.vy += 520 * dt; } // faint = arc up then fall
+  }
   G.ghosts = G.ghosts.filter(g => g.life > 0);
 
   if (G.state === 'menu' || G.state === 'gameover' || G.state === 'dex') return;
