@@ -34,6 +34,7 @@ const G = {
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
   motionTier: 0, motionStyle: 'march',
   marchDir: 1, divers: false, diveCD: 6, gridCols: 10, pathSpeed: 0.04,
+  blocksStatic: false, // boxed bricks are anchored; only the Pokémon move
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -147,44 +148,54 @@ const FORMATIONS = [
   { name: 'CANYONS',      mild: true, skip: (r, c) => c % 3 === 2 },
 ];
 const MILD_FORMS = FORMATIONS.filter(f => f.mild);
-// vertical BREATHING ROOM the flyers must leave above the paddle. Generous
-// for most of the journey so patterns stay up high; only the final region of
-// a cycle crowds the paddle for a real difficulty spike (flyers never trip
-// the danger line, so a low pattern is intense but still fair).
+// vertical BREATHING ROOM the flyers leave above the paddle. Generous for most
+// of the journey; only the final region of a cycle crowds the paddle for a
+// difficulty spike (flyers never trip the danger line, so a low pattern is
+// intense but fair). Blocks are static, so this only ever bounds the FLYERS.
 function flyerRoom(lvl) {
   const regionInCycle = Math.floor((lvl - 1) / STAGES) % GENS.length;
   const t = Math.max(0, Math.min(1, (regionInCycle - 6) / 2)); // 0 until region 7, →1 by the last
-  return Math.max(58, H * (0.30 - 0.25 * t));
+  return Math.max(56, H * (0.19 - 0.13 * t));
 }
-// where a squad's flight curve lives on the field. Wrapping kinds span past
-// BOTH edges — riders exit one side and pour back in on the other, one
-// continuous stream. Orbit circles the boxed core like a guard ring. Every
-// pattern is finally clamped into the airspace ABOVE the breathing-room
-// floor so nothing drifts down onto the paddle (until the endgame).
+// ---- FLYER ZONING: boxed bricks are a STATIC wall; the Pokémon own all the
+// motion, in patterns that provably never enter the block zone. Two kinds:
+//   • SQUARE — a loop traced strictly AROUND the grid (never inside it).
+//   • OPEN patterns — everything else, confined to the clear band BELOW the
+//     grid (top of the pattern clamped under the lowest rank).
+// Flyers can thread past each other, but no pattern overlaps the bricks.
 function flightGeom(kind, geo, s, nS) {
-  const wrap = kind === 'snake' || kind === 'helix' || kind === 'swoop';
-  let g;
-  if (kind === 'orbit') {
-    g = { cx: W / 2, cy: geo.gridCy, rx: geo.usable * 0.47, ry: geo.coreRy, spd: 0.75 };
-  } else {
-    const cy = geo.cy0 + (s % 2) * Math.min(56, geo.ryA * 0.45);
-    if (wrap) {
-      g = { cx: W / 2, cy, rx: W / 2 + 90, ry: Math.min(geo.ryA, 120), spd: 1.7 };
-    } else {
-      const cx = nS > 1 ? W / 2 + (s - (nS - 1) / 2) * geo.usable * 0.22 : W / 2;
-      const rx = geo.usable * (nS > 1 ? 0.26 : 0.4);
-      g = { cx, cy, rx, ry: geo.ryA * (kind === 'inf' ? 0.6 : 1) * (nS > 1 ? 0.85 : 1), spd: kind === 'lane' ? 1.3 : 1 };
-    }
+  if (kind === 'square') {
+    // a rectangle loop hugging OUTSIDE the grid — margin beyond every edge,
+    // so a rider on it can never touch a brick. Nested for multiple squads.
+    const m = Math.max(36, geo.usable * 0.03) + s * 26;
+    const ry = Math.min((geo.gridBottom - geo.gridTop) / 2 + m, geo.floorY - geo.gridCy - 6);
+    return { kind, cx: geo.gridCx, cy: geo.gridCy, rx: geo.gridHW + m, ry, spd: 0.7 };
   }
-  clampBand(g, geo.topY, geo.floorY);
+  // OPEN-ZONE patterns live entirely in the clear band below the grid
+  const wrap = kind === 'snake' || kind === 'helix' || kind === 'swoop';
+  const halfBand = (geo.floorY - geo.openTop) / 2;
+  // stack multiple open squads through the band so they don't pile up
+  const cy = geo.openTop + halfBand + (nS > 1 ? (s - (nS - 1) / 2) * Math.min(42, halfBand * 0.5) : 0);
+  let g;
+  if (wrap) {
+    g = { kind, cx: W / 2, cy, rx: W / 2 + 90, ry: Math.min(halfBand, 108), spd: 1.6 };
+  } else {
+    const cx = nS > 1 ? W / 2 + (s - (nS - 1) / 2) * geo.usable * 0.2 : W / 2;
+    const flat = kind === 'inf' || kind === 'oval' || kind === 'lane' || kind === 'weave' || kind === 'epi';
+    const round = kind === 'ring';
+    const rx = round ? Math.min(halfBand, geo.usable * 0.4)
+      : geo.usable * (kind === 'oval' ? 0.46 : nS > 1 ? 0.27 : 0.4);
+    g = { kind, cx, cy, rx, ry: Math.min(halfBand, round ? rx : flat ? halfBand * 0.72 : halfBand),
+      spd: kind === 'lane' ? 1.3 : 1 };
+  }
+  clampOpen(g, geo.openTop, geo.floorY);
   return g;
 }
-// slide a pattern's band up until its lowest point clears floorY; if the band
-// is simply taller than the airspace, shrink it and center it there
-function clampBand(g, topY, floorY) {
-  const band = floorY - topY;
+// hold an open pattern's band between the grid's underside and the paddle floor
+function clampOpen(g, top, floorY) {
+  const band = floorY - top;
   if (g.ry * 2 > band) g.ry = band / 2;
-  g.cy = Math.max(topY + g.ry, Math.min(floorY - g.ry, g.cy));
+  g.cy = Math.max(top + g.ry, Math.min(floorY - g.ry, g.cy));
 }
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
@@ -319,9 +330,10 @@ function buildLevel(lvl) {
   G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
   G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
   if (!hasBoss && regionsIn >= 1) {
-    // unlocked flight patterns grow region by region
-    const kinds = ['ring', 'lane'];
-    if (regionsIn >= 2) kinds.push('inf', 'snake', 'orbit');
+    // unlocked flight patterns grow region by region. 'square' loops around
+    // the bricks; the rest weave/circle in the open space below them.
+    const kinds = ['ring', 'oval', 'square', 'weave'];
+    if (regionsIn >= 2) kinds.push('inf', 'snake', 'lane');
     if (regionsIn >= 3) kinds.push('falls', 'diamond', 'swoop');
     if (regionsIn >= 4) kinds.push('olympic', 'liss');
     if (regionsIn >= 5) kinds.push('rose', 'helix');
@@ -335,25 +347,21 @@ function buildLevel(lvl) {
     }
     const flyers = pool2.slice(0, Math.min(pool2.length, gridFlyerBudget));
     const usable = W - margin * 2;
+    // the STATIC grid's rectangle, and the clear band below it the flyers own
+    const gridBottom = gridTop + (rows - 1) * pitchY + bh; // bottom of lowest rank
     const geo = {
-      usable,
-      cy0: gridTop + pitchY + rows * pitchY * 0.55 + 24,
-      ryA: Math.max(75, rows * pitchY * 0.55),
-      // ORBIT geometry: a ring of bare flyers circling the boxed core
-      gridCy: gridTop + rows * pitchY * 0.5,
-      coreRy: Math.max(90, rows * pitchY * 0.62 + 60),
-      // the airspace flyers live in: just under the top wall, down to the
-      // breathing-room floor above the paddle (clampBand keeps them inside)
-      topY: 84,
+      usable, margin,
+      gridTop, gridBottom, gridCx: W / 2, gridHW: usable / 2,
+      gridCy: (gridTop + gridBottom) / 2,
+      // clear gap below the wall so a flyer's sprite never grazes the bricks
+      openTop: gridBottom + Math.max(34, bh * 0.85),
       floorY: PADDLE_Y() - flyerRoom(lvl),
-      // orbit needs a boxed core left to circle
+      // 'square' needs a boxed core left to loop around
       hasCore: G.bricks.length - flyers.length >= 4,
     };
-    let orbitUsed = false;
     const pickKind = () => {
       let k = kinds[Math.floor(Math.random() * kinds.length)];
-      if (k === 'orbit' && (orbitUsed || !geo.hasCore)) k = 'ring';
-      if (k === 'orbit') orbitUsed = true;
+      if (k === 'square' && !geo.hasCore) k = 'oval'; // nothing to loop around
       return k;
     };
     // ---- WALL SQUADS: flyers break out a whole SQUAD at a time — the
@@ -381,16 +389,20 @@ function buildLevel(lvl) {
     // broken out — a trailing line pours in from off-screen and threads
     // straight into its pattern, one behind the other
     for (let s = 0; s < streamSquads; s++) {
-      const kind = pickKind();
+      // streams fly OPEN patterns only (a 'square' would have to cross the wall
+      // to reach its loop) and pour in from the SIDES at open-zone height, so
+      // the trailing line never passes through the bricks
+      let kind = pickKind();
+      if (kind === 'square') kind = 'oval';
       const g = flightGeom(kind, geo, s, streamSquads);
       const count = streamPer;
       const tierPool = gen.tiers[2];
       const [id, t] = tierPool[Math.floor(Math.random() * tierPool.length)]; // one species — reads as a flock
       const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp));
-      const edge = Math.random() < 0.34 ? 'top' : Math.random() < 0.5 ? 'left' : 'right';
+      const edge = Math.random() < 0.5 ? 'left' : 'right';
       for (let j = 0; j < count; j++) {
-        const sx = edge === 'top' ? g.cx + (j % 2 ? -1 : 1) * 40 : edge === 'left' ? -60 - j * 44 : W + 60 + j * 44;
-        const sy = edge === 'top' ? -46 - j * 44 : 84 + s * 48 + (j % 2) * 18;
+        const sx = edge === 'left' ? -60 - j * 44 : W + 60 + j * 44;
+        const sy = geo.openTop + s * 30 + (j % 3) * 22;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: 0, col: j,
           w: bw - gapX, h: bh, hp, maxHp: hp,
@@ -408,6 +420,9 @@ function buildLevel(lvl) {
   // arriving as pure flyers once the first formation falls
   G.reinforce = !hasBoss && regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0;
   G.marchDir = Math.random() < 0.5 ? -1 : 1;
+  // boxed bricks are a STATIC wall on every non-boss wave — only the Pokémon
+  // move (bosses keep their guard-ring choreography)
+  G.blocksStatic = !hasBoss;
   G.gridCols = cols;
   // Galaga peel-off dives: hinted on early challenge stages, constant later
   G.divers = regionsIn >= 2 || (regionsIn >= 1 && stage >= 1);

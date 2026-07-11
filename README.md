@@ -61,39 +61,34 @@ sometimes doesn't fire — trigger manually with
 This is the heart and the most-iterated system. Assigned per-wave in
 `buildLevel` (state.js ~line 250–314), executed in `update.js` (~line 425–540).
 
-- **`G.motionStyle`** — the whole formation's shared motion, rolled from a
-  region-gated pool: `march` (Galaxian sweep, only Kanto), `serpent`,
-  `colwave`, `split`. Everything rides on a **march**: broad side-to-side
-  sweeps that only step DOWN at walls (capped speed, gentle descent).
+- **Static wall + moving Pokémon (the core rule).** Boxed bricks are an
+  **anchored wall** — `G.blocksStatic` (set `!hasBoss` in `buildLevel`) skips
+  the march, descent, and sway in `update.js`, so a non-boss wave's bricks
+  never move (just a ±2.5px render bob). All motion belongs to the **flyers**,
+  and their patterns are **provably disjoint from the block zone** — verified
+  0 overlaps across every level/viewport. Only **boss waves** still march (the
+  `!G.blocksStatic` branch) with guard rings around the legendary.
 - **`br.flight`** — individual Pokémon that **break out of their boxes** and
-  fly. `buildLevel` marks a fraction of non-armored bricks (0% Kanto → ~18%
-  Johto → ~40% mid → 100% Paldea) with a `flight` object, carved into
-  **squads** of ~7: each squad pops its boxes together (within ~a second)
-  and threads onto its **own pattern** — own shape, center, direction
-  (`flightGeom` in state.js picks the geometry). They start `state:0`
-  (boxed), the box **visibly shatters** (`shatterBox`) at `swayT >= launch`
-  (`state:1`, gliding onto the curve), then `state:2` (cycling). `flying(br)`
-  gates them out of march/rally/danger-line logic.
-- **Streams** — from region 4 on, waves field 1–2 fewer boxed rows and the
-  difference arrives **already broken out**: a trailing line pours in from
-  off-screen (left/right/top; `flight.state:1` with negative `t` = holding
-  off-screen for its turn) straight into its pattern.
-- **Breathing room** — every flight curve is clamped by `clampBand` into the
-  airspace between the top wall and a **breathing-room floor** (`flyerRoom` in
-  state.js) well above the paddle. The floor is generous (`~0.30·H`) for most
-  of the journey and only collapses (to ~58px) in the **final region of a
-  cycle** for a real difficulty spike. Flyers ride in **screen space** —
-  update.js strips `G.fx/G.fy` back out so the formation's downward march
-  never drags them onto the paddle (the floor would be meaningless otherwise).
-- **`flightPos(F, tAbs)`** (update.js ~172) — the **15-pattern library**:
-  `ring, inf, falls, liss, rose, diamond, pulsar, helix, pend, epi, snake,
-  olympic`, plus `orbit` (a ring of bare flyers circling the boxed core),
-  `lane` (bobbing vertical lanes, a wave travels across them) and `swoop`
-  (wrapping dive-run). Wrapping kinds (`snake/helix/swoop`) span past BOTH
-  edges — riders exit one side and re-enter the other in one continuous
-  stream (the wrap jump happens fully off-screen; off-screen flyers are
-  excluded from enemy-shot selection and de-prioritized by `nearestBrick`).
-  Flyers ride nose-to-tail via `phase`; `F.spd` scales per-squad speed.
+  fly, carved into **squads** that pop together and thread onto their **own
+  pattern** (`flightGeom` in state.js). `state:0` boxed → box **visibly
+  shatters** (`shatterBox`) at `swayT >= launch` → `state:1` gliding on →
+  `state:2` cycling. `flying(br)` / `bareMon(br)` gate them out of wall logic.
+- **Non-overlap zoning** (`flightGeom` + `clampOpen`, state.js) — the wall's
+  rectangle is known and fixed, so patterns are placed to never enter it:
+  **`square`** loops strictly AROUND the grid (margin beyond every edge);
+  every **open** pattern is clamped into the clear band BELOW the grid
+  (`geo.openTop = gridBottom + ~bh`, down to the `flyerRoom` floor). Streams
+  fly open patterns only and enter from the SIDES at open-zone height, so a
+  trailing line never crosses the wall.
+- **`flightPos(F, tAbs)`** (update.js) — the pattern library: `square` (loop
+  around the bricks), `ring`/`oval` (circle/ellipse), `inf`/`falls` (figure-
+  eights), `olympic`, `rose`, `diamond`, `liss`, `pulsar`, `pend`, `epi`,
+  `weave` (threading sweep), `lane` (bobbing lanes), plus wrapping
+  `snake`/`helix`/`swoop` that span past both edges (wrap jump off-screen;
+  off-screen flyers can't fire and are de-prioritized by `nearestBrick`).
+  Flyers ride nose-to-tail via `phase`; `F.spd` scales per-squad speed. The
+  **`flyerRoom`** floor keeps them above the paddle (generous → ~0-crowding in
+  the final region); flyers ride in screen space (`G.fx/G.fy` stripped out).
 - **`br.dive`** — Galaga peel-offs: a flyer/brick swoops at the paddle,
   fires one aimed shot at the bottom, loops home. Up to 3 concurrent
   late-game. A boxed brick that dives **shatters its box first** and stays

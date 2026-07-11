@@ -218,7 +218,22 @@ function flightPos(F, tAbs) {
       const x = F.cx - F.rx + u * F.rx * 2;
       return { x, y: F.cy + (F.strand ? 30 : -30) + Math.sin(u * Math.PI * 6) * F.ry * 0.45 };
     }
-    default: // 'ring' / 'olympic' / 'orbit': the smooth circle
+    case 'square': { // a marching loop traced AROUND the static grid, corner
+      // to corner — the "squares around bricks" pattern
+      const u = ((F.phase + t) % 1 + 1) % 1;
+      const hw = F.rx, hh = F.ry, perim = 4 * (hw + hh);
+      let dd = u * perim;
+      if (dd < 2 * hh) return { x: F.cx + hw, y: F.cy - hh + dd };       // right edge ↓
+      dd -= 2 * hh;
+      if (dd < 2 * hw) return { x: F.cx + hw - dd, y: F.cy + hh };       // bottom ←
+      dd -= 2 * hw;
+      if (dd < 2 * hh) return { x: F.cx - hw, y: F.cy + hh - dd };       // left edge ↑
+      dd -= 2 * hh;
+      return { x: F.cx - hw + dd, y: F.cy - hh };                        // top →
+    }
+    case 'weave': // threads left↔right across the open lane, bobbing as it goes
+      return { x: F.cx + s * F.rx, y: F.cy + Math.sin(th * 3) * F.ry };
+    default: // 'ring' / 'oval' / 'olympic': the smooth circle or ellipse
       return { x: F.cx + c * F.rx, y: F.cy + s * F.ry };
   }
 }
@@ -554,26 +569,29 @@ function update(dt) {
     const alive = G.bricks.filter(b => !b.dead).length;
     const total = G.bricks.length;
     const thin = total > 0 ? 1 + (1 - alive / total) * 2.2 * preset().descent : 1;
-    // ---- GALAXIAN MARCH (Space Junkie's chassis): the whole formation
-    // sweeps broadly side to side and only steps DOWN when it turns at a
-    // wall. Thinning ranks march faster, classic-style.
-    let minX = Infinity, maxX = -Infinity;
-    for (const br of G.bricks) {
-      if (br.dead || br.isBoss || br.dive || br.entry || flying(br)) continue;
-      minX = Math.min(minX, br.hx - br.w / 2);
-      maxX = Math.max(maxX, br.hx + br.w / 2);
+    // ---- GALAXIAN MARCH — only on boss waves now. Everywhere else the boxed
+    // bricks are a STATIC wall (G.blocksStatic) and the Pokémon carry all the
+    // motion in their own patterns; the wall never marches or descends, so a
+    // flyer's pattern can never drift into it.
+    if (!G.blocksStatic) {
+      let minX = Infinity, maxX = -Infinity;
+      for (const br of G.bricks) {
+        if (br.dead || br.isBoss || br.dive || br.entry || flying(br)) continue;
+        minX = Math.min(minX, br.hx - br.w / 2);
+        maxX = Math.max(maxX, br.hx + br.w / 2);
+      }
+      if (minX < Infinity) {
+        const lo = 8 - minX, hi = W - 8 - maxX;
+        // capped so late-game never turns into a blur
+        const marchV = Math.min(105, (24 + d.descent * 4.5) * Math.min(thin, 2));
+        G.fx += G.marchDir * marchV * ts * dt;
+        // gentle steps: pressure builds over minutes, not seconds
+        const stepDown = Math.min(G.brickH * 0.35, 6 + d.descent * 0.6);
+        if (G.fx >= hi && G.marchDir > 0) { G.fx = hi; G.marchDir = -1; G.fy += stepDown; tone(70, 0.1, 'sine', 0.045); }
+        else if (G.fx <= lo && G.marchDir < 0) { G.fx = lo; G.marchDir = 1; G.fy += stepDown; tone(70, 0.1, 'sine', 0.045); }
+      }
+      G.fy += d.descent * 0.07 * thin * ts * dt; // whisper of constant pressure
     }
-    if (minX < Infinity) {
-      const lo = 8 - minX, hi = W - 8 - maxX;
-      // capped so late-game never turns into a blur
-      const marchV = Math.min(105, (24 + d.descent * 4.5) * Math.min(thin, 2));
-      G.fx += G.marchDir * marchV * ts * dt;
-      // gentle steps: pressure builds over minutes, not seconds
-      const stepDown = Math.min(G.brickH * 0.35, 6 + d.descent * 0.6);
-      if (G.fx >= hi && G.marchDir > 0) { G.fx = hi; G.marchDir = -1; G.fy += stepDown; tone(70, 0.1, 'sine', 0.045); }
-      else if (G.fx <= lo && G.marchDir < 0) { G.fx = lo; G.marchDir = 1; G.fy += stepDown; tone(70, 0.1, 'sine', 0.045); }
-    }
-    G.fy += d.descent * 0.07 * thin * ts * dt; // whisper of constant pressure
     // ---- choreography rides ON TOP of the march. Boss guards instead
     // ripple in rings around their legendary, who patrols its arena.
     if (boss) {
@@ -611,6 +629,11 @@ function update(dt) {
       }
       if (flying(br)) continue; // flyers are positioned by their pattern
       let ox = 0, oy = 0;
+      if (G.blocksStatic) {
+        // anchored wall: no sway at all (just the tiny render bob for life)
+        br.bx = br.hx; br.by = br.hy;
+        continue;
+      }
       if (boss && mt >= 1) { // rings radiating from the boss
         const dist = Math.hypot(br.hx - boss.bx, br.hy - boss.hy);
         oy = Math.sin(G.swayT * 1.5 - dist * 0.02) * Math.min(11, br.h * 0.2);
