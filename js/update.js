@@ -28,7 +28,7 @@ function tickEffects(dt) {
     G.overheat -= dt;
     if (G.overheat <= 0) { G.overheat = 0; G.heat = 0.3; }
   } else {
-    G.heat = Math.max(0, G.heat - dt * 0.15);
+    G.heat = Math.max(0, G.heat - dt * 0.26); // cools fast — brief pauses recover
   }
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
@@ -1048,7 +1048,9 @@ function update(dt) {
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive
           && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
-        if (alive.length) {
+        // cap concurrent warnings so the board never fills with warning lines
+        const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
+        if (alive.length && activeTel < 3) {
           const shooter = alive[Math.floor(Math.random() * alive.length)];
           G.telegraphs.push({ br: shooter, boss: false, t: 0.5, max: 0.5 });
         }

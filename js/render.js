@@ -666,33 +666,38 @@ function drawTelegraphs() {
     const bx = tg.br.bx + G.fx, by = tg.br.by + G.fy + tg.br.h / 2;
     const prog = 1 - tg.t / tg.max;
     ctx.save();
-    ctx.globalAlpha = 0.25 + prog * 0.45;
-    ctx.setLineDash([6, 9]);
-    ctx.lineDashOffset = -G.time * 70;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = tg.boss ? '#e1bee7' : '#ff8a80';
-    ctx.beginPath();
-    ctx.moveTo(bx, by);
+    // BOSS shots are aimed and lethal → draw the full trajectory line. Regular
+    // shots just drop straight down, so a short stub + a charging muzzle glow
+    // is warning enough and keeps the board from filling with lines.
     if (tg.boss) {
+      ctx.globalAlpha = 0.25 + prog * 0.45;
+      ctx.setLineDash([6, 9]);
+      ctx.lineDashOffset = -G.time * 70;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#e1bee7';
       const ang = Math.atan2(PADDLE_Y() - by, G.paddle.x - bx);
       const len = Math.hypot(PADDLE_Y() - by, G.paddle.x - bx);
+      ctx.beginPath(); ctx.moveTo(bx, by);
       ctx.lineTo(bx + Math.cos(ang) * len, by + Math.sin(ang) * len);
+      ctx.stroke();
+      ctx.setLineDash([]);
     } else {
-      ctx.lineTo(bx, PADDLE_Y());
+      ctx.globalAlpha = 0.3 + prog * 0.45;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ff8a80';
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + 26); ctx.stroke();
     }
-    ctx.stroke();
-    ctx.setLineDash([]);
     // charging glow at the muzzle
     ctx.globalAlpha = 0.5 + prog * 0.5;
     ctx.fillStyle = tg.boss ? '#b388ff' : '#ff5252';
-    ctx.beginPath(); ctx.arc(bx, by, 3 + prog * 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx, by, 3 + prog * (tg.boss ? 7 : 4), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
   for (const cs of G.columnStrikes) {
     ctx.save();
     const col = cs.color || '#80d8ff';
     if (cs.warn > 0) {
-      const a = 0.14 + 0.1 * Math.sin(G.time * 14);
+      const a = 0.12 + 0.07 * Math.sin(G.time * 8); // calmer pulse, less strobe
       ctx.fillStyle = `rgba(255,82,82,${a})`;
       ctx.fillRect(cs.x - cs.w / 2, 60, cs.w, FLOOR() - 60);
       ctx.setLineDash([10, 8]);
@@ -1022,8 +1027,13 @@ function drawShield() {
 
 function drawDangerLine() {
   if (G.state !== 'play') return;
+  // only the boxed, descending wall can cross the danger line and cost a life;
+  // flyers never do. On static waves nothing descends, so this stays hidden.
   let lowest = -Infinity;
-  for (const br of G.bricks) if (!br.dead) lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
+  for (const br of G.bricks) {
+    if (br.dead || br.isBoss || br.dive || (br.flight && br.flight.state >= 1)) continue;
+    lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
+  }
   const prox = (lowest - (DANGER_Y() - 200)) / 200;
   if (prox <= 0.35) return; // only warn when genuinely close — no early-game noise
   const a = Math.min(0.5, prox * 0.5) * (0.6 + 0.4 * Math.sin(G.time * 6));

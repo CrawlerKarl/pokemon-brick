@@ -309,14 +309,15 @@ function fireAction(auto = false) {
   }
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
-  G.blasterCD = 0.55;
+  G.blasterCD = 0.3;
   G.shotsFired++;
   G.muzzle = 0.12;
-  // heat: the blaster is a finishing tool, not a primary weapon — ~3 shots
-  // overheat it. paddle returns vent it, so real breakout play keeps it cool.
-  // (a water partner's Torrent keeps the barrel cooler still)
-  const torrent = G.starter === 'water' ? 0.75 - 0.05 * (G.starterLvl - 1) : 1;
-  G.heat = Math.min(1, G.heat + 0.4 * (1 - 0.3 * upgN('coolant')) * torrent);
+  // heat: fire freely like a shooter — a long sustained stream (~15+ shots)
+  // before it overheats, and it cools fast, so the lockout is a rare "held it
+  // down forever" event rather than a constant governor. Paddle returns still
+  // vent it; a water partner's Torrent runs the barrel cooler still.
+  const torrent = G.starter === 'water' ? 0.8 - 0.04 * (G.starterLvl - 1) : 1;
+  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.3 * upgN('coolant')) * torrent);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, PADDLE_Y() - 44, 'OVERHEATED!', '#ff7043', 15);

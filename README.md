@@ -164,8 +164,17 @@ Trial runs never save best score or Pokédex catches (`G.trial` flag).
   in `buildLevel`
 - **Cycle speed:** `G.pathSpeed` (state.js). Blocks are static
   (`G.blocksStatic`); the march (update.js) runs only on boss waves
-- **Mega/heat/barrier:** `MEGA_DUR`, `OVERHEAT_DUR`, heat-per-shot (input.js
-  `fireAction`), `barrierCharges` (state.js)
+- **Blaster feel (fires freely, Space-Junkies style):** cadence `G.blasterCD`
+  and heat-per-shot in `fireAction` (input.js), passive cool in `tickEffects`
+  (update.js), `OVERHEAT_DUR` (state.js). Overheat is now a rare "held it
+  forever" event, not a constant governor.
+- **Difficulty vs the free blaster:** `BRICK_HP_MUL` in `buildLevel` (state.js)
+  — the single knob to make waves tankier/snappier (currently `1.35`).
+- **Enemy warnings:** telegraphs are capped (≤3 concurrent, `update.js` enemy-
+  fire block) and drawn compact for non-boss shots (short stub, not a full
+  line) in `drawTelegraphs` (render.js). Danger line only shows for a
+  descending boxed wall (hidden on static waves).
+- **Mega/barrier:** `MEGA_DUR`, `barrierCharges` (state.js)
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
 
 Persisted in `localStorage`: `pkbrk-settings`, `pkbrk-best`, `pkbrk-dex`,

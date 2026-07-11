@@ -7,7 +7,7 @@ const MEGA_DUR = 5;      // Mega Evolution duration in seconds
 function shieldCap() { return 3 + 2 * upgN('bulwark'); }
 function megaDur() { return upgN('megaX') ? 8 : MEGA_DUR; }
 function barrierCharges() { return 2 + (upgN('rally') ? 1 : 0); }
-const OVERHEAT_DUR = 2.8; // blaster lockout after overheating, in seconds
+const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
 const G = {
   state: 'menu',
   score: 0, best: +(localStorage.getItem('pkbrk-best') || 0),
@@ -279,8 +279,10 @@ function buildLevel(lvl) {
     const [id, t] = pool[Math.floor(Math.random() * pool.length)];
     for (let c = 0; c < cols; c++) {
       if (form && form.skip(r, c, rows, cols)) continue;
-      // late-game blocks are tougher so waves don't melt in seconds
-      let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
+      // blocks are tougher now that the blaster fires freely — the extra HP
+      // keeps waves from melting in seconds (BRICK_HP_MUL is the tuning knob)
+      const BRICK_HP_MUL = 1.35;
+      let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp * BRICK_HP_MUL) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
       if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
       // Space Junkie entrance: ranks pour in from off-screen, swooping along
       // a curve into their slot — alternating sides per row, staggered
