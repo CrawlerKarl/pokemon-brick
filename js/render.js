@@ -40,6 +40,12 @@ function armorColor(br) {
   return ARMOR_STEPS[idx];
 }
 
+// gait families for the free-flyers: the TYPE decides how a mon travels —
+// wing-beats, swimming undulation, an eerie hover, or a padding ground gait
+const GAIT_FLAP = new Set(['flying', 'dragon', 'bug']);
+const GAIT_SWIM = new Set(['water', 'ice']);
+const GAIT_HOVER = new Set(['ghost', 'psychic', 'fairy', 'poison']);
+
 function drawBricks() {
   const boss = G.bricks.find(b => b.isBoss);
   const introOff = G.bossIntro > 0 ? -Math.pow(G.bossIntro / 1.6, 2) * (H * 0.4) : 0;
@@ -60,27 +66,67 @@ function drawBricks() {
       const img2 = getSprite(br.poke.id, br.shiny);
       ctx.save();
       const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1);
-      const ag = ctx.createRadialGradient(x, y, 2, x, y, s2 * 0.62);
+      // ---- NATURAL LOCOMOTION: nothing floats like a stamp. Velocity
+      // comes from the frame delta; the mon's type picks its gait — a
+      // Dragonite beats its wings, a Persian pads along its pattern, a
+      // Gastly drifts, a Wooper swims. Every mon also faces and banks
+      // into its direction of travel.
+      const vx = (br.bx - (br.pbx ?? br.bx)) * 60, vy = (br.by - (br.pby ?? br.by)) * 60;
+      br.pbx = br.bx; br.pby = br.by;
+      const spd2 = Math.hypot(vx, vy);
+      if (vx > 25) br.face = -1; else if (vx < -25) br.face = 1; // hysteresis: no flip-jitter
+      const face = br.face || 1;
+      const T2 = br.poke.t, ph2 = br.wobble, t2 = G.time;
+      let bobY = 0, gaitRot = 0, sclX = 1, sclY = 1;
+      if (GAIT_FLAP.has(T2)) {
+        // wing-beats: quick flap bob, body pumping with each stroke
+        const flap = Math.sin(t2 * 9 + ph2 * 3);
+        bobY = flap * 3.4;
+        sclY = 1 + 0.07 * Math.sin(t2 * 18 + ph2 * 3);
+        gaitRot = flap * 0.05;
+      } else if (GAIT_SWIM.has(T2)) {
+        // swimming: slow full-body undulation, nosing along the path
+        gaitRot = Math.sin(t2 * 4.5 + ph2 * 2) * 0.12;
+        bobY = Math.sin(t2 * 2.2 + ph2) * 2.4;
+      } else if (GAIT_HOVER.has(T2)) {
+        // eerie hover: deep slow bob with a lazy roll
+        bobY = Math.sin(t2 * 1.8 + ph2) * 3.8;
+        gaitRot = Math.sin(t2 * 1.2 + ph2 * 2) * 0.07;
+      } else {
+        // ground gait: a footfall bounce that quickens with speed — the
+        // mon WALKS its pattern, springing off each stride
+        const stride = t2 * (4 + Math.min(6, spd2 * 0.03)) + ph2 * 2;
+        const step = Math.abs(Math.sin(stride));
+        bobY = -step * 3.4;
+        sclY = 0.95 + step * 0.07;
+        sclX = 1.03 - step * 0.03;
+        gaitRot = Math.sin(stride * 2) * 0.035;
+      }
+      // bank into travel, pitch a touch with climb/dive
+      const bank = Math.max(-0.3, Math.min(0.3, vx * 0.0011))
+        + Math.max(-0.13, Math.min(0.13, vy * 0.0005));
+      const yb = y + bobY;
+      const ag = ctx.createRadialGradient(x, yb, 2, x, yb, s2 * 0.62);
       ag.addColorStop(0, col + '55'); ag.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = ag;
-      ctx.beginPath(); ctx.arc(x, y, s2 * 0.62, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, yb, s2 * 0.62, 0, Math.PI * 2); ctx.fill();
       if (img2.complete && img2.naturalWidth) {
-        // bank into the direction of travel
-        const tilt = Math.max(-0.35, Math.min(0.35, (br.bx - (br.pbx ?? br.bx)) * 0.06));
-        br.pbx = br.bx;
-        ctx.translate(x, y); ctx.rotate(tilt);
+        ctx.save();
+        ctx.translate(x, yb);
+        ctx.rotate(bank + gaitRot);
+        ctx.scale(face * sclX, sclY);
         ctx.drawImage(img2, -s2 / 2, -s2 / 2, s2, s2);
-        ctx.rotate(-tilt); ctx.translate(-x, -y);
+        ctx.restore();
       } else {
         drawGlyph(ctx, 'pokeball', x, y, br.h * 0.4, '#ffffff33');
       }
       if (br.flash > 0.35) { // hit flash: white overlay pop on the sprite
         ctx.globalAlpha = (br.flash - 0.35) * 0.9;
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(x, y, s2 * 0.45, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.45, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
-      if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, y - s2 * 0.4, 5, '#ffd700');
+      if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, yb - s2 * 0.4, 5, '#ffd700');
       ctx.restore();
       continue;
     }

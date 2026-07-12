@@ -471,9 +471,12 @@ function buildLevel(lvl) {
       openTop: Math.max(96, Math.round(H * 0.12)),
       floorY,
     };
-    // Space Junkie mons are SMALL — half-size sprites, closely knit
-    const mw = Math.min(48, Math.max(32, bw * 0.5));
-    const mh = Math.min(42, Math.max(28, bh * 0.72));
+    // Space Junkie mons: compact but readable — and mostly UNEVOLVED.
+    // Tier-1 species are the rank and file; evolved Pokémon arrive as
+    // ELITES — noticeably LARGER, much tougher to shoot down, and in
+    // smaller squads, so bringing one down feels like a kill that counts.
+    const mw = Math.min(56, Math.max(36, bw * 0.58));
+    const mh = Math.min(50, Math.max(32, bh * 0.82));
     for (let s = 0; s < nS; s++) {
       let kind = kinds[Math.floor(Math.random() * kinds.length)];
       if (kind === 'square') kind = 'ring'; // no wall to loop around
@@ -487,21 +490,27 @@ function buildLevel(lvl) {
       } else g.ry *= 0.65;
       g.spd *= 1.25;
       clampOpen(g, geo.openTop, geo.floorY);
-      const tier = s === 0 && stage >= 1 ? 3 : s % 2 ? 1 : 2;
+      // evolution tiers unlock with the journey: one mid-evolved squad from
+      // region 3, a fully-evolved elite squad headlining challenges from 4
+      const tier = s === 0 && stage >= 1 && regionsIn >= 3 ? 3
+        : s === nS - 1 && regionsIn >= 2 ? 2 : 1;
+      const sizeMul = tier === 3 ? 1.5 : tier === 2 ? 1.25 : 1;
+      const perS = tier === 3 ? Math.max(3, per - 3) : tier === 2 ? Math.max(4, per - 2) : per;
       const pool3 = gen.tiers[tier];
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad — a flock
-      const hp = Math.max(1, Math.round((1 + tier * 0.5 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
-      for (let j = 0; j < per; j++) {
+      // evolved mons are far tankier than their unevolved counterparts
+      const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.6 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
+      for (let j = 0; j < perS; j++) {
         const sx = s % 2 ? W + 60 + j * 34 : -60 - j * 34;
         const sy = geo.openTop + s * 30 + (j % 3) * 18;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
-          w: mw, h: mh, hp, maxHp: hp,
+          w: mw * sizeMul, h: mh * sizeMul, hp, maxHp: hp,
           poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
           flight: {
             kind, state: 1, t: -(0.3 + j * 0.14 + s * 0.5), sx, sy, sq: s,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
-            phase: j / per, dir: s % 2 ? -1 : 1, strand: j % 2,
+            phase: j / perS, dir: s % 2 ? -1 : 1, strand: j % 2,
           },
         });
       }
@@ -578,16 +587,19 @@ function spawnReinforcement() {
   const cy0 = junkie
     ? Math.max(84 + ry, Math.min(H * 0.38, floorY - ry))
     : Math.max(84 + ry, Math.min(floorY - ry, 150 + Math.max(70, bh * 3)));
-  const rw = junkie ? Math.min(48, Math.max(32, bw * 0.5)) : bw - Math.max(8, bw * 0.15);
-  const rh = junkie ? Math.min(42, Math.max(28, bh * 0.72)) : bh;
+  const rw = junkie ? Math.min(56, Math.max(36, bw * 0.58)) : bw - Math.max(8, bw * 0.15);
+  const rh = junkie ? Math.min(50, Math.max(32, bh * 0.82)) : bh;
   for (let i = 0; i < n; i++) {
-    const pool = gen.tiers[i % 3 === 0 ? 3 : 2];
+    const rTier = i % 3 === 0 ? 3 : 2;
+    const pool = gen.tiers[rTier];
     const [id, t] = pool[Math.floor(Math.random() * pool.length)];
-    const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp));
+    // reinforcements are all EVOLVED — bigger and tankier in junkie mode
+    const rMul = junkie ? (rTier === 3 ? 1.5 : 1.25) : 1;
+    const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp * (junkie ? (rTier === 3 ? 1.7 : 1.25) : 1)));
     G.bricks.push({
       bx: i % 2 ? -70 : W + 70, by: -50 - (i % 5) * 24,
       hx: W / 2, hy: cy0, row: 0, col: i,
-      w: rw, h: rh,
+      w: rw * rMul, h: rh * rMul,
       hp, maxHp: hp,
       poke: { id, t },
       flash: 0, wobble: Math.random() * Math.PI * 2,
