@@ -16,8 +16,8 @@ if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
 // game MODE: the classic brick-breaker, or a ball-less pure shooter (Space
 // Junkies flavour) where the blaster is everything and you can charge shots
 const MODES = [
-  { key: 'classic', label: 'CLASSIC', desc: 'BALL + BLASTER · BRICK BREAKER' },
-  { key: 'blaster', label: 'BLASTER', desc: 'NO BALL · PURE SHOOTER · HOLD TO CHARGE' },
+  { key: 'classic', label: 'CLASSIC', desc: 'BALL + BLASTER' },
+  { key: 'blaster', label: 'BLASTER', desc: 'NO BALL · CHARGE SHOTS' },
 ];
 if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'classic';
 function saveSettings() { localStorage.setItem('pkbrk-settings', JSON.stringify(SETTINGS)); }
@@ -83,13 +83,15 @@ function menuLayout() {
   const starterInfoY = startY + starterH + 16; // readable ability detail lines
   const chipsLabelY = starterInfoY + 34 + 12 * s;
   const chipsY = chipsLabelY + 14;
-  // MODE row (Classic / Blaster) sits between difficulty and START
-  const modeLabelY = chipsY + chipH + 15 * s;
-  const modeY = modeLabelY + 12;
-  const modeH = 32 * s + 4;
-  const modeW = Math.min(196, (W - 40 - chipGap) / 2);
+  // MODE row (Classic / Blaster) sits between difficulty and START — roomy,
+  // readable buttons with a clear gap above so they don't crowd the difficulty
+  // row (a squished MODE strip was the whole complaint)
+  const modeLabelY = chipsY + chipH + 30 * s;
+  const modeY = modeLabelY + 16;
+  const modeH = 48 * s + 8;
+  const modeW = Math.min(228, (W - 40 - chipGap) / 2);
   const btnW = Math.min(300, W * 0.84), btnH = 54 * s + 8;
-  const btnY = modeY + modeH + 26 * s;
+  const btnY = modeY + modeH + 30 * s;
   return {
     s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY, modeLabelY,
     starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),

@@ -1435,12 +1435,12 @@ function drawMenu() {
     ctx.strokeStyle = sel ? mcol : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(13, mg.w / 8)}px Orbitron, sans-serif`;
+    ctx.font = `900 ${Math.min(17, mg.w / 8)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? mcol : '#cfd8dc';
-    ctx.fillText(MODES[i].label, mg.x + mg.w / 2, mg.y + mg.h / 2 - 6);
-    ctx.font = `600 ${Math.min(8.5, mg.w / 24)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? '#cfd8dc' : '#78909c';
-    ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h / 2 + 9, mg.w - 10);
+    ctx.fillText(MODES[i].label, mg.x + mg.w / 2, mg.y + mg.h * 0.36);
+    ctx.font = `600 ${Math.min(11, mg.w / 17)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? '#cfd8dc' : '#90a4ae';
+    ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h * 0.72, mg.w - 16);
     ctx.restore();
   }
   // start button — the one big obvious thing on the screen
