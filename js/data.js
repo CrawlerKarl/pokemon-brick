@@ -682,12 +682,12 @@ function preloadGen(g) {
 preloadGen(GENS[0]); preloadGen(GENS[1]);
 
 // ---- Pokédex (persistent collection, shinies tracked separately) ----
-const DEX = new Set(JSON.parse(localStorage.getItem('pkbrk-dex') || '[]'));
-const DEXS = new Set(JSON.parse(localStorage.getItem('pkbrk-dexs') || '[]'));
+const DEX = new Set((v => Array.isArray(v) ? v : [])(loadStore('pkbrk-dex', '[]')));
+const DEXS = new Set((v => Array.isArray(v) ? v : [])(loadStore('pkbrk-dexs', '[]')));
 function addToDex(id, shiny) {
   const isNew = !DEX.has(id) || (shiny && !DEXS.has(id));
   DEX.add(id);
-  localStorage.setItem('pkbrk-dex', JSON.stringify([...DEX]));
-  if (shiny) { DEXS.add(id); localStorage.setItem('pkbrk-dexs', JSON.stringify([...DEXS])); }
+  saveStore('pkbrk-dex', [...DEX]);
+  if (shiny) { DEXS.add(id); saveStore('pkbrk-dexs', [...DEXS]); }
   return isNew;
 }

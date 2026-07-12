@@ -144,7 +144,7 @@ window.addEventListener('touchcancel', e => {
 });
 function toggleMusic() {
   MUSIC.on = !MUSIC.on;
-  localStorage.setItem('pkbrk-music', MUSIC.on);
+  saveStore('pkbrk-music', MUSIC.on);
 }
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
 let konamiIdx = 0;
@@ -162,9 +162,12 @@ window.addEventListener('keydown', e => {
     else if (paused) quitToMenu(); // paused + Esc = leave the run
     else togglePause();
   }
-  // 1/2/3 pick an upgrade card between waves
+  // 1/2/3 pick an upgrade card between waves; R rerolls the hand once
   if (G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
     pickUpgrade(+e.code.slice(5) - 1);
+  }
+  if (e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices && !G.rerolled && G.stateT > 0.8) {
+    rerollDraft();
   }
   // ↑↑↓↓←→←→BA — some legends never die
   konamiIdx = e.code === KONAMI[konamiIdx] ? konamiIdx + 1 : (e.code === KONAMI[0] ? 1 : 0);
@@ -183,7 +186,7 @@ function togglePause() { if (G.state === 'play' || G.state === 'serve') paused =
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
   if (G.state !== 'play' && G.state !== 'serve' && !paused) return;
-  if (!G.trial && G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
+  if (!G.trial && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   paused = false;
   G.state = 'menu';
   dexScroll = 0;
@@ -203,11 +206,13 @@ function upgradeLayout() {
   if (stacked) {
     const cw = Math.min(370, W * 0.92), ch = Math.min(96, H * 0.13);
     const x = W / 2 - cw / 2, y0 = Math.min(H * 0.4, H - 3 * (ch + 14) - 60);
-    return { stacked, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }) };
+    return { stacked, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }),
+      reroll: { x: W / 2 - 90, y: Math.min(y0 + 3 * (ch + 14) + 6, H - 44), w: 180, h: 32 } };
   }
   const cw = Math.min(235, (W - 84) / 3), ch = Math.min(240, H * 0.34);
   const gap = 20, total = cw * 3 + gap * 2;
-  return { stacked, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: H * 0.4, w: cw, h: ch }) };
+  return { stacked, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: H * 0.4, w: cw, h: ch }),
+    reroll: { x: W / 2 - 90, y: Math.min(H * 0.4 + ch + 16, H - 48), w: 180, h: 34 } };
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
@@ -241,6 +246,13 @@ function pickUpgrade(i) {
     (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
   if (capped) SFX.mega();
 }
+// one fresh hand per draft — reroll keeps drafts from feeling dead when
+// every offer misses your build
+function rerollDraft() {
+  G.rerolled = true;
+  rollUpgradeChoices();
+  SFX.wall();
+}
 function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
 function onPress(x, y) {
   audio();
@@ -255,6 +267,7 @@ function onPress(x, y) {
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         if (inRect(x, y, L.card(i))) { pickUpgrade(i); return; }
       }
+      if (!G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
     }
     return;
   }
@@ -298,6 +311,7 @@ function onPress(x, y) {
       return;
     }
     const L = menuLayout();
+    if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
     for (let i = 0; i < STARTERS.length; i++) {
       if (inRect(x, y, L.starter(i))) { SETTINGS.starter = STARTERS[i].key; saveSettings(); SFX.wall(); return; }
     }

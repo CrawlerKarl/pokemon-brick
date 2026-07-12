@@ -25,9 +25,43 @@ function attackElement() { return G.ballElement || pilotInfo().t; }
 // paddle line outside junkie mode. The band gives ~120px of vertical flight.
 const SHIP_BAND = 120;
 function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
+// ---- REGION CHECKPOINTS: 27 stages is a long arcade run, so the run is
+// saved at every region's doorstep. CONTINUE on the title screen resumes it;
+// a true game-over (empty skill tree) clears it. Trial runs never save.
+let RUN_CKPT = (v => (v && typeof v === 'object' && v.v === 1 && v.lvl >= 4) ? v : null)(loadStore('pkbrk-run', 'null'));
+function saveCheckpoint() {
+  RUN_CKPT = {
+    v: 1, lvl: G.level, score: G.score, lives: G.lives, mode: G.mode,
+    starter: G.starter, starterLvl: G.starterLvl,
+    path: { ...G.path }, upg: { ...G.upg }, stacks: { ...G.stacks },
+    catchBonus: G.catchBonus, caughtRun: G.caughtRun, adapt: G.adapt,
+    preset: SETTINGS.preset,
+  };
+  saveStore('pkbrk-run', RUN_CKPT);
+}
+function clearCheckpoint() { RUN_CKPT = null; saveStore('pkbrk-run', null); }
+function resumeRun() {
+  const c = RUN_CKPT;
+  if (!c) return;
+  SETTINGS.mode = MODES.some(m => m.key === c.mode) ? c.mode : 'classic';
+  SETTINGS.starter = STARTER_MON[c.starter] ? c.starter : 'none';
+  if (PRESETS[c.preset]) SETTINGS.preset = c.preset;
+  saveSettings();
+  resetRun(c.lvl, false);
+  // resetRun granted a random tree for the deep start — overwrite with the
+  // REAL run state from the checkpoint
+  G.score = c.score; G.lives = Math.max(1, c.lives);
+  G.path = { ...c.path }; G.upg = { ...c.upg };
+  G.stacks = Object.assign({ orb: 0, ice: 0, bell: 0 }, c.stacks);
+  G.catchBonus = c.catchBonus || 0; G.caughtRun = c.caughtRun || 0;
+  G.adapt = c.adapt || 1; G.starterLvl = c.starterLvl || starterStage(c.lvl);
+  setAnnounce('swift', '#80d8ff', 'JOURNEY RESUMED',
+    genFor(c.lvl).name + ' · WAVE ' + c.lvl + ' — WELCOME BACK', 3,
+    'SAVED AT EVERY REGION · GAME OVER CLEARS THE SAVE');
+}
 const G = {
   state: 'menu',
-  score: 0, best: +(localStorage.getItem('pkbrk-best') || 0),
+  score: 0, best: Math.max(0, +loadStore('pkbrk-best', '0') || 0),
   lives: 3, level: 1, combo: 0,
   paddle: { x: 0, w: 130, h: 18, speed: 0, squash: 0 },
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
@@ -58,6 +92,7 @@ const G = {
   maneuver: null, maneuverCD: 8, // SPACE JUNKIE: periodic squad maneuvers
   stacks: { orb: 0, ice: 0, bell: 0 }, // SPACE JUNKIE: infinitely-stacking held items
   attackAnim: 0,       // SPACE JUNKIE: pilot lunge/recoil timer on fire
+  rerolled: false,     // one draft reroll per upgrade screen
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -475,8 +510,9 @@ function buildLevel(lvl) {
     // Tier-1 species are the rank and file; evolved Pokémon arrive as
     // ELITES — noticeably LARGER, much tougher to shoot down, and in
     // smaller squads, so bringing one down feels like a kill that counts.
-    const mw = Math.min(56, Math.max(36, bw * 0.58));
-    const mh = Math.min(50, Math.max(32, bh * 0.82));
+    // phones read better with chunkier mons — raise the floor on touch
+    const mw = Math.min(56, Math.max(IS_TOUCH ? 42 : 36, bw * 0.58));
+    const mh = Math.min(50, Math.max(IS_TOUCH ? 37 : 32, bh * 0.82));
     for (let s = 0; s < nS; s++) {
       let kind = kinds[Math.floor(Math.random() * kinds.length)];
       if (kind === 'square') kind = 'ring'; // no wall to loop around
@@ -565,6 +601,9 @@ function buildLevel(lvl) {
     G.starterLvl = starterStage(lvl); // the default pilot still grows (Pikachu → Raichu)
   }
   if (junkie) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
+  // arriving at a region's doorstep checkpoints the run (post-draft state —
+  // buildLevel runs after every pick, and after white-out tree burns too)
+  if (!G.trial && stage === 0 && lvl >= 4) saveCheckpoint();
 }
 
 // a fresh attack flight arrives after the main formation falls — pure

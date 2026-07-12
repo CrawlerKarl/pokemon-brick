@@ -67,7 +67,7 @@ const SFX = {
   shield: () => tone(440, 0.15, 'sine', 0.08, 220),
 };
 // ---- music: per-region chiptune with drums, bass, melody, pads ----
-const MUSIC = { on: JSON.parse(localStorage.getItem('pkbrk-music') ?? 'true'), nextT: 0, step: 0 };
+const MUSIC = { on: loadStore('pkbrk-music', 'true') !== false, nextT: 0, step: 0 };
 const GEN_ROOTS = [0, 2, 3, 5, 7, 8, 10, 1, 4];  // semitones above A2 per region
 const GEN_TEMPO = [0.135, 0.15, 0.13, 0.155, 0.12, 0.14, 0.125, 0.118, 0.128];
 // i – VI – III – VII in natural minor: the progression every bar leans on,

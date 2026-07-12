@@ -127,6 +127,16 @@ function drawBricks() {
         ctx.globalAlpha = 1;
       }
       if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, yb - s2 * 0.4, 5, '#ffd700');
+      // durability ring on tough flyers — evolved elites take several hits,
+      // and without this their remaining HP is guesswork
+      if (br.maxHp >= 3 && br.hp < br.maxHp && br.hp > 0) {
+        const frac = Math.max(0, br.hp / br.maxHp);
+        ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(8,12,28,0.55)';
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, Math.PI * 1.5); ctx.stroke();
+        ctx.strokeStyle = frac > 0.5 ? '#9ccc65' : frac > 0.25 ? '#ffd54f' : '#ff7043';
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); ctx.stroke();
+      }
       ctx.restore();
       continue;
     }
@@ -1147,6 +1157,11 @@ function drawProjectiles() {
     g.addColorStop(0, core); g.addColorStop(0.55, outer); g.addColorStop(1, inner);
     ctx.fillStyle = g; ctx.fill();
     ctx.shadowBlur = 0;
+    // hard dark outline: the danger silhouette must read on ANY backdrop,
+    // independent of its color
+    ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(5,7,18,0.85)';
+    ctx.stroke();
     // dark pupil-like core so the shape can't be mistaken for a glowing ball
     ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
     ctx.fillStyle = inner; ctx.fill();
@@ -1268,15 +1283,15 @@ function drawAnnounce() {
     ctx.font = `900 ${nameSize}px Orbitron, sans-serif`;
     nameW = ctx.measureText(a.name).width + (isGlyph ? gR * 2 + 14 : (a.icon ? ctx.measureText(a.icon + '  ').width : 0));
   }
-  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.font = bodyFont(12.5, 700);
   const descLines = wrapText(a.desc, maxTextW);
-  ctx.font = '700 11px Orbitron, sans-serif';
+  ctx.font = bodyFont(10.5, 600);
   const subLines = a.sub ? wrapText(a.sub, maxTextW) : [];
   const descH = descLines.length * 19, subH = subLines.length * 16;
   let lineW = nameW;
-  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.font = bodyFont(12.5, 700);
   for (const l of descLines) lineW = Math.max(lineW, ctx.measureText(l).width);
-  ctx.font = '700 11px Orbitron, sans-serif';
+  ctx.font = bodyFont(10.5, 600);
   for (const l of subLines) lineW = Math.max(lineW, ctx.measureText(l).width);
   const pillW = Math.min(W - 16, lineW + 56);
   const pillH = 62 + descH + (subH ? subH + 6 : 0);
@@ -1297,12 +1312,12 @@ function drawAnnounce() {
     ctx.fillText((a.icon ? a.icon + '  ' : '') + a.name, W / 2, y);
   }
   ctx.shadowBlur = 0;
-  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.font = bodyFont(12.5, 700);
   ctx.fillStyle = '#ffffff';
   ctx.globalAlpha = alpha * 0.85;
   descLines.forEach((l, i) => ctx.fillText(l, W / 2, y + 28 + i * 19));
   if (subLines.length) {
-    ctx.font = '700 11px Orbitron, sans-serif';
+    ctx.font = bodyFont(10.5, 600);
     ctx.fillStyle = '#90a4ae';
     ctx.globalAlpha = alpha * 0.8;
     subLines.forEach((l, i) => ctx.fillText(l, W / 2, y + 28 + descH + 8 + i * 16));
@@ -1331,43 +1346,29 @@ function drawAnnounce() {
 
 // transient tutorial hint: shows until you've fired a few shots.
 // on touch it points at the FIRE button instead of the paddle
+// ONE contextual hint at a time, in a control-safe zone: on touch the pill
+// sits well ABOVE the button row and the ship — it never competes with
+// MEGA/FIRE/CHARGE or covers the pilot
 function drawShootHint() {
   if (G.state !== 'play' || G.shotsFired >= 3 || G.playT > 20) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
+  const text = G.mode === 'junkie'
+    ? (IS_TOUCH ? 'HOLD FIRE — CHARGE FOR A BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
+    : G.mode === 'blaster'
+      ? (IS_TOUCH ? 'FIRE · HOLD CHARGE FOR A BIG SHOT' : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
+      : (IS_TOUCH ? 'HOLD FIRE TO SHOOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT');
   ctx.save();
   ctx.globalAlpha = a;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = '700 13px Orbitron, sans-serif';
-  if (IS_TOUCH) {
-    const B = touchButtons().fire;
-    const text = G.mode === 'blaster' ? 'FIRE · HOLD CHARGE FOR A BIG SHOT' : 'HOLD FIRE TO SHOOT';
-    const tw = ctx.measureText(text).width + 26;
-    const x = B.x - B.r - tw / 2 - 14, y = B.y - 6;
-    roundRect(x - tw / 2, y - 15, tw, 30, 15);
-    ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
-    ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#b3e5fc';
-    ctx.fillText(text, x, y + 1);
-    // arrow pointing right at the button
-    ctx.beginPath();
-    ctx.moveTo(x + tw / 2 + 4, y - 5); ctx.lineTo(x + tw / 2 + 4, y + 5); ctx.lineTo(x + tw / 2 + 12, y);
-    ctx.closePath();
-    ctx.fillStyle = '#80d8ff'; ctx.fill();
-  } else {
-    const x = G.paddle.x, y = PADDLE_Y() - 72;
-    const text = G.mode === 'blaster' ? 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT';
-    const tw = ctx.measureText(text).width + 26;
-    roundRect(x - tw / 2, y - 15, tw, 30, 15);
-    ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
-    ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#b3e5fc';
-    ctx.fillText(text, x, y + 1);
-    // little arrow pointing at the blaster barrel
-    ctx.beginPath();
-    ctx.moveTo(x - 5, y + 15); ctx.lineTo(x + 5, y + 15); ctx.lineTo(x, y + 24);
-    ctx.closePath();
-    ctx.fillStyle = '#80d8ff'; ctx.fill();
-  }
+  ctx.font = bodyFont(12, 700);
+  const x = IS_TOUCH ? W / 2 : G.paddle.x;
+  const y = IS_TOUCH ? FLOOR() - 168 : shipY() - (G.mode === 'junkie' ? 96 : 72);
+  const tw = Math.min(W - 24, ctx.measureText(text).width + 26);
+  roundRect(x - tw / 2, y - 15, tw, 30, 15);
+  ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
+  ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#b3e5fc';
+  ctx.fillText(text, x, y + 1, tw - 16);
   ctx.restore();
 }
 
@@ -1637,14 +1638,19 @@ function drawTouchControls() {
   ctx.restore();
 }
 
+// Orbitron is for TITLES and numbers; body copy (descriptions, tutorials,
+// upgrade text) reads far better in a humanist face at small sizes
+function bodyFont(px, weight = 600) {
+  return `${weight} ${px}px Verdana, 'Segoe UI', system-ui, sans-serif`;
+}
 // draw centered text, auto-shrinking to fit the viewport width
-function fitText(text, y, baseSize, weight, color, maxW) {
+function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, sans-serif') {
   let size = baseSize;
-  ctx.font = `${weight} ${size}px Orbitron, sans-serif`;
+  ctx.font = `${weight} ${size}px ${family}`;
   const w = ctx.measureText(text).width;
   if (w > maxW) {
     size = Math.max(8.5, size * maxW / w);
-    ctx.font = `${weight} ${size}px Orbitron, sans-serif`;
+    ctx.font = `${weight} ${size}px ${family}`;
   }
   ctx.fillStyle = color;
   ctx.fillText(text, W / 2, y);
@@ -1664,7 +1670,9 @@ function drawMenu() {
     ['JOURNEY THROUGH 9 REGIONS · 3 STAGES EACH · A LEGENDARY GUARDS EVERY THIRD', '#cfd8dc'],
     ['CATCH POKÉMON · EXPLOIT TYPE MATCHUPS · DRAFT UPGRADES BETWEEN WAVES', '#b0bec5'],
   ];
-  lines.forEach(([l, c], i) => fitText(l, L.infoY + i * L.lineH, 13 * Math.max(0.85, L.s), '500', c, maxW));
+  // short landscape: a single tagline is plenty — vertical space is precious
+  (L.short ? lines.slice(0, 1) : lines).forEach(([l, c], i) =>
+    fitText(l, L.infoY + i * L.lineH, 12 * Math.max(0.85, L.s), '600', c, maxW, "Verdana, system-ui, sans-serif"));
   // starter Pokémon — a partner whose paddle ability grows all game
   ctx.font = '700 13px Orbitron, sans-serif';
   ctx.fillStyle = '#90a4ae';
@@ -1710,16 +1718,17 @@ function drawMenu() {
     const selMon = STARTER_MON[SETTINGS.starter];
     const selCol = selMon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
     const narrowM = W < 560;
+    const BODY = "Verdana, system-ui, sans-serif";
     if (selMon) {
-      fitText(selMon.ability + ' — ' + selMon.tiers[0], L.starterInfoY, 13 * Math.max(0.85, L.s), '700', selCol, maxW);
-      fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
+      fitText(selMon.ability + ' — ' + selMon.tiers[0], L.starterInfoY, 12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
+      if (!L.short) fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
         : 'YOUR PARTNER RIDES THE PADDLE · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
-        L.starterInfoY + 19, 10.5 * Math.max(0.85, L.s), '500', '#90a4ae', maxW);
+        L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
     } else {
       fitText(narrowM ? 'NO PARTNER — PLAIN PADDLE' : 'NO PARTNER — A PLAIN PADDLE AND NO SERVE ELEMENT',
-        L.starterInfoY, 13 * Math.max(0.85, L.s), '700', '#90a4ae', maxW);
-      fitText(narrowM ? 'POWER-UPS STILL CHANGE BALL TYPE' : 'POWER-UPS AND ELEMENT ORBS STILL CHANGE YOUR BALL TYPE MID-RUN',
-        L.starterInfoY + 19, 10.5 * Math.max(0.85, L.s), '500', '#78909c', maxW);
+        L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#90a4ae', maxW, BODY);
+      if (!L.short) fitText(narrowM ? 'POWER-UPS STILL CHANGE BALL TYPE' : 'POWER-UPS AND ELEMENT ORBS STILL CHANGE YOUR BALL TYPE MID-RUN',
+        L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#78909c', maxW, BODY);
     }
   }
   // difficulty presets
@@ -1771,6 +1780,29 @@ function drawMenu() {
     ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h * 0.72, mg.w - 14);
     ctx.restore();
   }
+  // CONTINUE — a saved journey resumes right where its region began
+  if (L.resume && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
+    const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
+    const modeLabel = (MODES.find(m => m.key === RUN_CKPT.mode) || MODES[0]).label;
+    ctx.save();
+    ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hovR ? 24 : 12;
+    roundRect(rb.x, rb.y, rb.w, rb.h, 12);
+    ctx.fillStyle = hovR ? 'rgba(128,216,255,0.28)' : 'rgba(128,216,255,0.16)';
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#80d8ff'; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${L.short ? 12 : 15}px Orbitron, sans-serif`;
+    ctx.fillStyle = '#e0f7ff';
+    ctx.fillText('▶ CONTINUE', rb.x + rb.w / 2, rb.y + rb.h * (L.short ? 0.5 : 0.36));
+    if (!L.short) {
+      ctx.font = bodyFont(9.5, 600);
+      ctx.fillStyle = '#80d8ff';
+      ctx.fillText(genFor(RUN_CKPT.lvl).name + ' · WAVE ' + RUN_CKPT.lvl + ' · ' + modeLabel + ' · ' + RUN_CKPT.score + ' PTS',
+        rb.x + rb.w / 2, rb.y + rb.h * 0.72, rb.w - 20);
+    }
+    ctx.restore();
+  }
   // start button — the one big obvious thing on the screen
   const b = startBtnGeom();
   const hover = inRect(mouseX, lastMouseY, b);
@@ -1781,23 +1813,36 @@ function drawMenu() {
   bg.addColorStop(0, hover ? '#ffe082' : '#ffd54f'); bg.addColorStop(1, '#f9a825');
   ctx.fillStyle = bg; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.font = '900 20px Orbitron, sans-serif';
+  ctx.font = `900 ${L.short ? 15 : 20}px Orbitron, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#1a1205';
-  ctx.fillText('START JOURNEY', b.x + b.w / 2, b.y + b.h / 2 + 1);
+  ctx.fillText((L.resume ? 'NEW JOURNEY' : 'START JOURNEY'), b.x + b.w / 2, b.y + b.h / 2 + 1);
   ctx.restore();
-  // pokédex + advanced settings links
+  // pokédex / trial / settings — stacked links, or one compact row when tight
   const db = dexBtnGeom();
-  ctx.font = '700 14px Orbitron, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillStyle = inRect(mouseX, lastMouseY, db) ? '#ffd54f' : '#90a4ae';
-  ctx.fillText('◓  POKÉDEX: ' + DEX.size + ' CAUGHT — VIEW', W / 2, db.y + db.h / 2);
-  ctx.font = '700 13px Orbitron, sans-serif';
-  ctx.fillStyle = inRect(mouseX, lastMouseY, L.trial) ? '#ffd54f' : '#80d8ff';
-  ctx.fillText('▶  TRIAL MODE — JUMP TO ANY REGION', W / 2, L.trial.y + L.trial.h / 2);
-  ctx.font = '700 12px Orbitron, sans-serif';
-  ctx.fillStyle = inRect(mouseX, lastMouseY, L.adv) ? '#ffd54f' : '#78909c';
-  ctx.fillText('⚙  ADVANCED SETTINGS', W / 2, L.adv.y + L.adv.h / 2);
+  if (L.oneRow) {
+    const rowFont = '700 11px Orbitron, sans-serif';
+    for (const [g, label, colBase] of [
+      [db, '◓ POKÉDEX ' + DEX.size, '#90a4ae'],
+      [L.trial, '▶ TRIAL', '#80d8ff'],
+      [L.adv, '⚙ SETTINGS', '#78909c'],
+    ]) {
+      ctx.font = rowFont;
+      ctx.fillStyle = inRect(mouseX, lastMouseY, g) ? '#ffd54f' : colBase;
+      ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2, g.w - 6);
+    }
+  } else {
+    ctx.font = '700 14px Orbitron, sans-serif';
+    ctx.fillStyle = inRect(mouseX, lastMouseY, db) ? '#ffd54f' : '#90a4ae';
+    ctx.fillText('◓  POKÉDEX: ' + DEX.size + ' CAUGHT — VIEW', W / 2, db.y + db.h / 2);
+    ctx.font = '700 13px Orbitron, sans-serif';
+    ctx.fillStyle = inRect(mouseX, lastMouseY, L.trial) ? '#ffd54f' : '#80d8ff';
+    ctx.fillText('▶  TRIAL MODE — JUMP TO ANY REGION', W / 2, L.trial.y + L.trial.h / 2);
+    ctx.font = '700 12px Orbitron, sans-serif';
+    ctx.fillStyle = inRect(mouseX, lastMouseY, L.adv) ? '#ffd54f' : '#78909c';
+    ctx.fillText('⚙  ADVANCED SETTINGS', W / 2, L.adv.y + L.adv.h / 2);
+  }
   if (advOpen) drawAdvanced();
   if (trialOpen) drawTrial();
 }
@@ -2100,7 +2145,7 @@ function drawOverlays() {
             ctx.font = '900 14px Orbitron, sans-serif';
             ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + 64, r.y + 33);
-            ctx.font = '500 9.5px Orbitron, sans-serif';
+            ctx.font = bodyFont(9.5);
             ctx.fillStyle = '#b0bec5';
             wrapText(c.stack.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
           } else {
@@ -2115,7 +2160,7 @@ function drawOverlays() {
             ctx.font = '900 15px Orbitron, sans-serif';
             ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 112, r.w - 20);
-            ctx.font = '500 11px Orbitron, sans-serif';
+            ctx.font = bodyFont(10.5);
             ctx.fillStyle = '#b0bec5';
             wrapText(c.stack.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 16));
             ctx.font = '700 9.5px Orbitron, sans-serif';
@@ -2156,7 +2201,7 @@ function drawOverlays() {
           ctx.font = '900 14px Orbitron, sans-serif';
           ctx.fillStyle = '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + 64, r.y + 33);
-          ctx.font = '500 9.5px Orbitron, sans-serif';
+          ctx.font = bodyFont(9.5);
           ctx.fillStyle = '#b0bec5';
           wrapText(tier.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
         } else { // desktop: tall card
@@ -2169,7 +2214,7 @@ function drawOverlays() {
           ctx.font = '900 15px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';
           ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 112, r.w - 20);
-          ctx.font = '500 11px Orbitron, sans-serif';
+          ctx.font = bodyFont(10.5);
           ctx.fillStyle = '#b0bec5';
           wrapText(tier.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 16));
           ctx.font = '700 9.5px Orbitron, sans-serif';
@@ -2181,6 +2226,20 @@ function drawOverlays() {
         }
         ctx.restore();
       }
+      // one reroll per draft — a dead hand shouldn't end the build
+      const rr = L.reroll;
+      const canRR = !G.rerolled;
+      const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
+      ctx.globalAlpha = a * (canRR ? 1 : 0.35);
+      roundRect(rr.x, rr.y, rr.w, rr.h, 16);
+      ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.2)' : 'rgba(255,255,255,0.07)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,255,255,0.35)') : 'rgba(255,255,255,0.15)';
+      ctx.stroke();
+      ctx.font = '700 12px Orbitron, sans-serif';
+      ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
+      ctx.fillText(canRR ? (IS_TOUCH ? '⟳ REROLL' : '⟳ REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1);
       ctx.globalAlpha = 1;
       ctx.textAlign = 'center';
     }
@@ -2313,7 +2372,7 @@ function render() {
     drawAnnounce();
   }
   ctx.restore();
-  ctx.drawImage(vignette, 0, 0, W, H);
+  if (vignette) ctx.drawImage(vignette, 0, 0, W, H); // may be unset pre-boot
   if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade') drawHUD();
   drawOverlays();
   if (G.state === 'menu' || G.state === 'dex') drawAnnounce(); // konami toast etc.

@@ -237,7 +237,25 @@ Trial runs never save best score or Pokédex catches (`G.trial` flag).
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
 
 Persisted in `localStorage`: `pkbrk-settings`, `pkbrk-best`, `pkbrk-dex`,
-`pkbrk-dexs`, `pkbrk-music`.
+`pkbrk-dexs`, `pkbrk-music`, `pkbrk-run` (the region checkpoint), `pkbrk-v`
+(storage version). ALWAYS go through `loadStore`/`saveStore` (setup.js) —
+they survive corrupt values and full/blocked storage; raw
+`JSON.parse(localStorage...)` at module scope once bricked startup.
+
+**Region checkpoints:** every non-trial run auto-saves at each region's
+first wave (`saveCheckpoint`, state.js, hooked at the end of `buildLevel`);
+the title screen grows a CONTINUE button (`RUN_CKPT`), and a true game over
+(empty skill tree) clears it. **Draft reroll:** one per upgrade screen
+(`rerollDraft`, input.js; `rollUpgradeChoices`, update.js).
+
+**Fonts are local** (`assets/fonts/orbitron.woff2`, variable weight 400-900,
+preloaded + kicked via `document.fonts.load` in setup.js — canvas alone
+doesn't trigger @font-face). Orbitron is for titles/numbers; body copy uses
+`bodyFont()` (render.js) — Verdana/system stack for readability.
+
+**Title screen fits short landscape** (`menuLayout` short/oneRow variants,
+config.js): under H=560 every gap compresses and the footer links collapse
+to one row. Keep both variants in mind when adding menu items.
 
 ---
 
@@ -269,6 +287,15 @@ Instead, drive the sim deterministically from the JS console:
 force-run, then read `G.*`. `G.freeze=999` freezes a frame for a screenshot.
 This is how every mechanic in the git history was verified. `?touch` +
 synthetic `TouchEvent`s test mobile paths.
+
+**Automated invariants:** open `http://localhost:8741/test.html` — a
+self-contained suite (startup, per-mode smoke, wall/flyer non-overlap,
+density budget, roster/sprite coverage, menu fit, storage-corruption
+recovery) that drives the sim headless and reports PASS/FAIL
+(`window.TEST_RESULTS` for automation). `npm run check` syntax-checks all
+modules; `npm run verify-assets` cross-checks rosters vs NAMES vs sprite
+files (tools/verify-assets.js). Run these after any invariant-adjacent
+change.
 
 ---
 

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Pokémon Invaders Breakout — invariant tests</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #05060f; color: #cfd8ea; font: 13px/1.5 Menlo, Consolas, monospace; }
+  body { overflow: auto; }
+  /* the game canvas must exist for the engine, but the report owns the page */
+  #game { position: fixed; top: 0; left: 0; z-index: 0; opacity: 0.14; pointer-events: none; }
+  #safe-probe { position: fixed; bottom: 0; height: env(safe-area-inset-bottom, 0px); width: 1px; visibility: hidden; }
+  #report { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 22px 18px 60px; }
+  h1 { font-size: 16px; color: #8ab4ff; margin-bottom: 4px; }
+  #summary { font-size: 20px; font-weight: bold; margin: 10px 0 16px; color: #ffd54f; }
+  #summary.pass { color: #66bb6a; }
+  #summary.fail { color: #ff5252; }
+  table { border-collapse: collapse; width: 100%; background: rgba(10, 14, 30, 0.92); }
+  th, td { border: 1px solid #1d2942; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { color: #8ab4ff; background: #0b1020; }
+  td.status { font-weight: bold; white-space: nowrap; }
+  tr.PASS td.status { color: #66bb6a; }
+  tr.FAIL td.status { color: #ff5252; }
+  tr.SKIP td.status { color: #ffb74d; }
+  tr.RUN  td.status { color: #8ab4ff; }
+  td.ms { text-align: right; white-space: nowrap; color: #7c8db0; }
+  td.detail { word-break: break-word; color: #aab6cf; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="safe-probe"></div>
+<div id="report">
+  <h1>Pokémon Invaders Breakout — in-browser invariant suite</h1>
+  <div id="summary">loading game scripts…</div>
+  <table>
+    <thead><tr><th>test</th><th>status</th><th>ms</th><th>detail</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script>
+'use strict';
+// ---- pre-game shims (MUST run before the game scripts load) ----
+// 1) capture every uncaught error / rejection so tests can assert "no exception"
+window.__ERRORS = [];
+window.addEventListener('error', e => {
+  window.__ERRORS.push((e.message || 'error') + ' @ ' + (e.filename || '?') + ':' + (e.lineno || 0));
+});
+window.addEventListener('unhandledrejection', e => {
+  window.__ERRORS.push('unhandledrejection: ' + (e.reason && e.reason.message || e.reason));
+});
+// 2) swallow the game's requestAnimationFrame loop — the suite drives update()
+//    manually, exactly like the console-driven sim in CLAUDE.md, so backgrounded
+//    rAF throttling can never starve the tests.
+window.__realRAF = window.requestAnimationFrame.bind(window);
+window.requestAnimationFrame = function () { return 0; };
+</script>
+
+<!-- same scripts, same order as index.html -->
+<script src="js/setup.js"></script>
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/data.js"></script>
+<script src="js/scenery.js"></script>
+<script src="js/state.js"></script>
+<script src="js/input.js"></script>
+<script src="js/update.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+
+<script>
+'use strict';
+/* eslint-disable no-undef */
+(function () {
+  const ERR = window.__ERRORS;
+  const RESULTS = [];
+  const rowsEl = document.getElementById('rows');
+  const summaryEl = document.getElementById('summary');
+  const tick = () => new Promise(r => setTimeout(r, 0));
+
+  function addRow(name) {
+    const tr = document.createElement('tr');
+    tr.className = 'RUN';
+    tr.innerHTML = '<td></td><td class="status">RUN…</td><td class="ms"></td><td class="detail"></td>';
+    tr.children[0].textContent = name;
+    rowsEl.appendChild(tr);
+    return tr;
+  }
+  function finishRow(tr, status, ms, detail) {
+    tr.className = status;
+    tr.children[1].textContent = status;
+    tr.children[2].textContent = String(Math.round(ms));
+    tr.children[3].textContent = detail || '';
+  }
+
+  // assertion helper: throws to fail the enclosing test
+  function assert(cond, msg) { if (!cond) throw new Error(msg); }
+  class Skip extends Error {}
+
+  // Some headless/embedded browsers lay the page out at 0×0, which makes
+  // resize() bail and leaves every geometry degenerate. If the real viewport
+  // is unusable, force a fixed virtual one — deterministic for automation.
+  let FORCED_VIEWPORT = false;
+  function forceViewport(w, h) {
+    FORCED_VIEWPORT = true;
+    DPR = 1; W = w; H = h; SAFE_B = 0;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    canvas.width = W; canvas.height = H;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    buildStars(); buildVignette(); bgGen = -1;
+    G.paddle.x = W / 2;
+  }
+  function ensureViewport() {
+    resize();
+    if (W < 100 || H < 100) forceViewport(900, 700);
+  }
+
+  // ---- shared sim helpers -------------------------------------------------
+  // the proven headless-driving pattern: force-run each frame, steer, update
+  async function runFrames(n, perFrame) {
+    for (let f = 0; f < n; f++) {
+      paused = false; G.freeze = 0;
+      if (perFrame && perFrame(f) === false) return f;
+      update(1 / 60);
+      if ((f & 511) === 511) await tick(); // stay responsive on long runs
+    }
+    return n;
+  }
+  function nanScan() {
+    const bad = [];
+    for (const b of G.balls) {
+      if (!Number.isFinite(b.x) || !Number.isFinite(b.y) || !Number.isFinite(b.vx) || !Number.isFinite(b.vy)) {
+        bad.push('ball(' + b.x + ',' + b.y + ' v ' + b.vx + ',' + b.vy + ')');
+      }
+    }
+    for (const br of G.bricks) {
+      if (!Number.isFinite(br.bx) || !Number.isFinite(br.by) || !Number.isFinite(br.hx) || !Number.isFinite(br.hy)) {
+        bad.push('brick#' + (br.poke && br.poke.id) + '(' + br.bx + ',' + br.by + ')');
+      }
+    }
+    if (!Number.isFinite(G.paddle.x)) bad.push('paddle.x=' + G.paddle.x);
+    return bad;
+  }
+  function aliveBricks() { return G.bricks.filter(b => !b.dead).length; }
+  function steerBallOrAim(mode) {
+    if (mode === 'classic') {
+      const b = G.balls.find(bb => !bb.dead);
+      mouseX = b ? b.x : W / 2;
+    } else {
+      // aim the blaster: park under the nearest living target so fire connects
+      let tgt = null, td = Infinity;
+      for (const br of G.bricks) {
+        if (br.dead) continue;
+        const d = Math.abs(br.bx + G.fx - G.paddle.x);
+        if (d < td) { td = d; tgt = br; }
+      }
+      mouseX = tgt ? Math.max(20, Math.min(W - 20, tgt.bx + G.fx)) : W / 2;
+      lastMouseY = H - 40; // junkie: keep the ship low in its band
+    }
+  }
+  function resetBetween() {
+    try {
+      fireHeld = false; chargeHeld = false; trialOpen = false; advOpen = false;
+      dragSlider = -1;
+      SETTINGS.mode = 'classic';
+      resetRun(1, true);
+      G.state = 'menu';
+      paused = false; G.freeze = 0;
+      mouseX = W / 2; lastMouseY = H / 2;
+    } catch (e) { ERR.push('between-test reset failed: ' + e.message); }
+  }
+
+  // ---- the tests ----------------------------------------------------------
+  const TESTS = [];
+  function test(name, fn) { TESTS.push({ name, fn }); }
+
+  // 1) startup: scripts loaded, one resize + update + render, no errors, menu state
+  test('startup', async () => {
+    ensureViewport();
+    paused = false; G.freeze = 0;
+    update(1 / 60);
+    render();
+    assert(G.state === 'menu', "G.state is '" + G.state + "', expected 'menu'");
+    assert(ERR.length === 0, 'errors during load/startup: ' + ERR.join(' | '));
+    return 'scripts loaded, resize+update+render clean, W×H=' + W + '×' + H +
+      (FORCED_VIEWPORT ? ' (viewport reported 0×0 — forced virtual 900×700)' : '');
+  });
+
+  // 2) mode smoke ×3
+  async function modeSmoke(mode, frames) {
+    const e0 = ERR.length;
+    SETTINGS.mode = mode;
+    resetRun(1, true);
+    G.lives = 99; // smoke test: survive shots — we're testing sim health, not skill
+    if (mode !== 'classic') fireHeld = true;
+    let cleared = false;
+    const used = await runFrames(frames, f => {
+      if (G.state === 'upgrade') { cleared = true; return false; }
+      if (G.state === 'serve') fireAction();
+      if (mode === 'classic' && G.state === 'play') fireHeld = true; // classic = ball + free-firing blaster
+      steerBallOrAim(mode);
+    });
+    fireHeld = false;
+    const nans = nanScan();
+    assert(nans.length === 0, 'NaN positions: ' + nans.join(', '));
+    assert(ERR.length === e0, 'errors during sim: ' + ERR.slice(e0).join(' | '));
+    assert(cleared || G.level > 1, 'no wave cleared in ' + frames + ' frames (state=' + G.state +
+      ' level=' + G.level + ' bricksAlive=' + aliveBricks() + ')');
+    // the upgrade draft must be usable
+    assert(G.state === 'upgrade', "expected 'upgrade' state, got '" + G.state + "'");
+    assert(G.upgradeChoices && G.upgradeChoices.length > 0, 'no upgrade choices offered');
+    pickUpgrade(0);
+    assert(G.upgradeChoices === null, 'pickUpgrade(0) did not consume the draft');
+    assert(G.state === 'serve' || G.state === 'play',
+      "pickUpgrade(0) left state '" + G.state + "', expected serve/play");
+    assert(ERR.length === e0, 'errors during pickUpgrade: ' + ERR.slice(e0).join(' | '));
+    return 'wave cleared in ' + used + ' frames, pickUpgrade(0) OK → level ' + G.level + ' (' + G.state + ')';
+  }
+  test('mode smoke: classic', () => modeSmoke('classic', 6000));
+  test('mode smoke: blaster', () => modeSmoke('blaster', 3000));
+  test('mode smoke: junkie', () => modeSmoke('junkie', 3000));
+
+  // 2b) classic lose-a-life: park the paddle away and let the ball drain
+  test('classic: lose a life cleanly', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'classic';
+    resetRun(1, true);
+    const lives0 = G.lives;
+    let dropped = false;
+    const used = await runFrames(3600, f => {
+      if (G.lives < lives0) { dropped = true; return false; }
+      if (G.state === 'serve' && f < 3) fireAction(); // launch once, then abandon
+      mouseX = -9999; // paddle away
+    });
+    assert(ERR.length === e0, 'errors while losing a life: ' + ERR.slice(e0).join(' | '));
+    assert(dropped, 'lives never dropped (' + lives0 + ' → ' + G.lives + ') in ' + used + ' frames, state=' + G.state);
+    assert(G.lives === lives0 - 1, 'lives went ' + lives0 + ' → ' + G.lives + ', expected exactly -1');
+    const nans = nanScan();
+    assert(nans.length === 0, 'NaN positions: ' + nans.join(', '));
+    return 'lives ' + lives0 + ' → ' + G.lives + ' in ' + used + ' frames, back to ' + G.state;
+  });
+
+  // 3) wall/flyer non-overlap — the core geometric invariant (classic)
+  function overlapTest(lvl) {
+    return async () => {
+      const e0 = ERR.length;
+      SETTINGS.mode = 'classic';
+      resetRun(lvl, true);
+      G.lives = 99;
+      let overlaps = 0, maxFlyers = 0, framesSampled = 0;
+      const samples = [];
+      await runFrames(1800, f => {
+        if (G.state === 'upgrade' || G.state === 'gameover') return false; // wave over — enough sampled
+        if (G.state === 'serve') fireAction(); // flyers only launch during play
+        steerBallOrAim('classic');
+        framesSampled = f + 1;
+        const flyers = [], boxed = [];
+        for (const br of G.bricks) {
+          if (br.dead) continue;
+          if (br.flight && br.flight.state >= 2 && !br.dive) flyers.push(br);
+          else if (!bareMon(br) && !br.isBoss && !br.entry) boxed.push(br);
+        }
+        if (flyers.length > maxFlyers) maxFlyers = flyers.length;
+        for (const a of flyers) {
+          const ax = a.bx + G.fx, ay = a.by + G.fy;
+          for (const b of boxed) {
+            const bx = b.bx + G.fx, by = b.by + G.fy;
+            if (Math.abs(ax - bx) < (a.w + b.w) / 2 && Math.abs(ay - by) < (a.h + b.h) / 2) {
+              overlaps++;
+              if (samples.length < 3) {
+                samples.push('f' + f + ' ' + (NAMES[a.poke.id] || a.poke.id) + '(' + (ax | 0) + ',' + (ay | 0) +
+                  ') vs ' + (NAMES[b.poke.id] || b.poke.id) + '(' + (bx | 0) + ',' + (by | 0) + ')');
+              }
+            }
+          }
+        }
+      });
+      assert(ERR.length === e0, 'errors during sim: ' + ERR.slice(e0).join(' | '));
+      assert(overlaps === 0, overlaps + ' flyer↔wall overlaps, e.g. ' + samples.join(' ; '));
+      return framesSampled + ' frames sampled, peak steady flyers ' + maxFlyers +
+        (maxFlyers === 0 ? ' (WARNING: no steady flyers ever observed — vacuous)' : '') + ', overlaps 0';
+    };
+  }
+  for (const lvl of [5, 8, 14, 20, 26]) test('non-overlap: level ' + lvl, overlapTest(lvl));
+
+  // 4) density budget at build time, levels 1..27
+  test('density budget (levels 1–27)', async () => {
+    SETTINGS.mode = 'classic';
+    const fails = [];
+    let maxBricks = 0, maxFlyers = 0, atB = 0, atF = 0;
+    for (let lvl = 1; lvl <= 27; lvl++) {
+      resetRun(lvl, true);
+      const nonBoss = G.bricks.filter(b => !b.isBoss).length;
+      const flyers = G.bricks.filter(b => b.flight).length;
+      if (nonBoss > maxBricks) { maxBricks = nonBoss; atB = lvl; }
+      if (flyers > maxFlyers) { maxFlyers = flyers; atF = lvl; }
+      if (nonBoss > 40) fails.push('L' + lvl + ': ' + nonBoss + ' non-boss bricks > 40');
+      if (flyers > 30) fails.push('L' + lvl + ': ' + flyers + ' flyers > 30');
+      if (lvl % 9 === 0) await tick();
+    }
+    assert(fails.length === 0, fails.join(' ; '));
+    return 'peak non-boss bricks ' + maxBricks + ' (L' + atB + '), peak flyers ' + maxFlyers + ' (L' + atF + ')';
+  });
+
+  // 5) roster names + sprite files present (base ids only; shiny/remote excepted)
+  test('roster names & sprite coverage', async () => {
+    const ids = new Set();
+    for (const g of GENS) {
+      for (const t of Object.values(g.tiers)) for (const [id] of t) ids.add(id);
+      ids.add(g.boss.id);
+    }
+    const noName = [...ids].filter(id => !NAMES[id]);
+    assert(noName.length === 0, 'roster ids missing from NAMES: ' + noName.join(', '));
+    const all = [...ids];
+    const missing = [];
+    for (let i = 0; i < all.length; i += 25) { // batched HEAD probes
+      await Promise.all(all.slice(i, i + 25).map(async id => {
+        try {
+          const r = await fetch('assets/sprites/' + id + '.png', { method: 'HEAD' });
+          if (!r.ok) missing.push(id);
+        } catch (e) { missing.push(id); }
+      }));
+    }
+    missing.sort((a, b) => a - b);
+    assert(missing.length === 0, 'sprites missing on disk: ' + missing.join(', '));
+    return ids.size + ' roster/boss ids — all named, all sprites present';
+  });
+
+  // 6) menu layout fits common viewports (fake W/H, menuLayout is pure geometry)
+  test('menu fit across viewports', async () => {
+    const w0 = W, h0 = H;
+    const bad = [];
+    try {
+      for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
+        W = w; H = h;
+        const L = menuLayout();
+        const rects = { start: L.start, dex: L.dex, trial: L.trial, adv: L.adv };
+        for (let i = 0; i < MODES.length; i++) rects['mode(' + i + ')'] = L.mode(i);
+        for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = L.starter(i);
+        for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = L.chip(i);
+        for (const [name, r] of Object.entries(rects)) {
+          if (!(r.x >= -2 && r.y >= -2 && r.x + r.w <= w + 2 && r.y + r.h <= h + 2)) {
+            bad.push(w + '×' + h + ' ' + name + ' [' + (r.x | 0) + ',' + (r.y | 0) + ' ' + (r.w | 0) + '×' + (r.h | 0) + ']');
+          }
+        }
+      }
+    } finally {
+      W = w0; H = h0;
+      resize(); // belt and braces: recompute from the real viewport
+    }
+    assert(bad.length === 0, 'geometry off-screen: ' + bad.join(' ; '));
+    return '5 viewports × ' + (4 + MODES.length + STARTERS.length + Object.keys(PRESETS).length) + ' rects all on-screen';
+  });
+
+  // 7) storage corruption recovery — never destroys the real save (finally-restore)
+  test('storage corruption recovery', async () => {
+    const KEYS = ['pkbrk-settings', 'pkbrk-dex', 'pkbrk-dexs', 'pkbrk-music', 'pkbrk-best'];
+    const FALLBACK = { 'pkbrk-settings': '{}', 'pkbrk-dex': '[]', 'pkbrk-dexs': '[]', 'pkbrk-music': 'true', 'pkbrk-best': '0' };
+    const saved = {};
+    for (const k of KEYS) saved[k] = localStorage.getItem(k);
+    try {
+      for (const k of KEYS) localStorage.setItem(k, '{corrupt');
+      if (typeof loadStore !== 'function') {
+        // no safe-load helper in the codebase yet: demonstrate raw JSON.parse recovery
+        let threw = false;
+        try { JSON.parse(localStorage.getItem('pkbrk-settings') || '{}'); } catch (e) { threw = true; }
+        throw new Skip('no loadStore() helper exists yet (raw JSON.parse threw: ' + threw + ')');
+      }
+      const s = loadStore('pkbrk-settings', '{}');
+      assert(s !== null && typeof s === 'object' && !Array.isArray(s),
+        "loadStore('pkbrk-settings','{}') on corrupt data returned " + JSON.stringify(s) + ', expected an object');
+      for (const k of KEYS) {
+        localStorage.setItem(k, '{corrupt'); // loadStore may have cleaned it — re-corrupt each
+        let v;
+        try { v = loadStore(k, FALLBACK[k]); }
+        catch (e) { assert(false, 'loadStore(' + k + ') threw on corrupt data: ' + e.message); }
+        const want = JSON.parse(FALLBACK[k]);
+        assert(typeof v === typeof want && Array.isArray(v) === Array.isArray(want),
+          'loadStore(' + k + ') gave ' + JSON.stringify(v) + ', expected the ' + FALLBACK[k] + ' fallback shape');
+      }
+      return 'all 5 keys recover to their fallbacks without throwing';
+    } finally {
+      for (const k of KEYS) {
+        if (saved[k] === null) localStorage.removeItem(k);
+        else localStorage.setItem(k, saved[k]);
+      }
+    }
+  });
+
+  // ---- runner -------------------------------------------------------------
+  async function main() {
+    await tick();
+    for (const t of TESTS) {
+      const tr = addRow(t.name);
+      const t0 = performance.now();
+      let status = 'PASS', detail = '';
+      try {
+        detail = (await t.fn()) || '';
+      } catch (e) {
+        if (e instanceof Skip) { status = 'SKIP'; detail = e.message; }
+        else { status = 'FAIL'; detail = e.message || String(e); }
+      }
+      const ms = performance.now() - t0;
+      finishRow(tr, status, ms, detail);
+      console.log('[TEST] ' + status + '  ' + t.name + '  (' + Math.round(ms) + 'ms)' + (detail ? '  — ' + detail : ''));
+      RESULTS.push({ name: t.name, status, ms: Math.round(ms), detail });
+      resetBetween();
+      await tick();
+    }
+    const passed = RESULTS.filter(r => r.status === 'PASS').length;
+    const failed = RESULTS.filter(r => r.status === 'FAIL').length;
+    const skipped = RESULTS.filter(r => r.status === 'SKIP').length;
+    const line = passed + '/' + RESULTS.length + ' PASSED' +
+      (failed ? ' · ' + failed + ' FAILED' : '') + (skipped ? ' · ' + skipped + ' SKIPPED' : '');
+    summaryEl.textContent = line;
+    summaryEl.className = failed ? 'fail' : 'pass';
+    console.log('[TEST SUITE] ' + line);
+    window.TEST_RESULTS = RESULTS;
+    window.TEST_DONE = true;
+  }
+
+  window.addEventListener('load', () => {
+    // deterministic knobs regardless of whatever the player has saved locally —
+    // in-memory only (saveSettings is never called), so the real save is untouched
+    try {
+      SETTINGS.drops = 1; SETTINGS.speed = 1; SETTINGS.preset = 'easy';
+      SETTINGS.sfx = 0; SETTINGS.music = 0; SETTINGS.starter = 'none';
+      SETTINGS.mode = 'classic';
+      if (typeof MUSIC !== 'undefined') MUSIC.on = false;
+      ensureViewport();
+    } catch (e) { ERR.push('settings normalization failed: ' + e.message); }
+    summaryEl.textContent = 'running…';
+    main().catch(e => {
+      summaryEl.textContent = 'SUITE CRASHED: ' + (e.message || e);
+      summaryEl.className = 'fail';
+      window.TEST_RESULTS = RESULTS;
+      window.TEST_DONE = true;
+    });
+  });
+})();
+</script>
+</body>
+</html>

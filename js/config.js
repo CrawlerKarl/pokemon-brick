@@ -11,7 +11,7 @@ const PRESETS = {
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
     reduceShake: false, reduceFlash: false, hcBall: false, mode: 'classic' },
-  JSON.parse(localStorage.getItem('pkbrk-settings') || '{}'));
+  (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}')));
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
 // game MODE: the classic brick-breaker; a ball-less shooter against the same
 // walls; or full SPACE JUNKIE — no wall, every wave airborne, and your
@@ -22,7 +22,7 @@ const MODES = [
   { key: 'junkie',  label: 'SPACE JUNKIE', desc: 'POKÉMON PILOT' },
 ];
 if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'classic';
-function saveSettings() { localStorage.setItem('pkbrk-settings', JSON.stringify(SETTINGS)); }
+function saveSettings() { saveStore('pkbrk-settings', SETTINGS); }
 function preset() { return PRESETS[SETTINGS.preset]; }
 // physics scale with the playfield — phones get a proportionally slower ball
 // so it crosses the screen in the same time it would on a desktop
@@ -70,39 +70,52 @@ const STARTERS = [
 ];
 let advOpen = false; // advanced settings panel
 // one responsive layout, shared by rendering and hit-testing, so nothing
-// can drift off-screen on small windows or phones
+// can drift off-screen on small windows or phones. Two extra concerns:
+//  • SHORT viewports (landscape phones) compress every gap and collapse the
+//    footer links into a single row — the whole menu must fit H<400.
+//  • a saved run adds a CONTINUE button above START (RUN_CKPT, state.js).
 function menuLayout() {
+  const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
+  const short = H < 560;
   const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
-  const titleSize = Math.min(52, W / 11) * Math.max(0.8, s);
-  const titleY = Math.max(54, H * 0.11);
-  const lineH = 22 * s + 2;
-  const infoY = titleY + titleSize * 1.55 + 14 * s;
+  const titleSize = short ? Math.min(30, W / 16) : Math.min(52, W / 11) * Math.max(0.8, s);
+  const titleY = short ? 26 : Math.max(54, H * 0.11);
+  const lineH = short ? 14 : 22 * s + 2;
+  const infoY = short ? titleY + titleSize + 12 : titleY + titleSize * 1.55 + 14 * s;
   const chipGap = 10;
-  const chipW = Math.min(126, (W - 40 - chipGap * 3) / 4), chipH = 40 * s + 4;
-  const starterH = 58 * s + 6; // taller: partner sprite + ability line
-  const startLabelY = infoY + 2 * lineH + 22 * s;
-  const startY = startLabelY + 14;
-  const starterInfoY = startY + starterH + 16; // readable ability detail lines
-  const chipsLabelY = starterInfoY + 34 + 12 * s;
-  const chipsY = chipsLabelY + 14;
-  // MODE row (Classic / Blaster) sits between difficulty and START — roomy,
-  // readable buttons with a clear gap above so they don't crowd the difficulty
-  // row (a squished MODE strip was the whole complaint)
-  const modeLabelY = chipsY + chipH + 30 * s;
-  const modeY = modeLabelY + 16;
-  const modeH = 48 * s + 8;
+  const chipW = Math.min(126, (W - 40 - chipGap * 3) / 4);
+  const chipH = short ? 30 : 40 * s + 4;
+  const starterH = short ? 40 : 58 * s + 6; // taller: partner sprite + ability line
+  const startLabelY = short ? infoY + lineH + 10 : infoY + 2 * lineH + 22 * s;
+  const startY = startLabelY + (short ? 10 : 14);
+  const starterInfoY = startY + starterH + (short ? 12 : 16);
+  const chipsLabelY = starterInfoY + (short ? 16 : 34 + 12 * s);
+  const chipsY = chipsLabelY + (short ? 10 : 14);
+  const modeLabelY = chipsY + chipH + (short ? 14 : 30 * s);
+  const modeY = modeLabelY + (short ? 10 : 16);
+  const modeH = short ? 32 : 48 * s + 8;
   const modeW = Math.min(228, (W - 40 - chipGap * (MODES.length - 1)) / MODES.length);
-  const btnW = Math.min(300, W * 0.84), btnH = 54 * s + 8;
-  const btnY = modeY + modeH + 30 * s;
+  const btnW = Math.min(300, W * 0.84), btnH = short ? 38 : 54 * s + 8;
+  const resumeH = hasCkpt ? (short ? 30 : 44) : 0;
+  const resumeGap = hasCkpt ? (short ? 8 : 12) : 0;
+  const btnY = modeY + modeH + (short ? 8 : 26 * s) + resumeH + resumeGap;
+  const footerY = btnY + btnH + (short ? 8 : 14);
+  // footer: stacked links normally; a single compact row when space is tight
+  const oneRow = short || (hasCkpt && H < 800);
+  const fW = Math.min(230, (W - 56) / 3);
   return {
-    s, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY, modeLabelY,
+    s, short, oneRow, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY, modeLabelY,
     starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
     chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
     mode: i => ({ x: W / 2 - (modeW * MODES.length + chipGap * (MODES.length - 1)) / 2 + i * (modeW + chipGap), y: modeY, w: modeW, h: modeH }),
+    resume: hasCkpt ? { x: W / 2 - btnW / 2, y: btnY - resumeH - resumeGap, w: btnW, h: resumeH } : null,
     start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
-    dex: { x: W / 2 - 170, y: btnY + btnH + 14, w: 340, h: 30 },
-    trial: { x: W / 2 - 170, y: btnY + btnH + 48, w: 340, h: 28 },
-    adv: { x: W / 2 - 130, y: btnY + btnH + 80, w: 260, h: 28 },
+    dex: oneRow ? { x: W / 2 - fW * 1.5 - 14, y: footerY, w: fW, h: 26 }
+      : { x: W / 2 - 170, y: footerY, w: 340, h: 30 },
+    trial: oneRow ? { x: W / 2 - fW / 2, y: footerY, w: fW, h: 26 }
+      : { x: W / 2 - 170, y: footerY + 34, w: 340, h: 28 },
+    adv: oneRow ? { x: W / 2 + fW / 2 + 14, y: footerY, w: fW, h: 26 }
+      : { x: W / 2 - 130, y: footerY + 66, w: 260, h: 28 },
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)

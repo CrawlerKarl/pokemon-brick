@@ -404,6 +404,26 @@ function bossAbility(boss) {
   addFloater(boss.bx + G.fx, by - boss.h / 2 - 44, ab.name + '!', TYPE_COLORS[boss.poke.t], 16);
 }
 
+// deal (or re-deal) the between-wave draft: up to three path tiers, and in
+// SPACE JUNKIE any empty slot offers a forever-stacking held item
+function rollUpgradeChoices() {
+  const pool = PATH_KEYS.filter(k => pathLvl(k) < 4);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const choices = pool.slice(0, 3).map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }));
+  if (G.mode === 'junkie' && choices.length < 3) {
+    const si = STACK_ITEMS.slice();
+    for (let i = si.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [si[i], si[j]] = [si[j], si[i]];
+    }
+    while (choices.length < 3 && si.length) choices.push({ stack: si.pop() });
+  }
+  G.upgradeChoices = choices.length ? choices : null;
+}
+
 function loseLife() {
   G.lives--;
   G.combo = 0;
@@ -436,7 +456,8 @@ function loseLife() {
     }
     G.state = 'gameover'; G.stateT = 0;
     SFX.gameOver();
-    if (!G.trial && G.score > G.best) { G.best = G.score; localStorage.setItem('pkbrk-best', G.best); }
+    if (!G.trial) clearCheckpoint(); // a TRUE game over ends the saved journey
+    if (!G.trial && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   } else {
     serve();
   }
@@ -1344,23 +1365,8 @@ function update(dt) {
       addFloater(W / 2, H * 0.42, 'POKÉ REVIVE — +1 LIFE', '#ec407a', 20);
     }
     // draft: advance one of up to three paths (skip maxed ones)
-    const pool = PATH_KEYS.filter(k => pathLvl(k) < 4);
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    const choices = pool.slice(0, 3).map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }));
-    // SPACE JUNKIE: when the tree runs out of tiers, the draft switches to
-    // held items that stack FOREVER — any empty card slot offers one
-    if (G.mode === 'junkie' && choices.length < 3) {
-      const si = STACK_ITEMS.slice();
-      for (let i = si.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [si[i], si[j]] = [si[j], si[i]];
-      }
-      while (choices.length < 3 && si.length) choices.push({ stack: si.pop() });
-    }
-    G.upgradeChoices = choices.length ? choices : null;
+    rollUpgradeChoices();
+    G.rerolled = false; // one fresh reroll per draft screen
     SFX.levelUp();
     // confetti!
     const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];
