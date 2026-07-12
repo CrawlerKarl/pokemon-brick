@@ -14,7 +14,8 @@ function scoreMult() {
   return (G.fx_score ? 2 * G.fx_score.tier : 1)
     * (1 + Math.min(G.combo, 20) * 0.1)
     * (G.modifier?.key === 'bounty' ? 2 : 1)
-    * (1 + G.catchBonus);
+    * (1 + G.catchBonus)
+    * (1 + 0.06 * ((G.stacks && G.stacks.bell) || 0)); // SOOTHE BELL stacks
 }
 
 function tickEffects(dt) {
@@ -22,13 +23,24 @@ function tickEffects(dt) {
     if (G[k]) { G[k].t -= dt; if (G[k].t <= 0) G[k] = null; }
   }
   if (G.megaT > 0) G.megaT = Math.max(0, G.megaT - dt);
-  if (G.ballElement) { G.ballElementT -= dt; if (G.ballElementT <= 0) G.ballElement = null; }
+  if (G.ballElement) {
+    G.ballElementT -= dt;
+    if (G.ballElementT <= 0) {
+      G.ballElement = null;
+      // SPACE JUNKIE: a temporary type change reverts to the pilot's base type
+      if (G.mode === 'junkie' && G.state === 'play') {
+        addFloater(G.paddle.x, shipY() - 52, 'BACK TO ' + pilotInfo().t.toUpperCase() + ' TYPE', TYPE_COLORS[pilotInfo().t], 12);
+        tone(340, 0.14, 'sine', 0.04, -80);
+      }
+    }
+  }
   // blaster heat cools slowly on its own, faster once fully overheated
   if (G.overheat > 0) {
     G.overheat -= dt;
     if (G.overheat <= 0) { G.overheat = 0; G.heat = 0.3; }
   } else {
-    G.heat = Math.max(0, G.heat - dt * 0.26); // cools fast — brief pauses recover
+    // cools fast — brief pauses recover (junkie cools faster still)
+    G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? 0.36 : 0.26));
   }
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
@@ -305,9 +317,11 @@ function awardRally(b, x, y) {
 // apply a falling pickup's payload — shared by paddle catches and blaster snags
 function collectPickup(pu) {
   if (pu.p.key === 'element') {
-    // pure element swap — no other effect, just fixes your matchup
+    // pure element swap — no other effect, just fixes your matchup.
+    // SPACE JUNKIE type changes are shorter-lived: they revert to the
+    // pilot's base type on a visible timer
     G.ballElement = pu.p.t;
-    G.ballElementT = 30;
+    G.ballElementT = G.mode === 'junkie' ? 20 : 30;
     G.resistStreak = 0;
     SFX.power();
     burst(pu.x, pu.y, TYPE_COLORS[pu.p.t], 16, 200);
@@ -467,6 +481,7 @@ function update(dt) {
   G.invuln = Math.max(0, G.invuln - dt);
   G.blasterCD = Math.max(0, G.blasterCD - dt);
   G.muzzle = Math.max(0, G.muzzle - dt);
+  G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 
   for (const p of G.particles) {
@@ -546,20 +561,27 @@ function update(dt) {
   // the field resists your current element, one arrives quickly; otherwise
   // they show up now and then with something useful.
   G.elementOrbCD -= dt;
-  if (G.elementOrbCD <= 0 && G.state === 'play' && !G.powerups.some(p => p.p.key === 'element')) {
+  // SPACE JUNKIE is BUILT on type-switching, so orbs flow much more freely
+  // there (and two can be falling at once); elsewhere they stay a rescue
+  const jkOrbs = G.mode === 'junkie';
+  const orbsFalling = G.powerups.reduce((n, p) => n + (p.p.key === 'element' ? 1 : 0), 0);
+  if (G.elementOrbCD <= 0 && G.state === 'play' && orbsFalling < (jkOrbs ? 2 : 1)) {
     const alive = G.bricks.filter(b => !b.dead && b.poke.id > 0);
     if (alive.length >= 4) {
-      const resisted = G.ballElement ? alive.filter(b => (RESIST[G.ballElement] || []).includes(b.poke.t)).length : 0;
-      const struggling = G.ballElement && resisted >= alive.length * 0.5;
+      // in junkie the CURRENT attack type is what matters — walled off means
+      // most of the field resists what you're firing right now
+      const curEl = jkOrbs ? attackElement() : G.ballElement;
+      const resisted = curEl ? alive.filter(b => (RESIST[curEl] || []).includes(b.poke.t)).length : 0;
+      const struggling = curEl && resisted >= alive.length * (jkOrbs ? 0.35 : 0.5);
       // orbs are a rescue mechanic, not a scheduled shower: quick when you're
       // genuinely walled off, otherwise scarce
-      G.elementOrbCD = struggling ? 8 : 34 + Math.random() * 20;
-      if (struggling || Math.random() < 0.22) {
+      G.elementOrbCD = struggling ? (jkOrbs ? 4 : 8) : jkOrbs ? 10 + Math.random() * 8 : 34 + Math.random() * 20;
+      if (struggling || Math.random() < (jkOrbs ? 0.7 : 0.22)) {
         // offer an element that's super effective against the dominant type
         const counts = {};
         for (const b of alive) counts[b.poke.t] = (counts[b.poke.t] || 0) + 1;
         const domType = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-        const cands = Object.keys(EFFECTIVE).filter(el => EFFECTIVE[el].includes(domType) && el !== G.ballElement);
+        const cands = Object.keys(EFFECTIVE).filter(el => EFFECTIVE[el].includes(domType) && el !== curEl);
         const el = cands.length ? cands[Math.floor(Math.random() * cands.length)] : 'normal';
         G.powerups.push({ x: 50 + Math.random() * (W - 100), y: -20, vy: 62, p: { key: 'element', t: el }, rot: Math.random() * 6, orb: true });
       }
@@ -665,6 +687,37 @@ function update(dt) {
         br.hx = pos.x - G.fx; br.hy = pos.y - G.fy;
       }
       if (!br.entry && !br.dive) { br.bx = br.hx; br.by = br.hy; }
+    }
+    // ---- SPACE JUNKIE crispness: flyers NEVER overlap. A proper little
+    // constraint solver: several full-projection passes push any two
+    // sprites out to a minimum spacing. When a pattern tries to converge
+    // (vortex contracting, star pinching through its center), the squad
+    // packs into a crisp, non-overlapping knot instead of a blob — tightly
+    // knit, but every Pokémon stays distinct and trackable.
+    if (G.mode === 'junkie') {
+      const fl = [];
+      for (const br of G.bricks) {
+        if (!br.dead && br.flight && br.flight.state >= 1 && !br.dive && !br.entry) fl.push(br);
+      }
+      for (let it = 0; it < 4; it++) {
+        let moved = false;
+        for (let i = 0; i < fl.length; i++) {
+          for (let j = i + 1; j < fl.length; j++) {
+            const a = fl[i], b2 = fl[j];
+            const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.58;
+            let dx = b2.bx - a.bx, dy = b2.by - a.by;
+            let d = Math.hypot(dx, dy);
+            if (d < minD) {
+              if (d < 0.01) { dx = Math.cos(i * 2.4); dy = Math.sin(i * 2.4); d = 1; }
+              const push = (minD - d) / 2;
+              a.bx -= dx / d * push; a.by -= dy / d * push;
+              b2.bx += dx / d * push; b2.by += dy / d * push;
+              moved = true;
+            }
+          }
+        }
+        if (!moved) break;
+      }
     }
   }
   if (G.state === 'play' || G.state === 'serve') {
@@ -1088,7 +1141,9 @@ function update(dt) {
         } else {
           L.dead = true;
         }
-        const dmg = L.charged ? L.power : (L.hyper ? 2 : 1);
+        let dmg = L.charged ? L.power : (L.hyper ? 2 : 1);
+        // LIFE ORB stacks amplify the pilot's typed attacks
+        if (L.element && G.stacks.orb) dmg = Math.max(1, Math.round(dmg * (1 + 0.08 * G.stacks.orb)));
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
@@ -1294,9 +1349,18 @@ function update(dt) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    G.upgradeChoices = pool.length
-      ? pool.slice(0, 3).map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }))
-      : null;
+    const choices = pool.slice(0, 3).map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }));
+    // SPACE JUNKIE: when the tree runs out of tiers, the draft switches to
+    // held items that stack FOREVER — any empty card slot offers one
+    if (G.mode === 'junkie' && choices.length < 3) {
+      const si = STACK_ITEMS.slice();
+      for (let i = si.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [si[i], si[j]] = [si[j], si[i]];
+      }
+      while (choices.length < 3 && si.length) choices.push({ stack: si.pop() });
+    }
+    G.upgradeChoices = choices.length ? choices : null;
     SFX.levelUp();
     // confetti!
     const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];

@@ -212,6 +212,19 @@ function upgradeLayout() {
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
+  // SPACE JUNKIE held-item STACK pick (the tree is full — these stack forever)
+  if (c.stack) {
+    G.stacks[c.stack.key] = (G.stacks[c.stack.key] || 0) + 1;
+    G.upgradeChoices = null;
+    SFX.power();
+    buildLevel(G.level);
+    serve();
+    setAnnounce(c.stack.icon, c.stack.color,
+      c.stack.name + ' ×' + G.stacks[c.stack.key],
+      c.stack.desc, 2.4, 'HELD ITEMS STACK FOREVER — CHECK YOUR PILOT');
+    return;
+  }
+  const junkieName = junkieTierName(c.pathKey, c.tierIdx);
   const tier = advancePath(c.pathKey);
   G.upgradeChoices = null;
   SFX.power();
@@ -221,10 +234,11 @@ function pickUpgrade(i) {
   // confirm AFTER buildLevel so the stage banner doesn't swallow it —
   // unless the partner just evolved, which is the bigger moment
   if (G.justEvolved) { G.justEvolved = false; return; }
+  const shownName = G.mode === 'junkie' ? junkieName : tier.name;
   setAnnounce(tier.icon, c.path.color,
-    (capped ? '★ ' : '') + tier.name + (capped ? ' ★' : ''),
+    (capped ? '★ ' : '') + shownName + (capped ? ' ★' : ''),
     tier.desc, capped ? 3 : 2.2,
-    c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
+    (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
   if (capped) SFX.mega();
 }
 function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
@@ -343,7 +357,10 @@ function fireAction(auto = false) {
   // down forever" event rather than a constant governor. Paddle returns still
   // vent it; a water partner's Torrent runs the barrel cooler still.
   const torrent = G.starter === 'water' ? 0.8 - 0.04 * (G.starterLvl - 1) : 1;
-  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.3 * upgN('coolant')) * torrent);
+  // SPACE JUNKIE runs much cooler — you're a Pokémon using its attack, not a
+  // cannon — and NEVER-MELT ICE stacks cool it further still
+  const junkieCool = G.mode === 'junkie' ? 0.55 * Math.pow(0.94, G.stacks.ice) : 1;
+  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.3 * upgN('coolant')) * torrent * junkieCool);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
@@ -352,6 +369,7 @@ function fireAction(auto = false) {
   // SPACE JUNKIE mode: the shot IS the pilot's attack — the SHAPE follows the
   // species, the color + type follow the current element (green fire, etc.)
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
+  if (pil) G.attackAnim = 1; // the pilot visibly ATTACKS — lunge + flash
   const nBolts = upgN('twin') ? 2 : 1;
   for (let i = 0; i < nBolts; i++) {
     G.lasers.push({
@@ -371,6 +389,7 @@ function fireCharge(c) {
   const power = 1 + Math.round(c * 4);   // 1..5 damage
   const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
+  if (pil) G.attackAnim = 1.4; // charge release = the big attack animation
   G.lasers.push({
     x: G.paddle.x, y: shipY() - 18, basic: true, charged: true,
     power, pierce, r: 12 + c * 22, explosive: !!G.fx_fire,

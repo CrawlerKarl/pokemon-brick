@@ -248,7 +248,8 @@ function drawBricks() {
     // so they never sit over the Pokémon's face, and the 2× tag is skipped —
     // the pulsing gold ring carries that signal alone.
     if (br.poke.id !== -1) {
-      const elem = G.ballElement;
+      // junkie: hints reflect the CURRENT attack type (base or temporary)
+      const elem = G.mode === 'junkie' ? attackElement() : G.ballElement;
       const strong = elem && (EFFECTIVE[elem] || []).includes(br.poke.t);
       const weak = elem && (RESIST[elem] || []).includes(br.poke.t);
       // small cards keep the Pokémon CLEAN: the badge only appears when it
@@ -351,16 +352,84 @@ function drawPilotRig(x, py) {
   ctx.quadraticCurveTo(4, 14 * fl, 7, 0);
   ctx.closePath(); ctx.fill();
   ctx.restore();
-  // the pilot itself — banking with your movement
+  // ---- the pilot itself, with a pseudo-3D treatment: a soft drop shadow
+  // below-right, an element-colored rim light behind, and — when firing —
+  // a real ATTACK animation: the mon lunges nose-up with squash & stretch
+  // and flashes from within, like a battle attack frame.
+  const atk = Math.min(1, G.attackAnim);           // 1 at the shot, decays fast
+  const lungeY = -9 * atk;                          // lunge upward into the shot
+  const sclX = 1 - 0.09 * atk, sclY = 1 + 0.14 * atk; // stretch into the attack
   const img = getSprite(pil.id);
+  const ok = img.complete && img.naturalWidth;
+  const shadow = ok ? getSilhouette(pil.id, '#060a18') : null;
+  const rim = ok ? getSilhouette(pil.id, col) : null;
+  const flash = ok ? getSilhouette(pil.id, '#ffffff') : null;
   ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(tilt);
+  ctx.translate(x, y + lungeY);
+  ctx.rotate(tilt - 0.09 * atk);
+  ctx.scale(sclX, sclY);
+  if (shadow) { // depth: soft shadow cast down-right
+    ctx.globalAlpha = 0.34;
+    ctx.drawImage(shadow, -s / 2 + 5, -s / 2 + 7, s, s * 0.96);
+    ctx.globalAlpha = 1;
+  }
+  if (rim) { // element rim light — brightens as the attack fires
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.3 + 0.45 * atk + (mega ? 0.2 : 0);
+    const rs = s * 1.07;
+    ctx.drawImage(rim, -rs / 2, -rs / 2 - 1.5, rs, rs);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
-  ctx.shadowBlur = mega ? 26 : 14;
-  if (img.complete && img.naturalWidth) ctx.drawImage(img, -s / 2, -s / 2, s, s);
+  ctx.shadowBlur = mega ? 26 : 12 + 14 * atk;
+  if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
   else drawGlyph(ctx, pil.t, 0, 0, 14, col);
+  ctx.shadowBlur = 0;
+  if (flash && atk > 0.05) { // the attack flash — the mon lights up from within
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.5 * atk;
+    ctx.drawImage(flash, -s / 2, -s / 2, s, s);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
+  // ---- held items orbit the pilot: one badge per skill-tree tier owned
+  // (SPACE JUNKIE names them as Pokémon items) plus every infinite stack
+  {
+    const badges = [];
+    for (const pk of PATH_KEYS) {
+      for (let d = 0; d < pathLvl(pk); d++) badges.push({ icon: PATHS[pk].tiers[d].icon, color: PATHS[pk].color });
+    }
+    for (const si of STACK_ITEMS) {
+      const n = (G.stacks && G.stacks[si.key]) || 0;
+      for (let d = 0; d < Math.min(n, 6); d++) badges.push({ icon: si.icon, color: si.color });
+    }
+    const extra = STACK_ITEMS.reduce((a, si) => a + Math.max(0, ((G.stacks && G.stacks[si.key]) || 0) - 6), 0);
+    const shown = badges.slice(0, 18);
+    if (shown.length) {
+      const orbitR = s * 0.78 + 10;
+      for (let i = 0; i < shown.length; i++) {
+        const a2 = (i / shown.length) * Math.PI * 2 + G.time * 0.55;
+        const bx2 = x + Math.cos(a2) * orbitR;
+        const by2 = y + Math.sin(a2) * orbitR * 0.55; // flattened ring = orbit depth
+        const behind = Math.sin(a2) < 0; // top half of the ring passes BEHIND
+        ctx.save();
+        ctx.globalAlpha = behind ? 0.45 : 0.95;
+        ctx.beginPath(); ctx.arc(bx2, by2, 7, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(8,12,28,0.85)'; ctx.fill();
+        ctx.lineWidth = 1.2; ctx.strokeStyle = shown[i].color; ctx.stroke();
+        drawGlyph(ctx, shown[i].icon, bx2, by2, 3.8, shown[i].color);
+        ctx.restore();
+      }
+      if (extra > 0) {
+        ctx.font = '900 9px Orbitron, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffd54f';
+        ctx.fillText('+' + extra, x + orbitR + 14, y);
+      }
+    }
+  }
   // muzzle flash at the nose, in the element color
   if (G.muzzle > 0) {
     const m = G.muzzle / 0.18;
@@ -804,62 +873,121 @@ function drawTelegraphs() {
 // ---- SPACE JUNKIE typed attacks: the bolt's SHAPE is the pilot's species
 // (flame / water jet / razor leaf / lightning), its COLOR is the CURRENT
 // element — a Charmeleon riding a grass element shoots green fire.
+// Rendered modern: every bolt gets a long additive light-trail, a hot white
+// core, and layered glow drawn in 'lighter' so shots feel like energy.
 function drawTypedBolt(L) {
   const col = TYPE_COLORS[L.element] || '#80d8ff';
   const t = G.time;
   ctx.save();
-  ctx.shadowColor = col; ctx.shadowBlur = 16;
+  // 1) motion trail — a soft light streak behind the bolt (additive)
+  ctx.globalCompositeOperation = 'lighter';
+  const tg = ctx.createLinearGradient(L.x, L.y - 6, L.x, L.y + 42);
+  tg.addColorStop(0, col + 'aa'); tg.addColorStop(0.5, col + '38'); tg.addColorStop(1, col + '00');
+  ctx.strokeStyle = tg; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(L.x, L.y + 40); ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.shadowColor = col; ctx.shadowBlur = 18;
   if (L.shape === 'flame') {
-    // a living flame tongue that flickers as it flies
-    const flick = 1 + 0.25 * Math.sin(t * 31 + L.x * 0.7);
-    const h = 30 * flick, w4 = 11;
+    // a living flame tongue — layered outer flame, inner tongue, white core
+    const flick = 1 + 0.22 * Math.sin(t * 31 + L.x * 0.7);
+    const h = 32 * flick, w4 = 12;
+    const flame = (sc, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(L.x, L.y - h * 0.65 * sc);
+      ctx.quadraticCurveTo(L.x + w4 * 0.55 * sc, L.y - h * 0.15 * sc, L.x + w4 * 0.34 * sc, L.y + h * 0.2 * sc);
+      ctx.quadraticCurveTo(L.x, L.y + h * 0.45 * sc, L.x - w4 * 0.34 * sc, L.y + h * 0.2 * sc);
+      ctx.quadraticCurveTo(L.x - w4 * 0.55 * sc, L.y - h * 0.15 * sc, L.x, L.y - h * 0.65 * sc);
+      ctx.fill();
+    };
+    flame(1, col);
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'lighter';
+    flame(0.62, col);
+    flame(0.34, 'rgba(255,255,255,0.95)');
+    ctx.globalCompositeOperation = 'source-over';
+    // ember sparks peeling off the tail
+    ctx.globalAlpha = 0.6;
     ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.moveTo(L.x, L.y - h * 0.65);
-    ctx.quadraticCurveTo(L.x + w4 * 0.55, L.y - h * 0.15, L.x + w4 * 0.34, L.y + h * 0.2);
-    ctx.quadraticCurveTo(L.x, L.y + h * 0.45, L.x - w4 * 0.34, L.y + h * 0.2);
-    ctx.quadraticCurveTo(L.x - w4 * 0.55, L.y - h * 0.15, L.x, L.y - h * 0.65);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.beginPath(); ctx.ellipse(L.x, L.y + h * 0.08, w4 * 0.2, h * 0.26, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 0.5; // trailing ember
-    ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 23 + L.y * 0.2) * 4, L.y + h * 0.55, 2.4, 0, Math.PI * 2); ctx.fill();
+    for (let e = 0; e < 2; e++) {
+      const ex = L.x + Math.sin(t * (23 + e * 9) + L.y * 0.2 + e * 2) * (4 + e * 3);
+      ctx.beginPath(); ctx.arc(ex, L.y + h * (0.5 + e * 0.18), 2.4 - e * 0.8, 0, Math.PI * 2); ctx.fill();
+    }
   } else if (L.shape === 'aqua') {
-    // a pulsing water jet with trailing bubbles
-    const puls = 1 + 0.15 * Math.sin(t * 18 + L.x);
-    const g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, 12 * puls);
-    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, col); g.addColorStop(1, col + '22');
+    // a sleek water dart: teardrop body, specular highlight, ripple ring
+    const puls = 1 + 0.12 * Math.sin(t * 18 + L.x);
+    const g = ctx.createRadialGradient(L.x - 2, L.y - 4, 1, L.x, L.y, 13 * puls);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, col); g.addColorStop(1, col + '18');
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(L.x, L.y, 7 * puls, 13 * puls, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y - 15 * puls);
+    ctx.quadraticCurveTo(L.x + 8 * puls, L.y - 2, L.x, L.y + 12 * puls);
+    ctx.quadraticCurveTo(L.x - 8 * puls, L.y - 2, L.x, L.y - 15 * puls);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // specular glint
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(L.x - 2.5, L.y - 5, 1.6, 3.4, -0.5, 0, Math.PI * 2); ctx.fill();
+    // ripple ring + trailing droplets
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(L.x, L.y + 14, 5 + ((t * 30 + L.y) % 8), 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 12) * 3, L.y + 17, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(L.x - Math.sin(t * 15) * 3, L.y + 26, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 12) * 3.4, L.y + 20, 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(L.x - Math.sin(t * 15) * 3.4, L.y + 28, 1.8, 0, Math.PI * 2); ctx.fill();
   } else if (L.shape === 'leaf') {
-    // a spinning razor leaf
+    // a spinning razor leaf inside a slicing light-disc
+    ctx.globalCompositeOperation = 'lighter';
+    const dg = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, 15);
+    dg.addColorStop(0, col + '55'); dg.addColorStop(1, col + '00');
+    ctx.fillStyle = dg;
+    ctx.beginPath(); ctx.arc(L.x, L.y, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.translate(L.x, L.y);
-    ctx.rotate(t * 14 + L.x * 0.1);
+    ctx.rotate(t * 16 + L.x * 0.1);
+    const lg = ctx.createLinearGradient(0, -13, 0, 13);
+    lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.35, col); lg.addColorStop(1, col);
+    ctx.fillStyle = lg;
+    ctx.beginPath();
+    ctx.moveTo(0, -13);
+    ctx.quadraticCurveTo(9, -3, 0, 13);
+    ctx.quadraticCurveTo(-9, -3, 0, -13);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
+    // twin echo-leaf: a ghost of the previous rotation frame
+    ctx.rotate(-0.6);
+    ctx.globalAlpha = 0.3;
     ctx.fillStyle = col;
     ctx.beginPath();
     ctx.moveTo(0, -13);
     ctx.quadraticCurveTo(9, -3, 0, 13);
     ctx.quadraticCurveTo(-9, -3, 0, -13);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
-  } else { // 'volt' — a jagged lightning bolt
-    const h = 34, seg = 5;
-    ctx.strokeStyle = col; ctx.lineWidth = 4.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (let i = 0; i <= seg; i++) {
-      const yy = L.y - h / 2 + i * h / seg;
-      const xx = L.x + (i === 0 || i === seg ? 0 : (i % 2 ? -1 : 1) * (4.5 + 1.5 * Math.sin(t * 40 + i)));
-      i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6;
-    ctx.stroke();
+  } else { // 'volt' — a forked lightning bolt with a halo flash
+    const h = 36, seg = 6;
+    ctx.globalCompositeOperation = 'lighter';
+    const hg2 = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, 16);
+    hg2.addColorStop(0, col + '66'); hg2.addColorStop(1, col + '00');
+    ctx.fillStyle = hg2;
+    ctx.beginPath(); ctx.arc(L.x, L.y, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    const jag = (amp, lw, color, seed) => {
+      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= seg; i++) {
+        const yy = L.y - h / 2 + i * h / seg;
+        const xx = L.x + (i === 0 || i === seg ? 0 : (i % 2 ? -1 : 1) * (amp + 1.6 * Math.sin(t * 40 + i + seed)));
+        i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+      }
+      ctx.stroke();
+    };
+    jag(5, 5, col, 0);
+    ctx.shadowBlur = 0;
+    jag(5, 1.8, 'rgba(255,255,255,0.95)', 0);
+    ctx.globalAlpha = 0.45; // side fork
+    jag(9, 1.4, col, 3.1);
   }
   ctx.restore();
 }
@@ -1255,14 +1383,21 @@ function drawHUD() {
     ctx.font = '700 13px Orbitron, sans-serif';
     ctx.fillText('COMBO x' + G.combo, 20, 72);
   }
-  if (G.ballElement) {
-    ctx.fillStyle = TYPE_COLORS[G.ballElement];
+  const hudElem = G.mode === 'junkie'; // junkie always shows the live attack type
+  if (G.ballElement || hudElem) {
+    const el = hudElem ? attackElement() : G.ballElement;
+    ctx.fillStyle = TYPE_COLORS[el];
     ctx.font = '700 11px Orbitron, sans-serif';
-    ctx.fillText('⬤ ' + G.ballElement.toUpperCase() + ' BALL', 20, G.combo > 1 ? 90 : 72);
+    const tag = hudElem
+      ? (G.ballElement
+        ? el.toUpperCase() + ' TYPE · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
+        : el.toUpperCase() + ' TYPE · BASE')
+      : el.toUpperCase() + ' BALL';
+    ctx.fillText('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72);
   }
   // skill tree at a glance — Phoenix-style: your build is always visible
   {
-    const treeY = (G.ballElement ? (G.combo > 1 ? 110 : 92) : (G.combo > 1 ? 92 : 74));
+    const treeY = ((G.ballElement || hudElem) ? (G.combo > 1 ? 110 : 92) : (G.combo > 1 ? 92 : 74));
     let tx3 = 26;
     for (const pk of PATH_KEYS) {
       const lvl = pathLvl(pk);
@@ -1873,7 +2008,7 @@ function drawOverlays() {
       ctx.font = '700 14px Orbitron, sans-serif';
       ctx.fillStyle = '#e3f2fd';
       const L = upgradeLayout();
-      ctx.fillText('ADVANCE A PATH', W / 2, L.card(0).y - 26);
+      ctx.fillText(G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'ADVANCE A PATH', W / 2, L.card(0).y - 26);
       // ---- the whole tree, so you can see where each path is heading ----
       if (!L.stacked) {
         const tw2 = Math.min(760, W * 0.86), colW = tw2 / 4;
@@ -1891,11 +2026,62 @@ function drawOverlays() {
           }
           ctx.font = '500 8.5px Orbitron, sans-serif';
           ctx.fillStyle = lvl >= 4 ? P.color : '#78909c';
-          ctx.fillText((lvl >= 4 ? '★ ' : '→ ') + P.tiers[3].name, cx3, ty + 32, colW - 10);
+          ctx.fillText((lvl >= 4 ? '★ ' : '→ ') + junkieTierName(pk, 3), cx3, ty + 32, colW - 10);
         }
       }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         const c = G.upgradeChoices[i], r = L.card(i);
+        // SPACE JUNKIE stack-item card: the tree is full — these stack forever
+        if (c.stack) {
+          const scol = c.stack.color;
+          const hov2 = inRect(mouseX, lastMouseY, r);
+          const owned = (G.stacks && G.stacks[c.stack.key]) || 0;
+          ctx.save();
+          if (hov2) { ctx.shadowColor = scol; ctx.shadowBlur = 22; }
+          roundRect(r.x, r.y, r.w, r.h, 14);
+          ctx.fillStyle = hov2 ? 'rgba(20,28,58,0.97)' : 'rgba(10,15,36,0.93)';
+          ctx.fill();
+          ctx.lineWidth = hov2 ? 2.5 : 1.5;
+          ctx.strokeStyle = hov2 ? scol : scol + '77';
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          if (L.stacked) {
+            drawGlyph(ctx, c.stack.icon, r.x + 34, r.y + r.h / 2, 17, scol);
+            ctx.textAlign = 'left';
+            ctx.font = '900 9px Orbitron, sans-serif';
+            ctx.fillStyle = scol;
+            ctx.fillText('HELD ITEM · STACKS FOREVER' + (owned ? ' · OWNED ×' + owned : ''), r.x + 64, r.y + 15);
+            ctx.font = '900 14px Orbitron, sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(c.stack.name, r.x + 64, r.y + 33);
+            ctx.font = '500 9.5px Orbitron, sans-serif';
+            ctx.fillStyle = '#b0bec5';
+            wrapText(c.stack.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
+          } else {
+            ctx.textAlign = 'center';
+            ctx.font = '900 10px Orbitron, sans-serif';
+            ctx.fillStyle = scol;
+            ctx.fillText('HELD ITEM', r.x + r.w / 2, r.y + 20);
+            ctx.font = '700 10px Orbitron, sans-serif';
+            ctx.fillStyle = owned ? '#fff' : '#78909c';
+            ctx.fillText(owned ? 'OWNED ×' + owned : 'NEW', r.x + r.w / 2, r.y + 38);
+            drawGlyph(ctx, c.stack.icon, r.x + r.w / 2, r.y + 72, 24, scol);
+            ctx.font = '900 15px Orbitron, sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 112, r.w - 20);
+            ctx.font = '500 11px Orbitron, sans-serif';
+            ctx.fillStyle = '#b0bec5';
+            wrapText(c.stack.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 16));
+            ctx.font = '700 9.5px Orbitron, sans-serif';
+            ctx.fillStyle = scol;
+            ctx.fillText('∞ NO CAP — TAKE IT EVERY TIME', r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
+            ctx.fillStyle = '#546e7a';
+            ctx.font = '700 11px Orbitron, sans-serif';
+            ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 16);
+          }
+          ctx.restore();
+          continue;
+        }
         const col = c.path.color, tier = c.tier;
         const isCap = c.tierIdx === 3;
         const hov = inRect(mouseX, lastMouseY, r);
@@ -1923,7 +2109,7 @@ function drawOverlays() {
           ctx.fillText(c.path.name + ' PATH · TIER ' + (c.tierIdx + 1) + '/4' + (isCap ? ' — CAPSTONE!' : ''), r.x + 64, r.y + 15);
           ctx.font = '900 14px Orbitron, sans-serif';
           ctx.fillStyle = '#fff';
-          ctx.fillText(tier.name, r.x + 64, r.y + 33);
+          ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + 64, r.y + 33);
           ctx.font = '500 9.5px Orbitron, sans-serif';
           ctx.fillStyle = '#b0bec5';
           wrapText(tier.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
@@ -1936,13 +2122,13 @@ function drawOverlays() {
           drawGlyph(ctx, tier.icon, r.x + r.w / 2, r.y + 72, 24, col);
           ctx.font = '900 15px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';
-          ctx.fillText((isCap ? '★ ' : '') + tier.name + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 112, r.w - 20);
+          ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 112, r.w - 20);
           ctx.font = '500 11px Orbitron, sans-serif';
           ctx.fillStyle = '#b0bec5';
           wrapText(tier.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 16));
           ctx.font = '700 9.5px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#546e7a';
-          ctx.fillText(isCap ? 'THE PATH COMPLETES HERE' : '→ LEADS TO: ' + c.path.tiers[3].name, r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
+          ctx.fillText(isCap ? 'THE PATH COMPLETES HERE' : '→ LEADS TO: ' + junkieTierName(c.pathKey, 3), r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
           ctx.fillStyle = '#546e7a';
           ctx.font = '700 11px Orbitron, sans-serif';
           ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 16);

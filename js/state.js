@@ -56,6 +56,8 @@ const G = {
   charge: 0, chargeCD: 0, // BLASTER mode: hold to charge a heavy shot
   shipYv: 0,           // SPACE JUNKIE: the ship flies vertically in a band
   maneuver: null, maneuverCD: 8, // SPACE JUNKIE: periodic squad maneuvers
+  stacks: { orb: 0, ice: 0, bell: 0 }, // SPACE JUNKIE: infinitely-stacking held items
+  attackAnim: 0,       // SPACE JUNKIE: pilot lunge/recoil timer on fire
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -617,6 +619,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.charge = 0; G.chargeCD = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;
+  G.stacks = { orb: 0, ice: 0, bell: 0 }; G.attackAnim = 0;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
@@ -641,18 +644,17 @@ function resetRun(startLevel = 1, trial = false) {
     granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
 }
 function serve() {
-  // starter partner: its type rides the ball (or the blaster) from the start
-  if (G.starter && !G.ballElement) {
+  // starter partner: its type rides the ball (or the blaster) from the start.
+  // SPACE JUNKIE never seeds it: there, G.ballElement is only ever a
+  // TEMPORARY override — when it expires, attackElement() falls back to the
+  // pilot's innate type, so every type change reverts to base on its own.
+  if (G.mode !== 'junkie' && G.starter && !G.ballElement) {
     G.ballElement = G.starter;
     G.ballElementT = 9999;
   }
   // shooter modes (BLASTER / SPACE JUNKIE): no ball at all — the wave is
   // live immediately, your fire is the whole game
   if (G.mode !== 'classic') {
-    if (G.mode === 'junkie' && !G.ballElement) { // the pilot's innate type rides the guns
-      G.ballElement = pilotInfo().t;
-      G.ballElementT = 9999;
-    }
     G.balls = [];
     G.charge = 0;
     G.state = 'play'; G.stateT = 0;

@@ -96,6 +96,18 @@ sometimes doesn't fire — trigger manually with
   ~1.8× then contracts), speed SURGE (~1.8× pattern speed), and from region
   3 a RAID that dips the whole flock toward the ship band and back — capped
   so it never enters the ship's airspace.
+  **Crispness:** a per-frame constraint solver keeps junkie flyers from EVER
+  overlapping (the pass after the flight loop, update.js) — converging
+  patterns pack into readable knots instead of blobs. **Type changes are
+  temporary** there: `G.ballElement` is only ever an override that counts
+  down (HUD shows `TYPE · Ns`) and reverts to the pilot's innate type;
+  element orbs drop far more often (junkie branch of the orb block).
+  **Held items:** the draft re-skins the same 4×4 tree as Pokémon items
+  (`JUNKIE_ITEMS`, data.js), every owned tier orbits the pilot as a badge,
+  and once the tree caps the draft offers `STACK_ITEMS` that stack forever
+  (Life Orb dmg / Never-Melt Ice cooling / Soothe Bell score — `G.stacks`).
+  The pilot renders pseudo-3D (silhouette shadow + element rim light) and
+  plays a lunge/flash ATTACK animation on every shot (`G.attackAnim`).
 
 ## The core systems (where to look, what they do)
 

@@ -447,6 +447,26 @@ const PATHS = {
   ]},
 };
 const PATH_KEYS = Object.keys(PATHS);
+// ---- SPACE JUNKIE held items: the SAME skill tree, re-skinned as the
+// Pokémon items your pilot would actually hold — one per path tier, each
+// appearing as a badge orbiting the ship when earned.
+const JUNKIE_ITEMS = {
+  arsenal: ['SCOPE LENS', 'NEVER-MELT ICE', 'CHOICE SPECS', 'LIFE ORB'],
+  aegis:   ['FOCUS BAND', 'EVIOLITE', 'LEFTOVERS', 'ASSAULT VEST'],
+  surge:   ['POWER HERB', 'METRONOME', 'CHARCOAL', 'MEGA STONE'],
+  bond:    ['MAGNET', 'SOOTHE BELL', 'AMULET COIN', 'MAX REVIVE'],
+};
+function junkieTierName(pathKey, tierIdx) {
+  return (G.mode === 'junkie' && JUNKIE_ITEMS[pathKey] && JUNKIE_ITEMS[pathKey][tierIdx])
+    ? JUNKIE_ITEMS[pathKey][tierIdx]
+    : PATHS[pathKey].tiers[tierIdx].name;
+}
+// once every path caps, junkie drafts keep offering these — infinite stacks
+const STACK_ITEMS = [
+  { key: 'orb',  name: 'LIFE ORB',       icon: 'mega',   color: '#b388ff', desc: 'ATTACK DAMAGE +8% — STACKS FOREVER' },
+  { key: 'ice',  name: 'NEVER-MELT ICE', icon: 'slow',   color: '#80deea', desc: 'BLASTER HEAT −6% PER SHOT — STACKS FOREVER' },
+  { key: 'bell', name: 'SOOTHE BELL',    icon: 'heart',  color: '#f48fb1', desc: 'ALL SCORE +6% — STACKS FOREVER' },
+];
 function upgN(k) { return G.upg[k] || 0; }
 function pathLvl(p) { return (G.path && G.path[p]) || 0; }
 function totalPathLevels() { return PATH_KEYS.reduce((a, k) => a + pathLvl(k), 0); }
