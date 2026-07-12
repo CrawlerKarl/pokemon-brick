@@ -457,6 +457,13 @@ function update(dt) {
   const target = Math.max(paddleW() / 2 + 8, Math.min(W - paddleW() / 2 - 8, mouseX));
   G.paddle.speed = (target - G.paddle.x) / Math.max(dt, 0.001);
   G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18);
+  // SPACE JUNKIE: the ship also flies vertically — mouse/finger Y steers it
+  // within a band above the old paddle line
+  if (G.mode === 'junkie') {
+    const bot = PADDLE_Y() + 8, top = PADDLE_Y() - SHIP_BAND;
+    const ty = Math.max(top, Math.min(bot, lastMouseY));
+    G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14);
+  } else G.shipYv = PADDLE_Y();
   G.invuln = Math.max(0, G.invuln - dt);
   G.blasterCD = Math.max(0, G.blasterCD - dt);
   G.muzzle = Math.max(0, G.muzzle - dt);
@@ -561,6 +568,55 @@ function update(dt) {
     }
   }
 
+  // ---- SPACE JUNKIE squad maneuvers: every so often one flock does
+  // something unexpected — startle-SCATTERS (the knot swells then contracts),
+  // SURGES (rides its pattern nearly double-speed), or, deeper in, dips into
+  // a RAID toward the ship band — then knits itself back into formation.
+  if (G.mode === 'junkie' && G.state === 'play') {
+    const regionsIn3 = Math.floor((G.level - 1) / STAGES);
+    if (G.maneuver) {
+      G.maneuver.t += dt * ts;
+      if (G.maneuver.t >= G.maneuver.dur) {
+        if (G.maneuver.kind === 'surge') {
+          for (const br of G.bricks) if (br.flight && br.flight.sq === G.maneuver.sq && br.flight.spd0) {
+            br.flight.spd = br.flight.spd0; br.flight.spd0 = null;
+          }
+        }
+        G.maneuver = null;
+      }
+    } else if (regionsIn3 >= 1) {
+      G.maneuverCD -= dt * ts;
+      if (G.maneuverCD <= 0) {
+        G.maneuverCD = 9 + Math.random() * 8;
+        const sqs = [...new Set(G.bricks.filter(b => !b.dead && b.flight && b.flight.state === 2 && b.flight.sq != null)
+          .map(b => b.flight.sq))];
+        if (sqs.length) {
+          const sq = sqs[Math.floor(Math.random() * sqs.length)];
+          const opts = ['scatter', 'surge'];
+          if (regionsIn3 >= 2) opts.push('raid');
+          const mv = { sq, kind: opts[Math.floor(Math.random() * opts.length)], t: 0 };
+          if (mv.kind === 'raid') {
+            // dip the whole flock toward the ship band — capped so it never
+            // crowds the ship's airspace
+            const m0 = G.bricks.find(b => !b.dead && b.flight && b.flight.sq === sq);
+            const allowed = m0 ? (PADDLE_Y() - 160) - (m0.flight.cy + m0.flight.ry) : 0;
+            mv.dy = Math.max(0, Math.min(130, allowed));
+            if (mv.dy < 30) mv.kind = 'scatter'; // no room below — startle instead
+          }
+          mv.dur = mv.kind === 'raid' ? 4.2 : mv.kind === 'scatter' ? 2.6 : 3;
+          if (mv.kind === 'surge') {
+            for (const br of G.bricks) if (!br.dead && br.flight && br.flight.sq === sq) {
+              br.flight.spd0 = br.flight.spd; br.flight.spd *= 1.8;
+            }
+            tone(620, 0.16, 'sawtooth', 0.04, 260);
+          } else {
+            tone(mv.kind === 'raid' ? 240 : 460, 0.18, 'triangle', 0.045, mv.kind === 'raid' ? -120 : 180);
+          }
+          G.maneuver = mv;
+        }
+      }
+    }
+  }
   // ---- formation drift ----
   // ---- Space Junkie entrances: ranks pour in from off-screen, swooping on a
   // curve into their formation slot. They animate even during the serve, and
@@ -587,6 +643,16 @@ function update(dt) {
       // out so flyers ride their pattern in screen coords — immune to the
       // march's downward creep, so the breathing-room floor actually holds
       const pos = flightPos(F, tAbs);
+      // squad maneuver post-transform: a startle-scatter swells the knot
+      // around its own center; a raid eases the whole flock down and back
+      const mv = G.maneuver;
+      if (mv && F.sq === mv.sq) {
+        const pr = Math.sin(Math.PI * Math.min(1, mv.t / mv.dur)); // 0→1→0
+        if (mv.kind === 'scatter') {
+          pos.x = F.cx + (pos.x - F.cx) * (1 + 0.8 * pr);
+          pos.y = F.cy + (pos.y - F.cy) * (1 + 0.8 * pr);
+        } else if (mv.kind === 'raid') pos.y += mv.dy * pr;
+      }
       if (F.state === 1) { // breaking out: glide from the wall onto the pattern
         F.t += dt * ts;
         // negative t = a stream rider still holding off-screen for its turn
@@ -674,7 +740,7 @@ function update(dt) {
         if (!dv.shot && p > 0.42) { // one aimed shot at the bottom of the swoop
           dv.shot = true;
           const sx2 = br.bx + G.fx, sy2 = br.by + G.fy + br.h / 2;
-          const ang = Math.atan2(PADDLE_Y() - sy2, G.paddle.x - sx2);
+          const ang = Math.atan2(shipY() - sy2, G.paddle.x - sx2);
           const sp2 = (240 + d.lv * 14) * d.shotSpeed;
           G.enemyShots.push({ x: sx2, y: sy2, vx: Math.cos(ang) * sp2, vy: Math.sin(ang) * sp2 });
           SFX.enemyShot();
@@ -1129,7 +1195,7 @@ function update(dt) {
     if (tg.t <= 0 && !tg.br.dead) {
       const bx = tg.br.bx + G.fx, by = tg.br.by + G.fy + tg.br.h / 2;
       if (tg.boss) {
-        const base = Math.atan2(PADDLE_Y() - by, G.paddle.x - bx);
+        const base = Math.atan2(shipY() - by, G.paddle.x - bx);
         const sp = (230 + d.lv * 12) * d.shotSpeed;
         const angles = tg.fan ? [-0.5, -0.25, 0, 0.25, 0.5].map(a => base + a)
           : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
@@ -1167,9 +1233,13 @@ function update(dt) {
       s.dead = true; G.shieldCharges--;
       burst(s.x, FLOOR() - 14, '#66bb6a', 14, 180); SFX.shield();
     }
-    const pw = paddleW(), py = PADDLE_Y();
-    if (!s.dead && G.invuln <= 0 && s.y > py - G.paddle.h && s.y < py + G.paddle.h &&
-        Math.abs(s.x - G.paddle.x) < pw / 2 + 6) {
+    // in SPACE JUNKIE the player is a compact mon, not a wide paddle — the
+    // hit zone is a small box around the ship, wherever it's flying
+    const jk = G.mode === 'junkie';
+    const pw = paddleW(), py = shipY();
+    const hitW = jk ? 26 : pw / 2 + 6, hitH = jk ? 24 : G.paddle.h;
+    if (!s.dead && G.invuln <= 0 && s.y > py - hitH && s.y < py + hitH &&
+        Math.abs(s.x - G.paddle.x) < hitW) {
       s.dead = true;
       G.invuln = 2;
       addFloater(G.paddle.x, py - 50, 'HIT!', '#ff5252', 22);
@@ -1189,7 +1259,7 @@ function update(dt) {
       const dx = G.paddle.x - pu.x;
       pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 75 * upgN('magnetize')) * dt;
     }
-    const pw = paddleW(), py = PADDLE_Y();
+    const pw = paddleW(), py = shipY(); // the ship catches wherever it flies
     // Overgrowth (grass partner) widens the pickup catch envelope
     const reach = 18 + (G.starter === 'grass' ? 10 + 6 * G.starterLvl : 0);
     if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + reach) {

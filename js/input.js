@@ -346,7 +346,7 @@ function fireAction(auto = false) {
   G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.3 * upgN('coolant')) * torrent);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
-    addFloater(G.paddle.x, PADDLE_Y() - 44, 'OVERHEATED!', '#ff7043', 15);
+    addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
     noiseBurst(0.3, 0.09);
   }
   // SPACE JUNKIE mode: the shot IS the pilot's attack — the SHAPE follows the
@@ -356,7 +356,7 @@ function fireAction(auto = false) {
   for (let i = 0; i < nBolts; i++) {
     G.lasers.push({
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
-      y: PADDLE_Y() - 16, basic: true,
+      y: shipY() - 16, basic: true, // fires from wherever the ship flies
       explosive: !!G.fx_fire, hyper: !!upgN('hyper'),
       shape: pil ? pil.shape : null,
       element: pil ? attackElement() : null,
@@ -372,7 +372,7 @@ function fireCharge(c) {
   const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
   G.lasers.push({
-    x: G.paddle.x, y: PADDLE_Y() - 18, basic: true, charged: true,
+    x: G.paddle.x, y: shipY() - 18, basic: true, charged: true,
     power, pierce, r: 12 + c * 22, explosive: !!G.fx_fire,
     shape: pil ? pil.shape : null,
     element: pil ? attackElement() : null,

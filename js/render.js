@@ -320,67 +320,61 @@ function drawFragments() {
   }
 }
 
-// ---- SPACE JUNKIE pilot rig: your partner IS the ship. The sprite rides a
-// slim thruster hull, banking with your movement; the engine wash, core
-// light and muzzle all burn in the CURRENT attack element's color, so a
-// Charmeleon riding a grass element visibly runs green.
-function drawPilotRig(x, py, pwv, ph) {
+// ---- SPACE JUNKIE ship: no paddle at all — the pilot IS the ship. A bare
+// Pokémon with an element-colored aura and jet exhaust, banking with your
+// movement and free to fly vertically inside its band. A Charmeleon riding
+// a grass element visibly runs green from aura to exhaust to muzzle.
+function drawPilotRig(x, py) {
   const pil = pilotInfo();
   const col = TYPE_COLORS[attackElement()] || '#80d8ff';
   const mega = G.megaT > 0;
-  // engine wash under the hull — flickers, colored by the attack element
-  const fl = 1 + 0.3 * Math.sin(G.time * 24) + 0.15 * Math.sin(G.time * 53);
-  const eg = ctx.createRadialGradient(x, py + 10, 2, x, py + 10, 26 * fl);
-  eg.addColorStop(0, col + 'cc'); eg.addColorStop(1, col + '00');
-  ctx.fillStyle = eg;
-  ctx.beginPath(); ctx.ellipse(x, py + 13, 20 * fl, 11 * fl, 0, 0, Math.PI * 2); ctx.fill();
-  // slim hull + swept fins
-  ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
-  ctx.shadowBlur = mega ? 24 : 16;
-  const hg = ctx.createLinearGradient(x, py - 7, x, py + 7);
-  hg.addColorStop(0, '#eceff1'); hg.addColorStop(0.55, '#90a4ae'); hg.addColorStop(1, '#37474f');
-  roundRect(x - pwv / 2, py - 6, pwv, 12, 6);
-  ctx.fillStyle = hg; ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#546e7a';
-  for (const dir of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(x + dir * (pwv / 2 - 2), py - 5);
-    ctx.lineTo(x + dir * (pwv / 2 + 12), py + 8);
-    ctx.lineTo(x + dir * (pwv / 2 - 10), py + 6);
-    ctx.closePath(); ctx.fill();
-  }
-  // element core light on the hull
-  ctx.beginPath(); ctx.arc(x, py, 5, 0, Math.PI * 2);
-  ctx.fillStyle = col; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; ctx.stroke();
-  // the pilot — banking with your movement, bobbing on the engine wash
-  const img = getSprite(pil.id);
-  const s = 46 + G.starterLvl * 4;
+  const s = 54 + G.starterLvl * 6;
   const bob = Math.sin(G.time * 3.2) * 2.5;
-  const tilt = Math.max(-0.3, Math.min(0.3, G.paddle.speed * 0.00025));
-  if (img.complete && img.naturalWidth) {
-    ctx.save();
-    ctx.translate(x, py - 10 - s / 2 + bob);
-    ctx.rotate(tilt);
-    ctx.drawImage(img, -s / 2, -s / 2, s, s);
-    ctx.restore();
-  } else {
-    drawGlyph(ctx, pil.t, x, py - 26 + bob, 12, col);
-  }
-  // muzzle flash in the element color
+  const y = py + bob;
+  const tilt = Math.max(-0.34, Math.min(0.34, G.paddle.speed * 0.00028));
+  // element aura — the "this is you" glow
+  const ag = ctx.createRadialGradient(x, y, 4, x, y, s * 0.8);
+  ag.addColorStop(0, col + '3c'); ag.addColorStop(0.7, col + '14'); ag.addColorStop(1, col + '00');
+  ctx.fillStyle = ag;
+  ctx.beginPath(); ctx.arc(x, y, s * 0.8, 0, Math.PI * 2); ctx.fill();
+  // jet exhaust under the mon, flickering in the element color
+  const fl = 1 + 0.35 * Math.sin(G.time * 26) + 0.18 * Math.sin(G.time * 57);
+  ctx.save();
+  ctx.translate(x, y + s * 0.34);
+  ctx.rotate(tilt * 0.6);
+  const jg = ctx.createLinearGradient(0, 0, 0, 28 * fl);
+  jg.addColorStop(0, '#ffffff'); jg.addColorStop(0.35, col); jg.addColorStop(1, col + '00');
+  ctx.fillStyle = jg;
+  ctx.beginPath();
+  ctx.moveTo(-7, 0);
+  ctx.quadraticCurveTo(-4, 14 * fl, 0, 26 * fl);
+  ctx.quadraticCurveTo(4, 14 * fl, 7, 0);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // the pilot itself — banking with your movement
+  const img = getSprite(pil.id);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(tilt);
+  ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
+  ctx.shadowBlur = mega ? 26 : 14;
+  if (img.complete && img.naturalWidth) ctx.drawImage(img, -s / 2, -s / 2, s, s);
+  else drawGlyph(ctx, pil.t, 0, 0, 14, col);
+  ctx.restore();
+  // muzzle flash at the nose, in the element color
   if (G.muzzle > 0) {
     const m = G.muzzle / 0.18;
-    const fg = ctx.createRadialGradient(x, py - 30, 0, x, py - 30, 16 * m);
+    const my = y - s * 0.55;
+    const fg = ctx.createRadialGradient(x, my, 0, x, my, 16 * m);
     fg.addColorStop(0, 'rgba(255,255,255,' + (0.9 * m).toFixed(3) + ')');
     fg.addColorStop(0.5, col + 'aa');
     fg.addColorStop(1, col + '00');
     ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.arc(x, py - 30, 16 * m, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, my, 16 * m, 0, Math.PI * 2); ctx.fill();
   }
-  // blaster heat gauge, same as the classic rig — full bar = overheat lockout
+  // blaster heat gauge rides below the exhaust — full bar = overheat lockout
   if (G.heat > 0.02 || G.overheat > 0) {
-    const hw2 = 46, hy = py + 22;
+    const hw2 = 46, hy = py + s * 0.62 + 12;
     const hot = G.overheat > 0;
     ctx.globalAlpha = hot ? 0.55 + 0.4 * Math.abs(Math.sin(G.time * 8)) : 0.85;
     roundRect(x - hw2 / 2, hy - 3, hw2, 6, 3);
@@ -402,7 +396,7 @@ function drawPilotRig(x, py, pwv, ph) {
 }
 
 function drawPaddle() {
-  const pw = paddleW(), py = PADDLE_Y(), x = G.paddle.x;
+  const pw = paddleW(), py = shipY(), x = G.paddle.x; // shipY === PADDLE_Y outside junkie
   const blink = G.invuln > 0 && Math.floor(G.time * 12) % 2 === 0;
   if (blink) return;
   const sq = 1 + G.paddle.squash * 0.25; // squash & stretch on bounce
@@ -429,8 +423,8 @@ function drawPaddle() {
     ctx.beginPath(); ctx.ellipse(x, py, rr, rr * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
-  // SPACE JUNKIE mode: the paddle IS your Pokémon pilot's rig
-  if (G.mode === 'junkie') { drawPilotRig(x, py, pwv, ph); ctx.restore(); return; }
+  // SPACE JUNKIE mode: no paddle — you ARE the Pokémon
+  if (G.mode === 'junkie') { drawPilotRig(x, py); ctx.restore(); return; }
   const sMon = STARTER_MON[G.starter];
   // the partner rides the left end of the paddle, growing as it evolves
   if (sMon && G.state !== 'menu') {
@@ -916,7 +910,7 @@ function drawProjectiles() {
   // charge tell: a growing plasma orb at the barrel as you wind up —
   // colored by the attack element in SPACE JUNKIE mode
   if (G.charge > 0 && (G.state === 'play')) {
-    const cx = G.paddle.x, cy = PADDLE_Y() - 20, r = 4 + G.charge * 20;
+    const cx = G.paddle.x, cy = shipY() - (G.mode === 'junkie' ? 46 : 20), r = 4 + G.charge * 20;
     const ccol = G.mode === 'junkie' ? (TYPE_COLORS[attackElement()] || '#4dd0e1') : '#4dd0e1';
     ctx.save();
     ctx.shadowColor = ccol; ctx.shadowBlur = 10 + G.charge * 20;

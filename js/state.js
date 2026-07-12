@@ -20,6 +20,11 @@ function pilotInfo() {
   return { id: PILOT_NONE.ids[G.starterLvl - 1], t: 'electric', shape: 'volt' };
 }
 function attackElement() { return G.ballElement || pilotInfo().t; }
+// SPACE JUNKIE: the ship's vertical position — everywhere the game asks
+// "where is the player", it should ask shipY(), which simply equals the
+// paddle line outside junkie mode. The band gives ~120px of vertical flight.
+const SHIP_BAND = 120;
+function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 const G = {
   state: 'menu',
   score: 0, best: +(localStorage.getItem('pkbrk-best') || 0),
@@ -49,6 +54,8 @@ const G = {
   blocksStatic: false, // boxed bricks are anchored; only the Pokémon move
   mode: 'classic',     // 'classic' (ball) or 'blaster' (ball-less pure shooter)
   charge: 0, chargeCD: 0, // BLASTER mode: hold to charge a heavy shot
+  shipYv: 0,           // SPACE JUNKIE: the ship flies vertically in a band
+  maneuver: null, maneuverCD: 8, // SPACE JUNKIE: periodic squad maneuvers
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -330,6 +337,7 @@ function buildLevel(lvl) {
   }
   G.enemyShotCD = 5;
   G.bossShotCD = 4;
+  G.maneuver = null; G.maneuverCD = 8;
   G.deathsThisWave = 0;
   G.dangerWarned = false;
   G.heat = 0; G.overheat = 0;
@@ -441,35 +449,55 @@ function buildLevel(lvl) {
   // flyers, squads pouring in from the edges straight onto their patterns.
   // Boss waves keep their choreography, but the guards ride BARE (no boxes:
   // nothing in this mode is ever a framed brick).
-  if (junkie && hasBoss) for (const b2 of G.bricks) { if (!b2.isBoss) b2.bare = true; }
+  if (junkie && hasBoss) {
+    // bare, Space-Junkie-sized guards around the legendary
+    for (const b2 of G.bricks) { if (!b2.isBoss) { b2.bare = true; b2.w *= 0.62; b2.h *= 0.62; } }
+  }
   if (junkie && !hasBoss) {
     const nS = Math.min(4, 2 + Math.floor(regionsIn / 3));
-    let per = Math.min(8, 5 + Math.floor(regionsIn / 2));
-    while (nS * per > 24) per--; // the readability cap still rules
+    let per = Math.min(9, 6 + Math.floor(regionsIn / 2));
+    while (nS * per > 26) per--; // the readability cap still rules
     const usable = W - margin * 2;
+    // Space Junkie airspace: the flocks live HIGH. The floor starts around
+    // 42% of the screen and only creeps down as the journey hardens — the
+    // low band belongs to the ship (and, later, to divers and raids).
+    const floorY = Math.max(200, Math.min(PADDLE_Y() - 170,
+      H * (0.42 + Math.min(0.14, regionsIn * 0.02))));
     const geo = {
       usable, margin, gridCx: W / 2, gridHW: usable / 2,
       gridTop: 0, gridBottom: 0, gridCy: 0, hasCore: false,
-      openTop: Math.max(104, Math.round(H * 0.14)), // the whole sky is open
-      floorY: PADDLE_Y() - flyerRoom(lvl),
+      openTop: Math.max(96, Math.round(H * 0.12)),
+      floorY,
     };
+    // Space Junkie mons are SMALL — half-size sprites, closely knit
+    const mw = Math.min(48, Math.max(32, bw * 0.5));
+    const mh = Math.min(42, Math.max(28, bh * 0.72));
     for (let s = 0; s < nS; s++) {
       let kind = kinds[Math.floor(Math.random() * kinds.length)];
       if (kind === 'square') kind = 'ring'; // no wall to loop around
       const g = flightGeom(kind, geo, s, nS);
+      // tighten the knot: patterns at ~half size, squad centers spread apart
+      // so each flock reads as its own dense knot of motion
+      const wrapK = kind === 'snake' || kind === 'helix' || kind === 'swoop';
+      if (!wrapK) {
+        g.rx *= 0.55; g.ry *= 0.6;
+        if (nS > 1) g.cx = W / 2 + (s - (nS - 1) / 2) * usable * 0.3;
+      } else g.ry *= 0.65;
+      g.spd *= 1.25;
+      clampOpen(g, geo.openTop, geo.floorY);
       const tier = s === 0 && stage >= 1 ? 3 : s % 2 ? 1 : 2;
       const pool3 = gen.tiers[tier];
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad — a flock
       const hp = Math.max(1, Math.round((1 + tier * 0.5 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
       for (let j = 0; j < per; j++) {
-        const sx = s % 2 ? W + 60 + j * 44 : -60 - j * 44;
-        const sy = geo.openTop + s * 34 + (j % 3) * 24;
+        const sx = s % 2 ? W + 60 + j * 34 : -60 - j * 34;
+        const sy = geo.openTop + s * 30 + (j % 3) * 18;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
-          w: bw - gapX, h: bh, hp, maxHp: hp,
+          w: mw, h: mh, hp, maxHp: hp,
           poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
           flight: {
-            kind, state: 1, t: -(0.3 + j * 0.14 + s * 0.5), sx, sy,
+            kind, state: 1, t: -(0.3 + j * 0.14 + s * 0.5), sx, sy, sq: s,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
             phase: j / per, dir: s % 2 ? -1 : 1, strand: j % 2,
           },
@@ -486,9 +514,10 @@ function buildLevel(lvl) {
   // move (bosses keep their guard-ring choreography)
   G.blocksStatic = !hasBoss;
   G.gridCols = cols;
-  // Galaga peel-off dives: hinted on early challenge stages, constant later
-  // (SPACE JUNKIE mode dives from the second wave — it IS the dive game)
-  G.divers = junkie ? lvl >= 2 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
+  // Galaga peel-off dives: hinted on early challenge stages, constant later.
+  // SPACE JUNKIE keeps region 1 calm — the flocks just fly their patterns;
+  // dives (and squad maneuvers) only start once the journey hardens
+  G.divers = junkie ? regionsIn >= 1 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
   G.diveCD = 6;
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
@@ -533,16 +562,22 @@ function spawnReinforcement() {
   const lvl = G.level, rIdx = regionIdx(lvl), regionsIn = Math.floor((lvl - 1) / STAGES);
   const gen = genFor(lvl);
   const p = preset();
+  const junkie = G.mode === 'junkie';
   const n = Math.min(16, 8 + regionsIn);
   const usable = W * 0.76;
   const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain'];
-  const kind = kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn)))];
+  const kind = kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn + (junkie ? 2 : 0))))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
-  // keep reinforcement patterns in the same breathing-room airspace
-  const ry = Math.max(80, H * 0.14);
+  // keep reinforcement patterns in the same breathing-room airspace —
+  // in SPACE JUNKIE they arrive as a small, tight, HIGH knot like the rest
+  const ry = junkie ? Math.max(56, H * 0.09) : Math.max(80, H * 0.14);
   const floorY = PADDLE_Y() - flyerRoom(lvl);
-  const cy0 = Math.max(84 + ry, Math.min(floorY - ry, 150 + Math.max(70, bh * 3)));
+  const cy0 = junkie
+    ? Math.max(84 + ry, Math.min(H * 0.38, floorY - ry))
+    : Math.max(84 + ry, Math.min(floorY - ry, 150 + Math.max(70, bh * 3)));
+  const rw = junkie ? Math.min(48, Math.max(32, bw * 0.5)) : bw - Math.max(8, bw * 0.15);
+  const rh = junkie ? Math.min(42, Math.max(28, bh * 0.72)) : bh;
   for (let i = 0; i < n; i++) {
     const pool = gen.tiers[i % 3 === 0 ? 3 : 2];
     const [id, t] = pool[Math.floor(Math.random() * pool.length)];
@@ -550,15 +585,15 @@ function spawnReinforcement() {
     G.bricks.push({
       bx: i % 2 ? -70 : W + 70, by: -50 - (i % 5) * 24,
       hx: W / 2, hy: cy0, row: 0, col: i,
-      w: bw - Math.max(8, bw * 0.15), h: bh,
+      w: rw, h: rh,
       hp, maxHp: hp,
       poke: { id, t },
       flash: 0, wobble: Math.random() * Math.PI * 2,
       entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
       flight: {
-        kind, state: 2, launch: 0,
-        cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * 0.4, ry,
-        spd: wrap ? 1.7 : 1,
+        kind, state: 2, launch: 0, sq: 99,
+        cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * (junkie ? 0.24 : 0.4), ry,
+        spd: (wrap ? 1.7 : 1) * (junkie ? 1.2 : 1),
         phase: i / n, dir: 1, strand: i % 2,
       },
     });
@@ -581,6 +616,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
   G.charge = 0; G.chargeCD = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
+  G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;

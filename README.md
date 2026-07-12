@@ -84,6 +84,18 @@ sometimes doesn't fire — trigger manually with
   remapped at drop time (`modePower`, update.js: multi→draco, magnet→shield,
   warp→star). BLASTER's charge shot works here too; a fire pilot's spent
   charge detonates (Blaze).
+  **The Space Junkie constants:** the player is a BARE Pokémon, not a paddle
+  (`drawPilotRig` — aura + jet exhaust, no hull), and it flies VERTICALLY in
+  a ~120px band (`G.shipYv`/`shipY()`, `SHIP_BAND` in state.js — every
+  "where is the player" check asks `shipY()`, with a small mon hitbox).
+  Enemies are HALF-SIZE and ride patterns shrunk to ~55% — tight, closely
+  knit flocks that live HIGH (airspace floor ~42% of the screen early,
+  creeping to ~56% late; the low band belongs to the ship). Region 1 is
+  calm; dives start in region 2, and from there squads periodically run
+  **maneuvers** (`G.maneuver`, update.js): startle-SCATTER (the knot swells
+  ~1.8× then contracts), speed SURGE (~1.8× pattern speed), and from region
+  3 a RAID that dips the whole flock toward the ship band and back — capped
+  so it never enters the ship's airspace.
 
 ## The core systems (where to look, what they do)
 
