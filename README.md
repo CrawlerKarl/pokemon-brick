@@ -67,6 +67,23 @@ sometimes doesn't fire — trigger manually with
   and the skill tree all still work. Wiring: `G.mode`, `G.charge` (state.js);
   charge build/release + enemy-fire boost (update.js); charge input + touch
   pad (input.js); bolt/charge visuals (render.js `drawProjectiles`).
+- **SPACE JUNKIE** — the full pure-shooter homage to the game's namesake:
+  **no wall at all**. Non-boss waves arrive as 100% free-flyers (squads pour
+  in from the edges straight onto patterns, built in `buildLevel`'s junkie
+  block); boss waves keep their choreography but guards ride **bare**.
+  Pattern unlocks come two regions early (`unlockR`), dives start at wave 2,
+  and reinforcements from region 1. **Your starter IS the ship** (Pikachu→
+  Raichu if none): `pilotInfo()`/`attackElement()` (state.js). The attack's
+  SHAPE follows the pilot species — flame / water jet / razor leaf /
+  lightning (`drawTypedBolt`, render.js) — while its COLOR + damage type
+  follow the CURRENT element, so a Charmeleon riding a grass element shoots
+  **green fire**, and `damageBrick` applies real type effectiveness (element
+  orbs become the key tactical pickup; a worn-off element falls back to the
+  pilot's innate type). The pilot rig (`drawPilotRig`) tints its engine wash,
+  core light, muzzle and charge orb by the element. Ball-only power-ups are
+  remapped at drop time (`modePower`, update.js: multi→draco, magnet→shield,
+  warp→star). BLASTER's charge shot works here too; a fire pilot's spent
+  charge detonates (Blaze).
 
 ## The core systems (where to look, what they do)
 
@@ -98,9 +115,14 @@ motion/march block (~495–650).
 - **`flightPos(F, tAbs)`** (update.js) — the pattern library: `square` (loop
   around the bricks), `ring`/`oval` (circle/ellipse), `inf`/`falls` (figure-
   eights), `olympic`, `rose`, `diamond`, `liss`, `pulsar`, `pend`, `epi`,
-  `weave` (threading sweep), `lane` (bobbing lanes), plus wrapping
+  `weave` (threading sweep), `lane` (bobbing lanes), `star` (five-point
+  circuit), `binary` (counter-rotating twin rings), `atom` (three crossed
+  orbitals), `fountain` (rise-and-fall columns), `zigzag` (hard-cornered
+  switchbacks), `vortex` (breathing spiral arms), plus wrapping
   `snake`/`helix`/`swoop` that span past both edges (wrap jump off-screen;
   off-screen flyers can't fire and are de-prioritized by `nearestBrick`).
+  Every non-wrapping pattern is BOUNDED inside its |rx|,|ry| box — that is
+  what keeps the non-overlap zoning provable; keep that true for new ones.
   Flyers ride nose-to-tail via `phase`; `F.spd` scales per-squad speed. The
   **`flyerRoom`** floor keeps them above the paddle (generous → ~0-crowding in
   the final region); flyers ride in screen space (`G.fx/G.fy` stripped out).

@@ -34,6 +34,14 @@ function tickEffects(dt) {
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
 }
 
+// ball-only power-ups make no sense in the no-ball shooter modes — swap them
+// for shooter-useful equivalents at drop time
+function modePower(p) {
+  if (G.mode === 'classic' || !p || !p.key) return p;
+  const swap = { multi: 'draco', magnet: 'shield', warp: 'star' };
+  return swap[p.key] ? POWERS[swap[p.key]] : p;
+}
+
 function damageBrick(br, dmg, sx, sy, element) {
   // ditto was disguised all along — first hit reveals it instead of damaging
   if (br.isDitto && !br.revealed) {
@@ -97,7 +105,7 @@ function damageBrick(br, dmg, sx, sy, element) {
       G.score += 999;
       const ks = Object.keys(POWERS);
       for (let i = 0; i < 3; i++) {
-        const p = POWERS[ks[Math.floor(Math.random() * ks.length)]];
+        const p = modePower(POWERS[ks[Math.floor(Math.random() * ks.length)]]);
         G.powerups.push({ x: br.bx + G.fx + (i - 1) * 44, y: br.by + G.fy, vy: 130, p, rot: 0 });
       }
       noiseBurst(0.3, 0.1);
@@ -125,18 +133,19 @@ function damageBrick(br, dmg, sx, sy, element) {
     // an early invitation up to the high ground
     if (!G.waveFirstKill) {
       G.waveFirstKill = true;
-      if (stageIdx(G.level) === 0 && !br.isBoss) {
+      // Sky Warp is a ball mechanic — only seed it in classic mode
+      if (stageIdx(G.level) === 0 && !br.isBoss && G.mode === 'classic') {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 95, p: POWERS.warp, rot: 0, hint: G.level === 1 });
       }
     }
     // drops: power-up tied to type, or a catchable pokéball
     const d = diff();
     if (br.isBoss) {
-      const p = POWERS[POWER_BY_TYPE[br.poke.t] || 'star'];
+      const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 40, vy: 110, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
     } else if (br.poke.id > 0 && Math.random() < d.dropChance) {
-      const p = POWERS[POWER_BY_TYPE[br.poke.t] || 'star'];
+      const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
       const pu = { x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 };
       if (G.level === 1 && G.dropHint < 2) { pu.hint = true; G.dropHint++; } // first drops get a CATCH! tag
       G.powerups.push(pu);
@@ -230,6 +239,39 @@ function flightPos(F, tAbs) {
       if (dd < 2 * hh) return { x: F.cx - hw, y: F.cy + hh - dd };       // left edge ↑
       dd -= 2 * hh;
       return { x: F.cx - hw + dd, y: F.cy - hh };                        // top →
+    }
+    case 'star': { // five-point star circuit — dips toward the center between points
+      const r01 = 0.55 + 0.45 * Math.cos(th * 5);
+      return { x: F.cx + c * F.rx * r01, y: F.cy + s * F.ry * r01 };
+    }
+    case 'binary': { // twin counter-rotating rings, one per strand — a binary star
+      const d2 = F.strand ? -1 : 1;
+      return { x: F.cx + d2 * F.rx * 0.5 + Math.cos(th * d2) * F.rx * 0.45,
+        y: F.cy + Math.sin(th * d2) * F.ry * 0.8 };
+    }
+    case 'atom': { // three crossed orbitals — riders split across tilted ellipses
+      const band = Math.floor(((F.phase * 3) % 3 + 3) % 3);
+      const A = band * Math.PI / 3;
+      const ex = c * Math.min(F.rx, F.ry * 1.1), ey = s * F.ry * 0.35;
+      return { x: F.cx + ex * Math.cos(A) - ey * Math.sin(A),
+        y: F.cy + ex * Math.sin(A) + ey * Math.cos(A) };
+    }
+    case 'fountain': { // rise-and-fall columns — a pumping curtain of risers
+      // and fallers, each rider sweeping its own lane top to bottom and back
+      const u = ((F.phase + t) % 1 + 1) % 1;
+      const tri = 1 - Math.abs(2 * u - 1) * 2;
+      return { x: F.cx + (F.phase - 0.5) * F.rx * 1.7 + Math.sin(th * 0.5) * F.rx * 0.15,
+        y: F.cy + tri * F.ry };
+    }
+    case 'zigzag': { // hard-cornered lightning path — sharp switchbacks, no curves
+      const v = ((F.phase + t) % 1 + 1) % 1;
+      const tri = f => 1 - Math.abs(2 * ((f % 1 + 1) % 1) - 1) * 2;
+      return { x: F.cx + tri(v) * F.rx, y: F.cy + tri(v * 3 + 0.25) * F.ry * 0.85 };
+    }
+    case 'vortex': { // swirling galaxy — the ring breathes per-rider, smearing
+      // the squad into rotating spiral arms
+      const rr = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(th * 0.7 + tAbs * 1.5));
+      return { x: F.cx + c * F.rx * rr, y: F.cy + s * F.ry * rr };
     }
     case 'weave': // threads left↔right across the open lane, bobbing as it goes
       return { x: F.cx + s * F.rx, y: F.cy + Math.sin(th * 3) * F.ry };
@@ -448,11 +490,11 @@ function update(dt) {
 
   tickEffects(dt);
   if (G.state === 'play') G.playT += dt;
-  // ---- BLASTER mode: hold CHARGE to build a heavy shot, release to fire.
-  // While charging, normal auto-fire pauses (you're winding up instead).
+  // ---- shooter modes (BLASTER / SPACE JUNKIE): hold CHARGE to build a heavy
+  // shot, release to fire. While charging, normal auto-fire pauses.
   G.chargeCD = Math.max(0, G.chargeCD - dt);
   let charging = false;
-  if (G.mode === 'blaster' && G.state === 'play') {
+  if (G.mode !== 'classic' && G.state === 'play') {
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
       G.charge = Math.min(1, G.charge + dt / 1.1); // ~1.1s to full
@@ -919,9 +961,9 @@ function update(dt) {
     }
   }
   G.balls = G.balls.filter(b => !b.dead);
-  // classic mode loses a life when the last ball drops; blaster mode has no
-  // ball — you only lose to enemy fire, so losing "all balls" never applies
-  if (G.mode !== 'blaster' && G.state === 'play' && G.balls.length === 0) { loseLife(); return; }
+  // classic mode loses a life when the last ball drops; the shooter modes have
+  // no ball — you only lose to enemy fire, so losing "all balls" never applies
+  if (G.mode === 'classic' && G.state === 'play' && G.balls.length === 0) { loseLife(); return; }
 
   // ---- lasers ----
   const laserActive = G.fx_laser || G.megaT > 0;
@@ -981,8 +1023,11 @@ function update(dt) {
           L.dead = true;
         }
         const dmg = L.charged ? L.power : (L.hyper ? 2 : 1);
-        damageBrick(br, dmg, L.x, L.y, L.basic ? null : 'electric'); // base blaster is type-neutral
+        // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
+        damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
+        // a fire pilot's spent charge shot detonates — Blaze in shooter form
+        if (L.charged && L.dead && L.shape === 'flame') fireballExplosion(L.x, L.y, 1);
       }
     }
     if (L.y < 40) L.dead = true;
@@ -1059,9 +1104,9 @@ function update(dt) {
         G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
       }
     }
-    // BLASTER mode leans into the shooter fantasy: enemies fire from the first
+    // the shooter modes lean into the fantasy: enemies fire from the first
     // wave and roughly twice as often, with a bigger warning-line budget
-    const blaster = G.mode === 'blaster';
+    const blaster = G.mode !== 'classic';
     if (G.level >= 2 || blaster) {
       G.enemyShotCD -= dt * ts;
       if (G.enemyShotCD <= 0) {

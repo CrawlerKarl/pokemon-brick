@@ -320,6 +320,87 @@ function drawFragments() {
   }
 }
 
+// ---- SPACE JUNKIE pilot rig: your partner IS the ship. The sprite rides a
+// slim thruster hull, banking with your movement; the engine wash, core
+// light and muzzle all burn in the CURRENT attack element's color, so a
+// Charmeleon riding a grass element visibly runs green.
+function drawPilotRig(x, py, pwv, ph) {
+  const pil = pilotInfo();
+  const col = TYPE_COLORS[attackElement()] || '#80d8ff';
+  const mega = G.megaT > 0;
+  // engine wash under the hull — flickers, colored by the attack element
+  const fl = 1 + 0.3 * Math.sin(G.time * 24) + 0.15 * Math.sin(G.time * 53);
+  const eg = ctx.createRadialGradient(x, py + 10, 2, x, py + 10, 26 * fl);
+  eg.addColorStop(0, col + 'cc'); eg.addColorStop(1, col + '00');
+  ctx.fillStyle = eg;
+  ctx.beginPath(); ctx.ellipse(x, py + 13, 20 * fl, 11 * fl, 0, 0, Math.PI * 2); ctx.fill();
+  // slim hull + swept fins
+  ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
+  ctx.shadowBlur = mega ? 24 : 16;
+  const hg = ctx.createLinearGradient(x, py - 7, x, py + 7);
+  hg.addColorStop(0, '#eceff1'); hg.addColorStop(0.55, '#90a4ae'); hg.addColorStop(1, '#37474f');
+  roundRect(x - pwv / 2, py - 6, pwv, 12, 6);
+  ctx.fillStyle = hg; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#546e7a';
+  for (const dir of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(x + dir * (pwv / 2 - 2), py - 5);
+    ctx.lineTo(x + dir * (pwv / 2 + 12), py + 8);
+    ctx.lineTo(x + dir * (pwv / 2 - 10), py + 6);
+    ctx.closePath(); ctx.fill();
+  }
+  // element core light on the hull
+  ctx.beginPath(); ctx.arc(x, py, 5, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; ctx.stroke();
+  // the pilot — banking with your movement, bobbing on the engine wash
+  const img = getSprite(pil.id);
+  const s = 46 + G.starterLvl * 4;
+  const bob = Math.sin(G.time * 3.2) * 2.5;
+  const tilt = Math.max(-0.3, Math.min(0.3, G.paddle.speed * 0.00025));
+  if (img.complete && img.naturalWidth) {
+    ctx.save();
+    ctx.translate(x, py - 10 - s / 2 + bob);
+    ctx.rotate(tilt);
+    ctx.drawImage(img, -s / 2, -s / 2, s, s);
+    ctx.restore();
+  } else {
+    drawGlyph(ctx, pil.t, x, py - 26 + bob, 12, col);
+  }
+  // muzzle flash in the element color
+  if (G.muzzle > 0) {
+    const m = G.muzzle / 0.18;
+    const fg = ctx.createRadialGradient(x, py - 30, 0, x, py - 30, 16 * m);
+    fg.addColorStop(0, 'rgba(255,255,255,' + (0.9 * m).toFixed(3) + ')');
+    fg.addColorStop(0.5, col + 'aa');
+    fg.addColorStop(1, col + '00');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(x, py - 30, 16 * m, 0, Math.PI * 2); ctx.fill();
+  }
+  // blaster heat gauge, same as the classic rig — full bar = overheat lockout
+  if (G.heat > 0.02 || G.overheat > 0) {
+    const hw2 = 46, hy = py + 22;
+    const hot = G.overheat > 0;
+    ctx.globalAlpha = hot ? 0.55 + 0.4 * Math.abs(Math.sin(G.time * 8)) : 0.85;
+    roundRect(x - hw2 / 2, hy - 3, hw2, 6, 3);
+    ctx.fillStyle = 'rgba(10,14,30,0.75)'; ctx.fill();
+    const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
+    if (frac > 0.01) {
+      roundRect(x - hw2 / 2, hy - 3, hw2 * Math.min(1, frac), 6, 3);
+      ctx.fillStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : frac > 0.33 ? '#ffd54f' : '#80d8ff';
+      ctx.fill();
+    }
+    if (hot) {
+      ctx.font = '700 9px Orbitron, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ff8a80';
+      ctx.fillText('OVERHEAT', x, hy + 12);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
 function drawPaddle() {
   const pw = paddleW(), py = PADDLE_Y(), x = G.paddle.x;
   const blink = G.invuln > 0 && Math.floor(G.time * 12) % 2 === 0;
@@ -348,6 +429,8 @@ function drawPaddle() {
     ctx.beginPath(); ctx.ellipse(x, py, rr, rr * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
+  // SPACE JUNKIE mode: the paddle IS your Pokémon pilot's rig
+  if (G.mode === 'junkie') { drawPilotRig(x, py, pwv, ph); ctx.restore(); return; }
   const sMon = STARTER_MON[G.starter];
   // the partner rides the left end of the paddle, growing as it evolves
   if (sMon && G.state !== 'menu') {
@@ -724,15 +807,80 @@ function drawTelegraphs() {
   }
 }
 
+// ---- SPACE JUNKIE typed attacks: the bolt's SHAPE is the pilot's species
+// (flame / water jet / razor leaf / lightning), its COLOR is the CURRENT
+// element — a Charmeleon riding a grass element shoots green fire.
+function drawTypedBolt(L) {
+  const col = TYPE_COLORS[L.element] || '#80d8ff';
+  const t = G.time;
+  ctx.save();
+  ctx.shadowColor = col; ctx.shadowBlur = 16;
+  if (L.shape === 'flame') {
+    // a living flame tongue that flickers as it flies
+    const flick = 1 + 0.25 * Math.sin(t * 31 + L.x * 0.7);
+    const h = 30 * flick, w4 = 11;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y - h * 0.65);
+    ctx.quadraticCurveTo(L.x + w4 * 0.55, L.y - h * 0.15, L.x + w4 * 0.34, L.y + h * 0.2);
+    ctx.quadraticCurveTo(L.x, L.y + h * 0.45, L.x - w4 * 0.34, L.y + h * 0.2);
+    ctx.quadraticCurveTo(L.x - w4 * 0.55, L.y - h * 0.15, L.x, L.y - h * 0.65);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(L.x, L.y + h * 0.08, w4 * 0.2, h * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.5; // trailing ember
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 23 + L.y * 0.2) * 4, L.y + h * 0.55, 2.4, 0, Math.PI * 2); ctx.fill();
+  } else if (L.shape === 'aqua') {
+    // a pulsing water jet with trailing bubbles
+    const puls = 1 + 0.15 * Math.sin(t * 18 + L.x);
+    const g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, 12 * puls);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, col); g.addColorStop(1, col + '22');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(L.x, L.y, 7 * puls, 13 * puls, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 12) * 3, L.y + 17, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(L.x - Math.sin(t * 15) * 3, L.y + 26, 2, 0, Math.PI * 2); ctx.fill();
+  } else if (L.shape === 'leaf') {
+    // a spinning razor leaf
+    ctx.translate(L.x, L.y);
+    ctx.rotate(t * 14 + L.x * 0.1);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(0, -13);
+    ctx.quadraticCurveTo(9, -3, 0, 13);
+    ctx.quadraticCurveTo(-9, -3, 0, -13);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
+  } else { // 'volt' — a jagged lightning bolt
+    const h = 34, seg = 5;
+    ctx.strokeStyle = col; ctx.lineWidth = 4.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= seg; i++) {
+      const yy = L.y - h / 2 + i * h / seg;
+      const xx = L.x + (i === 0 || i === seg ? 0 : (i % 2 ? -1 : 1) * (4.5 + 1.5 * Math.sin(t * 40 + i)));
+      i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawProjectiles() {
   for (const L of G.lasers) {
     ctx.save();
-    // CHARGED shot: a fat plasma slug with a white-hot core
+    // CHARGED shot: a fat plasma slug with a white-hot core, tinted by the
+    // attack element in SPACE JUNKIE mode
     if (L.charged) {
       const r = L.r || 20;
-      ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 28;
+      const ccol = L.element ? (TYPE_COLORS[L.element] || '#4dd0e1') : '#4dd0e1';
+      ctx.shadowColor = ccol; ctx.shadowBlur = 28;
       const g = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, r);
-      g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, '#4dd0e1'); g.addColorStop(1, 'rgba(38,198,218,0.12)');
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, ccol); g.addColorStop(1, ccol + '1f');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.ellipse(L.x, L.y, r * 0.62, r, 0, 0, Math.PI * 2); ctx.fill();
       // leading spark
@@ -741,6 +889,8 @@ function drawProjectiles() {
       ctx.restore();
       continue;
     }
+    // JUNKIE-mode typed bolts: species shape, element color
+    if (L.shape) { ctx.restore(); drawTypedBolt(L); continue; }
     // BLASTER-mode basic bolts read as sleek energy darts (vs the classic slug)
     if (G.mode === 'blaster' && L.basic) {
       const bw4 = 5 + pathLvl('arsenal') * 1.2;
@@ -763,13 +913,15 @@ function drawProjectiles() {
     roundRect(L.x - 1.5, L.y - 16, 3, 24, 1.5); ctx.fill();
     ctx.restore();
   }
-  // BLASTER charge tell: a growing plasma orb at the barrel as you wind up
+  // charge tell: a growing plasma orb at the barrel as you wind up —
+  // colored by the attack element in SPACE JUNKIE mode
   if (G.charge > 0 && (G.state === 'play')) {
     const cx = G.paddle.x, cy = PADDLE_Y() - 20, r = 4 + G.charge * 20;
+    const ccol = G.mode === 'junkie' ? (TYPE_COLORS[attackElement()] || '#4dd0e1') : '#4dd0e1';
     ctx.save();
-    ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 10 + G.charge * 20;
+    ctx.shadowColor = ccol; ctx.shadowBlur = 10 + G.charge * 20;
     const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
-    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#4dd0e1'); g.addColorStop(1, 'rgba(38,198,218,0)');
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, ccol); g.addColorStop(1, ccol + '00');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
     // a ring that snaps bright at full charge
@@ -1422,10 +1574,11 @@ function drawMenu() {
   ctx.fillStyle = '#90a4ae';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('MODE', W / 2, L.modeLabelY);
+  const MODE_COLS = { classic: '#ffd54f', blaster: '#4dd0e1', junkie: '#ab47bc' };
   for (let i = 0; i < MODES.length; i++) {
     const mg = L.mode(i), sel = SETTINGS.mode === MODES[i].key;
     const hov = inRect(mouseX, lastMouseY, mg);
-    const mcol = MODES[i].key === 'blaster' ? '#4dd0e1' : '#ffd54f';
+    const mcol = MODE_COLS[MODES[i].key] || '#ffd54f';
     ctx.save();
     if (sel) { ctx.shadowColor = mcol; ctx.shadowBlur = 14; }
     roundRect(mg.x, mg.y, mg.w, mg.h, 9);
@@ -1435,12 +1588,12 @@ function drawMenu() {
     ctx.strokeStyle = sel ? mcol : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(17, mg.w / 8)}px Orbitron, sans-serif`;
+    ctx.font = `900 ${Math.min(16, mg.w / 9)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? mcol : '#cfd8dc';
-    ctx.fillText(MODES[i].label, mg.x + mg.w / 2, mg.y + mg.h * 0.36);
-    ctx.font = `600 ${Math.min(11, mg.w / 17)}px Orbitron, sans-serif`;
+    ctx.fillText(MODES[i].label, mg.x + mg.w / 2, mg.y + mg.h * 0.36, mg.w - 12);
+    ctx.font = `600 ${Math.min(10, mg.w / 13)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#cfd8dc' : '#90a4ae';
-    ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h * 0.72, mg.w - 16);
+    ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h * 0.72, mg.w - 14);
     ctx.restore();
   }
   // start button — the one big obvious thing on the screen

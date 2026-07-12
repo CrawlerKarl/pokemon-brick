@@ -8,6 +8,18 @@ function shieldCap() { return 3 + 2 * upgN('bulwark'); }
 function megaDur() { return upgN('megaX') ? 8 : MEGA_DUR; }
 function barrierCharges() { return 2 + (upgN('rally') ? 1 : 0); }
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
+// ---- SPACE JUNKIE pilots: in junkie mode your starter IS the ship (Pikachu
+// if you fly without a partner). The attack's SHAPE follows the pilot's
+// species; its COLOR + type follow the CURRENT element, so a Charmeleon
+// riding a grass element shoots green fire.
+const PILOT_NONE = { ids: [25, 25, 26], names: ['PIKACHU', 'PIKACHU', 'RAICHU'] };
+function pilotInfo() {
+  const sm = STARTER_MON[G.starter];
+  if (sm) return { id: sm.ids[G.starterLvl - 1], t: G.starter,
+    shape: G.starter === 'fire' ? 'flame' : G.starter === 'water' ? 'aqua' : 'leaf' };
+  return { id: PILOT_NONE.ids[G.starterLvl - 1], t: 'electric', shape: 'volt' };
+}
+function attackElement() { return G.ballElement || pilotInfo().t; }
 const G = {
   state: 'menu',
   score: 0, best: +(localStorage.getItem('pkbrk-best') || 0),
@@ -266,8 +278,11 @@ function buildLevel(lvl) {
   const gridFlyerBudget = Math.max(0, flyerBudget - streamSquads * streamPer);
   // boxed bricks: a generous wall early, thinning region by region
   const boxedBudget = Math.max(cols, Math.round(cols * (2.6 - regionsIn * 0.2)));
+  // SPACE JUNKIE mode: non-boss waves have NO wall — the whole wave flies
+  const junkie = G.mode === 'junkie';
   const rows = hasBoss
     ? Math.min(2 + Math.min(3, Math.floor(regionsIn / 3)), 8, maxRows)
+    : junkie ? 0
     : Math.max(2, Math.min(Math.round((boxedBudget + gridFlyerBudget) / cols) + (stage === 1 ? 1 : 0), 6, maxRows));
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
@@ -333,15 +348,17 @@ function buildLevel(lvl) {
     : ['serpent', 'colwave', 'split'];
   G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
   G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
-  if (!hasBoss && regionsIn >= 1) {
-    // unlocked flight patterns grow region by region. 'square' loops around
-    // the bricks; the rest weave/circle in the open space below them.
-    const kinds = ['ring', 'oval', 'square', 'weave'];
-    if (regionsIn >= 2) kinds.push('inf', 'snake', 'lane');
-    if (regionsIn >= 3) kinds.push('falls', 'diamond', 'swoop');
-    if (regionsIn >= 4) kinds.push('olympic', 'liss');
-    if (regionsIn >= 5) kinds.push('rose', 'helix');
-    if (regionsIn >= 6) kinds.push('pend', 'epi', 'pulsar');
+  // unlocked flight patterns grow region by region. 'square' loops around
+  // the bricks; the rest weave/circle in the open space below them.
+  // SPACE JUNKIE mode unlocks two regions early — variety IS that mode.
+  const unlockR = junkie ? regionsIn + 2 : regionsIn;
+  const kinds = ['ring', 'oval', 'square', 'weave'];
+  if (unlockR >= 2) kinds.push('inf', 'snake', 'lane');
+  if (unlockR >= 3) kinds.push('falls', 'diamond', 'swoop', 'fountain');
+  if (unlockR >= 4) kinds.push('olympic', 'liss', 'zigzag');
+  if (unlockR >= 5) kinds.push('rose', 'helix', 'binary', 'star');
+  if (unlockR >= 6) kinds.push('pend', 'epi', 'pulsar', 'atom', 'vortex');
+  if (!junkie && !hasBoss && regionsIn >= 1) {
     // how many break out of the wall is set by the density budget (above),
     // never a runaway fraction — the boxed wall keeps a real presence
     const pool2 = G.bricks.filter(b => !b.armored && !b.isBoss);
@@ -420,16 +437,58 @@ function buildLevel(lvl) {
       }
     }
   }
+  // ---- SPACE JUNKIE mode: no wall at all — the whole wave arrives as free
+  // flyers, squads pouring in from the edges straight onto their patterns.
+  // Boss waves keep their choreography, but the guards ride BARE (no boxes:
+  // nothing in this mode is ever a framed brick).
+  if (junkie && hasBoss) for (const b2 of G.bricks) { if (!b2.isBoss) b2.bare = true; }
+  if (junkie && !hasBoss) {
+    const nS = Math.min(4, 2 + Math.floor(regionsIn / 3));
+    let per = Math.min(8, 5 + Math.floor(regionsIn / 2));
+    while (nS * per > 24) per--; // the readability cap still rules
+    const usable = W - margin * 2;
+    const geo = {
+      usable, margin, gridCx: W / 2, gridHW: usable / 2,
+      gridTop: 0, gridBottom: 0, gridCy: 0, hasCore: false,
+      openTop: Math.max(104, Math.round(H * 0.14)), // the whole sky is open
+      floorY: PADDLE_Y() - flyerRoom(lvl),
+    };
+    for (let s = 0; s < nS; s++) {
+      let kind = kinds[Math.floor(Math.random() * kinds.length)];
+      if (kind === 'square') kind = 'ring'; // no wall to loop around
+      const g = flightGeom(kind, geo, s, nS);
+      const tier = s === 0 && stage >= 1 ? 3 : s % 2 ? 1 : 2;
+      const pool3 = gen.tiers[tier];
+      const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad — a flock
+      const hp = Math.max(1, Math.round((1 + tier * 0.5 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
+      for (let j = 0; j < per; j++) {
+        const sx = s % 2 ? W + 60 + j * 44 : -60 - j * 44;
+        const sy = geo.openTop + s * 34 + (j % 3) * 24;
+        G.bricks.push({
+          bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
+          w: bw - gapX, h: bh, hp, maxHp: hp,
+          poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
+          flight: {
+            kind, state: 1, t: -(0.3 + j * 0.14 + s * 0.5), sx, sy,
+            cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
+            phase: j / per, dir: s % 2 ? -1 : 1, strand: j % 2,
+          },
+        });
+      }
+    }
+  }
   // late rounds shouldn't melt: reinforcement flights extend each wave,
   // arriving as pure flyers once the first formation falls
-  G.reinforce = !hasBoss && regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0;
+  G.reinforce = !hasBoss && (junkie ? (regionsIn >= 3 ? 2 : 1)
+    : regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0);
   G.marchDir = Math.random() < 0.5 ? -1 : 1;
   // boxed bricks are a STATIC wall on every non-boss wave — only the Pokémon
   // move (bosses keep their guard-ring choreography)
   G.blocksStatic = !hasBoss;
   G.gridCols = cols;
   // Galaga peel-off dives: hinted on early challenge stages, constant later
-  G.divers = regionsIn >= 2 || (regionsIn >= 1 && stage >= 1);
+  // (SPACE JUNKIE mode dives from the second wave — it IS the dive game)
+  G.divers = junkie ? lvl >= 2 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
   G.diveCD = 6;
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
@@ -462,7 +521,10 @@ function buildLevel(lvl) {
         sm.names[sLvl - 2] + ' EVOLVED INTO ' + sm.names[sLvl - 1] + '!',
         sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
     }
+  } else if (junkie) {
+    G.starterLvl = starterStage(lvl); // the default pilot still grows (Pikachu → Raichu)
   }
+  if (junkie) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
 }
 
 // a fresh attack flight arrives after the main formation falls — pure
@@ -473,7 +535,7 @@ function spawnReinforcement() {
   const p = preset();
   const n = Math.min(16, 8 + regionsIn);
   const usable = W * 0.76;
-  const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose'];
+  const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain'];
   const kind = kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn)))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
@@ -548,9 +610,13 @@ function serve() {
     G.ballElement = G.starter;
     G.ballElementT = 9999;
   }
-  // BLASTER mode: no ball at all — the wave is live immediately, the blaster
-  // is the whole game
-  if (G.mode === 'blaster') {
+  // shooter modes (BLASTER / SPACE JUNKIE): no ball at all — the wave is
+  // live immediately, your fire is the whole game
+  if (G.mode !== 'classic') {
+    if (G.mode === 'junkie' && !G.ballElement) { // the pilot's innate type rides the guns
+      G.ballElement = pilotInfo().t;
+      G.ballElementT = 9999;
+    }
     G.balls = [];
     G.charge = 0;
     G.state = 'play'; G.stateT = 0;

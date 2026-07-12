@@ -15,8 +15,8 @@ function touchButtons() {
     pause: { x: W - 28, y: 84, r: 20 },
     sound: { x: W - 72, y: 82, r: 18 },
   };
-  // BLASTER mode: a CHARGE pad in the far bottom-left, for the other thumb
-  if (G.mode === 'blaster') b.charge = { x: 56, y: fl - 48, r: 40 };
+  // shooter modes: a CHARGE pad in the far bottom-left, for the other thumb
+  if (G.mode !== 'classic') b.charge = { x: 56, y: fl - 48, r: 40 };
   return b;
 }
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
@@ -349,25 +349,33 @@ function fireAction(auto = false) {
     addFloater(G.paddle.x, PADDLE_Y() - 44, 'OVERHEATED!', '#ff7043', 15);
     noiseBurst(0.3, 0.09);
   }
+  // SPACE JUNKIE mode: the shot IS the pilot's attack — the SHAPE follows the
+  // species, the color + type follow the current element (green fire, etc.)
+  const pil = G.mode === 'junkie' ? pilotInfo() : null;
   const nBolts = upgN('twin') ? 2 : 1;
   for (let i = 0; i < nBolts; i++) {
     G.lasers.push({
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
       y: PADDLE_Y() - 16, basic: true,
       explosive: !!G.fx_fire, hyper: !!upgN('hyper'),
+      shape: pil ? pil.shape : null,
+      element: pil ? attackElement() : null,
     });
   }
   SFX.blaster();
 }
-// BLASTER mode heavy shot — a fat, piercing bolt scaled by how long you held
+// shooter-mode heavy shot — a fat, piercing bolt scaled by how long you held
 // the charge (c in 0..1). Distinct fat visual + a deeper report.
 function fireCharge(c) {
   if (G.state !== 'play') return;
   const power = 1 + Math.round(c * 4);   // 1..5 damage
   const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
+  const pil = G.mode === 'junkie' ? pilotInfo() : null;
   G.lasers.push({
     x: G.paddle.x, y: PADDLE_Y() - 18, basic: true, charged: true,
     power, pierce, r: 12 + c * 22, explosive: !!G.fx_fire,
+    shape: pil ? pil.shape : null,
+    element: pil ? attackElement() : null,
   });
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
