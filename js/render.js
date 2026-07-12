@@ -46,6 +46,120 @@ const GAIT_FLAP = new Set(['flying', 'dragon', 'bug']);
 const GAIT_SWIM = new Set(['water', 'ice']);
 const GAIT_HOVER = new Set(['ghost', 'psychic', 'fairy', 'poison']);
 
+// ---- the LEGENDARY: no card, no frame — a huge bare Pokémon holding the
+// arena. Layered like a real boss: breathing arena aura, orbiting energy
+// ring that quickens per phase, silhouette shadow + rim light, gait motion,
+// phase-tinted presentation with pips on the health bar, crackling sparks
+// at the last stand.
+function drawBossMon(br, x, y) {
+  const col = TYPE_COLORS[br.poke.t];
+  const ph = br.phase || 1;
+  const phCol = ph === 3 ? '#ff1744' : ph === 2 ? '#ff8a65' : col;
+  const t = G.time;
+  const s = Math.max(br.w * 1.15, br.h * 1.9);
+  // legendaries move like themselves too
+  let bobY = Math.sin(t * 1.6 + br.wobble) * 5, gaitRot = Math.sin(t * 1.1 + br.wobble) * 0.03, sclY = 1;
+  if (GAIT_FLAP.has(br.poke.t)) { bobY = Math.sin(t * 4.2 + br.wobble) * 6.5; sclY = 1 + 0.045 * Math.sin(t * 8.4 + br.wobble); }
+  else if (GAIT_SWIM.has(br.poke.t)) { gaitRot = Math.sin(t * 2.6 + br.wobble) * 0.07; }
+  const yb = y + bobY - s * 0.06;
+  ctx.save();
+  const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(t * 6) : 1; // Lunala phases out
+  ctx.globalAlpha = phased;
+  // arena aura — a big breathing glow that reddens with the fight
+  const ar = s * (0.72 + 0.05 * Math.sin(t * 2.4));
+  const ag = ctx.createRadialGradient(x, yb, 6, x, yb, ar);
+  ag.addColorStop(0, phCol + (ph >= 2 ? '4a' : '38'));
+  ag.addColorStop(0.65, col + '1a');
+  ag.addColorStop(1, col + '00');
+  ctx.fillStyle = ag;
+  ctx.beginPath(); ctx.arc(x, yb, ar, 0, Math.PI * 2); ctx.fill();
+  // orbiting energy ring — two arcs, faster and angrier each phase
+  const rr = s * 0.58, spin = t * (0.7 + ph * 0.4);
+  ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  for (let i = 0; i < 2; i++) {
+    ctx.globalAlpha = phased * (0.4 + 0.1 * ph);
+    ctx.strokeStyle = phCol;
+    ctx.beginPath();
+    ctx.ellipse(x, yb, rr, rr * 0.42, 0, spin + i * Math.PI, spin + i * Math.PI + Math.PI * 0.55);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = phased;
+  // last stand: crackling sparks around the body
+  if (ph === 3) {
+    ctx.strokeStyle = '#ff8a80'; ctx.lineWidth = 1.6;
+    for (let i = 0; i < 3; i++) {
+      const a2 = t * 7 + i * 2.1 + br.wobble;
+      const sx2 = x + Math.cos(a2) * s * 0.42, sy2 = yb + Math.sin(a2 * 1.3) * s * 0.34;
+      ctx.globalAlpha = phased * (0.3 + 0.5 * Math.abs(Math.sin(t * 11 + i * 3)));
+      ctx.beginPath();
+      ctx.moveTo(sx2 - 5, sy2 + 5); ctx.lineTo(sx2 + 2, sy2 - 1); ctx.lineTo(sx2 - 2, sy2 - 2); ctx.lineTo(sx2 + 5, sy2 - 8);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = phased;
+  }
+  // shadow → rim light → the legendary itself
+  const img = getSprite(br.poke.id);
+  const ok = img.complete && img.naturalWidth;
+  const shadow = ok ? getSilhouette(br.poke.id, '#060a18') : null;
+  const rim = ok ? getSilhouette(br.poke.id, ph >= 2 ? '#ff5252' : col) : null;
+  const flashS = ok ? getSilhouette(br.poke.id, '#ffffff') : null;
+  ctx.save();
+  ctx.translate(x, yb);
+  ctx.rotate(gaitRot);
+  ctx.scale(1, sclY);
+  if (shadow) {
+    ctx.globalAlpha = phased * 0.35;
+    ctx.drawImage(shadow, -s / 2 + 7, -s / 2 + 10, s, s * 0.97);
+  }
+  if (rim) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = phased * (0.3 + (ph === 3 ? 0.2 * Math.abs(Math.sin(t * 6)) : ph === 2 ? 0.12 : 0));
+    const rs = s * 1.06;
+    ctx.drawImage(rim, -rs / 2, -rs / 2 - 2, rs, rs);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.globalAlpha = phased;
+  ctx.shadowColor = phCol;
+  ctx.shadowBlur = 24 + (ph === 3 ? 10 * Math.abs(Math.sin(t * 8)) : 0);
+  if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
+  else drawGlyph(ctx, 'pokeball', 0, 0, br.h * 0.4, '#ffffff33');
+  ctx.shadowBlur = 0;
+  if (flashS && br.flash > 0.3) { // hits light the legendary up from within
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = phased * (br.flash - 0.3) * 0.9;
+    ctx.drawImage(flashS, -s / 2, -s / 2, s, s);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.restore();
+  // name plate + segmented HP bar + phase pips — anchored to the hitbox
+  const hh = br.h / 2;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 13px Orbitron, sans-serif';
+  ctx.fillStyle = ph === 3 ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
+  ctx.fillText((ph === 3 ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''), x, y - hh - 26);
+  ctx.shadowBlur = 0;
+  const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
+  roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
+  if (frac > 0) {
+    roundRect(x - bw2 / 2, y - hh - 16, bw2 * frac, 8, 4);
+    const hg = ctx.createLinearGradient(x - bw2 / 2, 0, x + bw2 / 2, 0);
+    hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
+    ctx.fillStyle = hg; ctx.fill();
+  }
+  // phase notches on the bar at ⅔ and ⅓, plus pips under it
+  ctx.fillStyle = 'rgba(6,9,24,0.9)';
+  for (const f2 of [1 / 3, 2 / 3]) ctx.fillRect(x - bw2 / 2 + bw2 * f2 - 1, y - hh - 16, 2, 8);
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(x - 16 + i * 16, y - hh - 3, 3.4, 0, Math.PI * 2);
+    ctx.fillStyle = i < ph ? phCol : 'rgba(255,255,255,0.2)';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawBricks() {
   const boss = G.bricks.find(b => b.isBoss);
   const introOff = G.bossIntro > 0 ? -Math.pow(G.bossIntro / 1.6, 2) * (H * 0.4) : 0;
@@ -140,6 +254,8 @@ function drawBricks() {
       ctx.restore();
       continue;
     }
+    // the legendary gets its own full presentation — never a framed card
+    if (br.isBoss) { drawBossMon(br, x, y); continue; }
     ctx.save();
     const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(G.time * 6) : 1; // Lunala fades out
     ctx.globalAlpha = phased;

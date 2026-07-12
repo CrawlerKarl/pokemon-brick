@@ -293,7 +293,8 @@ function buildLevel(lvl) {
   if (hasBoss) {
     const bossW = Math.min(bw * 2.1, W * 0.46), bossH = bh * 1.85;
     const bossY = 102 + bossH / 2;
-    const bossHp = Math.max(6, Math.round((14 + rIdx * 7 + cycle * 26) * p.bossHp));
+    // real boss-fight durability: three phases need room to breathe
+    const bossHp = Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp));
     G.bricks.push({
       bx: W / 2, by: bossY, w: bossW, h: bossH,
       hx: W / 2, hy: bossY, row: -1, col: -1,
@@ -757,7 +758,7 @@ function shatterBrick(br, x, y, bare) {
   if (G.ghosts.length < 14 && br.poke.id > 0) {
     G.ghosts.push({
       id: br.poke.id, shiny: br.shiny, x, y,
-      s: br.h * (br.isBoss ? 1.1 : 1.3),
+      s: br.h * (br.isBoss ? 1.9 : 1.3), // a fainting legendary falls LARGE
       vr: (Math.random() - 0.5) * (bare ? 7 : 3), rot: 0,
       life: bare ? 0.5 : 0.6, maxLife: bare ? 0.5 : 0.6,
       faint: bare, vy: bare ? -150 : 0,

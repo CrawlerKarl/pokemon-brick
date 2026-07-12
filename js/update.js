@@ -97,12 +97,47 @@ function damageBrick(br, dmg, sx, sy, element) {
   if (br.isBoss && br.hp > 0) {
     SFX.bossHit();
     G.mega = Math.min(1, G.mega + 0.004);
-    // ---- boss enrage phase ----
-    if (br.phase === 1 && br.hp <= br.maxHp / 2) {
-      br.phase = 2;
+    // ---- THREE boss phases at ⅔ and ⅓ HP. Each transition is an event:
+    // hit-stop, a dodgeable radial shockwave of shots, and at the LAST
+    // STAND the legendary calls in a ring of bare minions.
+    const newPhase = br.hp > br.maxHp * 2 / 3 ? 1 : br.hp > br.maxHp / 3 ? 2 : 3;
+    if (newPhase > br.phase) {
+      br.phase = newPhase;
       SFX.enrage();
-      G.shake = 12; G.flashT = 0.15;
-      setAnnounce('alert', '#ff5252', br.poke.n.toUpperCase() + ' IS ENRAGED!', 'FASTER, SPREADING ATTACKS', 2.4);
+      G.shake = 14; G.flashT = 0.18;
+      G.freeze = Math.max(G.freeze, 0.18);
+      const bx3 = br.bx + G.fx, by3 = br.by + G.fy;
+      burst(bx3, by3, newPhase === 3 ? '#ff5252' : '#ff8a65', 40, 420, 0.9);
+      // shockwave ring — slow enough to weave through
+      const nRing = newPhase === 3 ? 12 : 8;
+      const spR = (170 + diff().lv * 10) * diff().shotSpeed;
+      for (let i = 0; i < nRing; i++) {
+        const a = (i / nRing) * Math.PI * 2 + (newPhase === 3 ? 0.26 : 0);
+        G.enemyShots.push({ x: bx3, y: by3, vx: Math.cos(a) * spR, vy: Math.sin(a) * spR, boss: true });
+      }
+      if (newPhase === 3 && !br.addsCalled) {
+        br.addsCalled = true; // the last stand summons a guard ring
+        const gen2 = genFor(G.level);
+        const pool4 = gen2.tiers[1];
+        const nAdd = 5;
+        for (let i = 0; i < nAdd; i++) {
+          const [id2, t2] = pool4[Math.floor(Math.random() * pool4.length)];
+          G.bricks.push({
+            bx: bx3, by: by3, hx: bx3 - G.fx, hy: by3 - G.fy, row: 0, col: i,
+            w: Math.min(48, Math.max(34, G.brickW * 0.5)), h: Math.min(42, Math.max(30, G.brickH * 0.7)),
+            hp: 2, maxHp: 2, poke: { id: id2, t: t2 },
+            flash: 0, wobble: Math.random() * Math.PI * 2,
+            flight: {
+              kind: 'ring', state: 2, launch: 0, sq: null,
+              cx: bx3, cy: Math.min(by3 + 60, H * 0.42), rx: Math.min(150, W * 0.16), ry: 90,
+              spd: 1.4, phase: i / nAdd, dir: 1, strand: i % 2,
+            },
+          });
+        }
+      }
+      setAnnounce('alert', newPhase === 3 ? '#ff1744' : '#ff5252',
+        br.poke.n.toUpperCase() + (newPhase === 3 ? ' — LAST STAND!' : ' IS ENRAGED!'),
+        newPhase === 3 ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4);
     }
   }
   if (br.hp <= 0) {
@@ -136,7 +171,8 @@ function damageBrick(br, dmg, sx, sy, element) {
     if (br.isBoss || pts >= 150) addFloater(br.bx + G.fx, br.by + G.fy, '+' + pts, '#fff', br.isBoss ? 26 : 15);
     if (!br.isBoss && G.combo > 2 && G.combo % 5 === 0) addFloater(br.bx + G.fx, br.by + G.fy - 26, 'COMBO x' + G.combo, '#ffd54f', 18);
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
-    shatterBrick(br, br.bx + G.fx, br.by + G.fy, bareMon(br));
+    // bosses are BARE legendaries now — they faint grandly, never card-shatter
+    shatterBrick(br, br.bx + G.fx, br.by + G.fy, bareMon(br) || br.isBoss);
     G.shake = Math.min(G.shake + (br.isBoss ? 14 : 4), 16);
     G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
     if (br.isBoss) { SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30); }
@@ -493,10 +529,11 @@ function update(dt) {
   G.paddle.speed = (target - G.paddle.x) / Math.max(dt, 0.001);
   G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18);
   // SPACE JUNKIE: the ship also flies vertically — mouse/finger Y steers it
-  // within a band above the old paddle line
+  // within a band above the old paddle line. On touch the ship rides ~85px
+  // ABOVE the finger, so your own thumb never hides your Pokémon.
   if (G.mode === 'junkie') {
     const bot = PADDLE_Y() + 8, top = PADDLE_Y() - SHIP_BAND;
-    const ty = Math.max(top, Math.min(bot, lastMouseY));
+    const ty = Math.max(top, Math.min(bot, lastMouseY - (IS_TOUCH ? 85 : 0)));
     G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14);
   } else G.shipYv = PADDLE_Y();
   G.invuln = Math.max(0, G.invuln - dt);
@@ -790,7 +827,11 @@ function update(dt) {
     // ---- choreography rides ON TOP of the march. Boss guards instead
     // ripple in rings around their legendary, who patrols its arena.
     if (boss) {
-      boss.bx = boss.hx + (mt >= 1 ? Math.sin(G.swayT * 0.45) * Math.min(90, W * 0.07) : 0);
+      // the patrol widens and quickens with each phase — a cornered legendary
+      const bp = boss.phase || 1;
+      boss.bx = boss.hx + (mt >= 1 || bp >= 2
+        ? Math.sin(G.swayT * (0.45 + bp * 0.22)) * Math.min(90 + bp * 26, W * (0.07 + bp * 0.02))
+        : 0);
     }
     for (const br of G.bricks) {
       if (br.dead || br.isBoss || br.entry) continue;
@@ -1225,7 +1266,7 @@ function update(dt) {
       if (BOSS_ABILITIES[boss.poke.id]) {
         boss.abilityCD -= dt * ts;
         if (boss.abilityCD <= 0) {
-          boss.abilityCD = BOSS_ABILITIES[boss.poke.id].cd * (boss.phase === 2 ? 0.7 : 1);
+          boss.abilityCD = BOSS_ABILITIES[boss.poke.id].cd * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1);
           bossAbility(boss);
         }
       }
@@ -1242,7 +1283,7 @@ function update(dt) {
       if (boss.phaseT > 0) boss.phaseT -= dt;
       G.bossShotCD -= dt * ts;
       if (G.bossShotCD <= 0) {
-        G.bossShotCD = d.bossShotInt * (boss.phase === 2 ? 0.55 : 1);
+        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.4 : boss.phase === 2 ? 0.6 : 1);
         G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
       }
     }
@@ -1274,6 +1315,7 @@ function update(dt) {
         const base = Math.atan2(shipY() - by, G.paddle.x - bx);
         const sp = (230 + d.lv * 12) * d.shotSpeed;
         const angles = tg.fan ? [-0.5, -0.25, 0, 0.25, 0.5].map(a => base + a)
+          : tg.br.phase === 3 ? [base - 0.6, base - 0.3, base, base + 0.3, base + 0.6]
           : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
         for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true });
       } else {
