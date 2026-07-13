@@ -1,66 +1,101 @@
 # CLAUDE.md — orientation for this repo
 
 Vanilla-JS Canvas game. **Read `README.md` first** — it has the full file map,
-system tour, tuning knobs, and gotchas. This file is just the workflow.
+system tour, tuning knobs, and gotchas. This file is the workflow + the
+invariants you must not regress.
 
 ## What it is
-Breakout × Space Invaders/Galaga hybrid that morphs from a relaxed brick wall
-(Kanto) into a swarm of free-flying Pokémon (Paldea). 10 JS modules in `js/`,
-loaded in order (later reference earlier). No build step / deps / framework.
+Breakout × Space Invaders/Galaga hybrid, journeying through 9 Pokémon regions
+(3 stages each: ARRIVAL → CHALLENGE → LEGENDARY). 10 JS modules in `js/`, loaded
+in order (later reference earlier) via `<script>` tags in `index.html`. No build
+step / deps / framework. `G` (state.js) is the god-object holding all runtime
+state.
 
-Current shape of the game (as of the latest session): **boxed bricks are a
-STATIC wall; the Pokémon carry all the motion**, flying distinct patterns
-around and below the wall. See "Design invariants" below before touching
-motion, density, or flyer geometry.
+**Three game modes** (`SETTINGS.mode` / `G.mode`, chosen on the title screen):
+- **classic** — ball + free-firing blaster brick-breaker (the original).
+- **blaster** — same waves, NO ball; you clear everything by shooting. Hold
+  CHARGE (right-click / Shift / touch pad) for a fat piercing shot.
+- **junkie** (SPACE JUNKIE) — the pure-shooter homage: no wall at all, every
+  wave is tight high flocks of small flyers, and **your starter IS the ship**
+  (Pikachu if none), flying vertically and firing its own typed attack.
 
 ## Editing
-- Everything is `js/*.js`. `index.html` is just the shell. Never inline JS back
-  into it.
-- After any edit: `node --check js/<file>.js` (syntax) before testing.
-- `G` (in state.js) is the god-object holding all runtime state.
+- Everything is `js/*.js`. `index.html` is just the shell — never inline JS.
+- After any edit: `node --check js/<file>.js`, then run the invariant suite.
+- Storage: ALWAYS go through `loadStore`/`saveStore` (setup.js). They survive
+  corrupt/blocked storage; raw `JSON.parse(localStorage…)` at module scope once
+  bricked startup permanently.
 
 ## Verifying (there is no live human tester)
 The preview browser throttles rAF when backgrounded, so you can't watch
-real-time physics. **Drive the sim from the JS console instead:** loop
-`update(1/60)`, set `mouseX` to steer, `paused=false; G.freeze=0` to force-run,
-read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Test
-mobile with `?touch` in the URL + synthetic `TouchEvent`s. Serve locally with
-`node serve.js` (localhost:8741). Always check console for errors after.
+real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
+set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
+read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
+preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
+- **Automated invariants:** open `/test.html` (drives the sim headless, 14
+  checks, sets `window.TEST_RESULTS`). Keep it green.
+- `npm run check` (syntax all modules), `npm run verify-assets` (every roster id
+  is named + has a local sprite). Run after roster/data changes.
+- Test mobile with `?touch` in the URL. Serve locally: `node serve.js` (:8741).
 
 ## Deploying (user plays via GitHub Pages)
-Commit to `main`, `git push`. Then trigger + verify the build:
+Commit to `main`, `git push`, then trigger + verify the build:
 `gh api -X POST repos/CrawlerKarl/pokemon-brick/pages/builds`, poll
 `.../pages/builds/latest` until `.commit` == HEAD and `.status`=="built".
 Live at https://crawlerkarl.github.io/pokemon-brick/. The user tests on a real
 phone — flag anything only verifiable there.
 
-## Design invariants (current — don't regress these without being asked)
-- **Two modes** (`SETTINGS.mode` / `G.mode`, picked on the menu): `classic`
-  (ball + blaster brick-breaker) and `blaster` (ball-less pure shooter). In
-  `blaster`, `serve()` spawns NO ball, the "0 balls → loseLife" gate is
-  skipped (you only die to enemy fire), enemies fire ~2× and from wave 1, and
-  a held CHARGE (right-click / Shift / touch CHARGE pad) winds up a fat
-  piercing shot (`fireCharge`). Keep both modes working when touching fire,
-  serve, or the loss condition.
-- **Blocks are static; only the Pokémon move.** `G.blocksStatic` (set
-  `!hasBoss` in `buildLevel`) skips the march/descent/sway. Don't re-introduce
-  a marching wall on normal waves — the march now runs only on boss waves.
-- **Flyers NEVER overlap the boxed wall.** `flightGeom`/`clampOpen` (state.js)
-  place every pattern so it can't enter the grid rect: `square` loops AROUND
-  the wall, all `open` patterns stay in the band BELOW it, streams enter from
-  the sides at open-zone height. After ANY flyer-geometry change, re-run the
-  overlap-count sim assertion (drive `update(1/60)`, count flyer-rect vs
-  boxed-rect intersections; must be 0) on a few levels + mobile.
-- **Readability over density.** The ball must never get lost. `flyerBudget`
-  hard-caps moving flyers (≤20); `boxedBudget` shrinks the wall region by
-  region; total on-screen holds ~22–32. The ball's glow scales with on-screen
-  `clutter` (render.js `drawBalls`). Don't pile on entities.
-- **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this;
-  bare mons FAINT (no card shatter), boxed bricks card-shatter.
-- The "boxed brick vs bare free-flying Pokémon" split is the core metaphor.
+## Design invariants (don't regress without being asked)
+- **Modes share one wave generator.** `buildLevel` (state.js) branches on
+  `G.mode`. When touching fire / serve / the loss condition, keep all three
+  working: the shooter modes (`!== 'classic'`) spawn NO ball, skip the
+  "0 balls → loseLife" gate (you only die to enemy fire), and fire from
+  `shipY()` (junkie) — every "where is the player" check must use `shipY()`,
+  not `PADDLE_Y()`.
+- **Classic/blaster: blocks are a STATIC wall; flyers NEVER overlap it.**
+  `G.blocksStatic` (`!hasBoss`) skips march/descent/sway. `flightGeom`/
+  `clampOpen` place patterns so they can't enter the grid rect (square loops
+  AROUND it; open patterns stay in the band BELOW). **After any flyer-geometry
+  change, re-run the overlap-count assertion (must be 0).** The `test.html`
+  suite covers this.
+- **Junkie: tight, HIGH, non-overlapping flocks.** Small flyers, patterns
+  shrunk ~55%, airspace floor high (~42%→56% late) so the low band is the
+  ship's. A per-frame separation solver (update.js, after the flight loop)
+  guarantees flyers never overlap — keep it. Squads periodically run maneuvers
+  (`G.maneuver`: scatter/surge/raid); raids are capped out of the ship band.
+- **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
+  mons (flyers, divers, junkie flyers, bosses) FAINT; boxed bricks card-shatter.
+- **Bosses are BARE legendaries** (`drawBossMon`, render.js — no card), with
+  **three phases** at ⅔/⅓ HP (`br.phase`, set in `damageBrick`): each transition
+  fires a shockwave, and phase 3 (last stand) summons a minion ring + faster,
+  wider fire. Boss abilities keyed by id in `BOSS_ABILITIES`.
+- **Wave ecology.** Each wave draws ONE habitat (`pickWaveTheme` → a curated
+  `HABITAT_PACKS` pack or a `TYPE_CLUSTERS` fallback) via `themedPool`, so
+  Pokémon that belong together appear together, spanning evolution tiers. Pack
+  ids are constrained to their region's roster — `verify-assets` + the test
+  suite catch stragglers. Evolved species are bigger + tankier elites.
+- **Progression: held items (junkie) + checkpoints.** Drafts advance the same
+  4-path × 4-tier tree; junkie re-skins tiers as Pokémon items (`JUNKIE_ITEMS`)
+  and, once capped, offers forever-stacking `STACK_ITEMS` (`G.stacks`). Owned
+  tiers orbit the pilot. Runs auto-save at each region (`saveCheckpoint`/
+  `RUN_CKPT`); a true game over clears it. One draft reroll per screen.
+- **Readability over density.** The ball/character must never get lost. Caps:
+  `flyerBudget` ≤20, junkie squads ≤26, particles ≤450, rings ≤24. The ball's
+  glow scales with `clutter`.
+
+## Performance (mobile is the target — keep it smooth)
+- **Never allocate gradients or set `shadowBlur` per-entity per-frame in hot
+  loops.** Both are the mobile stutter killers (GC churn + GPU stalls). Repeated
+  art is baked ONCE into offscreen sprite caches: `shotSprite`, `auraSprite`,
+  `getSilhouette` (render.js). Enemy shots / flyer auras / boss aura / the big
+  boss sprite all use these. If you add a many-per-frame effect, bake it too.
+- Boss phase-tint silhouettes pre-warm at wave build so enrage can't hitch.
+- `br.flash` decays in `update()` (dt-scaled), NOT render — it gates the pierce
+  i-frame, so a per-render-frame decay coupled DPS to refresh rate. Render only
+  READS flash. Same rule for any field gameplay reads: mutate it in update.
 
 ## Working style the user likes
 - Big, ambitious feature swings; commit + push each round when asked.
-- Fine to delegate mechanical work to cheaper models; reserve top models for
+- Fine to delegate mechanical/analysis work to subagents; reserve top models for
   open-ended design. Verify visual work by screenshot, not just asserts.
 - End-user commit messages + `Co-Authored-By: Claude ...` trailer.

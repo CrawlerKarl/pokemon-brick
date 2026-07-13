@@ -222,7 +222,7 @@ function drawBricks() {
     const col = TYPE_COLORS[br.poke.t];
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
     const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
-    br.flash = Math.max(0, br.flash - 0.08);
+    // NB: br.flash is decayed in update() (dt-scaled) — render only READS it.
     // ---- FREE-FLYING ALIEN: broke out of its box — just the Pokémon,
     // banking through its pattern with a type-colored aura underneath.
     // Divers and once-dived (bare) blocks shattered their box too: NOTHING
@@ -990,10 +990,9 @@ function drawServeGuide() {
 // golden shimmer along the ceiling + the barrier net under the formation
 function drawRallyZone() {
   if (G.state !== 'play') return;
-  let wallTop = Infinity, rallyFloor = -Infinity;
+  let rallyFloor = -Infinity;
   for (const br of G.bricks) {
     if (br.dead) continue;
-    if (br.armored) wallTop = Math.min(wallTop, br.by + G.fy - br.h / 2);
     if (!br.isBoss && !br.dive) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
   }
   rallyFloor += 14;

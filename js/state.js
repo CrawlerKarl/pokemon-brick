@@ -341,7 +341,11 @@ function buildLevel(lvl) {
   const rows = hasBoss
     ? Math.min(2 + Math.min(3, Math.floor(regionsIn / 3)), 8, maxRows)
     : junkie ? 0
-    : Math.max(2, Math.min(Math.round((boxedBudget + gridFlyerBudget) / cols) + (stage === 1 ? 1 : 0), 6, maxRows));
+    // challenge waves add a row for pressure — but NOT when two stream squads
+    // are already pouring in (regionsIn>=7): the streams supply the density, so
+    // the extra boxed row would push a wide-viewport wave over the readability
+    // budget (L23 built ~44 entities; the flocks already carry the challenge)
+    : Math.max(2, Math.min(Math.round((boxedBudget + gridFlyerBudget) / cols) + (stage === 1 && streamSquads < 2 ? 1 : 0), 6, maxRows));
   for (let r = 0; r < rows; r++) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
@@ -393,19 +397,17 @@ function buildLevel(lvl) {
   G.dangerWarned = false;
   G.heat = 0; G.overheat = 0;
   G.highGroundDone = false; G.waveFirstKill = false; G.elementOrbCD = 9;
-  // motion choreography ramps with the journey: static ranks at first, then
-  // serpentine rows, traveling waves, and breathing formations late-game
+  // motionTier drives the boss guard-ring shimmer (mt>=1, regions 3+).
   G.motionTier = Math.min(3, Math.floor(regionsIn / 2) + (stage === 1 ? 1 : 0));
   // ---- FLYERS: the Space Junkie heart of the game. Boxed blocks are
   // bricks; Pokémon that BREAK OUT of their boxes become free-flying
   // aliens riding one of a dozen flight patterns, nose to tail. A few
   // break out starting in world 2; by the last regions nearly the whole
   // wave flies — brick breaker slowly becomes Space Junkie.
-  const styles = regionsIn === 0 ? ['march']
-    : regionsIn <= 2 ? ['march', 'serpent']
-    : regionsIn <= 4 ? ['march', 'serpent', 'colwave']
-    : ['serpent', 'colwave', 'split'];
-  G.motionStyle = styles[Math.floor(Math.random() * styles.length)];
+  // G.motionStyle only affects a region-1/2 boss's guard sway (the sole place
+  // update.js reaches the style branch — non-boss walls are static, and mt>=1
+  // bosses use the guard-ring instead). 'serpent' gives those guards a shimmer.
+  G.motionStyle = regionsIn >= 1 && Math.random() < 0.5 ? 'serpent' : 'march';
   G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
   // unlocked flight patterns grow region by region. 'square' loops around
   // the bricks; the rest weave/circle in the open space below them.

@@ -485,6 +485,7 @@ function regressPath(p) {
   const tier = PATHS[p].tiers[lvl - 1];
   G.path[p] = lvl - 1;
   delete G.upg[tier.key];
+  if (tier.key === 'revive') G.lives = Math.max(1, G.lives - 1); // inverse of advancePath
   return tier;
 }
 

@@ -569,6 +569,11 @@ function update(dt) {
   G.ghosts = G.ghosts.filter(g => g.life > 0);
   for (const r of G.rings) r.life -= dt;
   G.rings = G.rings.filter(r => r.life > 0);
+  // brick HIT FLASH decays here (dt-scaled), NOT in render: it gates the
+  // piercing Fireball/Mega i-frame (`br.flash <= 0.5` in the ball loop), so a
+  // fixed per-render-frame decay coupled that DPS to the display's refresh
+  // rate and desynced during hit-stop. 4.8/s ≈ the old 0.08/frame at 60fps.
+  for (const br of G.bricks) if (br.flash > 0) br.flash = Math.max(0, br.flash - dt * 4.8);
   // HUD juice: the score COUNTS up instead of teleporting; combo pops on kills
   G.scoreShown += (G.score - G.scoreShown) * Math.min(1, dt * 9);
   if (Math.abs(G.score - G.scoreShown) < 1) G.scoreShown = G.score;
@@ -884,31 +889,17 @@ function update(dt) {
         br.bx = br.hx; br.by = br.hy;
         continue;
       }
-      if (boss && mt >= 1) { // rings radiating from the boss
+      if (boss && mt >= 1) { // rings radiating from the boss (regions 3-9)
         const dist = Math.hypot(br.hx - boss.bx, br.hy - boss.hy);
         oy = Math.sin(G.swayT * 1.5 - dist * 0.02) * Math.min(11, br.h * 0.2);
         if (mt >= 2) ox = Math.sin(G.swayT * 0.8 + br.row * 0.9) * Math.min(14, br.w * 0.16);
-      } else if (style === 'serpent') { // rows slide hard against each other
+      } else if (style === 'serpent') { // early-boss guards (mt 0) slide in rows
         ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(38, G.brickW * 0.8);
-      } else if (style === 'colwave') { // vertical wave rolls across columns
-        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(28, G.brickW * 0.6);
-        oy = Math.sin(G.swayT * 1.5 - br.col * 0.65) * Math.min(18, G.brickH * 0.5);
-      } else if (style === 'split') { // the halves shear apart and rejoin
-        ox = Math.sin(G.swayT * 0.8) * Math.min(52, G.brickW * 1.1) * (br.col < G.gridCols / 2 ? 1 : -1);
-        oy = Math.sin(G.swayT * 1.6 + br.row) * 6;
-      } else if (style === 'breathe') { // the formation inhales and exhales
-        ox = Math.sin(G.swayT * 0.9 + br.row * 0.85) * Math.min(18, G.brickW * 0.4)
-          + (br.hx - W / 2) * Math.sin(G.swayT * 0.5) * 0.12;
-        oy = Math.sin(G.swayT * 0.7 + (br.row + br.col) * 0.6) * 10;
-      } else if (style === 'swirl') { // rolling circular shimmer
-        const ph = G.swayT * 1.1 + (br.row + br.col) * 0.7;
-        ox = Math.cos(ph) * Math.min(24, G.brickW * 0.55);
-        oy = Math.sin(ph) * Math.min(14, G.brickH * 0.4);
-      } else if (style === 'free') { // PHOENIX SWARM: every block on its own orbit
-        const ph = G.swayT * (0.6 + (br.wobble % 1) * 0.9) + br.wobble * 7;
-        ox = Math.cos(ph) * Math.min(34, G.brickW * (0.5 + (br.wobble % 0.7)));
-        oy = Math.sin(ph * 1.3) * Math.min(20, G.brickH * 0.55);
       }
+      // (the static-wall redesign made the old colwave/split/breathe/swirl/free
+      //  sway styles unreachable — non-boss walls never sway, and mt>=1 bosses
+      //  use the ring branch above — so they were removed. Only 'serpent' on a
+      //  region-1/2 boss's guards still uses this path.)
       br.bx = br.hx + ox;
       br.by = br.hy + oy;
     }
