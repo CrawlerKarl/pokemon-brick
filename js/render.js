@@ -26,6 +26,7 @@ function drawBackground() {
   }
   ctx.globalAlpha = 1;
   ctx.drawImage(bgScenery, -par * 12 - W * 0.015, 0, W * 1.03, H);
+  if (G.state !== 'menu' && G.state !== 'dex') drawAtmosphere(genIdx); // depth wash over gameplay scenes
   drawAmbient(genIdx);
 }
 
@@ -45,6 +46,85 @@ function armorColor(br) {
 // many times per frame — enemy shots, flyer auras — is baked ONCE into an
 // offscreen canvas here and drawn with a plain drawImage.
 const fxCache = {};
+
+// a soft additive glow disc (white → transparent) for cheap emissive light
+function glowSprite() {
+  if (fxCache.glow) return fxCache.glow;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const cc = c.getContext('2d');
+  const g = cc.createRadialGradient(64, 64, 1, 64, 64, 63);
+  g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  cc.fillStyle = g; cc.beginPath(); cc.arc(64, 64, 63, 0, Math.PI * 2); cc.fill();
+  fxCache.glow = c; return c;
+}
+// a 4-point sparkle glint (drawn tinted via a temp buffer or globalAlpha)
+function glintSprite() {
+  if (fxCache.glint) return fxCache.glint;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const cc = c.getContext('2d'); const m = 32;
+  const g = cc.createRadialGradient(m, m, 0, m, m, 8);
+  g.addColorStop(0, '#fff'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  cc.fillStyle = g; cc.beginPath(); cc.arc(m, m, 8, 0, Math.PI * 2); cc.fill();
+  cc.fillStyle = '#fff';
+  for (let i = 0; i < 4; i++) {
+    cc.save(); cc.translate(m, m); cc.rotate(i * Math.PI / 2);
+    cc.beginPath(); cc.moveTo(0, -30); cc.lineTo(2.4, 0); cc.lineTo(0, 30); cc.lineTo(-2.4, 0);
+    cc.closePath(); cc.fill(); cc.restore();
+  }
+  fxCache.glint = c; return c;
+}
+
+// ---- BLOOM-LITE: after the world is drawn, a half-res blurred copy is
+// composited back additively so bright things (ball, bolts, flashes, mega,
+// kill rings) bleed a soft glow — the single biggest "modern" upgrade, and
+// cheap: one canvas read + a couple of scaled drawImages. Respects the
+// reduce-flashes accessibility toggle.
+let bloomA = null, bloomB = null, bloomW = 0;
+function drawBloom() {
+  if (SETTINGS.reduceFlash || !W || !H) return;
+  const bw = Math.max(2, Math.round(W / 2)), bh = Math.max(2, Math.round(H / 2));
+  if (!bloomA || bloomW !== bw) {
+    bloomA = document.createElement('canvas'); bloomA.width = bw; bloomA.height = bh;
+    bloomB = document.createElement('canvas'); bloomB.width = Math.round(bw / 2); bloomB.height = Math.round(bh / 2);
+    bloomW = bw;
+  }
+  const a = bloomA.getContext('2d'), b = bloomB.getContext('2d');
+  a.globalCompositeOperation = 'source-over';
+  a.clearRect(0, 0, bw, bh);
+  a.drawImage(canvas, 0, 0, bw, bh);          // downscale the whole frame
+  b.clearRect(0, 0, bloomB.width, bloomB.height);
+  b.drawImage(bloomA, 0, 0, bloomB.width, bloomB.height); // 2nd downscale = more blur
+  a.drawImage(bloomB, 0, 0, bw, bh);          // back up = smeared
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';   // additive: brights bloom, darks barely lift
+  ctx.globalAlpha = 0.22;
+  ctx.drawImage(bloomA, 0, 0, W, H);
+  ctx.restore();
+}
+
+// ---- ATMOSPHERE: a cached per-region wash (warm horizon glow + top darken)
+// that adds depth and mood over the flat scenery. Rebuilt only on region /
+// resize change, never per frame.
+let atmoCanvas = null, atmoKey = '';
+function drawAtmosphere(genIdx) {
+  const key = genIdx + 'x' + W + 'x' + H;
+  if (atmoKey !== key) {
+    atmoKey = key;
+    atmoCanvas = document.createElement('canvas'); atmoCanvas.width = W; atmoCanvas.height = H;
+    const c = atmoCanvas.getContext('2d');
+    const accent = (GENS[genIdx] && GENS[genIdx].accent) || '#7ee08a';
+    // horizon glow: a soft band of the region accent low on the screen
+    const hg = c.createRadialGradient(W / 2, H * 0.9, 10, W / 2, H * 0.9, H * 0.7);
+    hg.addColorStop(0, accent + '30'); hg.addColorStop(0.5, accent + '10'); hg.addColorStop(1, accent + '00');
+    c.fillStyle = hg; c.fillRect(0, 0, W, H);
+    // top darken for depth
+    const tg = c.createLinearGradient(0, 0, 0, H * 0.5);
+    tg.addColorStop(0, 'rgba(2,4,14,0.5)'); tg.addColorStop(1, 'rgba(2,4,14,0)');
+    c.fillStyle = tg; c.fillRect(0, 0, W, H * 0.5);
+  }
+  ctx.drawImage(atmoCanvas, 0, 0);
+}
 function shotSprite(boss) {
   const key = boss ? 'shotB' : 'shotN';
   if (fxCache[key]) return fxCache[key];
@@ -340,6 +420,15 @@ function drawBricks() {
     ctx.moveTo(x - hw + rad, y - hh + 1.5);
     ctx.lineTo(x + hw - rad, y - hh + 1.5);
     ctx.stroke();
+    // glossy sheen: a soft specular highlight catching the top of the tile,
+    // so the cards read as glossy glass rather than matte (cached glow sprite)
+    if (!smallCard) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.16;
+      ctx.drawImage(glowSprite(), x - hw * 0.75, y - hh - hh * 0.15, br.w * 0.75, br.h * 0.7);
+      ctx.restore();
+    }
     const aCol = br.armored ? armorColor(br) : null;
     ctx.lineWidth = br.armored ? 2.6 : br.isBoss ? 3 : 2;
     ctx.strokeStyle = br.flash > 0 ? '#ffffff' : br.shiny ? '#ffd700' : aCol ? aCol : (br.isBoss && br.phase === 2 ? '#ff8a80' : col);
@@ -1409,11 +1498,32 @@ function drawRings() {
 
 function drawParticles() {
   drawRings();
+  // regular particles glow additively (premium over the dark sky); sparkle
+  // glints ride the cached 4-point star sprite, twinkling as they fade
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const glint = glintSprite();
   for (const p of G.particles) {
-    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (p.life / p.maxLife), 0, Math.PI * 2); ctx.fill();
+    const lf = Math.max(0, p.life / p.maxLife);
+    if (p.glint) {
+      const s = p.r * (0.6 + lf * 0.8);
+      ctx.globalAlpha = lf * (0.6 + 0.4 * Math.sin(G.time * 22 + p.rot * 7));
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot + G.time * 2);
+      if (p.color !== '#ffffff') { // tint gold glints via a soft color wash under the white star
+        ctx.globalAlpha *= 0.9; ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.drawImage(glint, -s, -s, s * 2, s * 2);
+      ctx.restore();
+    } else {
+      ctx.globalAlpha = lf * 0.9;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * lf, 0, Math.PI * 2); ctx.fill();
+    }
   }
+  ctx.restore();
   ctx.globalAlpha = 1;
   for (const f of G.floaters) {
     ctx.globalAlpha = Math.min(1, f.life);
@@ -2561,6 +2671,8 @@ function render() {
     drawAnnounce();
   }
   ctx.restore();
+  // bloom the gameplay scene before the vignette darkens the edges
+  if (G.state === 'play' || G.state === 'serve') drawBloom();
   if (vignette) ctx.drawImage(vignette, 0, 0, W, H); // may be unset pre-boot
   if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade') drawHUD();
   drawOverlays();

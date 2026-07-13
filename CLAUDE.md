@@ -87,8 +87,13 @@ phone — flag anything only verifiable there.
 - **Never allocate gradients or set `shadowBlur` per-entity per-frame in hot
   loops.** Both are the mobile stutter killers (GC churn + GPU stalls). Repeated
   art is baked ONCE into offscreen sprite caches: `shotSprite`, `auraSprite`,
-  `getSilhouette` (render.js). Enemy shots / flyer auras / boss aura / the big
-  boss sprite all use these. If you add a many-per-frame effect, bake it too.
+  `glowSprite`, `glintSprite`, `getSilhouette` (render.js). Enemy shots / flyer
+  auras / boss aura / card gloss / sparkles all use these. Bake any new
+  many-per-frame effect too.
+- **Light & depth** are cheap: `drawBloom` (half-res additive re-composite of
+  the whole frame — the "modern glow"; play/serve only, respects `reduceFlash`)
+  and `drawAtmosphere` (cached per-region wash). Neither allocates per frame.
+  Kill/catch/shiny sparkles are `sparkle()` (state.js).
 - Boss phase-tint silhouettes pre-warm at wave build so enrage can't hitch.
 - `br.flash` decays in `update()` (dt-scaled), NOT render — it gates the pierce
   i-frame, so a per-render-frame decay coupled DPS to refresh rate. Render only

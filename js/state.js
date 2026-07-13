@@ -759,6 +759,20 @@ function ringFx(x, y, color, r0 = 6, r1 = 40, lw = 3, life = 0.38) {
   if (G.rings.length > 24) return;
   G.rings.push({ x, y, color, r0, r1, lw, life, maxLife: life });
 }
+// bright 4-point sparkle glints — the premium "twinkle" on kills / catches /
+// shinies. Flagged particles, drawn additively as a cached glint sprite.
+function sparkle(x, y, n = 4, gold = false) {
+  for (let i = 0; i < n; i++) {
+    if (G.particles.length > 450) break;
+    const a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 120;
+    G.particles.push({
+      x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30,
+      life: 0.4 + Math.random() * 0.4, maxLife: 0.8,
+      color: gold ? '#fff3b0' : '#ffffff', r: 7 + Math.random() * 7,
+      glint: true, rot: Math.random() * Math.PI,
+    });
+  }
+}
 // the box ALONE shatters — four tumbling corner fragments, no fainting
 // sprite. Used when a Pokémon breaks out of its brick and flies on.
 function shatterBox(br, x, y) {

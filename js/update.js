@@ -163,6 +163,7 @@ function damageBrick(br, dmg, sx, sy, element) {
       setAnnounce('fairy', '#ffd700', 'SHINY POKÉMON!', '+500 · GUARANTEED POKÉBALL DROP', 2.2);
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 36, vy: 115, p: { key: 'pokeball' }, dexId: br.poke.id, shiny: true, rot: 0 });
       burst(br.bx + G.fx, br.by + G.fy, '#ffd700', 30, 320, 0.9);
+      sparkle(br.bx + G.fx, br.by + G.fy, 10, true);
       SFX.gotcha();
     }
     const base = br.isBoss ? 1000 : br.maxHp * 25;
@@ -172,6 +173,8 @@ function damageBrick(br, dmg, sx, sy, element) {
     if (br.isBoss || pts >= 150) addFloater(br.bx + G.fx, br.by + G.fy, '+' + pts, '#fff', br.isBoss ? 26 : 15);
     if (!br.isBoss && G.combo > 2 && G.combo % 5 === 0) addFloater(br.bx + G.fx, br.by + G.fy - 26, 'COMBO x' + G.combo, '#ffd54f', 18);
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
+    // a twinkle of glints tops off every kill — more (and gold) for elites/bosses
+    sparkle(sx, sy, br.isBoss ? 16 : br.maxHp >= 3 ? 6 : 3, br.isBoss || br.maxHp >= 3);
     // bosses are BARE legendaries now — they faint grandly, never card-shatter
     shatterBrick(br, br.bx + G.fx, br.by + G.fy, bareMon(br) || br.isBoss);
     // shockwave pop on every kill — bigger for elites, arena-wide for a boss
@@ -377,6 +380,7 @@ function collectPickup(pu) {
     G.caughtRun++;
     SFX.gotcha();
     burst(pu.x, pu.y, pu.shiny ? '#ffd700' : '#ef5350', 18, 220);
+    sparkle(pu.x, pu.y, pu.shiny ? 12 : 6, pu.shiny);
     if (upgN('bond')) {
       G.catchBonus += 0.06 * upgN('bond');
       addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
