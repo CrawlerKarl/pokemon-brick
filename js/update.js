@@ -108,6 +108,7 @@ function damageBrick(br, dmg, sx, sy, element) {
       G.freeze = Math.max(G.freeze, 0.18);
       const bx3 = br.bx + G.fx, by3 = br.by + G.fy;
       burst(bx3, by3, newPhase === 3 ? '#ff5252' : '#ff8a65', 40, 420, 0.9);
+      ringFx(bx3, by3, newPhase === 3 ? '#ff1744' : '#ff8a65', 10, 160, 4, 0.55);
       // shockwave ring — slow enough to weave through
       const nRing = newPhase === 3 ? 12 : 8;
       const spR = (170 + diff().lv * 10) * diff().shotSpeed;
@@ -173,6 +174,12 @@ function damageBrick(br, dmg, sx, sy, element) {
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
     // bosses are BARE legendaries now — they faint grandly, never card-shatter
     shatterBrick(br, br.bx + G.fx, br.by + G.fy, bareMon(br) || br.isBoss);
+    // shockwave pop on every kill — bigger for elites, arena-wide for a boss
+    ringFx(br.bx + G.fx, br.by + G.fy, col, 6,
+      br.isBoss ? Math.min(W * 0.3, 240) : br.maxHp >= 3 ? 64 : 36,
+      br.isBoss ? 5 : 3, br.isBoss ? 0.7 : 0.38);
+    if (br.isBoss) ringFx(br.bx + G.fx, br.by + G.fy, '#ffffff', 6, 130, 3, 0.5);
+    G.comboPop = 1;
     G.shake = Math.min(G.shake + (br.isBoss ? 14 : 4), 16);
     G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
     if (br.isBoss) { SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30); }
@@ -461,6 +468,7 @@ function rollUpgradeChoices() {
 }
 
 function loseLife() {
+  ringFx(G.paddle.x, shipY(), '#ff5252', 8, 90, 4, 0.5);
   G.lives--;
   G.combo = 0;
   G.deathsThisWave++;
@@ -559,6 +567,12 @@ function update(dt) {
     if (gh.faint) { gh.y += gh.vy * dt; gh.vy += 520 * dt; } // faint = arc up then fall
   }
   G.ghosts = G.ghosts.filter(g => g.life > 0);
+  for (const r of G.rings) r.life -= dt;
+  G.rings = G.rings.filter(r => r.life > 0);
+  // HUD juice: the score COUNTS up instead of teleporting; combo pops on kills
+  G.scoreShown += (G.score - G.scoreShown) * Math.min(1, dt * 9);
+  if (Math.abs(G.score - G.scoreShown) < 1) G.scoreShown = G.score;
+  G.comboPop = Math.max(0, G.comboPop - dt * 3.2);
 
   if (G.state === 'menu' || G.state === 'gameover' || G.state === 'dex') return;
   if (paused) return;

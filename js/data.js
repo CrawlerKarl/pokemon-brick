@@ -496,8 +496,8 @@ const GENS = [
     sky: ['#081226', '#10254a', '#16324a'], land: ['#0c2e22', '#0a2118', '#06140f'], accent: '#7ee08a',
     boss: { id: 150, n: 'Mewtwo', t: 'psychic' },
     tiers: {
-      1: [[16,'flying'],[19,'normal'],[10,'bug'],[41,'poison'],[129,'water'],[43,'grass'],[60,'water'],[74,'rock'],[133,'normal'],[25,'electric'],[7,'water'],[4,'fire'],[1,'grass'],[39,'fairy'],[54,'water'],[92,'ghost']],
-      2: [[17,'flying'],[8,'water'],[5,'fire'],[2,'grass'],[64,'psychic'],[93,'ghost'],[67,'fighting'],[61,'water'],[26,'electric'],[75,'rock']],
+      1: [[16,'flying'],[19,'normal'],[10,'bug'],[41,'poison'],[129,'water'],[43,'grass'],[60,'water'],[74,'rock'],[133,'normal'],[25,'electric'],[7,'water'],[4,'fire'],[1,'grass'],[39,'fairy'],[54,'water'],[92,'ghost'],[52,'normal'],[23,'poison'],[109,'poison'],[35,'fairy']],
+      2: [[17,'flying'],[8,'water'],[5,'fire'],[2,'grass'],[64,'psychic'],[93,'ghost'],[67,'fighting'],[61,'water'],[26,'electric'],[75,'rock'],[53,'normal'],[24,'poison'],[110,'poison'],[36,'fairy']],
       3: [[6,'fire'],[9,'water'],[3,'grass'],[65,'psychic'],[94,'ghost'],[68,'fighting'],[130,'water'],[149,'dragon'],[143,'normal'],[144,'ice'],[145,'electric'],[146,'fire']],
     } },
   { name: 'JOHTO', scene: 'pagoda',
@@ -577,10 +577,11 @@ const GENS = [
 const HABITAT_PACKS = [
   [ // KANTO
     { n: "ASH'S PARTNERS", ids: [25, 1, 4, 7, 2, 5, 8, 3, 6, 9] },
+    { n: 'TEAM ROCKET', ids: [52, 23, 109, 53, 24, 110] }, // prepare for trouble
     { n: 'ROUTE 1', ids: [16, 19, 10, 17] },
     { n: 'CERULEAN WATERS', ids: [129, 54, 60, 61, 130] },
     { n: 'LAVENDER TOWER', ids: [92, 41, 93, 94] },
-    { n: 'MT. MOON', ids: [41, 74, 39, 75] },
+    { n: 'MT. MOON', ids: [41, 74, 35, 39, 75, 36] },
     { n: 'SAFFRON DOJO', ids: [64, 67, 65, 68] },
     { n: 'INDIGO ELITE', ids: [133, 143, 130, 149, 144, 145, 146] },
   ],
@@ -697,8 +698,8 @@ const BOSS_ABILITIES = {
 // names for everything in the rosters — the Pokédex shows them
 const NAMES = {
   1:'Bulbasaur',2:'Ivysaur',3:'Venusaur',4:'Charmander',5:'Charmeleon',6:'Charizard',7:'Squirtle',8:'Wartortle',9:'Blastoise',10:'Caterpie',
-  16:'Pidgey',17:'Pidgeotto',19:'Rattata',25:'Pikachu',26:'Raichu',39:'Jigglypuff',41:'Zubat',43:'Oddish',54:'Psyduck',60:'Poliwag',
-  61:'Poliwhirl',64:'Kadabra',65:'Alakazam',67:'Machoke',68:'Machamp',74:'Geodude',75:'Graveler',92:'Gastly',93:'Haunter',94:'Gengar',
+  16:'Pidgey',17:'Pidgeotto',19:'Rattata',23:'Ekans',24:'Arbok',25:'Pikachu',26:'Raichu',35:'Clefairy',36:'Clefable',39:'Jigglypuff',41:'Zubat',43:'Oddish',52:'Meowth',53:'Persian',54:'Psyduck',60:'Poliwag',
+  61:'Poliwhirl',64:'Kadabra',65:'Alakazam',67:'Machoke',68:'Machamp',74:'Geodude',75:'Graveler',92:'Gastly',93:'Haunter',94:'Gengar',109:'Koffing',110:'Weezing',
   129:'Magikarp',130:'Gyarados',132:'Ditto',133:'Eevee',143:'Snorlax',144:'Articuno',145:'Zapdos',146:'Moltres',149:'Dragonite',150:'Mewtwo',151:'Mew',
   152:'Chikorita',153:'Bayleef',154:'Meganium',155:'Cyndaquil',156:'Quilava',157:'Typhlosion',158:'Totodile',159:'Croconaw',160:'Feraligatr',
   161:'Sentret',163:'Hoothoot',167:'Spinarak',169:'Crobat',176:'Togetic',179:'Mareep',180:'Flaaffy',181:'Ampharos',183:'Marill',187:'Hoppip',

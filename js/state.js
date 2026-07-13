@@ -65,7 +65,8 @@ const G = {
   lives: 3, level: 1, combo: 0,
   paddle: { x: 0, w: 130, h: 18, speed: 0, squash: 0 },
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
-  particles: [], floaters: [], fragments: [], ghosts: [],
+  particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
+  scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
   announce: null, modifier: null,
   fx: 0, fy: 0, swayT: 0,
   brickW: 0, brickH: 0,
@@ -257,7 +258,7 @@ function clampOpen(g, top, floorY) {
 }
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
-  G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = [];
+  G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
   G.fx = 0; G.fy = 0; G.swayT = 0;
   G.gustT = 0; G.timeWarpT = 0;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
@@ -668,7 +669,7 @@ function spawnReinforcement() {
 
 function resetRun(startLevel = 1, trial = false) {
   const p = preset();
-  G.score = 0; G.lives = p.lives; G.level = startLevel; G.combo = 0;
+  G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.megaCalloutDone = false;
   G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false;
@@ -742,6 +743,11 @@ function burst(x, y, color, n = 18, speed = 260, life = 0.7) {
 }
 function addFloater(x, y, text, color, size = 16) {
   G.floaters.push({ x, y, text, color, size, life: 1.1 });
+}
+// expanding shockwave ring — the modern "kill pop". Additive, cheap, capped.
+function ringFx(x, y, color, r0 = 6, r1 = 40, lw = 3, life = 0.38) {
+  if (G.rings.length > 24) return;
+  G.rings.push({ x, y, color, r0, r1, lw, life, maxLife: life });
 }
 // the box ALONE shatters — four tumbling corner fragments, no fainting
 // sprite. Used when a Pokémon breaks out of its brick and flies on.

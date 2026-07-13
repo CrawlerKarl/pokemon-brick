@@ -829,11 +829,21 @@ function drawBalls() {
   for (const b of G.bricks) if (!b.dead) clutter++;
   const bright = SETTINGS.hcBall ? 0 : Math.min(1, Math.max(0, (clutter - 16) / 44));
   for (const b of G.balls) {
-    for (let i = 0; i < b.trail.length; i++) {
-      const t = b.trail[i], a = (1 - i / b.trail.length) * 0.35;
-      ctx.globalAlpha = a;
-      ctx.fillStyle = G.fx_fire ? '#ff7043' : (b.ember > 0 ? '#ffab66' : (elemCol || '#90caf9'));
-      ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (1 - i / b.trail.length * 0.6), 0, Math.PI * 2); ctx.fill();
+    // modern light-ribbon trail: a tapered additive streak instead of dots
+    if (b.trail.length > 1) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      const tc = G.fx_fire ? '#ff7043' : (b.ember > 0 ? '#ffab66' : (elemCol || '#90caf9'));
+      for (let i = 0; i < b.trail.length - 1; i++) {
+        const p0 = b.trail[i], p1 = b.trail[i + 1];
+        const f = 1 - i / b.trail.length;
+        ctx.globalAlpha = f * 0.28;
+        ctx.lineWidth = Math.max(0.8, b.r * 1.7 * f);
+        ctx.strokeStyle = tc;
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      }
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
     ctx.save();
@@ -1348,7 +1358,24 @@ function drawPowerups() {
   }
 }
 
+// additive shockwave rings — the modern kill pop, drawn before particles
+function drawRings() {
+  if (!G.rings.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const r of G.rings) {
+    const p = 1 - r.life / r.maxLife;
+    const rr = r.r0 + (r.r1 - r.r0) * (1 - Math.pow(1 - p, 2)); // ease-out expand
+    ctx.globalAlpha = (1 - p) * 0.55;
+    ctx.lineWidth = Math.max(0.5, r.lw * (1 - p * 0.5));
+    ctx.strokeStyle = r.color;
+    ctx.beginPath(); ctx.arc(r.x, r.y, rr, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawParticles() {
+  drawRings();
   for (const p of G.particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
     ctx.fillStyle = p.color;
@@ -1388,6 +1415,10 @@ function drawAnnounce() {
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const y = H * 0.64;
+  // entrance: the banner scales in with a soft pop instead of just appearing
+  const enter = Math.min(1, (a.max - a.t) / 0.22);
+  const sc = 0.93 + 0.07 * (1 - Math.pow(1 - enter, 3));
+  ctx.translate(W / 2, y); ctx.scale(sc, sc); ctx.translate(-W / 2, -y);
   const maxTextW = Math.min(W - 60, 560);
   const isGlyph = a.icon && /^[a-z]+$/.test(a.icon);
   const gR = Math.min(15, W / 30);
@@ -1533,8 +1564,12 @@ function drawHUD() {
   ctx.textBaseline = 'middle';
   ctx.font = '700 20px Orbitron, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#fff';
-  ctx.fillText(String(G.score).padStart(7, '0'), 20, 28);
+  // score COUNTS up, glowing gold while it ticks
+  const ticking = G.scoreShown < G.score - 0.5;
+  if (ticking) { ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 12; ctx.fillStyle = '#fff8d6'; }
+  else ctx.fillStyle = '#fff';
+  ctx.fillText(String(Math.floor(G.scoreShown)).padStart(7, '0'), 20, 28);
+  ctx.shadowBlur = 0;
   if (W >= 560) { // narrow screens: row 2 belongs to the wave title
     ctx.font = '500 10px Orbitron, sans-serif';
     ctx.fillStyle = '#90a4ae';
@@ -1542,8 +1577,10 @@ function drawHUD() {
   }
   // combo + ball element live just below the bar, clear of the wave title
   if (G.combo > 1) {
-    ctx.fillStyle = '#ffd54f';
-    ctx.font = '700 13px Orbitron, sans-serif';
+    // pop-scale on every kill — the combo feels alive
+    const pop = G.comboPop;
+    ctx.fillStyle = pop > 0.6 ? '#fff' : '#ffd54f';
+    ctx.font = `700 ${13 + pop * 4}px Orbitron, sans-serif`;
     ctx.fillText('COMBO x' + G.combo, 20, 72);
   }
   const hudElem = G.mode === 'junkie'; // junkie always shows the live attack type
@@ -1684,7 +1721,7 @@ function drawTouchControls() {
   ctx.strokeStyle = hot ? '#ff5252' : '#80d8ff';
   ctx.stroke();
   // heat arc wraps the fire button
-  const frac = hot ? 1 - Math.min(1, (2.4 - G.overheat) / 2.4) : G.heat;
+  const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
   if (frac > 0.02) {
     ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 5, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
     ctx.lineWidth = 4;
@@ -2409,9 +2446,12 @@ function drawOverlays() {
 }
 function dim(a) { ctx.fillStyle = `rgba(3,5,16,${a})`; ctx.fillRect(0, 0, W, H); }
 function title(text, y, size, color) {
+  // modern hero text: a white-hot top edge melting into the accent color
   ctx.font = `900 ${size}px Orbitron, sans-serif`;
-  ctx.shadowColor = color; ctx.shadowBlur = 24;
-  ctx.fillStyle = color;
+  ctx.shadowColor = color; ctx.shadowBlur = 26;
+  const tg = ctx.createLinearGradient(0, y - size * 0.6, 0, y + size * 0.5);
+  tg.addColorStop(0, '#ffffff'); tg.addColorStop(0.4, color); tg.addColorStop(1, color);
+  ctx.fillStyle = tg;
   ctx.fillText(text, W / 2, y);
   ctx.shadowBlur = 0;
 }
