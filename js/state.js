@@ -261,6 +261,10 @@ function buildLevel(lvl) {
   G.fx = 0; G.fy = 0; G.swayT = 0;
   G.gustT = 0; G.timeWarpT = 0;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
+  // one ECOLOGY per wave: every squad and rank draws from the same habitat
+  // pack or type cluster, so Pokémon that belong together appear together
+  const theme = pickWaveTheme(rIdx);
+  G.waveTheme = theme.name;
   preloadGen(gen);
   preloadGen(genFor(lvl + STAGES));
   buildBackground(rIdx);
@@ -333,7 +337,7 @@ function buildLevel(lvl) {
     // arrival waves lean on tier 1-2; boss waves field the elites
     const tier = hasBoss ? 3
       : r < Math.ceil(rows / 3) ? Math.min(3, 2 + stage) : r < Math.ceil(rows * 2 / 3) ? 2 : 1;
-    const pool = gen.tiers[tier];
+    const pool = themedPool(gen, tier, theme);
     // the very top row of a non-boss wave is an armored "guardian wall" —
     // multi-hit bricks the ball can rally against (see awardRally)
     const armored = !hasBoss && r === 0 && rows >= 2;
@@ -463,7 +467,7 @@ function buildLevel(lvl) {
       if (kind === 'square') kind = 'oval';
       const g = flightGeom(kind, geo, s, streamSquads);
       const count = streamPer;
-      const tierPool = gen.tiers[2];
+      const tierPool = themedPool(gen, 2, theme);
       const [id, t] = tierPool[Math.floor(Math.random() * tierPool.length)]; // one species — reads as a flock
       const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp));
       const edge = Math.random() < 0.5 ? 'left' : 'right';
@@ -533,7 +537,8 @@ function buildLevel(lvl) {
         : s === nS - 1 && regionsIn >= 2 ? 2 : 1;
       const sizeMul = tier === 3 ? 1.5 : tier === 2 ? 1.25 : 1;
       const perS = tier === 3 ? Math.max(3, per - 3) : tier === 2 ? Math.max(4, per - 2) : per;
-      const pool3 = gen.tiers[tier];
+      const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier —
+      // a Magikarp squad flies under a Gyarados elite of its own line
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad — a flock
       // evolved mons are far tankier than their unevolved counterparts
       const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.6 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
@@ -578,12 +583,15 @@ function buildLevel(lvl) {
     G.bossIntro = 1.6;
     SFX.roar();
   } else if (stage === 0) {
-    setAnnounce(null, gen.accent, gen.name, 'STAGE 1/3 — ARRIVAL', 2.6, form ? form.name + ' FORMATION' : null);
+    setAnnounce(null, gen.accent, gen.name, 'STAGE 1/3 — ARRIVAL', 2.6,
+      [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
   } else if (G.modifier) {
     const m = G.modifier;
-    setAnnounce(m.icon, m.color, m.name, m.desc, 3.2, form ? gen.name + ' 2/3 — ' + form.name + ' FORMATION' : null);
+    setAnnounce(m.icon, m.color, m.name, m.desc, 3.2,
+      [gen.name + ' 2/3', form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
   } else {
-    setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4, form ? form.name + ' FORMATION' : null);
+    setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4,
+      [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
   }
   // ---- starter evolution: the partner grows with the journey ----
   const sm = STARTER_MON[G.starter];
@@ -614,6 +622,7 @@ function spawnReinforcement() {
   const gen = genFor(lvl);
   const p = preset();
   const junkie = G.mode === 'junkie';
+  const theme = pickWaveTheme(regionIdx(lvl)); // reinforcements arrive as their own ecology
   const n = Math.min(16, 8 + regionsIn);
   const usable = W * 0.76;
   const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain'];
@@ -631,7 +640,7 @@ function spawnReinforcement() {
   const rh = junkie ? Math.min(50, Math.max(32, bh * 0.82)) : bh;
   for (let i = 0; i < n; i++) {
     const rTier = i % 3 === 0 ? 3 : 2;
-    const pool = gen.tiers[rTier];
+    const pool = themedPool(gen, rTier, theme);
     const [id, t] = pool[Math.floor(Math.random() * pool.length)];
     // reinforcements are all EVOLVED — bigger and tankier in junkie mode
     const rMul = junkie ? (rTier === 3 ? 1.5 : 1.25) : 1;

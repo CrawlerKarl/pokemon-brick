@@ -565,6 +565,115 @@ const GENS = [
       3: [[908,'grass'],[911,'fire'],[914,'water'],[923,'electric'],[934,'rock'],[959,'fairy'],[998,'dragon'],[979,'ghost'],[983,'dark'],[1000,'steel'],[970,'rock'],[980,'poison']],
     } },
 ];
+// ============================================================
+//  ECOLOGY — Pokémon that BELONG together appear together.
+//  Each region has curated HABITAT PACKS (the groupings you'd see in the
+//  episodes: a starter trio and its trainer's partner, a route's early
+//  birds and rodents, a haunted tower, an icy cavern, an elite den) —
+//  every id constrained to that region's roster, and packs spanning tiers
+//  so a Pidgey squad flies under a Pidgeotto elite of the SAME line.
+//  Waves without a pack fall back to a TYPE-CLUSTER habitat.
+// ============================================================
+const HABITAT_PACKS = [
+  [ // KANTO
+    { n: "ASH'S PARTNERS", ids: [25, 1, 4, 7, 2, 5, 8, 3, 6, 9] },
+    { n: 'ROUTE 1', ids: [16, 19, 10, 17] },
+    { n: 'CERULEAN WATERS', ids: [129, 54, 60, 61, 130] },
+    { n: 'LAVENDER TOWER', ids: [92, 41, 93, 94] },
+    { n: 'MT. MOON', ids: [41, 74, 39, 75] },
+    { n: 'SAFFRON DOJO', ids: [64, 67, 65, 68] },
+    { n: 'INDIGO ELITE', ids: [133, 143, 130, 149, 144, 145, 146] },
+  ],
+  [ // JOHTO
+    { n: 'NEW BARK TRIO', ids: [152, 155, 158, 153, 156, 159, 154, 157, 160] },
+    { n: 'ROUTE 29', ids: [161, 163, 167, 187] },
+    { n: 'ECRUTEAK NIGHT', ids: [228, 198, 196, 197, 229] },
+    { n: 'FIELDS OF GOLD', ids: [179, 187, 180, 181] },
+    { n: 'LAKE OF RAGE', ids: [183, 194, 158, 159, 160, 230] },
+    { n: 'MT. SILVER', ids: [246, 231, 247, 212, 248, 227, 232] },
+  ],
+  [ // HOENN
+    { n: 'LITTLEROOT TRIO', ids: [252, 255, 258, 253, 256, 259, 254, 257, 260] },
+    { n: 'PETALBURG WOODS', ids: [265, 285, 263, 261, 286] },
+    { n: 'COASTAL SWELL', ids: [278, 258, 259, 260, 350] },
+    { n: 'MT. CHIMNEY', ids: [322, 255, 323, 256, 257] },
+    { n: 'ICY CAVERN', ids: [363, 304, 364, 305, 306] },
+    { n: "DRAGON'S DEN", ids: [371, 372, 373, 334, 330, 376] },
+  ],
+  [ // SINNOH
+    { n: 'TWINLEAF TRIO', ids: [387, 390, 393, 388, 391, 394, 389, 392, 395] },
+    { n: 'ROUTE 202', ids: [399, 403, 396, 404, 405, 397, 398] },
+    { n: 'ETERNA FOREST', ids: [406, 427, 434, 426, 428, 407] },
+    { n: 'GREAT MARSH', ids: [453, 434, 418, 454] },
+    { n: 'SNOWPOINT PEAK', ids: [459, 436, 473] },
+    { n: 'MT. CORONET', ids: [436, 447, 444, 448, 445, 461] },
+  ],
+  [ // UNOVA
+    { n: 'ASPERTIA TRIO', ids: [495, 498, 501, 496, 499, 502, 497, 500, 503] },
+    { n: 'ROUTE 19', ids: [504, 506, 509, 519] },
+    { n: 'DESERT RESORT', ids: [551, 570, 552, 571, 553, 530] },
+    { n: 'CELESTIAL TOWER', ids: [607, 527, 608, 609] },
+    { n: 'CHARGESTONE CAVE', ids: [543, 522, 524, 523, 525, 637] },
+    { n: 'DRAGONSPIRAL', ids: [610, 611, 612, 635] },
+  ],
+  [ // KALOS
+    { n: 'VANIVILLE TRIO', ids: [650, 653, 656, 651, 654, 657, 652, 655, 658] },
+    { n: 'SANTALUNE FOREST', ids: [664, 661, 659, 662, 650] },
+    { n: 'FAIRY GARDEN', ids: [669, 677, 700, 671] },
+    { n: 'WINTER WOODS', ids: [712, 708, 713, 709] },
+    { n: 'SWORD & FIST', ids: [674, 679, 675, 680, 681, 701] },
+    { n: 'DRAGON MARSH', ids: [705, 706, 715] },
+  ],
+  [ // ALOLA
+    { n: 'MELEMELE TRIO', ids: [722, 725, 728, 723, 726, 729, 724, 727, 730] },
+    { n: 'ROUTE 1 TRIAL', ids: [731, 734, 736, 744, 745] },
+    { n: 'LUSH JUNGLE', ids: [761, 755, 764, 762, 763] },
+    { n: 'HAUNTED SHORES', ids: [769, 778, 781, 770] },
+    { n: "KAHUNA'S DRAGONS", ids: [782, 783, 784] },
+  ],
+  [ // GALAR
+    { n: 'GALAR TRIO', ids: [810, 813, 816, 811, 814, 817, 812, 815, 818] },
+    { n: 'ROUTE 1 GALAR', ids: [819, 821, 824, 827, 822, 825] },
+    { n: 'GALAR MINE', ids: [837, 843, 838, 844, 839, 879] },
+    { n: 'GLIMWOOD TANGLE', ids: [856, 859, 857, 860, 858, 861] },
+    { n: 'CHAMPION CUP', ids: [887, 823, 849, 879] },
+  ],
+  [ // PALDEA
+    { n: 'MESAGOZA TRIO', ids: [906, 909, 912, 907, 910, 913, 908, 911, 914] },
+    { n: 'POCO PATH', ids: [915, 917, 919, 921] },
+    { n: 'ELECTRIC RAVE', ids: [921, 940, 922, 923] },
+    { n: 'GHOST HUNT', ids: [971, 972, 937, 979] },
+    { n: 'FROZEN FANGS', ids: [996, 978, 997, 998] },
+  ],
+];
+// habitat clusters: types that share terrain in the show — the fallback
+// theme when a wave doesn't draw a curated pack
+const TYPE_CLUSTERS = [
+  ['water', 'ice'], ['grass', 'bug', 'poison'], ['rock', 'ground', 'steel'],
+  ['psychic', 'ghost', 'fairy'], ['fire', 'dragon'], ['electric', 'steel'],
+  ['dark', 'ghost', 'poison'], ['flying', 'normal', 'bug'],
+  ['fighting', 'rock', 'ground'],
+];
+// pick a wave THEME — squads in one wave draw from the same ecology
+function pickWaveTheme(genIdx) {
+  const packs = HABITAT_PACKS[genIdx] || [];
+  if (packs.length && Math.random() < 0.6) {
+    const p = packs[Math.floor(Math.random() * packs.length)];
+    return { name: p.n, ids: new Set(p.ids), types: null };
+  }
+  const cl = TYPE_CLUSTERS[Math.floor(Math.random() * TYPE_CLUSTERS.length)];
+  return { name: cl.map(t => t.toUpperCase()).join('/') + ' HABITAT', ids: null, types: new Set(cl) };
+}
+// one tier's pool filtered to the theme; falls back to the full tier so a
+// narrow pack can never produce an empty (crashing) pool
+function themedPool(gen, tier, theme) {
+  const pool = gen.tiers[tier];
+  if (!theme) return pool;
+  const f = theme.ids ? pool.filter(([id]) => theme.ids.has(id))
+    : pool.filter(([, t]) => theme.types.has(t));
+  return f.length ? f : pool;
+}
+
 // ---- 3-stage journey: every region is ARRIVAL → CHALLENGE → LEGENDARY ----
 const STAGES = 3;
 const STAGE_NAMES = ['ARRIVAL', 'CHALLENGE', 'LEGENDARY'];
