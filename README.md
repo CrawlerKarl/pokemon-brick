@@ -6,7 +6,9 @@ Space-Junkie-style shooter where Pokémon break out of their bricks and
 fly intricate patterns. Journey through 9 regions (3 stages each — Arrival,
 Challenge, and a Legendary boss), draft a permanent skill tree, pick a
 starter partner whose paddle ability evolves, and catch Pokémon for a
-persistent Pokédex.
+persistent Pokédex. Three modes: **CLASSIC** (ball + blaster), **BLASTER**
+(ball-less shooter), and **SPACE JUNKIE** (pilot your Pokémon through
+all-flying waves). Runs auto-save at each region — pick up with CONTINUE.
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -43,15 +45,18 @@ sometimes doesn't fire — trigger manually with
 | `setup.js` | Canvas, `resize()` (with a no-op guard — see Gotchas), DPR, safe-area, `IS_TOUCH` |
 | `config.js` | `PRESETS` (difficulty), `SETTINGS`, `diff()` (the one difficulty curve), menu/advanced/trial **layout geometry** |
 | `audio.js` | SFX synth (`tone`/`noiseBurst`), per-region chiptune with chord progression + echo bus (`musicTick`) |
-| `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`PATHS`** (skill tree), **`STARTER_MON`**, **`GENS`** (region/roster/boss data), `NAMES`, sprite loading, `drawGlyph` (all vector icons) |
+| `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`PATHS`** (skill tree) + `JUNKIE_ITEMS`/`STACK_ITEMS`, **`STARTER_MON`**, **`GENS`** (region/roster/boss data) + **`HABITAT_PACKS`/`TYPE_CLUSTERS`** (wave ecology), `NAMES`, sprite loading, `drawGlyph` (all vector icons) |
 | `scenery.js` | Per-region prerendered backgrounds (`drawScene[...]` — iconic towns), starfield, ambient weather |
-| `state.js` | The `G` state object, `buildLevel()` (**the level generator — formations, flight assignment, hp, motion style**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, particle/floater helpers, tree caps (`shieldCap`/`megaDur`/`barrierCharges`) |
-| `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`, `pickUpgrade`, `touchButtons` geometry, `serveAngle` |
-| `update.js` | The simulation: **flight patterns (`flightPos`), march, divers, reinforcements**, ball/laser/missile/enemy-shot physics, `damageBrick`, `bossAbility`, `loseLife` (white-out), rally/barrier, level-clear |
-| `render.js` | All drawing: bricks + free-flyers, paddle (starter rigs + cannon), HUD (build strip), menus, Pokédex, upgrade-draft screen, trial panel |
-| `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop) |
+| `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
+| `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
+| `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ 3-phase boss), `bossAbility`, `loseLife` (white-out), rally/barrier, level-clear |
+| `render.js` | All drawing: bricks + free-flyers (gait animation), bosses (`drawBossMon`), paddle / junkie pilot rig, HUD, menus, Pokédex, draft screen; **FX sprite caches + `drawBloom`/`drawAtmosphere`** (see Graphics & performance) |
+| `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop; a bootstrap guard retries until the viewport + vignette exist) |
 
-`index.html` is a 30-line shell (canvas + the 10 script tags).
+`index.html` is the shell (canvas + the 10 script tags + local font). Also in
+the repo: `test.html` (headless invariant suite), `package.json`
+(`check`/`verify-assets`/`serve` scripts), `tools/` (`fetch-sprites.js`,
+`verify-assets.js`), `assets/fonts/` (vendored Orbitron).
 
 ---
 
@@ -167,9 +172,49 @@ motion/march block (~495–650).
   the whole journey (was 15→118). Streams spend part of the flyer budget.
   The ball's glow + halo scale with on-screen `clutter` (render.js
   `drawBalls`) so a busy board can't swallow it.
-- **Rendered:** boxed bricks are cards (render.js `drawBricks`); flyers,
+- **Rendered:** boxed bricks are glossy cards (render.js `drawBricks`); flyers,
   divers and `bare` blocks are bare sprites with a type-colored aura
   (render.js, the first `if (bareMon(br))` block in the per-brick loop).
+- **Living locomotion (no floating stamps).** Each free-flyer moves like its
+  species: `GAIT_FLAP` (flying/dragon/bug) beats wings, `GAIT_SWIM`
+  (water/ice) undulates, `GAIT_HOVER` (ghost/psychic/fairy) drifts, everything
+  else pads a footfall bounce that quickens with speed. All face + bank into
+  travel (velocity from the frame delta). Junkie mons are **half-size and
+  mostly UNEVOLVED**; evolved species arrive as bigger, tankier **elites**.
+
+### Wave ecology (`HABITAT_PACKS`/`TYPE_CLUSTERS` in data.js)
+Each wave draws ONE habitat so Pokémon that belong together appear together
+(the episode groupings — Ash's partners, Cerulean waters, Team Rocket,
+Lavender Tower, dragon dens…). `pickWaveTheme(genIdx)` rolls a curated pack
+(≥60%) or a type-cluster fallback; `themedPool(gen, tier, theme)` filters each
+rank/squad to it, **always falling back to the full tier** so a narrow pack
+can't make an empty (crashing) pool. Pack ids are constrained to their
+region's roster — `verify-assets` + the test suite catch stragglers. Packs
+span evolution tiers, so an unevolved squad flies under an evolved elite of
+its own line. The stage banner names the ecology.
+
+### Boss battles (`drawBossMon` render.js, phases in `damageBrick`)
+Legendaries are **BARE** — a huge bare Pokémon holding the arena (breathing
+aura, orbiting energy ring, silhouette shadow + rim light, its own gait), never
+a card. **Three phases** at ⅔/⅓ HP (`br.phase`): each transition fires a
+dodgeable radial **shockwave** of shots + hit-stop, widens/quickens the patrol,
+and adds spread fire; the **last stand** (phase 3) also summons a ring of bare
+minions (`br.addsCalled`) and halves ability cooldowns. Signature abilities are
+keyed by legendary id in `BOSS_ABILITIES` (teleport, gusts, sweeps, time-warp,
+column strikes, fans, phase-out…). Boss HP scales with region + journey loop.
+
+### Graphics & performance (render.js)
+**Never allocate a gradient or set `shadowBlur` per-entity per-frame** — both
+are the mobile stutter killers (GC churn + GPU stalls). Repeated art is baked
+ONCE into offscreen sprite caches (`fxCache`): `shotSprite`, `auraSprite`,
+`glowSprite`, `glintSprite`, plus `getSilhouette`. The "lit" look is cheap:
+`drawBloom` (a half-res blurred copy of the frame composited back additively —
+play/serve only, respects `reduceFlash`, ~0.2ms) and `drawAtmosphere` (cached
+per-region horizon-glow + top-darken wash). Kills/catches/shinies throw
+`sparkle()` glints and `ringFx()` shockwaves (both capped). `br.flash` (hit
+flash) decays in `update()` dt-scaled, NOT render — it gates the pierce
+i-frame, so a per-render-frame decay would couple DPS to the display's refresh
+rate. **Rule: mutate any field gameplay reads in `update`; render only reads.**
 
 ### Skill tree (`PATHS` in data.js ~423)
 Four paths × four tiers, **permanent**, drafted between waves. Advancing is
@@ -299,12 +344,59 @@ change.
 
 ---
 
+## Roadmap / ideas for the next session
+Not committed to — a menu of high-value work, roughly by leverage. Nothing
+here is started; the game is stable and shippable as-is.
+
+**Onboarding & clarity** (biggest player-facing gap)
+- The three modes are presented as equal buttons before the player understands
+  any. Consider making CLASSIC the guided intro and spotlighting/unlocking
+  BLASTER + SPACE JUNKIE after an early boss.
+- One-wave tutorial per mode: teach movement + primary action first, then
+  layer charge / Mega / rally barrier / type changes / catches progressively.
+- Boss identity: short named intro cards + one clear counterplay lesson each.
+
+**Gameplay depth**
+- Give the Pokédex a mechanical payoff (milestone perks / unlocks) — it
+  persists but currently only feeds score.
+- Build synergy tags on draft cards ("Ball / Blaster / Defense / Catch").
+- Seeded daily run (date-seeded, local-only leaderboard) — needs the RNG
+  service below.
+- Local balance telemetry (time/wave, deaths, damage source, picks, abandon
+  point) — even a dev-only summary would make tuning far easier.
+
+**Visual / UX**
+- Colorblind-friendly type palette (flyers convey type by aura color alone;
+  boxed cards at least show a glyph). Reuse the accessibility-toggle framework.
+- Per-region color grade + animated scenery accents (the atmosphere wash is a
+  start); richer boss-phase VFX.
+
+**Architecture** (deferred on purpose — the no-build vanilla setup is a feature)
+- Introduce a seeded RNG service → reproducible waves + deterministic tests.
+- If files grow further, migrate incrementally to native ES modules (no
+  bundler) and split `G` into `run`/`world`/`actors`/`ui`; route screen changes
+  through a small scene state machine. Do this between phases, not mid-feature.
+- Convert PNG sprites to WebP (≈17 MB of art); add an asset manifest that
+  preloads only the current + next region.
+
+**Known small items**
+- Dead `if (br.isBoss)` branch remains in `drawBricks`' card path (bosses now
+  route to `drawBossMon`) — harmless, removable.
+- Latent footgun: BOND path's tier-2 upgrade key is the literal `'bond'`, same
+  string as the path key (separate objects today, so no live bug).
+- Very short *touch* landscape could still spawn a wall a hair past the danger
+  line — a free first-crossing warning covers it, but worth a glance.
+
+---
+
 ## Assets & licensing
 
 Sprites are vendored in `assets/sprites/` (fetched by
 `node tools/fetch-sprites.js` — re-run after adding Pokémon ids to `GENS`;
-`sips -Z 256 assets/sprites/*.png` to shrink). `getSprite` loads local-first
-with a PokeAPI fallback; shinies stay remote.
+`sips -Z 256 assets/sprites/*.png` to shrink; then `npm run verify-assets`).
+`getSprite` loads local-first with a PokeAPI fallback; shinies stay remote.
+The Orbitron font is vendored too (`assets/fonts/orbitron.woff2`) — the game
+has **no network dependency** at play time.
 
 **Pokémon names/artwork are Nintendo/Creatures/GAME FREAK property.** This is
 a fan project — get a licensing review before any public distribution or
