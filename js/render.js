@@ -40,6 +40,59 @@ function armorColor(br) {
   return ARMOR_STEPS[idx];
 }
 
+// ---- pre-rendered FX sprites: shadowBlur and per-frame gradient allocation
+// are the two big mobile killers (GPU stalls + GC churn). Anything drawn
+// many times per frame — enemy shots, flyer auras — is baked ONCE into an
+// offscreen canvas here and drawn with a plain drawImage.
+const fxCache = {};
+function shotSprite(boss) {
+  const key = boss ? 'shotB' : 'shotN';
+  if (fxCache[key]) return fxCache[key];
+  const r = boss ? 13 : 10, spikes = boss ? 8 : 6;
+  const outer = boss ? '#ff5cf0' : '#ff5252';
+  const inner = boss ? '#7b1fa2' : '#b71c1c';
+  const core = boss ? '#fff0fb' : '#ffe0e0';
+  const size = Math.ceil(r * 1.35 + 13) * 2;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const cc = c.getContext('2d');
+  const cx = size / 2, cy = size / 2;
+  // baked halo — replaces the per-frame shadowBlur
+  const hg = cc.createRadialGradient(cx, cy, r * 0.4, cx, cy, size / 2);
+  hg.addColorStop(0, outer + '77'); hg.addColorStop(1, outer + '00');
+  cc.fillStyle = hg; cc.fillRect(0, 0, size, size);
+  cc.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const a = i * Math.PI / spikes;
+    const rr = i % 2 === 0 ? r * 1.35 : r * 0.6;
+    cc[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  cc.closePath();
+  const g = cc.createRadialGradient(cx, cy, 1, cx, cy, r * 1.35);
+  g.addColorStop(0, core); g.addColorStop(0.55, outer); g.addColorStop(1, inner);
+  cc.fillStyle = g; cc.fill();
+  cc.lineWidth = 2; cc.lineJoin = 'round';
+  cc.strokeStyle = 'rgba(5,7,18,0.85)';
+  cc.stroke();
+  cc.beginPath(); cc.arc(cx, cy, r * 0.32, 0, Math.PI * 2);
+  cc.fillStyle = inner; cc.fill();
+  fxCache[key] = c;
+  return c;
+}
+function auraSprite(col) {
+  const key = 'aura' + col;
+  if (fxCache[key]) return fxCache[key];
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const cc = c.getContext('2d');
+  const g = cc.createRadialGradient(64, 64, 4, 64, 64, 62);
+  g.addColorStop(0, col + '55'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  cc.fillStyle = g;
+  cc.beginPath(); cc.arc(64, 64, 62, 0, Math.PI * 2); cc.fill();
+  fxCache[key] = c;
+  return c;
+}
+
 // gait families for the free-flyers: the TYPE decides how a mon travels —
 // wing-beats, swimming undulation, an eerie hover, or a padding ground gait
 const GAIT_FLAP = new Set(['flying', 'dragon', 'bug']);
@@ -66,13 +119,12 @@ function drawBossMon(br, x, y) {
   const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(t * 6) : 1; // Lunala phases out
   ctx.globalAlpha = phased;
   // arena aura — a big breathing glow that reddens with the fight
+  // (cached sprite, scaled: no per-frame gradient on the biggest fill)
   const ar = s * (0.72 + 0.05 * Math.sin(t * 2.4));
-  const ag = ctx.createRadialGradient(x, yb, 6, x, yb, ar);
-  ag.addColorStop(0, phCol + (ph >= 2 ? '4a' : '38'));
-  ag.addColorStop(0.65, col + '1a');
-  ag.addColorStop(1, col + '00');
-  ctx.fillStyle = ag;
-  ctx.beginPath(); ctx.arc(x, yb, ar, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = phased * (ph >= 2 ? 0.95 : 0.75);
+  const bAur = auraSprite(phCol);
+  ctx.drawImage(bAur, x - ar, yb - ar, ar * 2, ar * 2);
+  ctx.globalAlpha = phased;
   // orbiting energy ring — two arcs, faster and angrier each phase
   const rr = s * 0.58, spin = t * (0.7 + ph * 0.4);
   ctx.lineWidth = 2.5; ctx.lineCap = 'round';
@@ -113,17 +165,16 @@ function drawBossMon(br, x, y) {
   }
   if (rim) {
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = phased * (0.3 + (ph === 3 ? 0.2 * Math.abs(Math.sin(t * 6)) : ph === 2 ? 0.12 : 0));
-    const rs = s * 1.06;
+    ctx.globalAlpha = phased * (0.42 + (ph === 3 ? 0.22 * Math.abs(Math.sin(t * 6)) : ph === 2 ? 0.14 : 0));
+    const rs = s * 1.07;
     ctx.drawImage(rim, -rs / 2, -rs / 2 - 2, rs, rs);
     ctx.globalCompositeOperation = 'source-over';
   }
   ctx.globalAlpha = phased;
-  ctx.shadowColor = phCol;
-  ctx.shadowBlur = 24 + (ph === 3 ? 10 * Math.abs(Math.sin(t * 8)) : 0);
+  // no shadowBlur on a 200px+ sprite (mobile GPU stall) — the rim-light
+  // silhouette above already carries the glow
   if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
   else drawGlyph(ctx, 'pokeball', 0, 0, br.h * 0.4, '#ffffff33');
-  ctx.shadowBlur = 0;
   if (flashS && br.flash > 0.3) { // hits light the legendary up from within
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = phased * (br.flash - 0.3) * 0.9;
@@ -220,10 +271,10 @@ function drawBricks() {
       const bank = Math.max(-0.3, Math.min(0.3, vx * 0.0011))
         + Math.max(-0.13, Math.min(0.13, vy * 0.0005));
       const yb = y + bobY;
-      const ag = ctx.createRadialGradient(x, yb, 2, x, yb, s2 * 0.62);
-      ag.addColorStop(0, col + '55'); ag.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = ag;
-      ctx.beginPath(); ctx.arc(x, yb, s2 * 0.62, 0, Math.PI * 2); ctx.fill();
+      // cached aura sprite — one gradient per TYPE ever, not per flyer per frame
+      const aur = auraSprite(col);
+      const ad = s2 * 1.24;
+      ctx.drawImage(aur, x - ad / 2, yb - ad / 2, ad, ad);
       if (img2.complete && img2.naturalWidth) {
         ctx.save();
         ctx.translate(x, yb);
@@ -1061,14 +1112,17 @@ function drawTypedBolt(L) {
   const col = TYPE_COLORS[L.element] || '#80d8ff';
   const t = G.time;
   ctx.save();
-  // 1) motion trail — a soft light streak behind the bolt (additive)
+  // 1) motion trail — soft light streak in two plain alpha strokes
+  // (no per-bolt gradient allocation; this runs for every bolt every frame)
   ctx.globalCompositeOperation = 'lighter';
-  const tg = ctx.createLinearGradient(L.x, L.y - 6, L.x, L.y + 42);
-  tg.addColorStop(0, col + 'aa'); tg.addColorStop(0.5, col + '38'); tg.addColorStop(1, col + '00');
-  ctx.strokeStyle = tg; ctx.lineWidth = 7; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(L.x, L.y + 40); ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.42; ctx.lineWidth = 7;
+  ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(L.x, L.y + 22); ctx.stroke();
+  ctx.globalAlpha = 0.16; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(L.x, L.y + 20); ctx.lineTo(L.x, L.y + 40); ctx.stroke();
+  ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
-  ctx.shadowColor = col; ctx.shadowBlur = 18;
+  ctx.shadowColor = col; ctx.shadowBlur = 14;
   if (L.shape === 'flame') {
     // a living flame tongue — layered outer flame, inner tongue, white core
     const flick = 1 + 0.22 * Math.sin(t * 31 + L.x * 0.7);
@@ -1251,46 +1305,26 @@ function drawProjectiles() {
   }
   // enemy fire: spinning spiked hazards — deliberately NOT ball-shaped so
   // incoming shots read instantly as danger, never confused with your ball
+  // enemy shots: pre-baked sprites (halo, star, outline, pupil all baked in)
+  // — a Last-Stand shockwave of 30 shots costs 30 drawImages, not 60 gradient
+  // allocations + 30 shadowBlur stalls, which was stuttering phones
   for (const s of G.enemyShots) {
     const r = s.boss ? 13 : 10;
-    const spikes = s.boss ? 8 : 6;
     const spin = G.time * (s.boss ? 4 : 6) + s.x * 0.05;
     const outer = s.boss ? '#ff5cf0' : '#ff5252';
-    const inner = s.boss ? '#7b1fa2' : '#b71c1c';
-    const core = s.boss ? '#fff0fb' : '#ffe0e0';
-    // short motion tail shows travel direction
+    // short motion tail shows travel direction (plain alpha stroke, no gradient)
     const sp = Math.hypot(s.vx || 0, s.vy || 0) || 1;
     const ux = (s.vx || 0) / sp, uy = (s.vy || 1) / sp;
     ctx.save();
-    ctx.globalAlpha = 0.5;
-    const tg = ctx.createLinearGradient(s.x, s.y, s.x - ux * 26, s.y - uy * 26);
-    tg.addColorStop(0, outer); tg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.strokeStyle = tg; ctx.lineWidth = r * 0.9; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - ux * 24, s.y - uy * 24); ctx.stroke();
+    ctx.globalAlpha = 0.38;
+    ctx.strokeStyle = outer;
+    ctx.lineWidth = r * 0.9; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(s.x - ux * 6, s.y - uy * 6); ctx.lineTo(s.x - ux * 24, s.y - uy * 24); ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.translate(s.x, s.y);
     ctx.rotate(spin);
-    ctx.shadowColor = outer; ctx.shadowBlur = 14;
-    // spiked star body
-    ctx.beginPath();
-    for (let i = 0; i < spikes * 2; i++) {
-      const a = i * Math.PI / spikes;
-      const rr = i % 2 === 0 ? r * 1.35 : r * 0.6;
-      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr, Math.sin(a) * rr);
-    }
-    ctx.closePath();
-    const g = ctx.createRadialGradient(0, 0, 1, 0, 0, r * 1.35);
-    g.addColorStop(0, core); g.addColorStop(0.55, outer); g.addColorStop(1, inner);
-    ctx.fillStyle = g; ctx.fill();
-    ctx.shadowBlur = 0;
-    // hard dark outline: the danger silhouette must read on ANY backdrop,
-    // independent of its color
-    ctx.lineWidth = 2; ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(5,7,18,0.85)';
-    ctx.stroke();
-    // dark pupil-like core so the shape can't be mistaken for a glowing ball
-    ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
-    ctx.fillStyle = inner; ctx.fill();
+    const img = shotSprite(s.boss);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
     ctx.restore();
   }
 }

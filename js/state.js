@@ -309,6 +309,14 @@ function buildLevel(lvl) {
       abilityCD: (BOSS_ABILITIES[gen.boss.id]?.cd || 8) * 0.7,
     });
     gridTop = bossY + bossH / 2 + 26;
+    // pre-warm the boss's phase-tint silhouettes so the enrage transition
+    // never pays a cache-miss hitch mid-fight
+    setTimeout(() => {
+      getSilhouette(gen.boss.id, '#060a18');
+      getSilhouette(gen.boss.id, '#ff5252');
+      getSilhouette(gen.boss.id, '#ffffff');
+      getSilhouette(gen.boss.id, TYPE_COLORS[gen.boss.t]);
+    }, 600);
   }
   // ---- grid ----
   // challenge waves always pull a random formation; arrivals often do too
