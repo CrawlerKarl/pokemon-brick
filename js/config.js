@@ -13,13 +13,18 @@ const SETTINGS = Object.assign(
     reduceShake: false, reduceFlash: false, hcBall: false, mode: 'classic' },
   (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}')));
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
-// game MODE: the classic brick-breaker; a ball-less shooter against the same
-// walls; or full SPACE JUNKIE — no wall, every wave airborne, and your
-// starter IS the ship, firing its own typed attack
+// game MODE — the FIRST choice, on the title screen. Two headliners (the
+// classic brick-breaker and full SPACE JUNKIE — no wall, every wave airborne,
+// your starter IS the ship) plus BLASTER, the experimental hybrid: the same
+// walls but no ball, cleared entirely by shooting. Difficulty + starter are
+// picked on the setup page AFTER the mode.
 const MODES = [
-  { key: 'classic', label: 'CLASSIC', desc: 'BALL + BLASTER' },
-  { key: 'blaster', label: 'BLASTER', desc: 'NO BALL · CHARGE' },
-  { key: 'junkie',  label: 'SPACE JUNKIE', desc: 'POKÉMON PILOT' },
+  { key: 'classic', label: 'BRICK BREAKER', desc: 'BALL + BLASTER', accent: '#ffd54f',
+    lines: ['THE CLASSIC — SMASH THE WALL', 'WITH BALL AND BLASTER'] },
+  { key: 'junkie',  label: 'SPACE JUNKIE', desc: 'PURE SHOOTER', accent: '#ab47bc',
+    lines: ['NO WALL · PURE SHOOTER', 'YOUR POKÉMON IS THE SHIP'] },
+  { key: 'blaster', label: 'BLASTER', desc: 'EXPERIMENTAL MIX', accent: '#4dd0e1',
+    lines: ['BRICK WALLS, NO BALL · HOLD TO CHARGE'] },
 ];
 if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'classic';
 function saveSettings() { saveStore('pkbrk-settings', SETTINGS); }
@@ -69,53 +74,79 @@ const STARTERS = [
   { key: 'grass', label: 'BULBASAUR' },
 ];
 let advOpen = false; // advanced settings panel
-// one responsive layout, shared by rendering and hit-testing, so nothing
-// can drift off-screen on small windows or phones. Two extra concerns:
+// the menu is TWO pages now: 'modes' (title + pick your game) then 'setup'
+// (difficulty + starter for the chosen mode, then START). Anything that
+// returns to the menu resets this to 'modes'.
+let menuPage = 'modes';
+// PAGE 1 — title + mode select. Responsive layout shared by rendering and
+// hit-testing so nothing drifts off-screen. Concerns:
 //  • SHORT viewports (landscape phones) compress every gap and collapse the
-//    footer links into a single row — the whole menu must fit H<400.
-//  • a saved run adds a CONTINUE button above START (RUN_CKPT, state.js).
+//    footer links into a single row — the whole page must fit H<400.
+//  • NARROW phones stack the two headliner cards vertically.
+//  • a saved run adds a CONTINUE button below the cards (RUN_CKPT, state.js).
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
   const short = H < 560;
   const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
   const titleSize = short ? Math.min(30, W / 16) : Math.min(52, W / 11) * Math.max(0.8, s);
-  const titleY = short ? 26 : Math.max(54, H * 0.11);
-  const lineH = short ? 14 : 22 * s + 2;
-  const infoY = short ? titleY + titleSize + 12 : titleY + titleSize * 1.55 + 14 * s;
-  const chipGap = 10;
-  const chipW = Math.min(126, (W - 40 - chipGap * 3) / 4);
-  const chipH = short ? 30 : 40 * s + 4;
-  const starterH = short ? 40 : 58 * s + 6; // taller: partner sprite + ability line
-  const startLabelY = short ? infoY + lineH + 10 : infoY + 2 * lineH + 22 * s;
-  const startY = startLabelY + (short ? 10 : 14);
-  const starterInfoY = startY + starterH + (short ? 12 : 16);
-  const chipsLabelY = starterInfoY + (short ? 16 : 34 + 12 * s);
-  const chipsY = chipsLabelY + (short ? 10 : 14);
-  const modeLabelY = chipsY + chipH + (short ? 14 : 30 * s);
-  const modeY = modeLabelY + (short ? 10 : 16);
-  const modeH = short ? 32 : 48 * s + 8;
-  const modeW = Math.min(228, (W - 40 - chipGap * (MODES.length - 1)) / MODES.length);
-  const btnW = Math.min(300, W * 0.84), btnH = short ? 38 : 54 * s + 8;
-  const resumeH = hasCkpt ? (short ? 30 : 44) : 0;
-  const resumeGap = hasCkpt ? (short ? 8 : 12) : 0;
-  const btnY = modeY + modeH + (short ? 8 : 26 * s) + resumeH + resumeGap;
-  const footerY = btnY + btnH + (short ? 8 : 14);
+  const titleY = short ? 24 : Math.max(54, H * 0.11);
+  const tagY = short ? titleY + titleSize + 10 : titleY + titleSize * 1.55 + 12 * s;
+  const stacked = W < 520; // headliner cards side-by-side, or stacked on phones
+  const gap = 14;
+  const cardW = stacked ? Math.min(360, W * 0.9) : Math.min(272, (W - 56) / 2);
+  const cardH = short ? 72 : stacked ? 96 : 150 * s + 16;
+  const pickLabelY = tagY + (short ? 14 : 26 * s + 8);
+  const cardsY = pickLabelY + (short ? 10 : 16);
+  const cardsBottom = cardsY + (stacked ? cardH * 2 + gap : cardH);
+  const expW = stacked ? cardW : Math.min(420, W * 0.86);
+  const expH = short ? 32 : 46;
+  const expY = cardsBottom + (short ? 8 : gap);
+  const btnW = Math.min(340, W * 0.86);
+  const resumeH = hasCkpt ? (short ? 32 : 48) : 0;
+  const resumeY = expY + expH + (short ? 8 : 18);
+  const footerY = resumeY + (hasCkpt ? resumeH + (short ? 8 : 16) : 0);
   // footer: stacked links normally; a single compact row when space is tight
-  const oneRow = short || (hasCkpt && H < 800);
+  const oneRow = short || stacked || (hasCkpt && H < 760);
   const fW = Math.min(230, (W - 56) / 3);
   return {
-    s, short, oneRow, titleY, titleSize, infoY, lineH, chipsLabelY, startLabelY, starterInfoY, modeLabelY,
-    starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
-    chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
-    mode: i => ({ x: W / 2 - (modeW * MODES.length + chipGap * (MODES.length - 1)) / 2 + i * (modeW + chipGap), y: modeY, w: modeW, h: modeH }),
-    resume: hasCkpt ? { x: W / 2 - btnW / 2, y: btnY - resumeH - resumeGap, w: btnW, h: resumeH } : null,
-    start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
+    s, short, stacked, oneRow, titleY, titleSize, tagY, pickLabelY,
+    card: i => stacked
+      ? { x: W / 2 - cardW / 2, y: cardsY + i * (cardH + gap), w: cardW, h: cardH }
+      : { x: W / 2 - cardW - gap / 2 + i * (cardW + gap), y: cardsY, w: cardW, h: cardH },
+    exp: { x: W / 2 - expW / 2, y: expY, w: expW, h: expH },
+    resume: hasCkpt ? { x: W / 2 - btnW / 2, y: resumeY, w: btnW, h: resumeH } : null,
     dex: oneRow ? { x: W / 2 - fW * 1.5 - 14, y: footerY, w: fW, h: 26 }
       : { x: W / 2 - 170, y: footerY, w: 340, h: 30 },
     trial: oneRow ? { x: W / 2 - fW / 2, y: footerY, w: fW, h: 26 }
       : { x: W / 2 - 170, y: footerY + 34, w: 340, h: 28 },
     adv: oneRow ? { x: W / 2 + fW / 2 + 14, y: footerY, w: fW, h: 26 }
       : { x: W / 2 - 130, y: footerY + 66, w: 260, h: 28 },
+  };
+}
+// PAGE 2 — setup for the chosen mode: starter Pokémon, difficulty, START.
+// Same responsive rules as page 1.
+function setupLayout() {
+  const short = H < 560;
+  const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
+  const headY = short ? 30 : Math.max(52, H * 0.11);
+  const headSize = short ? Math.min(22, W / 18) : Math.min(36, W / 14);
+  const chipGap = 10;
+  const chipW = Math.min(126, (W - 40 - chipGap * 3) / 4);
+  const chipH = short ? 30 : 40 * s + 4;
+  const starterH = short ? 40 : 58 * s + 6; // taller: partner sprite + ability line
+  const startLabelY = headY + headSize + (short ? 22 : 40 * s + 12);
+  const startY = startLabelY + (short ? 10 : 14);
+  const starterInfoY = startY + starterH + (short ? 12 : 16);
+  const chipsLabelY = starterInfoY + (short ? 16 : 34 + 12 * s);
+  const chipsY = chipsLabelY + (short ? 10 : 14);
+  const btnW = Math.min(300, W * 0.84), btnH = short ? 38 : 54 * s + 8;
+  const btnY = chipsY + chipH + (short ? 14 : 44 * s);
+  return {
+    s, short, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
+    back: { x: 14, y: 14, w: 96, h: 36 },
+    starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
+    chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
+    start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)
@@ -148,9 +179,9 @@ function trialLayout() {
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };
 }
-function presetGeom(i) { return menuLayout().chip(i); }
+function presetGeom(i) { return setupLayout().chip(i); }
 function sliderGeom(i) { return advLayout().slider(i); }
-function startBtnGeom() { return menuLayout().start; }
+function startBtnGeom() { return setupLayout().start; }
 function dexBtnGeom() { return menuLayout().dex; }
 // "QUIT TO MENU" button on the pause overlay
 function pauseQuitGeom() {

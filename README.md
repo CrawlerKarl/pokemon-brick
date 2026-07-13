@@ -6,9 +6,10 @@ Space-Junkie-style shooter where Pokémon break out of their bricks and
 fly intricate patterns. Journey through 9 regions (3 stages each — Arrival,
 Challenge, and a Legendary boss), draft a permanent skill tree, pick a
 starter partner whose paddle ability evolves, and catch Pokémon for a
-persistent Pokédex. Three modes: **CLASSIC** (ball + blaster), **BLASTER**
-(ball-less shooter), and **SPACE JUNKIE** (pilot your Pokémon through
-all-flying waves). Runs auto-save at each region — pick up with CONTINUE.
+persistent Pokédex. Two headline modes — **BRICK BREAKER** (`classic`, ball +
+blaster) and **SPACE JUNKIE** (pilot your Pokémon through all-flying waves) —
+plus **BLASTER**, the experimental ball-less hybrid. Runs auto-save at each
+region — pick up with CONTINUE.
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -60,8 +61,14 @@ the repo: `test.html` (headless invariant suite), `package.json`
 
 ---
 
-## Game modes (`SETTINGS.mode`, picked on the menu)
-- **CLASSIC** — the ball + blaster brick-breaker described below.
+## Game modes (`SETTINGS.mode`, picked on the title screen)
+The menu is TWO pages (`menuPage`, config.js): page 1 is the title + mode
+select — two big cards for BRICK BREAKER and SPACE JUNKIE plus a smaller
+dashed "experimental" chip for BLASTER — and picking a game leads to page 2,
+setup (starter + difficulty + START, `setupLayout`). Quitting/game over
+always lands back on page 1.
+- **BRICK BREAKER** (`classic`) — the ball + blaster brick-breaker described
+  below.
 - **BLASTER** — a ball-less pure shooter (Space-Junkies flavour). `serve()`
   spawns no ball and drops you straight into play; you clear the wall and the
   flyers by shooting. You only lose to enemy fire (the "0 balls → loseLife"
@@ -107,10 +114,10 @@ the repo: `test.html` (headless invariant suite), `package.json`
   temporary** there: `G.ballElement` is only ever an override that counts
   down (HUD shows `TYPE · Ns`) and reverts to the pilot's innate type;
   element orbs drop far more often (junkie branch of the orb block).
-  **Held items:** the draft re-skins the same 4×4 tree as Pokémon items
+  **Held items:** the draft re-skins the same 5×4 tree as Pokémon items
   (`JUNKIE_ITEMS`, data.js), every owned tier orbits the pilot as a badge,
-  and once the tree caps the draft offers `STACK_ITEMS` that stack forever
-  (Life Orb dmg / Never-Melt Ice cooling / Soothe Bell score — `G.stacks`).
+  and late drafts offer `STACK_ITEMS` that stack forever (Life Orb damage /
+  Never-Melt Ice cooling / Soothe Bell score — `G.stacks`).
   The pilot renders pseudo-3D (silhouette shadow + element rim light) and
   plays a lunge/flash ATTACK animation on every shot (`G.attackAnim`).
 
@@ -217,17 +224,29 @@ i-frame, so a per-render-frame decay would couple DPS to the display's refresh
 rate. **Rule: mutate any field gameplay reads in `update`; render only reads.**
 
 ### Skill tree (`PATHS` in data.js ~423)
-Four paths × four tiers, **permanent**, drafted between waves. Advancing is
-`advancePath(key)`; the capstone (tier 4) is a superweapon:
-- **ARSENAL** → HYPER CANNON (bolts drill 3 blocks, 2× dmg; Twin Cannon at t3)
-- **AEGIS** → SUPER SHIELD (floor-shield regrows every 10s; bigger cap; wider)
-- **SURGE** → APEX MEGA (8s Mega hitting for 5; rally barrier +1 & pts +50%)
-- **BOND** → POKÉ REVIVE (+1 life now + per region cleared; more drops)
+Five paths × four tiers, **permanent**, drafted between every wave. Advancing
+is `advancePath(key)`. The hand guarantees an offense option and a non-offense
+option while both groups remain, so damage never crowds survival/utility off
+the screen:
+- **VOLLEY** → HYPER CYCLE (coverage, interception, cooling, Twin Cannon;
+  Twin bolts deal 65% each and the capstone is +25% fire rate)
+- **IMPACT** → NOVA ROUND (wide heavy bolts, elite damage, an obvious piercing
+  pulse every fifth volley, then a double-damage pulse every fourth)
+- **AEGIS** → SUPER SHIELD (floor-shield regrows every 10s; bigger cap; 18%
+  wider frame)
+- **SURGE** → APEX MEGA (hits/kills charge Mega in every mode; 9s capstone
+  window and +50% attack damage)
+- **BOND** → POKÉ REVIVE (+1 life now + per region cleared; more drops/score)
 
-Draft UI (render.js, `state === 'upgrade'`) shows the **whole tree** with tier
-pips and each card's "→ LEADS TO". A **HUD build strip** (top-left, render.js
-`drawHUD`) shows owned paths always. Caps read via `shieldCap`/`megaDur`/
-`barrierCharges` (state.js). `upgN(key)` = does the player own that tier.
+The draft cards label each path's playstyle and show the next tier plus
+capstone. **FULL TREE** (`T` on desktop) opens a five-column atlas with every
+tier, description, owned node, next node, and future node; phones use a compact
+five-row version. A **HUD build strip** shows owned paths, every non-junkie tier
+adds a colored hardware socket to the paddle, and Junkie tiers orbit the pilot
+as held items. As authored paths cap, all modes fill empty offers with small
+forever-stacking mastery items instead of dead reward screens. Caps read via
+`shieldCap`/`megaDur`/`barrierCharges` (state.js). `upgN(key)` = does the player
+own that tier.
 
 ### White-out (not game-over) — `loseLife()` update.js ~351
 Losing all lives **burns 2 random tree levels** (`regressPath`), refills
@@ -298,9 +317,11 @@ preloaded + kicked via `document.fonts.load` in setup.js — canvas alone
 doesn't trigger @font-face). Orbitron is for titles/numbers; body copy uses
 `bodyFont()` (render.js) — Verdana/system stack for readability.
 
-**Title screen fits short landscape** (`menuLayout` short/oneRow variants,
-config.js): under H=560 every gap compresses and the footer links collapse
-to one row. Keep both variants in mind when adding menu items.
+**Title screen fits short landscape** (`menuLayout`/`setupLayout` short/
+oneRow/stacked variants, config.js): under H=560 every gap compresses and
+the footer links collapse to one row; under W=520 the two mode cards stack.
+Both menu pages are covered by the `menu fit across viewports` test — keep
+it green when adding menu items.
 
 ---
 

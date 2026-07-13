@@ -717,8 +717,9 @@ function drawPilotRig(x, py) {
       const n = (G.stacks && G.stacks[si.key]) || 0;
       for (let d = 0; d < Math.min(n, 6); d++) badges.push({ icon: si.icon, color: si.color });
     }
-    const extra = STACK_ITEMS.reduce((a, si) => a + Math.max(0, ((G.stacks && G.stacks[si.key]) || 0) - 6), 0);
-    const shown = badges.slice(0, 18);
+    const overflowStacks = STACK_ITEMS.reduce((a, si) => a + Math.max(0, ((G.stacks && G.stacks[si.key]) || 0) - 6), 0);
+    const shown = badges.slice(0, 24);
+    const extra = overflowStacks + Math.max(0, badges.length - shown.length);
     if (shown.length) {
       const orbitR = s * 0.78 + 10;
       for (let i = 0; i < shown.length; i++) {
@@ -773,6 +774,52 @@ function drawPilotRig(x, py) {
       ctx.fillText('OVERHEAT', x, hy + 12);
     }
     ctx.globalAlpha = 1;
+  }
+}
+
+// Every permanent pick leaves hardware behind. The compact rail fits all 20
+// authored tiers on a normal paddle; late mastery items orbit its ends. SPACE
+// JUNKIE already expresses the same information as held-item badges around the
+// Pokémon pilot, so this rail is for the two paddle modes.
+function drawBuildRail(x, py, pw, ph) {
+  if (G.mode === 'junkie') return;
+  const socketN = totalPathLevels();
+  if (socketN) {
+    const railW = Math.min(pw - 22, Math.max(26, socketN * 7));
+    const gap = socketN > 1 ? railW / (socketN - 1) : 0;
+    const sy = py + ph / 2 + 3;
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(225,245,254,0.35)';
+    ctx.beginPath(); ctx.moveTo(x - railW / 2 - 4, sy); ctx.lineTo(x + railW / 2 + 4, sy); ctx.stroke();
+    let socketI = 0;
+    for (const pk of PATH_KEYS) {
+      const P = PATHS[pk], lvl = pathLvl(pk);
+      for (let i = 0; i < lvl; i++, socketI++) {
+        const sx = socketN > 1 ? x - railW / 2 + socketI * gap : x;
+        ctx.beginPath(); ctx.arc(sx, sy, 2.8, 0, Math.PI * 2);
+        ctx.fillStyle = P.color; ctx.fill();
+        ctx.strokeStyle = '#102033'; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  // Mastery stacks remain individually countable after the main tree caps.
+  let mi = 0;
+  for (const item of STACK_ITEMS) {
+    const n = (G.stacks && G.stacks[item.key]) || 0;
+    if (!n) continue;
+    const side = mi % 2 ? 1 : -1;
+    const mx = x + side * (pw / 2 + 10 + Math.floor(mi / 2) * 14), my = py - 2;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(8,12,28,0.9)'; ctx.fill();
+    ctx.strokeStyle = item.color; ctx.lineWidth = 1.4; ctx.stroke();
+    drawGlyph(ctx, item.icon, mx, my, 3.8, item.color);
+    ctx.font = '900 7px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff'; ctx.fillText(String(n), mx, my + 11);
+    ctx.restore();
+    mi++;
   }
 }
 
@@ -897,15 +944,20 @@ function drawPaddle() {
       }
     }
   }
-  // ---- the cannon grows with your ARSENAL path (Phoenix-style) ----
-  const arsenal = pathLvl('arsenal');
-  const barrelW = 7 + arsenal * 1.4, barrelH = 12 + arsenal * 2;
+  // VOLLEY adds barrels/cycle fins; IMPACT thickens the amber bore. Their
+  // silhouettes make the two weapon builds readable before either one fires.
+  const volley = pathLvl('arsenal'), impact = pathLvl('impact');
+  const barrelW = 7 + volley * 0.7 + impact * 1.1, barrelH = 12 + volley * 1.1 + impact * 1.6;
   const barrels = upgN('twin') ? [-10, 10] : [0];
   for (const off of barrels) {
-    if (upgN('hyper')) { ctx.shadowColor = '#ff5cf0'; ctx.shadowBlur = 10; }
-    ctx.fillStyle = G.blasterCD > 0 ? '#546e7a' : (upgN('hyper') ? '#f3aaff' : '#cfd8dc');
+    if (impact) { ctx.shadowColor = PATHS.impact.color; ctx.shadowBlur = 5 + impact * 1.5; }
+    ctx.fillStyle = G.blasterCD > 0 ? '#546e7a' : (impact ? '#ffccbc' : '#cfd8dc');
     roundRect(x + off - barrelW / 2, py - 12 - barrelH, barrelW, barrelH, 3); ctx.fill();
     ctx.shadowBlur = 0;
+    if (volley) {
+      ctx.fillStyle = PATHS.arsenal.color;
+      ctx.fillRect(x + off - barrelW / 2, py - 15 - barrelH, barrelW, 3);
+    }
   }
   if (G.muzzle > 0) { // muzzle flash on blaster fire
     const m = G.muzzle / 0.12;
@@ -958,6 +1010,7 @@ function drawPaddle() {
       ctx.closePath(); ctx.fill();
     }
   }
+  drawBuildRail(x, py, pwv, ph);
   ctx.restore();
 }
 
@@ -1335,28 +1388,49 @@ function drawProjectiles() {
       ctx.restore();
       continue;
     }
-    // JUNKIE-mode typed bolts: species shape, element color
-    if (L.shape) { ctx.restore(); drawTypedBolt(L); continue; }
+    // JUNKIE-mode typed bolts: species shape, element color. Precision pulses
+    // add an amber ring without replacing the species-specific attack shape.
+    if (L.shape) {
+      ctx.restore(); drawTypedBolt(L);
+      if (L.pulse) {
+        ctx.save();
+        ctx.globalAlpha = L.nova ? 0.95 : 0.65;
+        ctx.strokeStyle = L.nova ? '#fff3e0' : PATHS.impact.color;
+        ctx.lineWidth = L.nova ? 3 : 2;
+        ctx.beginPath(); ctx.ellipse(L.x, L.y, L.heavy ? 14 : 10, L.heavy ? 24 : 19, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
+      continue;
+    }
     // BLASTER-mode basic bolts read as sleek energy darts (vs the classic slug)
     if (G.mode === 'blaster' && L.basic) {
-      const bw4 = 5 + pathLvl('arsenal') * 1.2;
-      ctx.shadowColor = '#26c6da'; ctx.shadowBlur = 15;
-      ctx.fillStyle = '#4dd0e1';
+      const bw4 = 5 + (L.heavy ? 3 : 0) + (L.pulse ? 2 : 0);
+      const boltCol = L.nova ? '#ffccbc' : L.pulse ? PATHS.impact.color : '#4dd0e1';
+      ctx.shadowColor = boltCol; ctx.shadowBlur = L.pulse ? 23 : 15;
+      ctx.fillStyle = boltCol;
       roundRect(L.x - bw4 / 2, L.y - 26, bw4, 42, bw4 / 2); ctx.fill();
       ctx.fillStyle = '#e0ffff';
       roundRect(L.x - 1.3, L.y - 22, 2.6, 32, 1.3); ctx.fill();
+      if (L.pulse) {
+        ctx.strokeStyle = L.nova ? '#ffffff' : '#ffab91'; ctx.lineWidth = L.nova ? 2.5 : 1.5;
+        ctx.beginPath(); ctx.ellipse(L.x, L.y - 4, bw4 + 4, 24, 0, 0, Math.PI * 2); ctx.stroke();
+      }
       ctx.restore();
       continue;
     }
-    ctx.shadowColor = L.hyper ? '#ff5cf0' : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
-    ctx.shadowBlur = L.hyper ? 22 : 16;
-    ctx.fillStyle = L.hyper ? '#f8bbf3' : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
-    // bolts visibly beef up with your ARSENAL level — Phoenix-style firepower
-    const bw4 = 8 + (L.basic ? pathLvl('arsenal') * 1.4 : 0);
+    const pulseCol = L.nova ? '#ffccbc' : PATHS.impact.color;
+    ctx.shadowColor = L.pulse ? pulseCol : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
+    ctx.shadowBlur = L.pulse ? 22 : 16;
+    ctx.fillStyle = L.pulse ? pulseCol : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
+    const bw4 = 8 + (L.heavy ? 3 : 0) + (L.pulse ? 2 : 0);
     roundRect(L.x - bw4 / 2, L.y - 20, bw4, 32, 4); ctx.fill();
     // bright core
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     roundRect(L.x - 1.5, L.y - 16, 3, 24, 1.5); ctx.fill();
+    if (L.pulse) {
+      ctx.strokeStyle = L.nova ? '#fff' : '#ffab91'; ctx.lineWidth = L.nova ? 2.5 : 1.5;
+      ctx.beginPath(); ctx.ellipse(L.x, L.y - 4, bw4 + 3, 20, 0, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
   }
   // charge tell: a growing plasma orb at the barrel as you wind up —
@@ -1952,27 +2026,189 @@ function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, san
   ctx.fillText(text, W / 2, y);
 }
 function drawMenu() {
+  if (menuPage === 'setup') { drawSetup(); return; }
   dim(0.55);
   const L = menuLayout();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   title('POKÉMON', L.titleY, L.titleSize, '#ffd54f');
   title('INVADERS BREAKOUT', L.titleY + L.titleSize, L.titleSize * 0.5, '#e3f2fd');
   const maxW = W * 0.92;
-  // two lines only — the real tutorial happens in your first wave
-  const lines = W < 560 ? [
-    ['9 REGIONS · 3 STAGES EACH', '#cfd8dc'],
-    ['CATCH POKÉMON · DRAFT UPGRADES', '#b0bec5'],
-  ] : [
-    ['JOURNEY THROUGH 9 REGIONS · 3 STAGES EACH · A LEGENDARY GUARDS EVERY THIRD', '#cfd8dc'],
-    ['CATCH POKÉMON · EXPLOIT TYPE MATCHUPS · DRAFT UPGRADES BETWEEN WAVES', '#b0bec5'],
-  ];
-  // short landscape: a single tagline is plenty — vertical space is precious
-  (L.short ? lines.slice(0, 1) : lines).forEach(([l, c], i) =>
-    fitText(l, L.infoY + i * L.lineH, 12 * Math.max(0.85, L.s), '600', c, maxW, "Verdana, system-ui, sans-serif"));
+  // one tagline only — the real tutorial happens in your first wave
+  fitText(W < 560 ? 'CATCH POKÉMON ACROSS 9 REGIONS'
+    : 'CATCH POKÉMON ACROSS 9 REGIONS · A LEGENDARY GUARDS EVERY THIRD WAVE',
+    L.tagY, 12 * Math.max(0.85, L.s), '600', '#cfd8dc', maxW, "Verdana, system-ui, sans-serif");
+  ctx.font = '700 12px Orbitron, sans-serif';
+  ctx.fillStyle = '#78909c';
+  ctx.fillText('— CHOOSE YOUR GAME —', W / 2, L.pickLabelY);
+  // the two headliner cards: BRICK BREAKER and SPACE JUNKIE
+  for (let i = 0; i < 2; i++) {
+    const m = MODES[i], cg = L.card(i);
+    const hov = inRect(mouseX, lastMouseY, cg);
+    ctx.save();
+    ctx.shadowColor = m.accent; ctx.shadowBlur = hov ? 26 : 12;
+    roundRect(cg.x, cg.y, cg.w, cg.h, 14);
+    ctx.fillStyle = hov ? m.accent + '30' : m.accent + '14';
+    ctx.fill();
+    ctx.lineWidth = hov ? 2.5 : 1.5;
+    ctx.strokeStyle = hov ? m.accent : m.accent + 'aa';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    const compact = L.stacked || L.short; // one-row card: icon left, text right
+    const iconR = compact ? cg.h * 0.30 : Math.min(26, cg.h * 0.17);
+    const iconX = compact ? cg.x + cg.h * 0.52 : cg.x + cg.w / 2;
+    const iconY = compact ? cg.y + cg.h / 2 : cg.y + cg.h * 0.26;
+    const tx = compact ? cg.x + cg.h * 1.0 + (cg.w - cg.h) / 2 : cg.x + cg.w / 2;
+    drawModeIcon(m.key, iconX, iconY, iconR, m.accent);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.min(compact ? 16 : 19, cg.w / (compact ? 15 : 9))}px Orbitron, sans-serif`;
+    ctx.fillStyle = hov ? '#fff' : m.accent;
+    ctx.fillText(m.label, tx, compact ? cg.y + cg.h * 0.34 : cg.y + cg.h * 0.55, compact ? cg.w - cg.h * 1.2 : cg.w - 16);
+    ctx.font = bodyFont(Math.min(10.5, cg.w / 24), 600);
+    ctx.fillStyle = hov ? '#e3f2fd' : '#90a4ae';
+    if (compact) {
+      ctx.fillText(m.lines.join(' · '), tx, cg.y + cg.h * 0.68, cg.w - cg.h * 1.2);
+    } else {
+      m.lines.forEach((l, li) =>
+        ctx.fillText(l, tx, cg.y + cg.h * (0.72 + li * 0.13), cg.w - 20));
+    }
+    ctx.restore();
+  }
+  // the experimental third — a deliberately smaller chip
+  {
+    const m = MODES[2], eg = L.exp;
+    const hov = inRect(mouseX, lastMouseY, eg);
+    ctx.save();
+    if (hov) { ctx.shadowColor = m.accent; ctx.shadowBlur = 16; }
+    roundRect(eg.x, eg.y, eg.w, eg.h, 10);
+    ctx.fillStyle = hov ? m.accent + '28' : 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 4]); // dashed border = "experimental"
+    ctx.strokeStyle = hov ? m.accent : m.accent + '77';
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+    ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`;
+    ctx.fillStyle = hov ? m.accent : '#8fb8c0';
+    ctx.fillText('⚗ ' + m.label + ' — EXPERIMENTAL MIX', eg.x + eg.w / 2, eg.y + eg.h * (L.short ? 0.5 : 0.36), eg.w - 16);
+    if (!L.short) {
+      ctx.font = bodyFont(9.5, 600);
+      ctx.fillStyle = hov ? '#cfd8dc' : '#78909c';
+      ctx.fillText(m.lines[0], eg.x + eg.w / 2, eg.y + eg.h * 0.72, eg.w - 16);
+    }
+    ctx.restore();
+  }
+  // CONTINUE — a saved journey resumes right where its region began
+  if (L.resume && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
+    const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
+    const modeLabel = (MODES.find(m => m.key === RUN_CKPT.mode) || MODES[0]).label;
+    ctx.save();
+    ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hovR ? 24 : 12;
+    roundRect(rb.x, rb.y, rb.w, rb.h, 12);
+    ctx.fillStyle = hovR ? 'rgba(128,216,255,0.28)' : 'rgba(128,216,255,0.16)';
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#80d8ff'; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${L.short ? 12 : 15}px Orbitron, sans-serif`;
+    ctx.fillStyle = '#e0f7ff';
+    ctx.fillText('▶ CONTINUE', rb.x + rb.w / 2, rb.y + rb.h * (L.short ? 0.5 : 0.36));
+    if (!L.short) {
+      ctx.font = bodyFont(9.5, 600);
+      ctx.fillStyle = '#80d8ff';
+      ctx.fillText(genFor(RUN_CKPT.lvl).name + ' · WAVE ' + RUN_CKPT.lvl + ' · ' + modeLabel + ' · ' + RUN_CKPT.score + ' PTS',
+        rb.x + rb.w / 2, rb.y + rb.h * 0.72, rb.w - 20);
+    }
+    ctx.restore();
+  }
+  // pokédex / trial / settings — stacked links, or one compact row when tight
+  const db = dexBtnGeom();
+  ctx.textAlign = 'center';
+  if (L.oneRow) {
+    const rowFont = '700 11px Orbitron, sans-serif';
+    for (const [g, label, colBase] of [
+      [db, '◓ POKÉDEX ' + DEX.size, '#90a4ae'],
+      [L.trial, '▶ TRIAL', '#80d8ff'],
+      [L.adv, '⚙ SETTINGS', '#78909c'],
+    ]) {
+      ctx.font = rowFont;
+      ctx.fillStyle = inRect(mouseX, lastMouseY, g) ? '#ffd54f' : colBase;
+      ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2, g.w - 6);
+    }
+  } else {
+    ctx.font = '700 14px Orbitron, sans-serif';
+    ctx.fillStyle = inRect(mouseX, lastMouseY, db) ? '#ffd54f' : '#90a4ae';
+    ctx.fillText('◓  POKÉDEX: ' + DEX.size + ' CAUGHT — VIEW', W / 2, db.y + db.h / 2);
+    ctx.font = '700 13px Orbitron, sans-serif';
+    ctx.fillStyle = inRect(mouseX, lastMouseY, L.trial) ? '#ffd54f' : '#80d8ff';
+    ctx.fillText('▶  TRIAL MODE — JUMP TO ANY REGION', W / 2, L.trial.y + L.trial.h / 2);
+    ctx.font = '700 12px Orbitron, sans-serif';
+    ctx.fillStyle = inRect(mouseX, lastMouseY, L.adv) ? '#ffd54f' : '#78909c';
+    ctx.fillText('⚙  ADVANCED SETTINGS', W / 2, L.adv.y + L.adv.h / 2);
+  }
+  if (advOpen) drawAdvanced();
+  if (trialOpen) drawTrial();
+}
+// small vector icons that give each mode card an identity at a glance —
+// pure strokes/fills, cheap enough to draw live (menu only, few per frame)
+function drawModeIcon(key, x, y, r, col) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = col; ctx.fillStyle = col;
+  ctx.lineWidth = Math.max(1.5, r * 0.13);
+  if (key === 'classic') { // brick row + ball + paddle
+    const bw = r * 0.85, bh = r * 0.42, g = r * 0.14;
+    for (let i = -1; i <= 1; i++) {
+      roundRect(i * (bw + g) - bw / 2, -r, bw, bh, 2);
+      ctx.globalAlpha = 0.85; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(0, r * 0.15, r * 0.26, 0, Math.PI * 2); ctx.fill();
+    roundRect(-r * 0.7, r * 0.75, r * 1.4, r * 0.3, r * 0.15); ctx.fill();
+  } else { // junkie: a little ship with wing swept lines
+    ctx.beginPath();
+    ctx.moveTo(0, -r);
+    ctx.lineTo(r * 0.75, r * 0.65);
+    ctx.lineTo(0, r * 0.25);
+    ctx.lineTo(-r * 0.75, r * 0.65);
+    ctx.closePath();
+    ctx.globalAlpha = 0.9; ctx.fill();
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); // exhaust flame, tucked into the tail notch
+    ctx.moveTo(-r * 0.16, r * 0.42); ctx.lineTo(0, r * 0.95); ctx.lineTo(r * 0.16, r * 0.42);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+// PAGE 2 — setup for the chosen mode: starter, difficulty, then START
+function drawSetup() {
+  dim(0.55);
+  const L = setupLayout();
+  const mode = MODES.find(m => m.key === SETTINGS.mode) || MODES[0];
+  const maxW = W * 0.92;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // header: the game you picked, in its color
+  title(mode.label, L.headY, L.headSize, mode.accent);
+  if (!L.short) {
+    ctx.font = bodyFont(11, 600);
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillText(mode.lines.join(' · '), W / 2, L.headY + L.headSize * 0.85 + 8, maxW);
+  }
+  // ‹ back to mode select
+  {
+    const bb = L.back, hov = inRect(mouseX, lastMouseY, bb);
+    ctx.font = '700 13px Orbitron, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = hov ? '#ffd54f' : '#90a4ae';
+    ctx.fillText('‹ BACK', bb.x + 8, bb.y + bb.h / 2);
+    ctx.textAlign = 'center';
+  }
   // starter Pokémon — a partner whose paddle ability grows all game
+  // (in SPACE JUNKIE the starter IS the ship, so say so)
   ctx.font = '700 13px Orbitron, sans-serif';
   ctx.fillStyle = '#90a4ae';
-  ctx.fillText('STARTER POKÉMON', W / 2, L.startLabelY);
+  ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR PILOT' : 'STARTER POKÉMON', W / 2, L.startLabelY);
   for (let i = 0; i < STARTERS.length; i++) {
     const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
     const hov = inRect(mouseX, lastMouseY, pg);
@@ -2014,11 +2250,17 @@ function drawMenu() {
     const selMon = STARTER_MON[SETTINGS.starter];
     const selCol = selMon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
     const narrowM = W < 560;
+    const junkie = SETTINGS.mode === 'junkie';
     const BODY = "Verdana, system-ui, sans-serif";
     if (selMon) {
       fitText(selMon.ability + ' — ' + selMon.tiers[0], L.starterInfoY, 12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
       if (!L.short) fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
-        : 'YOUR PARTNER RIDES THE PADDLE · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
+        : (junkie ? 'YOUR STARTER FLIES THE SHIP' : 'YOUR PARTNER RIDES THE PADDLE') + ' · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
+        L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
+    } else if (junkie) {
+      fitText(narrowM ? 'NO PICK — PIKACHU FLIES THE SHIP' : 'NO PICK — PIKACHU TAKES THE CONTROLS AND FIRES ITS OWN ATTACK',
+        L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#f9cc3d', maxW, BODY);
+      if (!L.short) fitText('EVOLVES AT REGIONS 4 & 7 — THE ATTACK GROWS EACH TIME',
         L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
     } else {
       fitText(narrowM ? 'NO PARTNER — PLAIN PADDLE' : 'NO PARTNER — A PLAIN PADDLE AND NO SERVE ELEMENT',
@@ -2049,56 +2291,6 @@ function drawMenu() {
     ctx.fillText(PRESETS[keys[i]].label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1);
     ctx.restore();
   }
-  // ---- MODE: classic brick-breaker vs the ball-less pure shooter ----
-  ctx.font = '700 13px Orbitron, sans-serif';
-  ctx.fillStyle = '#90a4ae';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('MODE', W / 2, L.modeLabelY);
-  const MODE_COLS = { classic: '#ffd54f', blaster: '#4dd0e1', junkie: '#ab47bc' };
-  for (let i = 0; i < MODES.length; i++) {
-    const mg = L.mode(i), sel = SETTINGS.mode === MODES[i].key;
-    const hov = inRect(mouseX, lastMouseY, mg);
-    const mcol = MODE_COLS[MODES[i].key] || '#ffd54f';
-    ctx.save();
-    if (sel) { ctx.shadowColor = mcol; ctx.shadowBlur = 14; }
-    roundRect(mg.x, mg.y, mg.w, mg.h, 9);
-    ctx.fillStyle = sel ? mcol + '2e' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
-    ctx.fill();
-    ctx.lineWidth = sel ? 2 : 1;
-    ctx.strokeStyle = sel ? mcol : 'rgba(255,255,255,0.25)';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(16, mg.w / 9)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? mcol : '#cfd8dc';
-    ctx.fillText(MODES[i].label, mg.x + mg.w / 2, mg.y + mg.h * 0.36, mg.w - 12);
-    ctx.font = `600 ${Math.min(10, mg.w / 13)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? '#cfd8dc' : '#90a4ae';
-    ctx.fillText(MODES[i].desc, mg.x + mg.w / 2, mg.y + mg.h * 0.72, mg.w - 14);
-    ctx.restore();
-  }
-  // CONTINUE — a saved journey resumes right where its region began
-  if (L.resume && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
-    const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
-    const modeLabel = (MODES.find(m => m.key === RUN_CKPT.mode) || MODES[0]).label;
-    ctx.save();
-    ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hovR ? 24 : 12;
-    roundRect(rb.x, rb.y, rb.w, rb.h, 12);
-    ctx.fillStyle = hovR ? 'rgba(128,216,255,0.28)' : 'rgba(128,216,255,0.16)';
-    ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#80d8ff'; ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `900 ${L.short ? 12 : 15}px Orbitron, sans-serif`;
-    ctx.fillStyle = '#e0f7ff';
-    ctx.fillText('▶ CONTINUE', rb.x + rb.w / 2, rb.y + rb.h * (L.short ? 0.5 : 0.36));
-    if (!L.short) {
-      ctx.font = bodyFont(9.5, 600);
-      ctx.fillStyle = '#80d8ff';
-      ctx.fillText(genFor(RUN_CKPT.lvl).name + ' · WAVE ' + RUN_CKPT.lvl + ' · ' + modeLabel + ' · ' + RUN_CKPT.score + ' PTS',
-        rb.x + rb.w / 2, rb.y + rb.h * 0.72, rb.w - 20);
-    }
-    ctx.restore();
-  }
   // start button — the one big obvious thing on the screen
   const b = startBtnGeom();
   const hover = inRect(mouseX, lastMouseY, b);
@@ -2112,35 +2304,8 @@ function drawMenu() {
   ctx.font = `900 ${L.short ? 15 : 20}px Orbitron, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#1a1205';
-  ctx.fillText((L.resume ? 'NEW JOURNEY' : 'START JOURNEY'), b.x + b.w / 2, b.y + b.h / 2 + 1);
+  ctx.fillText((typeof RUN_CKPT !== 'undefined' && RUN_CKPT ? 'NEW JOURNEY' : 'START JOURNEY'), b.x + b.w / 2, b.y + b.h / 2 + 1);
   ctx.restore();
-  // pokédex / trial / settings — stacked links, or one compact row when tight
-  const db = dexBtnGeom();
-  ctx.textAlign = 'center';
-  if (L.oneRow) {
-    const rowFont = '700 11px Orbitron, sans-serif';
-    for (const [g, label, colBase] of [
-      [db, '◓ POKÉDEX ' + DEX.size, '#90a4ae'],
-      [L.trial, '▶ TRIAL', '#80d8ff'],
-      [L.adv, '⚙ SETTINGS', '#78909c'],
-    ]) {
-      ctx.font = rowFont;
-      ctx.fillStyle = inRect(mouseX, lastMouseY, g) ? '#ffd54f' : colBase;
-      ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2, g.w - 6);
-    }
-  } else {
-    ctx.font = '700 14px Orbitron, sans-serif';
-    ctx.fillStyle = inRect(mouseX, lastMouseY, db) ? '#ffd54f' : '#90a4ae';
-    ctx.fillText('◓  POKÉDEX: ' + DEX.size + ' CAUGHT — VIEW', W / 2, db.y + db.h / 2);
-    ctx.font = '700 13px Orbitron, sans-serif';
-    ctx.fillStyle = inRect(mouseX, lastMouseY, L.trial) ? '#ffd54f' : '#80d8ff';
-    ctx.fillText('▶  TRIAL MODE — JUMP TO ANY REGION', W / 2, L.trial.y + L.trial.h / 2);
-    ctx.font = '700 12px Orbitron, sans-serif';
-    ctx.fillStyle = inRect(mouseX, lastMouseY, L.adv) ? '#ffd54f' : '#78909c';
-    ctx.fillText('⚙  ADVANCED SETTINGS', W / 2, L.adv.y + L.adv.h / 2);
-  }
-  if (advOpen) drawAdvanced();
-  if (trialOpen) drawTrial();
 }
 
 // trial mode: pick a region + stage, dive straight in (nothing persists)
@@ -2364,6 +2529,95 @@ function drawDex() {
   ctx.fillText('◀ BACK', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
 }
 
+// Modal atlas for the entire authored tree. Desktop gets five readable path
+// columns with full descriptions; narrow/short screens get five rows with all
+// four tier nodes still visible at once. Nothing is hidden behind hover.
+function drawFullUpgradeTree() {
+  const T = upgradeTreeLayout(), p = T.panel;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  dim(0.72);
+  ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = 24;
+  roundRect(p.x, p.y, p.w, p.h, 18);
+  ctx.fillStyle = 'rgba(6,10,27,0.985)'; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(128,216,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `900 ${Math.min(24, p.w / 21)}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#e3f2fd';
+  ctx.fillText('COMPLETE UPGRADE TREE', p.x + p.w / 2, p.y + 27);
+  ctx.font = '600 9.5px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+  ctx.fillText('FILLED = OWNED   ·   WHITE = NEXT   ·   DIM = FUTURE', p.x + p.w / 2, p.y + 48, p.w - 90);
+
+  if (!T.compact && p.h >= 470) {
+    const gap = 8, pad = 14, top = p.y + 66, colW = (p.w - pad * 2 - gap * (PATH_KEYS.length - 1)) / PATH_KEYS.length;
+    const headH = 54, tierGap = 6, tierH = Math.max(54, (p.h - 90 - headH - tierGap * 3) / 4);
+    for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+      const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk), cx = p.x + pad + pi * (colW + gap);
+      ctx.textAlign = 'center';
+      ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = P.color;
+      ctx.fillText(P.name, cx + colW / 2, top + 8, colW - 8);
+      ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#90a4ae';
+      ctx.fillText(P.role, cx + colW / 2, top + 24, colW - 8);
+      ctx.font = bodyFont(7.5, 600); ctx.fillStyle = '#607d8b';
+      ctx.fillText(P.tell, cx + colW / 2, top + 39, colW - 8);
+      for (let ti = 0; ti < 4; ti++) {
+        const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
+        const y = top + headH + ti * (tierH + tierGap);
+        roundRect(cx, y, colW, tierH, 9);
+        ctx.fillStyle = owned ? P.color + '2e' : next ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.035)'; ctx.fill();
+        ctx.strokeStyle = owned ? P.color : next ? '#ffffff' : 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = next ? 2 : 1; ctx.stroke();
+        drawGlyph(ctx, tier.icon, cx + 17, y + 19, 8, owned ? P.color : next ? '#fff' : '#546e7a');
+        ctx.textAlign = 'left';
+        ctx.font = '900 8.5px Orbitron, sans-serif';
+        ctx.fillStyle = owned ? P.color : next ? '#fff' : '#78909c';
+        ctx.fillText((ti === 3 ? '★ ' : '') + (G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name), cx + 31, y + 15, colW - 38);
+        ctx.font = bodyFont(7.5, 500); ctx.fillStyle = owned || next ? '#b0bec5' : '#546e7a';
+        wrapText(tier.desc, colW - 14).slice(0, 3).forEach((line, li) =>
+          ctx.fillText(line, cx + 8, y + 34 + li * 11, colW - 16));
+        ctx.textAlign = 'right'; ctx.font = '800 7px Orbitron, sans-serif';
+        ctx.fillStyle = owned ? P.color : next ? '#fff' : '#455a64';
+        ctx.fillText(owned ? 'OWNED' : next ? 'NEXT' : 'TIER ' + (ti + 1), cx + colW - 7, y + tierH - 9);
+      }
+    }
+  } else {
+    const pad = 10, labelW = Math.min(74, p.w * 0.2), top = p.y + 62;
+    const rowH = (p.h - 78) / PATH_KEYS.length, gap = 4;
+    const nodeW = (p.w - pad * 2 - labelW - gap * 3) / 4;
+    for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+      const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk), y = top + pi * rowH;
+      ctx.textAlign = 'left'; ctx.font = '900 9px Orbitron, sans-serif'; ctx.fillStyle = P.color;
+      ctx.fillText(P.name, p.x + pad, y + rowH * 0.38, labelW - 5);
+      ctx.font = '600 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+      ctx.fillText(P.role, p.x + pad, y + rowH * 0.58, labelW - 5);
+      for (let ti = 0; ti < 4; ti++) {
+        const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
+        const x = p.x + pad + labelW + ti * (nodeW + gap), nh = Math.max(24, rowH - 8);
+        roundRect(x, y + 3, nodeW, nh, 7);
+        ctx.fillStyle = owned ? P.color + '30' : next ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.035)'; ctx.fill();
+        ctx.strokeStyle = owned ? P.color : next ? '#fff' : 'rgba(255,255,255,0.12)'; ctx.lineWidth = next ? 1.8 : 1; ctx.stroke();
+        drawGlyph(ctx, tier.icon, x + nodeW / 2, y + Math.min(18, nh * 0.35), Math.min(7, nh * 0.15 + 2), owned ? P.color : next ? '#fff' : '#546e7a');
+        ctx.textAlign = 'center'; ctx.font = `800 ${nh < 45 ? 5.5 : 7}px Orbitron, sans-serif`;
+        ctx.fillStyle = owned ? P.color : next ? '#fff' : '#607d8b';
+        ctx.fillText((ti === 3 ? '★ ' : '') + (G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name),
+          x + nodeW / 2, y + Math.min(nh - 8, nh * 0.67), nodeW - 6);
+        if (nh >= 55) {
+          ctx.font = '700 6px Orbitron, sans-serif'; ctx.fillStyle = owned ? P.color : next ? '#cfd8dc' : '#455a64';
+          ctx.fillText(owned ? 'OWNED' : next ? 'NEXT' : 'T' + (ti + 1), x + nodeW / 2, y + nh - 4);
+        }
+      }
+    }
+  }
+  const cb = T.close;
+  roundRect(cb.x, cb.y, cb.w, cb.h, 9);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.font = '900 17px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#cfd8dc';
+  ctx.fillText('×', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
+  ctx.restore();
+}
+
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
@@ -2378,13 +2632,15 @@ function drawOverlays() {
     }
   } else if (G.state === 'upgrade') {
     dim(0.55);
+    const draftShort = H < 520;
     const wasBossStage = G.clearedStage === 2;
     const clearedGen = GENS[regionIdx(Math.max(1, G.level - 1))];
-    title(wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!', H * 0.16, Math.min(40, W / 12), wasBossStage ? clearedGen.accent : '#66bb6a');
+    const clearY = draftShort ? 36 : H * 0.16;
+    title(wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!', clearY, Math.min(draftShort ? 30 : 40, W / 12), wasBossStage ? clearedGen.accent : '#66bb6a');
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
-    ctx.fillText('+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS', W / 2, H * 0.16 + 34);
-    if (stageIdx(G.level) === 0) {
+    ctx.fillText('+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS', W / 2, clearY + (draftShort ? 28 : 34));
+    if (stageIdx(G.level) === 0 && !draftShort) {
       ctx.font = '900 16px Orbitron, sans-serif';
       ctx.fillStyle = genFor(G.level).accent;
       ctx.fillText('NEXT STOP: ' + genFor(G.level).name, W / 2, H * 0.16 + 62);
@@ -2395,10 +2651,10 @@ function drawOverlays() {
       ctx.font = '700 14px Orbitron, sans-serif';
       ctx.fillStyle = '#e3f2fd';
       const L = upgradeLayout();
-      ctx.fillText(G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'ADVANCE A PATH', W / 2, L.card(0).y - 26);
+      ctx.fillText(G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE', W / 2, L.card(0).y - 26);
       // ---- the whole tree, so you can see where each path is heading ----
-      if (!L.stacked) {
-        const tw2 = Math.min(760, W * 0.86), colW = tw2 / 4;
+      if (!L.stacked && !L.short) {
+        const tw2 = Math.min(900, W * 0.92), colW = tw2 / PATH_KEYS.length;
         const ty = L.card(0).y - 96;
         for (let pi = 0; pi < PATH_KEYS.length; pi++) {
           const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk);
@@ -2413,7 +2669,7 @@ function drawOverlays() {
           }
           ctx.font = '500 8.5px Orbitron, sans-serif';
           ctx.fillStyle = lvl >= 4 ? P.color : '#78909c';
-          ctx.fillText((lvl >= 4 ? '★ ' : '→ ') + junkieTierName(pk, 3), cx3, ty + 32, colW - 10);
+          ctx.fillText(P.role + ' · ' + (lvl >= 4 ? '★ COMPLETE' : '→ ' + junkieTierName(pk, 3)), cx3, ty + 32, colW - 10);
         }
       }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
@@ -2437,18 +2693,29 @@ function drawOverlays() {
             ctx.textAlign = 'left';
             ctx.font = '900 9px Orbitron, sans-serif';
             ctx.fillStyle = scol;
-            ctx.fillText('HELD ITEM · STACKS FOREVER' + (owned ? ' · OWNED ×' + owned : ''), r.x + 64, r.y + 15);
+            ctx.fillText((G.mode === 'junkie' ? 'HELD ITEM' : 'MASTERY ITEM') + ' · STACKS FOREVER' + (owned ? ' · OWNED ×' + owned : ''), r.x + 64, r.y + 15);
             ctx.font = '900 14px Orbitron, sans-serif';
             ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + 64, r.y + 33);
             ctx.font = bodyFont(9.5);
             ctx.fillStyle = '#b0bec5';
             wrapText(c.stack.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
+          } else if (L.short) {
+            ctx.textAlign = 'center';
+            ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = scol;
+            ctx.fillText(G.mode === 'junkie' ? 'HELD ITEM' : 'MASTERY ITEM', r.x + r.w / 2, r.y + 12, r.w - 8);
+            drawGlyph(ctx, c.stack.icon, r.x + r.w / 2, r.y + 39, 14, scol);
+            ctx.font = '900 11px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
+            ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 64, r.w - 10);
+            ctx.font = bodyFont(8, 600); ctx.fillStyle = '#b0bec5';
+            wrapText(c.stack.desc, r.w - 14).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 82 + li * 11));
+            ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#546e7a';
+            ctx.fillText(IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 8);
           } else {
             ctx.textAlign = 'center';
             ctx.font = '900 10px Orbitron, sans-serif';
             ctx.fillStyle = scol;
-            ctx.fillText('HELD ITEM', r.x + r.w / 2, r.y + 20);
+            ctx.fillText(G.mode === 'junkie' ? 'HELD ITEM' : 'MASTERY ITEM', r.x + r.w / 2, r.y + 20);
             ctx.font = '700 10px Orbitron, sans-serif';
             ctx.fillStyle = owned ? '#fff' : '#78909c';
             ctx.fillText(owned ? 'OWNED ×' + owned : 'NEW', r.x + r.w / 2, r.y + 38);
@@ -2493,13 +2760,25 @@ function drawOverlays() {
           ctx.textAlign = 'left';
           ctx.font = '900 9px Orbitron, sans-serif';
           ctx.fillStyle = col;
-          ctx.fillText(c.path.name + ' PATH · TIER ' + (c.tierIdx + 1) + '/4' + (isCap ? ' — CAPSTONE!' : ''), r.x + 64, r.y + 15);
+          ctx.fillText(c.path.name + ' · ' + c.path.role + ' · TIER ' + (c.tierIdx + 1) + '/4' + (isCap ? ' — CAPSTONE!' : ''), r.x + 64, r.y + 15, r.w - 72);
           ctx.font = '900 14px Orbitron, sans-serif';
           ctx.fillStyle = '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + 64, r.y + 33);
           ctx.font = bodyFont(9.5);
           ctx.fillStyle = '#b0bec5';
           wrapText(tier.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
+        } else if (L.short) { // short landscape: compact vertical card
+          ctx.textAlign = 'center';
+          ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = col;
+          ctx.fillText(c.path.name + ' · ' + c.path.role, r.x + r.w / 2, r.y + 12, r.w - 8);
+          pips(r.x + r.w / 2, r.y + 25);
+          drawGlyph(ctx, tier.icon, r.x + r.w / 2, r.y + 48, 13, col);
+          ctx.font = '900 11px Orbitron, sans-serif'; ctx.fillStyle = isCap ? col : '#fff';
+          ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + r.w / 2, r.y + 72, r.w - 10);
+          ctx.font = bodyFont(8, 600); ctx.fillStyle = '#b0bec5';
+          wrapText(tier.desc, r.w - 14).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 88 + li * 11));
+          ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#546e7a';
+          ctx.fillText(IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 8);
         } else { // desktop: tall card
           ctx.textAlign = 'center';
           ctx.font = '900 10px Orbitron, sans-serif';
@@ -2507,15 +2786,19 @@ function drawOverlays() {
           ctx.fillText(c.path.name + ' PATH', r.x + r.w / 2, r.y + 20);
           pips(r.x + r.w / 2, r.y + 36);
           drawGlyph(ctx, tier.icon, r.x + r.w / 2, r.y + 72, 24, col);
+          ctx.font = '700 8.5px Orbitron, sans-serif';
+          ctx.fillStyle = col;
+          ctx.fillText(c.path.role, r.x + r.w / 2, r.y + 96, r.w - 20);
           ctx.font = '900 15px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';
-          ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 112, r.w - 20);
+          ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 116, r.w - 20);
           ctx.font = bodyFont(10.5);
           ctx.fillStyle = '#b0bec5';
-          wrapText(tier.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 16));
+          wrapText(tier.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 140 + li * 16));
           ctx.font = '700 9.5px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#546e7a';
-          ctx.fillText(isCap ? 'THE PATH COMPLETES HERE' : '→ LEADS TO: ' + junkieTierName(c.pathKey, 3), r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
+          const nextName = c.tierIdx < 3 ? junkieTierName(c.pathKey, c.tierIdx + 1) : null;
+          ctx.fillText(isCap ? 'THE PATH COMPLETES HERE' : 'NEXT: ' + nextName + ' · CAP: ' + junkieTierName(c.pathKey, 3), r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
           ctx.fillStyle = '#546e7a';
           ctx.font = '700 11px Orbitron, sans-serif';
           ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 16);
@@ -2535,9 +2818,17 @@ function drawOverlays() {
       ctx.stroke();
       ctx.font = '700 12px Orbitron, sans-serif';
       ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-      ctx.fillText(canRR ? (IS_TOUCH ? '⟳ REROLL' : '⟳ REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1);
+      ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1);
+      ctx.globalAlpha = a;
+      const tr = L.tree, hovTR = inRect(mouseX, lastMouseY, tr);
+      roundRect(tr.x, tr.y, tr.w, tr.h, 16);
+      ctx.fillStyle = hovTR ? 'rgba(128,216,255,0.2)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = hovTR ? '#80d8ff' : 'rgba(255,255,255,0.35)'; ctx.stroke();
+      ctx.font = '700 11px Orbitron, sans-serif'; ctx.fillStyle = hovTR ? '#e0f7ff' : '#80d8ff';
+      ctx.fillText(IS_TOUCH ? 'FULL TREE' : 'FULL TREE (T)', tr.x + tr.w / 2, tr.y + tr.h / 2 + 1, tr.w - 12);
       ctx.globalAlpha = 1;
       ctx.textAlign = 'center';
+      if (upgradeTreeOpen) drawFullUpgradeTree();
     }
   } else if (G.state === 'gameover') {
     dim(0.65);

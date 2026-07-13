@@ -162,7 +162,7 @@ window.requestAnimationFrame = function () { return 0; };
   }
   function resetBetween() {
     try {
-      fireHeld = false; chargeHeld = false; trialOpen = false; advOpen = false;
+      fireHeld = false; chargeHeld = false; trialOpen = false; advOpen = false; upgradeTreeOpen = false;
       dragSlider = -1;
       SETTINGS.mode = 'classic';
       resetRun(1, true);
@@ -232,6 +232,28 @@ window.requestAnimationFrame = function () { return 0; };
   test('mode smoke: classic', () => modeSmoke('classic', 4000));
   test('mode smoke: blaster', () => modeSmoke('blaster', 3000));
   test('mode smoke: junkie', () => modeSmoke('junkie', 3000));
+
+  test('upgrade tree: five balanced paths + two weapon identities', async () => {
+    assert(PATH_KEYS.length === 5, 'expected 5 paths, got ' + PATH_KEYS.length);
+    assert(PATH_KEYS.filter(k => PATHS[k].family === 'offense').length === 2,
+      'expected exactly 2 offense paths');
+    assert(PATH_KEYS.every(k => PATHS[k].tiers.length === 4), 'every path must have exactly 4 tiers');
+    SETTINGS.mode = 'blaster';
+    resetRun(1, true);
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.length === 3, 'fresh draft did not contain 3 choices');
+    assert(G.upgradeChoices.some(c => c.path && c.path.family === 'offense'), 'draft omitted offense');
+    assert(G.upgradeChoices.some(c => c.path && c.path.family !== 'offense'), 'draft omitted non-offense');
+    for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
+    G.state = 'play'; G.blasterCD = 0; G.shotsFired = 3; G.lasers = [];
+    fireAction(); // fourth volley: Twin + Nova Round + Hyper Cycle
+    assert(G.lasers.length === 2, 'Twin Cannon should create 2 bolts, got ' + G.lasers.length);
+    assert(G.lasers.every(l => l.powerMul === 0.65), 'Twin bolts must each deal 65% base damage');
+    assert(G.lasers.every(l => l.pulse && l.nova), 'fourth capped Impact volley was not a Nova pulse');
+    assert(G.lasers.every(l => !l.hyper), 'old always-on Hyper pierce flag returned');
+    assert(Math.abs(G.blasterCD - 0.225) < 0.0001, 'Hyper Cycle cadence is not 25% faster');
+    return '5×4 tree; fair draft; Twin=2×65%; Nova every 4th; Hyper Cycle=−25% cooldown';
+  });
 
   // 2b) classic lose-a-life: park the paddle away and let the ball drain
   test('classic: lose a life cleanly', async () => {
@@ -339,18 +361,23 @@ window.requestAnimationFrame = function () { return 0; };
     return ids.size + ' roster/boss ids — all named, all sprites present';
   });
 
-  // 6) menu layout fits common viewports (fake W/H, menuLayout is pure geometry)
+  // 6) menu + upgrade layout fit common viewports (fake W/H, pure geometry)
+  // — both menu pages, three draft cards, and both draft actions
   test('menu fit across viewports', async () => {
     const w0 = W, h0 = H;
     const bad = [];
+    let count = 0;
     try {
       for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
-        const L = menuLayout();
-        const rects = { start: L.start, dex: L.dex, trial: L.trial, adv: L.adv };
-        for (let i = 0; i < MODES.length; i++) rects['mode(' + i + ')'] = L.mode(i);
-        for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = L.starter(i);
-        for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = L.chip(i);
+        const L = menuLayout(), S = setupLayout(), U = upgradeLayout();
+        const rects = { exp: L.exp, dex: L.dex, trial: L.trial, adv: L.adv, back: S.back, start: S.start,
+          reroll: U.reroll, fullTree: U.tree };
+        for (let i = 0; i < 2; i++) rects['card(' + i + ')'] = L.card(i);
+        for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = S.starter(i);
+        for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = S.chip(i);
+        for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
+        count = Object.keys(rects).length;
         for (const [name, r] of Object.entries(rects)) {
           if (!(r.x >= -2 && r.y >= -2 && r.x + r.w <= w + 2 && r.y + r.h <= h + 2)) {
             bad.push(w + '×' + h + ' ' + name + ' [' + (r.x | 0) + ',' + (r.y | 0) + ' ' + (r.w | 0) + '×' + (r.h | 0) + ']');
@@ -362,7 +389,7 @@ window.requestAnimationFrame = function () { return 0; };
       resize(); // belt and braces: recompute from the real viewport
     }
     assert(bad.length === 0, 'geometry off-screen: ' + bad.join(' ; '));
-    return '5 viewports × ' + (4 + MODES.length + STARTERS.length + Object.keys(PRESETS).length) + ' rects all on-screen';
+    return '5 viewports × ' + count + ' rects (both menu pages) all on-screen';
   });
 
   // 7) storage corruption recovery — never destroys the real save (finally-restore)

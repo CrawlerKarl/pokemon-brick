@@ -74,10 +74,11 @@ phone — flag anything only verifiable there.
   Pokémon that belong together appear together, spanning evolution tiers. Pack
   ids are constrained to their region's roster — `verify-assets` + the test
   suite catch stragglers. Evolved species are bigger + tankier elites.
-- **Progression: held items (junkie) + checkpoints.** Drafts advance the same
-  4-path × 4-tier tree; junkie re-skins tiers as Pokémon items (`JUNKIE_ITEMS`)
-  and, once capped, offers forever-stacking `STACK_ITEMS` (`G.stacks`). Owned
-  tiers orbit the pilot. Runs auto-save at each region (`saveCheckpoint`/
+- **Progression: paths + mastery + checkpoints.** Drafts advance the same
+  5-path × 4-tier tree (two distinct offense paths); junkie re-skins tiers as
+  Pokémon items (`JUNKIE_ITEMS`). As paths cap, every mode fills empty offers
+  with forever-stacking `STACK_ITEMS` (`G.stacks`). Owned tiers orbit the
+  junkie pilot; paddle modes show them on the build rail. Runs auto-save at each region (`saveCheckpoint`/
   `RUN_CKPT`); a true game over clears it. One draft reroll per screen.
 - **Readability over density.** The ball/character must never get lost. Caps:
   `flyerBudget` ≤20, junkie squads ≤26, particles ≤450, rings ≤24. The ball's

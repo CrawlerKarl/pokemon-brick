@@ -5,7 +5,7 @@
 const MEGA_DUR = 5;      // Mega Evolution duration in seconds
 // skill-tree-aware caps (capstones raise them)
 function shieldCap() { return 3 + 2 * upgN('bulwark'); }
-function megaDur() { return upgN('megaX') ? 8 : MEGA_DUR; }
+function megaDur() { return upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR; }
 function barrierCharges() { return 2 + (upgN('rally') ? 1 : 0); }
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
 // ---- SPACE JUNKIE pilots: in junkie mode your starter IS the ship (Pikachu

@@ -415,31 +415,43 @@ const MODIFIERS = [
 ];
 
 // ============================================================
-//  SKILL TREE — four paths, four tiers each. Every wave-clear draft
-//  advances a path; commit hard to one and its tier-4 CAPSTONE is a
-//  run-defining superweapon. Levels are permanent... unless you white
-//  out, which burns tree levels instead of ending the run.
+//  SKILL TREE — five paths, four tiers each. The two offense paths deliberately
+//  solve different problems: VOLLEY covers space while IMPACT rewards a lined-
+//  up shot. The remaining paths own survival, Mega tempo, and pickups/score.
+//  Every tier has an in-play tell on the pilot rig; levels are permanent...
+//  unless you white out, which burns tree levels instead of ending the run.
 // ============================================================
 const PATHS = {
-  arsenal: { name: 'ARSENAL', color: '#80d8ff', tiers: [
-    { key: 'intercept', icon: 'target', name: 'INTERCEPTOR',  desc: 'BLASTER BOLTS PIERCE +1 ENEMY SHOT' },
-    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',      desc: 'BLASTER HEAT PER SHOT −30%' },
-    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON',  desc: 'THE BLASTER FIRES TWO BOLTS' },
-    { key: 'hyper',     icon: 'laser',  name: 'HYPER CANNON', desc: 'BOLTS PIERCE THROUGH BLOCKS · DOUBLE DAMAGE' },
+  arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', family: 'offense', color: '#80d8ff',
+    summary: 'COVER MORE LANES · LOWER DAMAGE PER BOLT', tell: 'CYAN MULTI-BARREL RIG', tiers: [
+    { key: 'intercept', icon: 'target', name: 'INTERCEPTOR', desc: 'BOLTS DESTROY +1 ENEMY SHOT BEFORE FADING' },
+    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',     desc: 'BLASTER HEAT PER SHOT −25%' },
+    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON', desc: 'FIRE TWO BOLTS · EACH DEALS 65% DAMAGE' },
+    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'BLASTER FIRES 25% FASTER' },
   ]},
-  aegis: { name: 'AEGIS', color: '#66bb6a', tiers: [
+  impact: { name: 'IMPACT', role: 'PRECISION FIRE', family: 'offense', color: '#ff8a65',
+    summary: 'FEWER, HEAVIER SHOTS · LINE UP TARGETS', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
+    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT', desc: 'BOLTS ARE 30% WIDER · DAMAGE +15%' },
+    { key: 'lockon',  icon: 'alert',  name: 'ELITE SIGHT', desc: 'DEAL +25% DAMAGE TO ELITES AND BOSSES' },
+    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND', desc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS' },
+    { key: 'impactX', icon: 'star',   name: 'NOVA ROUND', desc: 'PULSE EVERY 4TH VOLLEY · DOUBLE DAMAGE' },
+  ]},
+  aegis: { name: 'AEGIS', role: 'SURVIVAL', family: 'defense', color: '#66bb6a',
+    summary: 'FORGIVING POSITIONING · RECHARGING DEFENSE', tell: 'GREEN ARMOR SOCKETS', tiers: [
     { key: 'guard',     icon: 'shield', name: 'HOME GUARD',   desc: 'START EVERY WAVE WITH A SHIELD CHARGE' },
     { key: 'bulwark',   icon: 'shield', name: 'BULWARK',      desc: 'SHIELD CAPACITY 3 → 5' },
-    { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 12% WIDER' },
+    { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 18% WIDER' },
     { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS' },
   ]},
-  surge: { name: 'SURGE', color: '#ffd54f', tiers: [
-    { key: 'momentum',  icon: 'mega',   name: 'MOMENTUM',     desc: 'PADDLE RETURNS CHARGE MEGA +2%' },
-    { key: 'rally',     icon: 'star',   name: 'RALLY MASTER', desc: 'RALLY BARRIER +1 CHARGE · RALLY POINTS +50%' },
-    { key: 'blaze',     icon: 'fire',   name: 'BLAZE CORE',   desc: 'FIRE EXPLOSIONS 35% LARGER' },
-    { key: 'megaX',     icon: 'mega',   name: 'APEX MEGA',    desc: 'MEGA LASTS 8s AND PUNCHES FOR 5' },
+  surge: { name: 'SURGE', role: 'MEGA TEMPO', family: 'tempo', color: '#ffd54f',
+    summary: 'CHARGE MEGA OFTEN · CASH IN A POWER WINDOW', tell: 'GOLD OVERDRIVE CORE', tiers: [
+    { key: 'momentum',  icon: 'mega', name: 'MOMENTUM',       desc: 'RETURNS +2% MEGA · BLASTER HITS +0.2%' },
+    { key: 'rally',     icon: 'star', name: 'RALLY MASTER',   desc: 'KILLS CHARGE MEGA · BARRIER +1 · RALLY SCORE +50%' },
+    { key: 'blaze',     icon: 'fire', name: 'OVERDRIVE CORE', desc: 'MEGA LASTS 7s · FIRE BLASTS 35% LARGER' },
+    { key: 'megaX',     icon: 'mega', name: 'APEX MEGA',      desc: 'MEGA LASTS 9s · ATTACK DAMAGE +50%' },
   ]},
-  bond: { name: 'BOND', color: '#ec407a', tiers: [
+  bond: { name: 'BOND', role: 'PICKUPS & SCORE', family: 'utility', color: '#ec407a',
+    summary: 'MORE DROPS · SAFER CATCHES · EXTRA LIVES', tell: 'PINK MAGNET NODE', tiers: [
     { key: 'magnetize', icon: 'magnet',   name: 'ITEM MAGNET',    desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE' },
     { key: 'bond',      icon: 'pokeball', name: "TRAINER'S BOND", desc: 'EACH CATCH: PERMANENT +6% SCORE' },
     { key: 'fortune',   icon: 'coin',     name: 'FORTUNE',        desc: 'POWER-UP DROP CHANCE +60%' },
@@ -452,6 +464,7 @@ const PATH_KEYS = Object.keys(PATHS);
 // appearing as a badge orbiting the ship when earned.
 const JUNKIE_ITEMS = {
   arsenal: ['SCOPE LENS', 'NEVER-MELT ICE', 'CHOICE SPECS', 'LIFE ORB'],
+  impact:  ['MUSCLE BAND', 'EXPERT BELT', 'RAZOR CLAW', 'LOADED DICE'],
   aegis:   ['FOCUS BAND', 'EVIOLITE', 'LEFTOVERS', 'ASSAULT VEST'],
   surge:   ['POWER HERB', 'METRONOME', 'CHARCOAL', 'MEGA STONE'],
   bond:    ['MAGNET', 'SOOTHE BELL', 'AMULET COIN', 'MAX REVIVE'],
@@ -461,9 +474,10 @@ function junkieTierName(pathKey, tierIdx) {
     ? JUNKIE_ITEMS[pathKey][tierIdx]
     : PATHS[pathKey].tiers[tierIdx].name;
 }
-// once every path caps, junkie drafts keep offering these — infinite stacks
+// As authored paths cap, every mode fills empty offers with these small mastery
+// stacks. In SPACE JUNKIE they are literal held items orbiting the pilot.
 const STACK_ITEMS = [
-  { key: 'orb',  name: 'LIFE ORB',       icon: 'mega',   color: '#b388ff', desc: 'ATTACK DAMAGE +8% — STACKS FOREVER' },
+  { key: 'orb',  name: 'LIFE ORB',       icon: 'mega',   color: '#b388ff', desc: 'ALL ATTACK DAMAGE +6% — STACKS FOREVER' },
   { key: 'ice',  name: 'NEVER-MELT ICE', icon: 'slow',   color: '#80deea', desc: 'BLASTER HEAT −6% PER SHOT — STACKS FOREVER' },
   { key: 'bell', name: 'SOOTHE BELL',    icon: 'heart',  color: '#f48fb1', desc: 'ALL SCORE +6% — STACKS FOREVER' },
 ];

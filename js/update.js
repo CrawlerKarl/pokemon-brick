@@ -3,7 +3,7 @@
 //  UPDATE
 // ============================================================
 function paddleW() {
-  return G.paddle.w * (1 + 0.1 * upgN('wide')) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1);
+  return G.paddle.w * (1 + 0.18 * upgN('wide')) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1);
 }
 function timeScale() {
   return (G.fx_slow ? 0.5 : 1) * SETTINGS.speed * (G.dramaticT > 0 ? 0.3 : 1);
@@ -66,6 +66,9 @@ function damageBrick(br, dmg, sx, sy, element) {
     getSprite(132);
     return;
   }
+  // Late-run mastery remains useful in every mode (ball, bolts, missiles,
+  // explosions) without recreating the old giant weapon-capstone spike.
+  if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
   // type effectiveness: super effective ×2, resisted ×¼
   if (element && dmg < 90) {
     if ((EFFECTIVE[element] || []).includes(br.poke.t)) {
@@ -146,7 +149,7 @@ function damageBrick(br, dmg, sx, sy, element) {
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     // tuned so Mega comes online roughly once per region (3 waves)
-    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008));
+    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + (upgN('rally') ? (br.isBoss ? 0.04 : 0.004) : 0));
     if (br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
     if (br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
       setAnnounce('▒', '#b0bec5', 'MISSINGNO.', 'ITEM DUPLICATION! ×3 POWER-UPS', 2.2);
@@ -451,16 +454,30 @@ function bossAbility(boss) {
   addFloater(boss.bx + G.fx, by - boss.h / 2 - 44, ab.name + '!', TYPE_COLORS[boss.poke.t], 16);
 }
 
-// deal (or re-deal) the between-wave draft: up to three path tiers, and in
-// SPACE JUNKIE any empty slot offers a forever-stacking held item
+// Deal (or re-deal) the between-wave draft. While both groups remain, every
+// hand contains at least one offense path and one non-offense path; the third
+// slot stays wild. Empty slots become small forever-stacking mastery items so
+// the last third of a long journey never has dead reward screens.
 function rollUpgradeChoices() {
   const pool = PATH_KEYS.filter(k => pathLvl(k) < 4);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  const choices = pool.slice(0, 3).map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }));
-  if (G.mode === 'junkie' && choices.length < 3) {
+  const picked = [];
+  const take = familyTest => {
+    const idx = pool.findIndex(k => familyTest(PATHS[k].family));
+    if (idx >= 0) picked.push(pool.splice(idx, 1)[0]);
+  };
+  take(f => f === 'offense');
+  take(f => f !== 'offense');
+  while (picked.length < 3 && pool.length) picked.push(pool.shift());
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  const choices = picked.map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }));
+  if (choices.length < 3) {
     const si = STACK_ITEMS.slice();
     for (let i = si.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -1126,7 +1143,7 @@ function update(dt) {
           // with brief contact i-frames so a surviving block isn't melted
           // frame-by-frame as the ball ghosts through it
           if (br.flash <= 0.5) {
-            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 5 : 3), b.x, b.y, G.ballElement);
+            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 4.5 : 3), b.x, b.y, G.ballElement);
             if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
             awardRally(b, b.x, b.y);
           }
@@ -1136,7 +1153,7 @@ function update(dt) {
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
           // Blaze embers from the last paddle return add burn damage
-          let dmg = pierce ? (upgN('megaX') ? 5 : 3) : 1;
+          let dmg = pierce ? (upgN('megaX') ? 4.5 : 3) : 1;
           if (b.ember > 0) {
             b.ember--;
             dmg += G.starterLvl >= 3 ? 2 : 1;
@@ -1166,7 +1183,8 @@ function update(dt) {
       G.laserCD = tier >= 3 ? 0.3 : tier >= 2 ? 0.42 : 0.6;
       const pw = paddleW();
       const xs = tier >= 3 ? [-pw / 2, -pw / 6, pw / 6, pw / 2] : [-pw / 2 + 8, pw / 2 - 8];
-      xs.forEach(off => G.lasers.push({ x: G.paddle.x + off, y: PADDLE_Y() - 14, explosive: !!G.fx_fire || G.megaT > 0 }));
+      xs.forEach(off => G.lasers.push({ x: G.paddle.x + off, y: PADDLE_Y() - 14,
+        explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0 }));
       SFX.laser();
     }
   }
@@ -1202,21 +1220,25 @@ function update(dt) {
       if (br.dead || br.phaseT > 0 || L.dead || L.lastHit === br) continue;
       const bx = br.bx + G.fx, by = br.by + G.fy;
       // charged shots are fat, so they connect over a wider span
-      const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0);
+      const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0) + (L.heavy ? 6 : 0);
       if (Math.abs(L.x - bx) < xtol && Math.abs(L.y - by) < br.h / 2) {
-        // HYPER CANNON and CHARGED shots drill through several blocks
-        if (L.hyper || L.charged) {
+        // Pulse rounds create occasional, readable line-clears. Charged shots
+        // keep their own hold-to-aim pierce; fast Volley bolts never gain it.
+        if (L.pulse || L.charged) {
           L.lastHit = br;
           L.bhits = (L.bhits || 0) + 1;
-          if (L.bhits >= (L.charged ? L.pierce : 3)) L.dead = true;
+          if (L.bhits >= (L.charged ? L.pierce : 2)) L.dead = true;
         } else {
           L.dead = true;
         }
-        let dmg = L.charged ? L.power : (L.hyper ? 2 : 1);
-        // LIFE ORB stacks amplify the pilot's typed attacks
-        if (L.element && G.stacks.orb) dmg = Math.max(1, Math.round(dmg * (1 + 0.08 * G.stacks.orb)));
+        let dmg = L.charged ? L.power : (L.powerMul || 1);
+        if (L.heavy) dmg *= 1.15;
+        if (upgN('lockon') && (br.isBoss || br.maxHp >= 3)) dmg *= 1.25;
+        if (L.nova) dmg *= 2;
+        if (L.mega) dmg *= upgN('megaX') ? 1.5 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
+        if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + 0.002);
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
         // a fire pilot's spent charge shot detonates — Blaze in shooter form
         if (L.charged && L.dead && L.shape === 'flame') fireballExplosion(L.x, L.y, 1);
@@ -1417,6 +1439,7 @@ function update(dt) {
     }
     // draft: advance one of up to three paths (skip maxed ones)
     rollUpgradeChoices();
+    upgradeTreeOpen = false;
     G.rerolled = false; // one fresh reroll per draft screen
     SFX.levelUp();
     // confetti!

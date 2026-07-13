@@ -156,17 +156,23 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyP') togglePause();
   if (e.code === 'KeyQ') quitToMenu();
   if (e.code === 'Escape') {
-    if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
+    if (G.state === 'upgrade' && upgradeTreeOpen) upgradeTreeOpen = false;
+    else if (G.state === 'upgrade') return;
+    else if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
     else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
+    else if (G.state === 'menu' && menuPage === 'setup') menuPage = 'modes'; // back out of setup
     else if (paused) quitToMenu(); // paused + Esc = leave the run
     else togglePause();
   }
-  // 1/2/3 pick an upgrade card between waves; R rerolls the hand once
-  if (G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
+  // 1/2/3 pick, R rerolls, T opens the complete tree between waves
+  if (e.code === 'KeyT' && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8) {
+    upgradeTreeOpen = !upgradeTreeOpen; SFX.wall();
+  }
+  if (!upgradeTreeOpen && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
     pickUpgrade(+e.code.slice(5) - 1);
   }
-  if (e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices && !G.rerolled && G.stateT > 0.8) {
+  if (!upgradeTreeOpen && e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices && !G.rerolled && G.stateT > 0.8) {
     rerollDraft();
   }
   // ↑↑↓↓←→←→BA — some legends never die
@@ -182,6 +188,7 @@ window.addEventListener('keydown', e => {
   }
 });
 let paused = false;
+let upgradeTreeOpen = false;
 function togglePause() { if (G.state === 'play' || G.state === 'serve') paused = !paused; }
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
@@ -189,6 +196,7 @@ function quitToMenu() {
   if (!G.trial && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   paused = false;
   G.state = 'menu';
+  menuPage = 'modes'; // always land on the title page, not mid-setup
   dexScroll = 0;
   SFX.wall();
 }
@@ -202,36 +210,49 @@ function setSliderFromX(i, x) {
 function inRect(x, y, r) { return x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h; }
 // between-wave upgrade cards: 3 across on desktop, stacked rows on phones
 function upgradeLayout() {
-  const stacked = W < 560;
+  const short = H < 520;
+  const stacked = W < 560 && !short;
   if (stacked) {
     const cw = Math.min(370, W * 0.92), ch = Math.min(96, H * 0.13);
     const x = W / 2 - cw / 2, y0 = Math.min(H * 0.4, H - 3 * (ch + 14) - 60);
-    return { stacked, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }),
-      reroll: { x: W / 2 - 90, y: Math.min(y0 + 3 * (ch + 14) + 6, H - 44), w: 180, h: 32 } };
+    const ay = Math.min(y0 + 3 * (ch + 14) + 6, H - 44), aw = Math.min(150, (W - 36) / 2);
+    return { stacked, short, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }),
+      reroll: { x: W / 2 - aw - 6, y: ay, w: aw, h: 32 },
+      tree: { x: W / 2 + 6, y: ay, w: aw, h: 32 } };
   }
   const cw = Math.min(235, (W - 84) / 3), ch = Math.min(240, H * 0.34);
   const gap = 20, total = cw * 3 + gap * 2;
-  return { stacked, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: H * 0.4, w: cw, h: ch }),
-    reroll: { x: W / 2 - 90, y: Math.min(H * 0.4 + ch + 16, H - 48), w: 180, h: 34 } };
+  const ay = Math.min(H * 0.4 + ch + 16, H - 48);
+  return { stacked, short, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: H * 0.4, w: cw, h: ch }),
+    reroll: { x: W / 2 - 188, y: ay, w: 176, h: 34 },
+    tree: { x: W / 2 + 12, y: ay, w: 176, h: 34 } };
+}
+function upgradeTreeLayout() {
+  const panel = { x: Math.max(10, W * 0.025), y: Math.max(10, H * 0.035),
+    w: Math.min(W - 20, W * 0.95), h: Math.min(H - 20, H * 0.93) };
+  return { panel, compact: W < 700,
+    close: { x: panel.x + panel.w - 46, y: panel.y + 10, w: 34, h: 34 } };
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
-  // SPACE JUNKIE held-item STACK pick (the tree is full — these stack forever)
+  // late-run mastery STACK pick (literal held item in SPACE JUNKIE)
   if (c.stack) {
     G.stacks[c.stack.key] = (G.stacks[c.stack.key] || 0) + 1;
     G.upgradeChoices = null;
+    upgradeTreeOpen = false;
     SFX.power();
     buildLevel(G.level);
     serve();
     setAnnounce(c.stack.icon, c.stack.color,
       c.stack.name + ' ×' + G.stacks[c.stack.key],
-      c.stack.desc, 2.4, 'HELD ITEMS STACK FOREVER — CHECK YOUR PILOT');
+      c.stack.desc, 2.4, G.mode === 'junkie' ? 'HELD ITEM STACKED — CHECK YOUR PILOT' : 'MASTERY STACKED — CHECK YOUR BUILD RAIL');
     return;
   }
   const junkieName = junkieTierName(c.pathKey, c.tierIdx);
   const tier = advancePath(c.pathKey);
   G.upgradeChoices = null;
+  upgradeTreeOpen = false;
   SFX.power();
   const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);
@@ -264,10 +285,16 @@ function onPress(x, y) {
   if (G.state === 'upgrade') {
     if (G.upgradeChoices && G.stateT > 0.8) {
       const L = upgradeLayout();
+      if (upgradeTreeOpen) {
+        const T = upgradeTreeLayout();
+        if (inRect(x, y, T.close) || !inRect(x, y, T.panel)) upgradeTreeOpen = false;
+        return;
+      }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         if (inRect(x, y, L.card(i))) { pickUpgrade(i); return; }
       }
       if (!G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
+      if (inRect(x, y, L.tree)) { upgradeTreeOpen = true; SFX.wall(); return; }
     }
     return;
   }
@@ -310,19 +337,29 @@ function onPress(x, y) {
       }
       return;
     }
+    // PAGE 2 — setup: starter + difficulty for the chosen mode, then START
+    if (menuPage === 'setup') {
+      const L = setupLayout();
+      if (inRect(x, y, L.back)) { menuPage = 'modes'; SFX.wall(); return; }
+      for (let i = 0; i < STARTERS.length; i++) {
+        if (inRect(x, y, L.starter(i))) { SETTINGS.starter = STARTERS[i].key; saveSettings(); SFX.wall(); return; }
+      }
+      const keys = Object.keys(PRESETS);
+      for (let i = 0; i < keys.length; i++) {
+        if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
+      }
+      if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
+      return;
+    }
+    // PAGE 1 — pick your game: two headliner cards + the experimental chip
     const L = menuLayout();
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
-    for (let i = 0; i < STARTERS.length; i++) {
-      if (inRect(x, y, L.starter(i))) { SETTINGS.starter = STARTERS[i].key; saveSettings(); SFX.wall(); return; }
-    }
-    const keys = Object.keys(PRESETS);
-    for (let i = 0; i < keys.length; i++) {
-      if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
-    }
     for (let i = 0; i < MODES.length; i++) {
-      if (inRect(x, y, L.mode(i))) { SETTINGS.mode = MODES[i].key; saveSettings(); SFX.power(); return; }
+      if (inRect(x, y, i < 2 ? L.card(i) : L.exp)) {
+        SETTINGS.mode = MODES[i].key; saveSettings();
+        menuPage = 'setup'; SFX.power(); return;
+      }
     }
-    if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }
     if (inRect(x, y, L.trial)) { trialOpen = true; return; }
     if (inRect(x, y, L.adv)) { advOpen = true; return; }
@@ -363,7 +400,7 @@ function fireAction(auto = false) {
   }
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
-  G.blasterCD = 0.3;
+  G.blasterCD = upgN('hyper') ? 0.225 : 0.3;
   G.shotsFired++;
   G.muzzle = 0.12;
   // heat: fire freely like a shooter — a long sustained stream (~15+ shots)
@@ -373,8 +410,9 @@ function fireAction(auto = false) {
   const torrent = G.starter === 'water' ? 0.8 - 0.04 * (G.starterLvl - 1) : 1;
   // SPACE JUNKIE runs much cooler — you're a Pokémon using its attack, not a
   // cannon — and NEVER-MELT ICE stacks cool it further still
-  const junkieCool = G.mode === 'junkie' ? 0.55 * Math.pow(0.94, G.stacks.ice) : 1;
-  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.3 * upgN('coolant')) * torrent * junkieCool);
+  const modeCool = G.mode === 'junkie' ? 0.55 : 1;
+  const masteryCool = Math.pow(0.94, G.stacks.ice || 0);
+  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.25 * upgN('coolant')) * torrent * modeCool * masteryCool);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
@@ -385,11 +423,16 @@ function fireAction(auto = false) {
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
   if (pil) G.attackAnim = 1; // the pilot visibly ATTACKS — lunge + flash
   const nBolts = upgN('twin') ? 2 : 1;
+  const pulseEvery = upgN('impactX') ? 4 : 5;
+  const pulse = !!upgN('pulse') && G.shotsFired % pulseEvery === 0;
   for (let i = 0; i < nBolts; i++) {
     G.lasers.push({
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
       y: shipY() - 16, basic: true, // fires from wherever the ship flies
-      explosive: !!G.fx_fire, hyper: !!upgN('hyper'),
+      explosive: !!G.fx_fire || G.megaT > 0,
+      powerMul: nBolts > 1 ? 0.65 : 1,
+      heavy: !!upgN('heavy'), pulse, nova: pulse && !!upgN('impactX'),
+      mega: G.megaT > 0,
       shape: pil ? pil.shape : null,
       element: pil ? attackElement() : null,
     });
@@ -400,13 +443,14 @@ function fireAction(auto = false) {
 // the charge (c in 0..1). Distinct fat visual + a deeper report.
 function fireCharge(c) {
   if (G.state !== 'play') return;
-  const power = 1 + Math.round(c * 4);   // 1..5 damage
+  const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1); // 1..5, capstone +25%
   const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
   if (pil) G.attackAnim = 1.4; // charge release = the big attack animation
   G.lasers.push({
     x: G.paddle.x, y: shipY() - 18, basic: true, charged: true,
-    power, pierce, r: 12 + c * 22, explosive: !!G.fx_fire,
+    power, pierce, r: (12 + c * 22) * (upgN('heavy') ? 1.15 : 1),
+    heavy: !!upgN('heavy'), explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0,
     shape: pil ? pil.shape : null,
     element: pil ? attackElement() : null,
   });
@@ -417,8 +461,15 @@ function fireCharge(c) {
 }
 function primaryAction() {
   audio();
-  if (G.state === 'menu') { if (!advOpen && !trialOpen) resetRun(); return; }
-  if (G.state === 'gameover') { G.state = 'menu'; return; }
+  // keyboard walks the two menu pages: mode select → setup → start
+  if (G.state === 'menu') {
+    if (!advOpen && !trialOpen) {
+      if (menuPage === 'setup') resetRun();
+      else menuPage = 'setup'; // fire on page 1 = take the current mode to setup
+    }
+    return;
+  }
+  if (G.state === 'gameover') { G.state = 'menu'; menuPage = 'modes'; return; }
   if (G.state === 'upgrade') return;
   fireAction();
 }
