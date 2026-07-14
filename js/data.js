@@ -425,9 +425,10 @@ const PATHS = {
   arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', family: 'offense', color: '#80d8ff',
     summary: 'COVER MORE LANES · LOWER DAMAGE PER BOLT', tell: 'CYAN MULTI-BARREL RIG', tiers: [
     { key: 'intercept', icon: 'target', name: 'INTERCEPTOR', desc: 'BOLTS DESTROY +1 ENEMY SHOT BEFORE FADING' },
-    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',     desc: 'BLASTER HEAT PER SHOT −25%' },
+    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',     desc: 'BLASTER HEAT PER SHOT −25%',
+      sdesc: 'HEAT PER SHOT −25% · CHARGE SHOTS BUILD 35% FASTER' },
     { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON', desc: 'FIRE TWO BOLTS · EACH DEALS 65% DAMAGE' },
-    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'BLASTER FIRES 25% FASTER' },
+    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'FIRES 25% FASTER · HEAT PER SHOT −20%' },
   ]},
   impact: { name: 'IMPACT', role: 'PRECISION FIRE', family: 'offense', color: '#ff8a65',
     summary: 'FEWER, HEAVIER SHOTS · LINE UP TARGETS', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
@@ -437,22 +438,27 @@ const PATHS = {
     { key: 'impactX', icon: 'star',   name: 'NOVA ROUND', desc: 'PULSE EVERY 4TH VOLLEY · DOUBLE DAMAGE' },
   ]},
   aegis: { name: 'AEGIS', role: 'SURVIVAL', family: 'defense', color: '#66bb6a',
-    summary: 'FORGIVING POSITIONING · RECHARGING DEFENSE', tell: 'GREEN ARMOR SOCKETS', tiers: [
-    { key: 'guard',     icon: 'shield', name: 'HOME GUARD',   desc: 'START EVERY WAVE WITH A SHIELD CHARGE' },
+    summary: 'SHIELDS ABSORB LETHAL HITS · RECHARGING DEFENSE', tell: 'GREEN ARMOR SOCKETS + SHIELD BUBBLE', tiers: [
+    { key: 'guard',     icon: 'shield', name: 'HOME GUARD',   desc: 'START WAVES SHIELDED · SHIELDS SAVE BALLS & BLOCK HITS',
+      sdesc: 'START WAVES SHIELDED · A SHIELD ABSORBS ONE HIT' },
     { key: 'bulwark',   icon: 'shield', name: 'BULWARK',      desc: 'SHIELD CAPACITY 3 → 5' },
-    { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 18% WIDER' },
+    { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 18% WIDER',
+      sdesc: 'CATCH REACH +18% · YOUR HURTBOX STAYS SMALL' },
     { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS' },
   ]},
   surge: { name: 'SURGE', role: 'MEGA TEMPO', family: 'tempo', color: '#ffd54f',
     summary: 'CHARGE MEGA OFTEN · CASH IN A POWER WINDOW', tell: 'GOLD OVERDRIVE CORE', tiers: [
-    { key: 'momentum',  icon: 'mega', name: 'MOMENTUM',       desc: 'RETURNS +2% MEGA · BLASTER HITS +0.2%' },
-    { key: 'rally',     icon: 'star', name: 'RALLY MASTER',   desc: 'KILLS CHARGE MEGA · BARRIER +1 · RALLY SCORE +50%' },
+    { key: 'momentum',  icon: 'mega', name: 'MOMENTUM',       desc: 'RETURNS +2% MEGA · BLASTER HITS +0.2%',
+      sdesc: 'EVERY BLASTER HIT CHARGES +0.4% MEGA' },
+    { key: 'rally',     icon: 'star', name: 'RALLY MASTER',   desc: 'KILLS CHARGE MEGA · BARRIER +1 · RALLY SCORE +50%',
+      sdesc: 'KILLS CHARGE MEGA ×2.5 · COMBO SCORE +50%' },
     { key: 'blaze',     icon: 'fire', name: 'OVERDRIVE CORE', desc: 'MEGA LASTS 7s · FIRE BLASTS 35% LARGER' },
     { key: 'megaX',     icon: 'mega', name: 'APEX MEGA',      desc: 'MEGA LASTS 9s · ATTACK DAMAGE +50%' },
   ]},
   bond: { name: 'BOND', role: 'PICKUPS & SCORE', family: 'utility', color: '#ec407a',
     summary: 'MORE DROPS · SAFER CATCHES · EXTRA LIVES', tell: 'PINK MAGNET NODE', tiers: [
-    { key: 'magnetize', icon: 'magnet',   name: 'ITEM MAGNET',    desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE' },
+    { key: 'magnetize', icon: 'magnet',   name: 'ITEM MAGNET',    desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE',
+      sdesc: 'PICKUPS DRIFT TOWARD YOU' },
     { key: 'bond',      icon: 'pokeball', name: "TRAINER'S BOND", desc: 'EACH CATCH: PERMANENT +6% SCORE' },
     { key: 'fortune',   icon: 'coin',     name: 'FORTUNE',        desc: 'POWER-UP DROP CHANCE +60%' },
     { key: 'revive',    icon: 'heart',    name: 'POKÉ REVIVE',    desc: '+1 LIFE NOW · +1 LIFE EVERY REGION CLEARED' },
@@ -463,7 +469,7 @@ const PATH_KEYS = Object.keys(PATHS);
 // Pokémon items your pilot would actually hold — one per path tier, each
 // appearing as a badge orbiting the ship when earned.
 const JUNKIE_ITEMS = {
-  arsenal: ['SCOPE LENS', 'NEVER-MELT ICE', 'CHOICE SPECS', 'LIFE ORB'],
+  arsenal: ['SCOPE LENS', 'MYSTIC WATER', 'CHOICE SPECS', 'QUICK CLAW'],
   impact:  ['MUSCLE BAND', 'EXPERT BELT', 'RAZOR CLAW', 'LOADED DICE'],
   aegis:   ['FOCUS BAND', 'EVIOLITE', 'LEFTOVERS', 'ASSAULT VEST'],
   surge:   ['POWER HERB', 'METRONOME', 'CHARCOAL', 'MEGA STONE'],
@@ -473,6 +479,12 @@ function junkieTierName(pathKey, tierIdx) {
   return (G.mode === 'junkie' && JUNKIE_ITEMS[pathKey] && JUNKIE_ITEMS[pathKey][tierIdx])
     ? JUNKIE_ITEMS[pathKey][tierIdx]
     : PATHS[pathKey].tiers[tierIdx].name;
+}
+// Cards, the tree atlas, and pick confirmations all describe what a tier does
+// IN THE CURRENT MODE — a shooter-mode player never reads about paddles/balls.
+function tierDesc(pathKey, tierIdx) {
+  const tier = PATHS[pathKey].tiers[tierIdx];
+  return (G.mode !== 'classic' && tier.sdesc) ? tier.sdesc : tier.desc;
 }
 // As authored paths cap, every mode fills empty offers with these small mastery
 // stacks. In SPACE JUNKIE they are literal held items orbiting the pilot.

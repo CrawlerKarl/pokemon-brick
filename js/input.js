@@ -263,7 +263,7 @@ function pickUpgrade(i) {
   const shownName = G.mode === 'junkie' ? junkieName : tier.name;
   setAnnounce(tier.icon, c.path.color,
     (capped ? '★ ' : '') + shownName + (capped ? ' ★' : ''),
-    tier.desc, capped ? 3 : 2.2,
+    tierDesc(c.pathKey, c.tierIdx), capped ? 3 : 2.2,
     (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
   if (capped) SFX.mega();
 }
@@ -412,7 +412,10 @@ function fireAction(auto = false) {
   // cannon — and NEVER-MELT ICE stacks cool it further still
   const modeCool = G.mode === 'junkie' ? 0.55 : 1;
   const masteryCool = Math.pow(0.94, G.stacks.ice || 0);
-  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.25 * upgN('coolant')) * torrent * modeCool * masteryCool);
+  // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
+  // heat-limited well below the faster cadence and the capstone adds no DPS
+  const hyperCool = upgN('hyper') ? 0.8 : 1;
+  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);

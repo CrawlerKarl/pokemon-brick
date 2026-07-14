@@ -255,6 +255,30 @@ window.requestAnimationFrame = function () { return 0; };
     return '5×4 tree; fair draft; Twin=2×65%; Nova every 4th; Hyper Cycle=−25% cooldown';
   });
 
+  // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
+  // the player, and an unshielded hit still costs a life. (Shields used to
+  // trigger only at the floor line BELOW the player — dead in these modes.)
+  test('shooter survival: shield absorbs a hit at the player', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'blaster';
+    resetRun(1, true);
+    G.state = 'play';
+    const lives0 = G.lives;
+    G.shieldCharges = 2; G.invuln = 0;
+    G.enemyShots.push({ x: G.paddle.x, y: shipY() - 4, vy: 100 });
+    paused = false; G.freeze = 0;
+    update(1 / 60);
+    assert(G.lives === lives0, 'shield did not absorb: lives ' + lives0 + ' → ' + G.lives);
+    assert(G.shieldCharges === 1, 'absorb must consume exactly 1 charge, got ' + G.shieldCharges);
+    assert(G.invuln > 0, 'absorb must grant a grace window');
+    G.shieldCharges = 0; G.invuln = 0;
+    G.enemyShots.push({ x: G.paddle.x, y: shipY() - 4, vy: 100 });
+    update(1 / 60);
+    assert(G.lives === lives0 - 1, 'unshielded hit should cost a life (' + lives0 + ' → ' + G.lives + ')');
+    assert(ERR.length === e0, 'errors during shield test: ' + ERR.slice(e0).join(' | '));
+    return 'shielded hit absorbed (1 charge, grace i-frames); unshielded hit cost a life';
+  });
+
   // 2b) classic lose-a-life: park the paddle away and let the ball drain
   test('classic: lose a life cleanly', async () => {
     const e0 = ERR.length;

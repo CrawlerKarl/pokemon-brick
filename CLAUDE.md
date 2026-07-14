@@ -32,11 +32,12 @@ real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
-- **Automated invariants:** open `/test.html` (drives the sim headless, 14
+- **Automated invariants:** open `/test.html` (drives the sim headless, 16
   checks, sets `window.TEST_RESULTS`). Keep it green.
 - `npm run check` (syntax all modules), `npm run verify-assets` (every roster id
   is named + has a local sprite). Run after roster/data changes.
-- Test mobile with `?touch` in the URL. Serve locally: `node serve.js` (:8741).
+- Test mobile with `?touch` in the URL. Serve locally: `node serve.js`
+  (:8741, or set `PORT=` — the preview harness assigns one via autoPort).
 
 ## Deploying (user plays via GitHub Pages)
 Commit to `main`, `git push`, then trigger + verify the build:
@@ -76,7 +77,12 @@ phone — flag anything only verifiable there.
   suite catch stragglers. Evolved species are bigger + tankier elites.
 - **Progression: paths + mastery + checkpoints.** Drafts advance the same
   5-path × 4-tier tree (two distinct offense paths); junkie re-skins tiers as
-  Pokémon items (`JUNKIE_ITEMS`). As paths cap, every mode fills empty offers
+  Pokémon items (`JUNKIE_ITEMS`). **Every tier must stay live in all three
+  modes** — tiers carry an optional `sdesc` (shooter-mode text, `tierDesc`)
+  and mode-aware wiring: shields ABSORB a lethal hit on the player in every
+  mode (`absorbHit`, update.js — never regress them to floor-line-only),
+  Momentum/Rally charge Mega off blaster hits/kills in the shooter modes, and
+  upgrades never widen the shooter hurtbox. As paths cap, every mode fills empty offers
   with forever-stacking `STACK_ITEMS` (`G.stacks`). Owned tiers orbit the
   junkie pilot; paddle modes show them on the build rail. Runs auto-save at each region (`saveCheckpoint`/
   `RUN_CKPT`); a true game over clears it. One draft reroll per screen.

@@ -1737,9 +1737,33 @@ function drawShootHint() {
 }
 
 function drawShield() {
-  if (G.shieldCharges <= 0) return;
+  if (G.shieldCharges <= 0 && !(G.shieldFlash > 0)) return;
   ctx.save();
-  const a = 0.25 + 0.12 * Math.sin(G.time * 4) + G.shieldCharges * 0.08;
+  const flare = G.shieldFlash || 0;
+  if (G.mode !== 'classic') {
+    // shooter modes: shields are a personal barrier — a bubble riding the
+    // ship/paddle that visibly eats the hit (cheap: strokes only, no blur)
+    const px = G.paddle.x, py = shipY();
+    const r = (G.mode === 'junkie' ? 40 : 52) + flare * 10;
+    const a = Math.min(0.9, 0.3 + 0.1 * Math.sin(G.time * 4) + G.shieldCharges * 0.06 + flare * 0.5);
+    ctx.strokeStyle = `rgba(165,214,167,${a})`;
+    ctx.lineWidth = 2 + flare * 2.5;
+    ctx.beginPath(); ctx.arc(px, py, r, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    ctx.strokeStyle = `rgba(102,187,106,${a * 0.55})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(px, py, r + 5, Math.PI * 1.25, Math.PI * 1.75); ctx.stroke();
+    // charge pips over the crown of the bubble
+    for (let i = 0; i < G.shieldCharges; i++) {
+      ctx.fillStyle = `rgba(165,214,167,${Math.min(1, a + 0.25)})`;
+      ctx.beginPath();
+      ctx.arc(px + (i - (G.shieldCharges - 1) / 2) * 10, py - r - 8, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
+  if (G.shieldCharges <= 0) { ctx.restore(); return; }
+  const a = 0.25 + 0.12 * Math.sin(G.time * 4) + G.shieldCharges * 0.08 + flare * 0.4;
   const fl = FLOOR();
   const g = ctx.createLinearGradient(0, fl - 26, 0, fl);
   g.addColorStop(0, 'rgba(102,187,106,0)');
@@ -2574,7 +2598,7 @@ function drawFullUpgradeTree() {
         ctx.fillStyle = owned ? P.color : next ? '#fff' : '#78909c';
         ctx.fillText((ti === 3 ? '★ ' : '') + (G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name), cx + 31, y + 15, colW - 38);
         ctx.font = bodyFont(7.5, 500); ctx.fillStyle = owned || next ? '#b0bec5' : '#546e7a';
-        wrapText(tier.desc, colW - 14).slice(0, 3).forEach((line, li) =>
+        wrapText(tierDesc(pk, ti), colW - 14).slice(0, 3).forEach((line, li) =>
           ctx.fillText(line, cx + 8, y + 34 + li * 11, colW - 16));
         ctx.textAlign = 'right'; ctx.font = '800 7px Orbitron, sans-serif';
         ctx.fillStyle = owned ? P.color : next ? '#fff' : '#455a64';
@@ -2766,7 +2790,7 @@ function drawOverlays() {
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + 64, r.y + 33);
           ctx.font = bodyFont(9.5);
           ctx.fillStyle = '#b0bec5';
-          wrapText(tier.desc, r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
+          wrapText(tierDesc(c.pathKey, c.tierIdx), r.w - 80).forEach((l, li) => ctx.fillText(l, r.x + 64, r.y + 50 + li * 12));
         } else if (L.short) { // short landscape: compact vertical card
           ctx.textAlign = 'center';
           ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = col;
@@ -2776,7 +2800,7 @@ function drawOverlays() {
           ctx.font = '900 11px Orbitron, sans-serif'; ctx.fillStyle = isCap ? col : '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + r.w / 2, r.y + 72, r.w - 10);
           ctx.font = bodyFont(8, 600); ctx.fillStyle = '#b0bec5';
-          wrapText(tier.desc, r.w - 14).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 88 + li * 11));
+          wrapText(tierDesc(c.pathKey, c.tierIdx), r.w - 14).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 88 + li * 11));
           ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#546e7a';
           ctx.fillText(IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 8);
         } else { // desktop: tall card
@@ -2794,7 +2818,7 @@ function drawOverlays() {
           ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 116, r.w - 20);
           ctx.font = bodyFont(10.5);
           ctx.fillStyle = '#b0bec5';
-          wrapText(tier.desc, r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 140 + li * 16));
+          wrapText(tierDesc(c.pathKey, c.tierIdx), r.w - 28).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 140 + li * 16));
           ctx.font = '700 9.5px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#546e7a';
           const nextName = c.tierIdx < 3 ? junkieTierName(c.pathKey, c.tierIdx + 1) : null;

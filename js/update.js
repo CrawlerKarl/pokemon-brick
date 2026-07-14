@@ -11,8 +11,11 @@ function timeScale() {
 // Dialga's Roar of Time slows only the balls, not the player
 function ballTimeScale() { return G.timeWarpT > 0 ? 0.55 : 1; }
 function scoreMult() {
+  // RALLY MASTER's shooter translation: no ball rallies there, so the kill
+  // combo carries its +50% score identity instead
+  const comboAmp = (G.mode !== 'classic' && upgN('rally')) ? 1.5 : 1;
   return (G.fx_score ? 2 * G.fx_score.tier : 1)
-    * (1 + Math.min(G.combo, 20) * 0.1)
+    * (1 + Math.min(G.combo, 20) * 0.1 * comboAmp)
     * (G.modifier?.key === 'bounty' ? 2 : 1)
     * (1 + G.catchBonus)
     * (1 + 0.06 * ((G.stacks && G.stacks.bell) || 0)); // SOOTHE BELL stacks
@@ -149,7 +152,10 @@ function damageBrick(br, dmg, sx, sy, element) {
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     // tuned so Mega comes online roughly once per region (3 waves)
-    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + (upgN('rally') ? (br.isBoss ? 0.04 : 0.004) : 0));
+    // RALLY MASTER's shooter translation: kills are the only tempo there, so
+    // they charge much harder (×2.5 total) — mega lands roughly every 2 waves
+    const rallyKill = upgN('rally') ? (br.isBoss ? 0.04 : (G.mode !== 'classic' ? 0.012 : 0.004)) : 0;
+    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + rallyKill);
     if (br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
     if (br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
       setAnnounce('▒', '#b0bec5', 'MISSINGNO.', 'ITEM DUPLICATION! ×3 POWER-UPS', 2.2);
@@ -488,6 +494,23 @@ function rollUpgradeChoices() {
   G.upgradeChoices = choices.length ? choices : null;
 }
 
+// A shield charge absorbs one lethal hit on the player (enemy shot or column
+// strike) — consumed at impact, with a moment of grace so a shot cluster can't
+// strip the whole bank in one frame. Returns true if the hit was eaten.
+// (Shields used to burn at the FLOOR line, below the player — every shot they
+// "blocked" had already missed, so AEGIS did nothing in the shooter modes.)
+function absorbHit(x, y) {
+  if (G.shieldCharges <= 0) return false;
+  G.shieldCharges--;
+  G.invuln = 1.2;
+  G.shieldFlash = 1; // render: the bubble flares where it ate the hit
+  addFloater(G.paddle.x, y - 46, 'SHIELD!', '#66bb6a', 15);
+  burst(x, y, '#66bb6a', 18, 240, 0.5);
+  ringFx(G.paddle.x, y, '#a5d6a7', 6, 64, 3, 0.4);
+  SFX.shield();
+  return true;
+}
+
 function loseLife() {
   ringFx(G.paddle.x, shipY(), '#ff5252', 8, 90, 4, 0.5);
   G.lives--;
@@ -568,6 +591,7 @@ function update(dt) {
   G.invuln = Math.max(0, G.invuln - dt);
   G.blasterCD = Math.max(0, G.blasterCD - dt);
   G.muzzle = Math.max(0, G.muzzle - dt);
+  G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
   G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 
@@ -617,7 +641,8 @@ function update(dt) {
   if (G.mode !== 'classic' && G.state === 'play') {
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
-      G.charge = Math.min(1, G.charge + dt / 1.1); // ~1.1s to full
+      // COOLANT's shooter translation: a cooler barrel also charges faster
+      G.charge = Math.min(1, G.charge + dt / (upgN('coolant') ? 0.8 : 1.1)); // ~1.1s to full (0.8 w/ Coolant)
     } else if (G.charge > 0) {
       fireCharge(G.charge);
       G.charge = 0; G.chargeCD = 0.25;
@@ -633,7 +658,7 @@ function update(dt) {
         G.shieldRegenT = 10;
         G.shieldCharges++;
         SFX.shield();
-        addFloater(G.paddle.x, PADDLE_Y() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
+        addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
       }
     } else G.shieldRegenT = 10;
   }
@@ -1183,7 +1208,8 @@ function update(dt) {
       G.laserCD = tier >= 3 ? 0.3 : tier >= 2 ? 0.42 : 0.6;
       const pw = paddleW();
       const xs = tier >= 3 ? [-pw / 2, -pw / 6, pw / 6, pw / 2] : [-pw / 2 + 8, pw / 2 - 8];
-      xs.forEach(off => G.lasers.push({ x: G.paddle.x + off, y: PADDLE_Y() - 14,
+      // shipY, not PADDLE_Y — the junkie pilot fires from wherever it flies
+      xs.forEach(off => G.lasers.push({ x: G.paddle.x + off, y: shipY() - 14,
         explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0 }));
       SFX.laser();
     }
@@ -1238,7 +1264,9 @@ function update(dt) {
         if (L.mega) dmg *= upgN('megaX') ? 1.5 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
-        if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + 0.002);
+        // MOMENTUM: in the shooter modes there are no paddle returns, so
+        // blaster hits carry the whole tier — twice the classic trickle
+        if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + (G.mode !== 'classic' ? 0.004 : 0.002));
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
         // a fire pilot's spent charge shot detonates — Blaze in shooter form
         if (L.charged && L.dead && L.shape === 'flame') fireballExplosion(L.x, L.y, 1);
@@ -1256,7 +1284,7 @@ function update(dt) {
       G.missileCD = Math.max(0.5, 1.3 - tier * 0.25);
       const n = tier >= 2 ? 2 : 1;
       for (let i = 0; i < n; i++) {
-        G.missiles.push({ x: G.paddle.x + (i ? 18 : -18), y: PADDLE_Y() - 16, vx: (i ? 1 : -1) * 120, vy: -340, tier });
+        G.missiles.push({ x: G.paddle.x + (i ? 18 : -18), y: shipY() - 16, vx: (i ? 1 : -1) * 120, vy: -340, tier });
       }
       SFX.missile();
     }
@@ -1363,11 +1391,15 @@ function update(dt) {
       if (cs.warn <= 0) { G.shake = Math.min(G.shake + 10, 16); SFX.laser(); noiseBurst(0.25, 0.1); }
     } else {
       cs.strike -= dt * ts;
-      if (G.invuln <= 0 && Math.abs(G.paddle.x - cs.x) < cs.w / 2 + paddleW() / 2) {
+      // the junkie pilot is a compact mon — beam clips its small hitbox, not
+      // a phantom paddle width (same rule as enemy shots)
+      const halfW = G.mode === 'junkie' ? 26 : paddleW() / 2;
+      if (G.invuln <= 0 && Math.abs(G.paddle.x - cs.x) < cs.w / 2 + halfW) {
         cs.strike = 0;
+        if (absorbHit(G.paddle.x, shipY())) continue;
         G.invuln = 2;
-        addFloater(G.paddle.x, PADDLE_Y() - 50, 'HIT!', '#ff5252', 22);
-        burst(G.paddle.x, PADDLE_Y(), '#ffd54f', 30, 320);
+        addFloater(G.paddle.x, shipY() - 50, 'HIT!', '#ff5252', 22);
+        burst(G.paddle.x, shipY(), '#ffd54f', 30, 320);
         loseLife();
         return;
       }
@@ -1378,18 +1410,20 @@ function update(dt) {
     s.y += (s.vy || 0) * ts * dt;
     if (s.vx != null) s.x += s.vx * ts * dt;
     else s.x += Math.sin(s.y * 0.03) * 30 * dt;
-    if (s.y > FLOOR() - 18 && G.shieldCharges > 0) {
-      s.dead = true; G.shieldCharges--;
-      burst(s.x, FLOOR() - 14, '#66bb6a', 14, 180); SFX.shield();
-    }
     // in SPACE JUNKIE the player is a compact mon, not a wide paddle — the
-    // hit zone is a small box around the ship, wherever it's flying
+    // hit zone is a small box around the ship, wherever it's flying. BLASTER
+    // dodges for a living, so upgrades never widen its hurtbox (base width).
     const jk = G.mode === 'junkie';
-    const pw = paddleW(), py = shipY();
-    const hitW = jk ? 26 : pw / 2 + 6, hitH = jk ? 24 : G.paddle.h;
+    const py = shipY();
+    const hitW = jk ? 26 : (G.mode === 'classic' ? paddleW() : G.paddle.w) / 2 + 6;
+    const hitH = jk ? 24 : G.paddle.h;
     if (!s.dead && G.invuln <= 0 && s.y > py - hitH && s.y < py + hitH &&
         Math.abs(s.x - G.paddle.x) < hitW) {
       s.dead = true;
+      // AEGIS: a shield charge absorbs the hit at the moment of impact —
+      // this is what makes the survival path real in the shooter modes,
+      // where enemy fire is the only way to die
+      if (absorbHit(s.x, py)) continue;
       G.invuln = 2;
       addFloater(G.paddle.x, py - 50, 'HIT!', '#ff5252', 22);
       burst(G.paddle.x, py, '#ff5252', 30, 320);

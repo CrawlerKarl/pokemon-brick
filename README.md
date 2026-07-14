@@ -229,17 +229,32 @@ is `advancePath(key)`. The hand guarantees an offense option and a non-offense
 option while both groups remain, so damage never crowds survival/utility off
 the screen:
 - **VOLLEY** → HYPER CYCLE (coverage, interception, cooling, Twin Cannon;
-  Twin bolts deal 65% each and the capstone is +25% fire rate)
+  Twin bolts deal 65% each; the capstone is +25% fire rate AND −20% heat —
+  without the heat cut, sustained fire was heat-limited and the cadence
+  bonus added no real DPS). Coolant also builds charge shots 35% faster in
+  the shooter modes.
 - **IMPACT** → NOVA ROUND (wide heavy bolts, elite damage, an obvious piercing
   pulse every fifth volley, then a double-damage pulse every fourth)
-- **AEGIS** → SUPER SHIELD (floor-shield regrows every 10s; bigger cap; 18%
-  wider frame)
+- **AEGIS** → SUPER SHIELD. **A shield charge absorbs a lethal hit on the
+  player** (enemy shot or column strike — `absorbHit`, update.js) in every
+  mode, plus the classic floor net still saves dropped balls. Tiers: start
+  waves shielded / cap 3→5 / wider paddle (shooter modes: wider CATCH only —
+  upgrades never grow the hurtbox) / a charge regrows every 10s. In the
+  shooter modes the shield renders as a bubble riding the ship with charge
+  pips (`drawShield`, render.js). Historical note: shields used to trigger
+  only at the FLOOR line, *below* the player — every shot they "blocked" had
+  already missed, so AEGIS did nothing in the two modes where enemy fire is
+  the only way to die.
 - **SURGE** → APEX MEGA (hits/kills charge Mega in every mode; 9s capstone
-  window and +50% attack damage)
+  window and +50% attack damage). Shooter translations: Momentum gives +0.4%
+  Mega per blaster hit (no paddle returns there), Rally Master charges Mega
+  ×2.5 per kill and amplifies combo score +50%.
 - **BOND** → POKÉ REVIVE (+1 life now + per region cleared; more drops/score)
 
 The draft cards label each path's playstyle and show the next tier plus
-capstone. **FULL TREE** (`T` on desktop) opens a five-column atlas with every
+capstone. Card/tree/announce text is **mode-aware** (`tierDesc`, data.js —
+optional `sdesc` per tier), so a shooter-mode player never reads about
+paddles or balls. **FULL TREE** (`T` on desktop) opens a five-column atlas with every
 tier, description, owned node, next node, and future node; phones use a compact
 five-row version. A **HUD build strip** shows owned paths, every non-junkie tier
 adds a colored hardware socket to the paddle, and Junkie tiers orbit the pilot
