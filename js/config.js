@@ -19,8 +19,8 @@ if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
 // walls but no ball, cleared entirely by shooting. Difficulty + starter are
 // picked on the setup page AFTER the mode.
 const MODES = [
-  { key: 'classic', label: 'BRICK BREAKER', desc: 'BALL + BLASTER', accent: '#ffd54f',
-    lines: ['THE CLASSIC — SMASH THE WALL', 'WITH BALL AND BLASTER'] },
+  { key: 'classic', label: 'BRICK BREAKER', desc: 'BALL-FIRST', accent: '#ffd54f',
+    lines: ['THE CLASSIC — SMASH THE WALL', 'WITH YOUR BALL · EARN A BLASTER'] },
   { key: 'junkie',  label: 'SPACE JUNKIE', desc: 'PURE SHOOTER', accent: '#ab47bc',
     lines: ['NO WALL · PURE SHOOTER', 'YOUR POKÉMON IS THE SHIP'] },
   { key: 'blaster', label: 'BLASTER', desc: 'EXPERIMENTAL MIX', accent: '#4dd0e1',

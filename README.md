@@ -67,8 +67,12 @@ select — two big cards for BRICK BREAKER and SPACE JUNKIE plus a smaller
 dashed "experimental" chip for BLASTER — and picking a game leads to page 2,
 setup (starter + difficulty + START, `setupLayout`). Quitting/game over
 always lands back on page 1.
-- **BRICK BREAKER** (`classic`) — the ball + blaster brick-breaker described
-  below.
+- **BRICK BREAKER** (`classic`) — the ball-first brick-breaker described
+  below. The ball is THE weapon; there is **no free blaster**. Manual fire is
+  gated by `blasterArmed()` (state.js) and unlocks only with a LASER power-up,
+  an active Mega, or an offense-path draft (VOLLEY/IMPACT). Until then
+  `fireAction` no-ops, the touch FIRE pad is hidden, and the shoot hint is
+  suppressed — you serve/launch the ball by tapping the playfield.
 - **BLASTER** — a ball-less pure shooter (Space-Junkies flavour). `serve()`
   spawns no ball and drops you straight into play; you clear the wall and the
   flyers by shooting. You only lose to enemy fire (the "0 balls → loseLife"

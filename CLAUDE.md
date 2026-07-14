@@ -12,7 +12,11 @@ step / deps / framework. `G` (state.js) is the god-object holding all runtime
 state.
 
 **Three game modes** (`SETTINGS.mode` / `G.mode`, chosen on the title screen):
-- **classic** — ball + free-firing blaster brick-breaker (the original).
+- **classic** — ball-first brick-breaker (the original). The ball is THE
+  weapon; there is NO free blaster. The blaster is EARNED and gated by
+  `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or an
+  offense-path draft (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
+  touch FIRE pad is hidden, and the shoot hint is suppressed.
 - **blaster** — same waves, NO ball; you clear everything by shooting. Hold
   CHARGE (right-click / Shift / touch pad) for a fat piercing shot.
 - **junkie** (SPACE JUNKIE) — the pure-shooter homage: no wall at all, every

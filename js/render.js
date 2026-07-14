@@ -1715,6 +1715,8 @@ function drawAnnounce() {
 // MEGA/FIRE/CHARGE or covers the pilot
 function drawShootHint() {
   if (G.state !== 'play' || G.shotsFired >= 3 || G.playT > 20) return;
+  // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
+  if (G.mode === 'classic' && !blasterArmed()) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
     ? (IS_TOUCH ? 'HOLD FIRE — CHARGE FOR A BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
@@ -1951,28 +1953,30 @@ function drawTouchControls() {
   const B = touchButtons();
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // FIRE
+  // FIRE — absent in CLASSIC until the blaster is earned (touchButtons)
   const hot = G.overheat > 0;
   const f = B.fire;
-  ctx.globalAlpha = 0.85;
-  ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-  ctx.fillStyle = hot ? 'rgba(80,30,30,0.72)' : 'rgba(10,16,38,0.72)';
-  ctx.fill();
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = hot ? '#ff5252' : '#80d8ff';
-  ctx.stroke();
-  // heat arc wraps the fire button
-  const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
-  if (frac > 0.02) {
-    ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 5, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : '#ffd54f';
+  if (f) {
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.fillStyle = hot ? 'rgba(80,30,30,0.72)' : 'rgba(10,16,38,0.72)';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = hot ? '#ff5252' : '#80d8ff';
     ctx.stroke();
+    // heat arc wraps the fire button
+    const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
+    if (frac > 0.02) {
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 5, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : '#ffd54f';
+      ctx.stroke();
+    }
+    drawGlyph(ctx, 'target', f.x, f.y - 6, 13, hot ? '#ff8a80' : '#b3e5fc');
+    ctx.font = '900 9px Orbitron, sans-serif';
+    ctx.fillStyle = hot ? '#ff8a80' : '#b3e5fc';
+    ctx.fillText(hot ? 'HOT!' : 'FIRE', f.x, f.y + 16);
   }
-  drawGlyph(ctx, 'target', f.x, f.y - 6, 13, hot ? '#ff8a80' : '#b3e5fc');
-  ctx.font = '900 9px Orbitron, sans-serif';
-  ctx.fillStyle = hot ? '#ff8a80' : '#b3e5fc';
-  ctx.fillText(hot ? 'HOT!' : 'FIRE', f.x, f.y + 16);
   // MEGA — the button IS the meter (fills as a ring)
   const m = B.mega;
   const ready = G.mega >= 1 && G.megaT <= 0;
@@ -2882,9 +2886,15 @@ function drawOverlays() {
     title('PAUSED', H * 0.38, 44, '#e3f2fd');
     ctx.font = '500 13px Orbitron, sans-serif';
     ctx.fillStyle = '#90a4ae';
-    (IS_TOUCH
-      ? ['DRAG — MOVE PADDLE', 'FIRE BUTTON — LAUNCH · SHOOT BLASTER', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'RETURNS ON YOUR PADDLE VENT BLASTER HEAT']
-      : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH · FIRE BLASTER', 'E — MEGA EVOLVE WHEN METER IS FULL', 'PADDLE RETURNS VENT BLASTER HEAT', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT']
+    // CLASSIC leads with the ball — the blaster is an earned extra, not a
+    // default control, so its help never promises a FIRE button
+    (G.mode === 'classic'
+      ? (IS_TOUCH
+        ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS']
+        : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA EVOLVE WHEN METER IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
+      : (IS_TOUCH
+        ? ['DRAG — MOVE PADDLE', 'FIRE BUTTON — LAUNCH · SHOOT BLASTER', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'RETURNS ON YOUR PADDLE VENT BLASTER HEAT']
+        : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH · FIRE BLASTER', 'E — MEGA EVOLVE WHEN METER IS FULL', 'PADDLE RETURNS VENT BLASTER HEAT', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
     ).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.47 + i * 22, W * 0.92));
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);
     // QUIT TO MENU button — bail out of the run

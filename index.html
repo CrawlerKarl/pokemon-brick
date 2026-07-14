@@ -16,7 +16,10 @@
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #05060f; overscroll-behavior: none; }
-  canvas { display: block; cursor: none; touch-action: none; }
+  /* pinned to the visual viewport so the bottom of the play area (and the
+     touch controls anchored to it) can never fall behind a mobile browser
+     toolbar or the home indicator */
+  canvas { display: block; position: fixed; top: 0; left: 0; cursor: none; touch-action: none; }
   /* probe for the phone's home-indicator / safe-area height */
   #safe-probe { position: fixed; bottom: 0; height: env(safe-area-inset-bottom, 0px); width: 1px; visibility: hidden; }
 </style>

@@ -117,6 +117,14 @@ const FLOOR = () => H - SAFE_B;
 const PADDLE_Y = () => FLOOR() - (IS_TOUCH ? 124 : 64);
 const DANGER_Y = () => PADDLE_Y() - 86;
 const ballSp = () => diff().ballSpeed;
+// CLASSIC keeps the ball as THE weapon — the blaster is earned, never default.
+// It arms only once you draft an offense path (VOLLEY / IMPACT), grab a LASER
+// power-up, or pop Mega. The shooter modes (blaster / junkie) are always armed.
+function blasterArmed() {
+  if (G.mode !== 'classic') return true;
+  if (G.fx_laser || G.megaT > 0) return true;
+  return PATH_KEYS.some(k => PATHS[k].family === 'offense' && pathLvl(k) > 0);
+}
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
 function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false) {

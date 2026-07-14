@@ -8,15 +8,20 @@ let paddleTouchId = null;
 // on-screen buttons for touch play: drag anywhere moves the paddle,
 // FIRE shoots, MEGA unleashes, plus pause & sound in the top corner
 function touchButtons() {
-  const fl = FLOOR();
+  // keep the thumb pads well clear of the very bottom edge — mobile browsers
+  // park a toolbar / home indicator there and were clipping the FIRE ring off
+  // the bottom of the screen. Anchor the pads a comfortable margin above FLOOR.
+  const base = FLOOR() - 34;
   const b = {
-    fire:  { x: W - 52, y: fl - 48, r: 42 },
-    mega:  { x: W - 136, y: fl - 44, r: 30 }, // beside FIRE — paddle rides above both
+    mega:  { x: W - 138, y: base - 40, r: 30 }, // beside FIRE — paddle rides above both
     pause: { x: W - 28, y: 84, r: 20 },
     sound: { x: W - 72, y: 82, r: 18 },
   };
+  // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
+  // and the ball is launched by tapping the playfield, not this pad.
+  if (blasterArmed()) b.fire = { x: W - 58, y: base - 42, r: 42 };
   // shooter modes: a CHARGE pad in the far bottom-left, for the other thumb
-  if (G.mode !== 'classic') b.charge = { x: 56, y: fl - 48, r: 40 };
+  if (G.mode !== 'classic') b.charge = { x: 58, y: base - 42, r: 40 };
   return b;
 }
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
@@ -74,14 +79,14 @@ window.addEventListener('touchstart', e => {
       // touches that land on a button are UI touches — they must never be
       // adopted as paddle control, even if the finger wiggles (that was
       // yanking the paddle to the FIRE button's side of the screen)
-      if (inCircle(x, y, B.fire, 22)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
+      if (B.fire && inCircle(x, y, B.fire, 22)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
       if (B.charge && inCircle(x, y, B.charge, 20)) { chargeHeld = true; chargeTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.mega, 12)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.pause, 10)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.sound, 10)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
       // near-miss dead zone: a fumbled tap AROUND a button is swallowed
       // outright — under no circumstances does it become paddle control
-      if (inCircle(x, y, B.fire, 64) || inCircle(x, y, B.mega, 42) ||
+      if ((B.fire && inCircle(x, y, B.fire, 64)) || inCircle(x, y, B.mega, 42) ||
           (B.charge && inCircle(x, y, B.charge, 60)) ||
           inCircle(x, y, B.pause, 30) || inCircle(x, y, B.sound, 30)) {
         uiTouchIds.add(t.identifier);
@@ -398,6 +403,9 @@ function fireAction(auto = false) {
     });
     return;
   }
+  // CLASSIC has no free blaster — the ball is the weapon until you EARN a
+  // blaster (offense draft / LASER power-up / Mega). Pressing fire just no-ops.
+  if (!blasterArmed()) return;
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
   G.blasterCD = upgN('hyper') ? 0.225 : 0.3;
