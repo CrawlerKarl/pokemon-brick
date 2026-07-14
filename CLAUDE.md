@@ -17,8 +17,11 @@ state.
   `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or an
   offense-path draft (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
   touch FIRE pad is hidden, and the shoot hint is suppressed.
-- **blaster** — same waves, NO ball; you clear everything by shooting. Hold
-  CHARGE (right-click / Shift / touch pad) for a fat piercing shot.
+- **blaster** — same waves, NO ball; you clear everything by shooting. Charge
+  a fat piercing shot with right-click / Shift, or on touch a **double-tap +
+  hold on the FIRE pad** (no separate CHARGE pad — one thumb fires AND charges;
+  a quick double-tap is just two shots). Wiring: `chargePendingId`/
+  `CHARGE_HOLD_MS` (input.js), promoted to `chargeHeld` in update.js.
 - **junkie** (SPACE JUNKIE) — the pure-shooter homage: no wall at all, every
   wave is tight high flocks of small flyers, and **your starter IS the ship**
   (Pikachu if none), flying vertically and firing its own typed attack.

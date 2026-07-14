@@ -1719,9 +1719,9 @@ function drawShootHint() {
   if (G.mode === 'classic' && !blasterArmed()) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
-    ? (IS_TOUCH ? 'HOLD FIRE — CHARGE FOR A BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
+    ? (IS_TOUCH ? 'TAP TO ATTACK · DOUBLE-TAP + HOLD = BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
     : G.mode === 'blaster'
-      ? (IS_TOUCH ? 'FIRE · HOLD CHARGE FOR A BIG SHOT' : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
+      ? (IS_TOUCH ? 'TAP TO FIRE · DOUBLE-TAP + HOLD = CHARGE SHOT' : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
       : (IS_TOUCH ? 'HOLD FIRE TO SHOOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT');
   ctx.save();
   ctx.globalAlpha = a;
@@ -1953,16 +1953,19 @@ function drawTouchControls() {
   const B = touchButtons();
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // FIRE — absent in CLASSIC until the blaster is earned (touchButtons)
+  // FIRE — absent in CLASSIC until the blaster is earned (touchButtons). In the
+  // shooter modes this one pad also CHARGES: a double-tap + hold winds up a big
+  // shot, shown here as a cyan ring filling inside the heat arc.
   const hot = G.overheat > 0;
   const f = B.fire;
   if (f) {
+    const charging = G.charge > 0.02, full = G.charge >= 1;
     ctx.globalAlpha = 0.85;
     ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    ctx.fillStyle = hot ? 'rgba(80,30,30,0.72)' : 'rgba(10,16,38,0.72)';
+    ctx.fillStyle = hot ? 'rgba(80,30,30,0.72)' : charging ? 'rgba(16,60,72,0.78)' : 'rgba(10,16,38,0.72)';
     ctx.fill();
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = hot ? '#ff5252' : '#80d8ff';
+    ctx.strokeStyle = hot ? '#ff5252' : charging ? (full ? '#e0ffff' : '#4dd0e1') : '#80d8ff';
     ctx.stroke();
     // heat arc wraps the fire button
     const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
@@ -1972,10 +1975,20 @@ function drawTouchControls() {
       ctx.strokeStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : '#ffd54f';
       ctx.stroke();
     }
-    drawGlyph(ctx, 'target', f.x, f.y - 6, 13, hot ? '#ff8a80' : '#b3e5fc');
+    // charge fill — an inner ring winding up as you hold the double-tap
+    if (charging) {
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 12, -Math.PI / 2, -Math.PI / 2 + Math.min(1, G.charge) * Math.PI * 2);
+      ctx.lineWidth = 4; ctx.strokeStyle = full ? '#e0ffff' : '#80deea'; ctx.stroke();
+      if (full) {
+        ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 12 + Math.sin(G.time * 10) * 6;
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+    drawGlyph(ctx, charging ? 'warp' : 'target', f.x, f.y - 6, 13, hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#b2ebf2') : '#b3e5fc');
     ctx.font = '900 9px Orbitron, sans-serif';
-    ctx.fillStyle = hot ? '#ff8a80' : '#b3e5fc';
-    ctx.fillText(hot ? 'HOT!' : 'FIRE', f.x, f.y + 16);
+    ctx.fillStyle = hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#80deea') : '#b3e5fc';
+    ctx.fillText(hot ? 'HOT!' : charging ? 'CHARGE' : 'FIRE', f.x, f.y + 16);
   }
   // MEGA — the button IS the meter (fills as a ring)
   const m = B.mega;
@@ -2002,26 +2015,7 @@ function drawTouchControls() {
   ctx.font = '900 8px Orbitron, sans-serif';
   ctx.fillStyle = ready ? '#ffd54f' : '#90a4ae';
   ctx.fillText('MEGA', m.x, m.y + 13);
-  // CHARGE pad (blaster mode) — the ring fills as you hold, flares at full
-  if (B.charge) {
-    const c = B.charge, full = G.charge >= 1;
-    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-    ctx.fillStyle = chargeHeld ? 'rgba(20,80,90,0.78)' : 'rgba(10,16,38,0.72)'; ctx.fill();
-    ctx.lineWidth = 2.5; ctx.strokeStyle = full ? '#e0ffff' : '#4dd0e1'; ctx.stroke();
-    if (G.charge > 0.02) {
-      ctx.beginPath(); ctx.arc(c.x, c.y, c.r - 5, -Math.PI / 2, -Math.PI / 2 + Math.min(1, G.charge) * Math.PI * 2);
-      ctx.lineWidth = 4; ctx.strokeStyle = full ? '#e0ffff' : '#80deea'; ctx.stroke();
-    }
-    if (full) {
-      ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 12 + Math.sin(G.time * 10) * 6;
-      ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-    drawGlyph(ctx, 'warp', c.x, c.y - 5, 10, full ? '#e0ffff' : '#b2ebf2');
-    ctx.font = '900 9px Orbitron, sans-serif'; ctx.fillStyle = full ? '#e0ffff' : '#80deea';
-    ctx.textAlign = 'center';
-    ctx.fillText('CHARGE', c.x, c.y + 14);
-  }
+  // (charge now lives on the FIRE pad — double-tap + hold; no separate pad)
   // pause + sound, top-right under the lives
   for (const [b, icon, on] of [[B.pause, 'pause', true], [B.sound, 'sound', MUSIC.on]]) {
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
@@ -2893,8 +2887,8 @@ function drawOverlays() {
         ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS']
         : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA EVOLVE WHEN METER IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
       : (IS_TOUCH
-        ? ['DRAG — MOVE PADDLE', 'FIRE BUTTON — LAUNCH · SHOOT BLASTER', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'RETURNS ON YOUR PADDLE VENT BLASTER HEAT']
-        : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH · FIRE BLASTER', 'E — MEGA EVOLVE WHEN METER IS FULL', 'PADDLE RETURNS VENT BLASTER HEAT', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
+        ? ['DRAG ANYWHERE — MOVE', 'TAP FIRE — SHOOT', 'DOUBLE-TAP + HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
+        : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK OR SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
     ).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.47 + i * 22, W * 0.92));
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);
     // QUIT TO MENU button — bail out of the run

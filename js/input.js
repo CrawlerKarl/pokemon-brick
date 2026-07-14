@@ -18,10 +18,10 @@ function touchButtons() {
     sound: { x: W - 72, y: 82, r: 18 },
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
-  // and the ball is launched by tapping the playfield, not this pad.
+  // and the ball is launched by tapping the playfield, not this pad. In the
+  // shooter modes this ONE pad also charges (double-tap + hold), so there is
+  // no separate CHARGE pad and the other thumb is free to fly/steer.
   if (blasterArmed()) b.fire = { x: W - 58, y: base - 42, r: 42 };
-  // shooter modes: a CHARGE pad in the far bottom-left, for the other thumb
-  if (G.mode !== 'classic') b.charge = { x: 58, y: base - 42, r: 40 };
   return b;
 }
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
@@ -38,7 +38,12 @@ let lastTouchT = -9999;
 // Space Junkie firing: hold the button and the blaster keeps firing until
 // the heat lockout stops you — release, vent on a return, resume
 let fireHeld = false, fireTouchId = null;
-let chargeHeld = false, chargeTouchId = null; // BLASTER mode: hold to charge a shot
+let chargeHeld = false, chargeTouchId = null; // charge a big shot (right-click / Shift / double-tap-hold FIRE)
+// One thumb does it all: the FIRE pad also charges. A double-tap whose SECOND
+// press is HELD winds up a charged shot (no separate pad, no thumb-switching);
+// a quick double-tap is just two normal shots, so rapid-firing never charges.
+let lastFireDownT = -9999, chargePendingId = null, chargePendingT = 0;
+const DOUBLE_TAP_MS = 300, CHARGE_HOLD_MS = 140;
 const uiTouchIds = new Set(); // touches claimed by on-screen buttons
 window.addEventListener('mousedown', e => {
   if (performance.now() - lastTouchT < 900) return;
@@ -79,15 +84,22 @@ window.addEventListener('touchstart', e => {
       // touches that land on a button are UI touches — they must never be
       // adopted as paddle control, even if the finger wiggles (that was
       // yanking the paddle to the FIRE button's side of the screen)
-      if (B.fire && inCircle(x, y, B.fire, 22)) { fireAction(); fireHeld = true; fireTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
-      if (B.charge && inCircle(x, y, B.charge, 20)) { chargeHeld = true; chargeTouchId = t.identifier; uiTouchIds.add(t.identifier); continue; }
+      if (B.fire && inCircle(x, y, B.fire, 22)) {
+        uiTouchIds.add(t.identifier);
+        const now = performance.now();
+        // second tap of a quick double-tap (shooter modes): hold it to CHARGE
+        const dbl = G.mode !== 'classic' && now - lastFireDownT < DOUBLE_TAP_MS;
+        lastFireDownT = now;
+        if (dbl) { chargePendingId = t.identifier; chargePendingT = now; }
+        else { fireAction(); fireHeld = true; fireTouchId = t.identifier; }
+        continue;
+      }
       if (inCircle(x, y, B.mega, 12)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.pause, 10)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
       if (inCircle(x, y, B.sound, 10)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
       // near-miss dead zone: a fumbled tap AROUND a button is swallowed
       // outright — under no circumstances does it become paddle control
       if ((B.fire && inCircle(x, y, B.fire, 64)) || inCircle(x, y, B.mega, 42) ||
-          (B.charge && inCircle(x, y, B.charge, 60)) ||
           inCircle(x, y, B.pause, 30) || inCircle(x, y, B.sound, 30)) {
         uiTouchIds.add(t.identifier);
         continue;
@@ -128,6 +140,9 @@ window.addEventListener('touchend', e => {
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
     if (t.identifier === chargeTouchId) { chargeTouchId = null; chargeHeld = false; }
+    // a second-tap released before it charged (held < CHARGE_HOLD_MS) is just
+    // a quick second shot, not a charge
+    if (t.identifier === chargePendingId) { chargePendingId = null; fireAction(); }
     if (G.state === 'dex' && onPressDexTapPending && Math.abs(t.clientY - dexDragStart) < 10) {
       onPress(onPressDexTapPending.x, onPressDexTapPending.y);
     }
@@ -144,6 +159,7 @@ window.addEventListener('touchcancel', e => {
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
     if (t.identifier === chargeTouchId) { chargeTouchId = null; chargeHeld = false; }
+    if (t.identifier === chargePendingId) chargePendingId = null; // cancelled, no shot
   }
   onPressDexTapPending = null; dexDragY = null;
 });

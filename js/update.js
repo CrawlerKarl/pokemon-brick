@@ -639,6 +639,11 @@ function update(dt) {
   G.chargeCD = Math.max(0, G.chargeCD - dt);
   let charging = false;
   if (G.mode !== 'classic' && G.state === 'play') {
+    // a double-tap on FIRE whose second press is still held past the threshold
+    // promotes into a charge — one thumb fires AND charges (input.js)
+    if (chargePendingId !== null && performance.now() - chargePendingT >= CHARGE_HOLD_MS) {
+      chargeHeld = true; chargeTouchId = chargePendingId; chargePendingId = null;
+    }
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
       // COOLANT's shooter translation: a cooler barrel also charges faster

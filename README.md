@@ -77,12 +77,15 @@ always lands back on page 1.
   spawns no ball and drops you straight into play; you clear the wall and the
   flyers by shooting. You only lose to enemy fire (the "0 balls → loseLife"
   gate is skipped), enemies fire ~2× as often and from the first wave, bolts
-  render as sleek cyan energy darts, and holding **CHARGE** (right-click /
-  Shift on desktop, the CHARGE pad on touch) winds up a fat piercing shot
-  (`fireCharge`, damage/pierce scale with hold time). Mega, catches, drops,
-  and the skill tree all still work. Wiring: `G.mode`, `G.charge` (state.js);
-  charge build/release + enemy-fire boost (update.js); charge input + touch
-  pad (input.js); bolt/charge visuals (render.js `drawProjectiles`).
+  render as sleek cyan energy darts, and a **CHARGE** winds up a fat piercing
+  shot (`fireCharge`, damage/pierce scale with hold time). Charge is
+  right-click / Shift on desktop; on touch it's a **double-tap + hold on the
+  FIRE pad** — one thumb fires AND charges, so there's no separate CHARGE pad
+  and the other thumb stays free to steer (a quick double-tap is just two
+  shots). Mega, catches, drops, and the skill tree all still work. Wiring:
+  `G.mode`, `G.charge` (state.js); charge build/release + the double-tap→charge
+  promotion (update.js, `chargePendingId`/`CHARGE_HOLD_MS`); charge/fire input
+  (input.js); the FIRE pad's charge ring + bolt visuals (render.js).
 - **SPACE JUNKIE** — the full pure-shooter homage to the game's namesake:
   **no wall at all**. Non-boss waves arrive as 100% free-flyers (squads pour
   in from the edges straight onto patterns, built in `buildLevel`'s junkie
