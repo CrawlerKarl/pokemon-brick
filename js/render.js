@@ -2078,16 +2078,16 @@ function drawMenu() {
     ctx.stroke();
     ctx.shadowBlur = 0;
     const compact = L.stacked || L.short; // one-row card: icon left, text right
-    const iconR = compact ? cg.h * 0.30 : Math.min(26, cg.h * 0.17);
+    const iconR = compact ? Math.min(46, cg.h * 0.30) : Math.min(40, cg.h * 0.22);
     const iconX = compact ? cg.x + cg.h * 0.52 : cg.x + cg.w / 2;
     const iconY = compact ? cg.y + cg.h / 2 : cg.y + cg.h * 0.26;
     const tx = compact ? cg.x + cg.h * 1.0 + (cg.w - cg.h) / 2 : cg.x + cg.w / 2;
     drawModeIcon(m.key, iconX, iconY, iconR, m.accent);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `900 ${Math.min(compact ? 16 : 19, cg.w / (compact ? 15 : 9))}px Orbitron, sans-serif`;
+    ctx.font = `900 ${Math.min(compact ? 20 : 24, cg.w / (compact ? 13 : 9))}px Orbitron, sans-serif`;
     ctx.fillStyle = hov ? '#fff' : m.accent;
     ctx.fillText(m.label, tx, compact ? cg.y + cg.h * 0.34 : cg.y + cg.h * 0.55, compact ? cg.w - cg.h * 1.2 : cg.w - 16);
-    ctx.font = bodyFont(Math.min(10.5, cg.w / 24), 600);
+    ctx.font = bodyFont(Math.min(12, cg.w / 26), 600);
     ctx.fillStyle = hov ? '#e3f2fd' : '#90a4ae';
     if (compact) {
       ctx.fillText(m.lines.join(' · '), tx, cg.y + cg.h * 0.68, cg.w - cg.h * 1.2);
@@ -2230,7 +2230,7 @@ function drawSetup() {
   }
   // starter Pokémon — a partner whose paddle ability grows all game
   // (in SPACE JUNKIE the starter IS the ship, so say so)
-  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.font = `700 ${L.narrow ? 15 : 13}px Orbitron, sans-serif`;
   ctx.fillStyle = '#90a4ae';
   ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR PILOT' : 'STARTER POKÉMON', W / 2, L.startLabelY);
   for (let i = 0; i < STARTERS.length; i++) {
@@ -2238,34 +2238,38 @@ function drawSetup() {
     const hov = inRect(mouseX, lastMouseY, pg);
     const col = st.key === 'none' ? '#90a4ae' : TYPE_COLORS[st.key];
     const mon = STARTER_MON[st.key];
+    const dy = Math.min(11, pg.h * 0.13); // name / ability vertical split, scales with card
     ctx.save();
-    if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 14; }
-    roundRect(pg.x, pg.y, pg.w, pg.h, 10);
+    if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 16; }
+    roundRect(pg.x, pg.y, pg.w, pg.h, 12);
     ctx.fillStyle = sel ? col + '38' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
     ctx.fill();
-    ctx.lineWidth = sel ? 2 : 1;
+    ctx.lineWidth = sel ? 2.5 : 1;
     ctx.strokeStyle = sel ? col : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
     if (mon) {
       const img = getSprite(mon.ids[0]);
-      const sp = Math.min(38, pg.h * 0.7);
-      if (img.complete && img.naturalWidth) ctx.drawImage(img, pg.x + 4, pg.y + pg.h / 2 - sp / 2, sp, sp);
-      else drawGlyph(ctx, st.key, pg.x + 6 + sp / 2, pg.y + pg.h / 2, 8, col);
-      const tx = pg.x + sp + 4 + (pg.w - sp - 8) / 2;
-      ctx.font = `900 ${Math.min(11, pg.w / 11)}px Orbitron, sans-serif`;
+      const sp = Math.min(60, pg.h * 0.66);
+      const spx = pg.x + Math.max(6, pg.w * 0.05);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, spx, pg.y + pg.h / 2 - sp / 2, sp, sp);
+      else drawGlyph(ctx, st.key, spx + sp / 2, pg.y + pg.h / 2, sp * 0.28, col);
+      const txL = spx + sp + 6;           // text column starts right of the sprite
+      const txC = txL + (pg.x + pg.w - 8 - txL) / 2; // its centre
+      const tw = pg.x + pg.w - 8 - txL;   // its available width
+      ctx.font = `900 ${Math.min(17, pg.w / 8.5)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText(st.label, tx, pg.y + pg.h / 2 - 9, pg.w - sp - 10);
-      ctx.font = `900 ${Math.min(9.5, pg.w / 13)}px Orbitron, sans-serif`;
+      ctx.fillText(st.label, txC, pg.y + pg.h / 2 - dy, tw);
+      ctx.font = `900 ${Math.min(12, pg.w / 12)}px Orbitron, sans-serif`;
       ctx.fillStyle = col;
-      ctx.fillText(mon.ability, tx, pg.y + pg.h / 2 + 9, pg.w - sp - 10);
+      ctx.fillText(mon.ability, txC, pg.y + pg.h / 2 + dy, tw);
     } else {
-      ctx.font = `900 ${Math.min(12, pg.w / 8.2)}px Orbitron, sans-serif`;
+      ctx.font = `900 ${Math.min(18, pg.w / 7.5)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 - 8);
-      ctx.font = '500 8px Orbitron, sans-serif';
+      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 - dy, pg.w - 12);
+      ctx.font = `500 ${Math.min(10, pg.w / 17)}px Orbitron, sans-serif`;
       ctx.fillStyle = '#78909c';
-      ctx.fillText('NO PARTNER', pg.x + pg.w / 2, pg.y + pg.h / 2 + 10);
+      ctx.fillText('NO PARTNER', pg.x + pg.w / 2, pg.y + pg.h / 2 + dy, pg.w - 12);
     }
     ctx.restore();
   }
@@ -2294,7 +2298,7 @@ function drawSetup() {
     }
   }
   // difficulty presets
-  ctx.font = '700 13px Orbitron, sans-serif';
+  ctx.font = `700 ${L.narrow ? 15 : 13}px Orbitron, sans-serif`;
   ctx.fillStyle = '#90a4ae';
   ctx.fillText('DIFFICULTY', W / 2, L.chipsLabelY);
   const keys = Object.keys(PRESETS);
@@ -2302,17 +2306,17 @@ function drawSetup() {
     const pg = presetGeom(i), sel = SETTINGS.preset === keys[i];
     const hov = inRect(mouseX, lastMouseY, pg);
     ctx.save();
-    if (sel) { ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 14; }
-    roundRect(pg.x, pg.y, pg.w, pg.h, 10);
+    if (sel) { ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 16; }
+    roundRect(pg.x, pg.y, pg.w, pg.h, 12);
     ctx.fillStyle = sel ? 'rgba(255,213,79,0.22)' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
     ctx.fill();
-    ctx.lineWidth = sel ? 2 : 1;
+    ctx.lineWidth = sel ? 2.5 : 1;
     ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(13, pg.w / 8.2)}px Orbitron, sans-serif`;
+    ctx.font = `900 ${Math.min(20, pg.w / 8)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
-    ctx.fillText(PRESETS[keys[i]].label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1);
+    ctx.fillText(PRESETS[keys[i]].label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1, pg.w - 12);
     ctx.restore();
   }
   // start button — the one big obvious thing on the screen
@@ -2325,10 +2329,10 @@ function drawSetup() {
   bg.addColorStop(0, hover ? '#ffe082' : '#ffd54f'); bg.addColorStop(1, '#f9a825');
   ctx.fillStyle = bg; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.font = `900 ${L.short ? 15 : 20}px Orbitron, sans-serif`;
+  ctx.font = `900 ${L.short ? 15 : L.narrow ? 24 : 20}px Orbitron, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#1a1205';
-  ctx.fillText((typeof RUN_CKPT !== 'undefined' && RUN_CKPT ? 'NEW JOURNEY' : 'START JOURNEY'), b.x + b.w / 2, b.y + b.h / 2 + 1);
+  ctx.fillText((typeof RUN_CKPT !== 'undefined' && RUN_CKPT ? 'NEW JOURNEY' : 'START JOURNEY'), b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 24);
   ctx.restore();
 }
 

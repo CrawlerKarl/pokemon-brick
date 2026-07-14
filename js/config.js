@@ -87,26 +87,35 @@ let menuPage = 'modes';
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
   const short = H < 560;
+  const stacked = W < 560; // headliner cards side-by-side, or stacked on phones
   const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
   const titleSize = short ? Math.min(30, W / 16) : Math.min(52, W / 11) * Math.max(0.8, s);
-  const titleY = short ? 24 : Math.max(54, H * 0.11);
-  const tagY = short ? titleY + titleSize + 10 : titleY + titleSize * 1.55 + 12 * s;
-  const stacked = W < 520; // headliner cards side-by-side, or stacked on phones
+  const titleY = short ? 24 : Math.max(54, H * 0.09);
+  const tagY = short ? titleY + titleSize + 10 : titleY + titleSize * 1.4 + 12;
+  const pickLabelY = tagY + (short ? 14 : 24);
   const gap = 14;
-  const cardW = stacked ? Math.min(360, W * 0.9) : Math.min(272, (W - 56) / 2);
-  const cardH = short ? 72 : stacked ? 96 : 150 * s + 16;
-  const pickLabelY = tagY + (short ? 14 : 26 * s + 8);
-  const cardsY = pickLabelY + (short ? 10 : 16);
-  const cardsBottom = cardsY + (stacked ? cardH * 2 + gap : cardH);
-  const expW = stacked ? cardW : Math.min(420, W * 0.86);
-  const expH = short ? 32 : 46;
-  const expY = cardsBottom + (short ? 8 : gap);
-  const btnW = Math.min(340, W * 0.86);
-  const resumeH = hasCkpt ? (short ? 32 : 48) : 0;
-  const resumeY = expY + expH + (short ? 8 : 18);
-  const footerY = resumeY + (hasCkpt ? resumeH + (short ? 8 : 16) : 0);
-  // footer: stacked links normally; a single compact row when space is tight
-  const oneRow = short || stacked || (hasCkpt && H < 760);
+  const oneRow = short || stacked || (hasCkpt && H < 820);
+  const cardW = stacked ? Math.min(430, W * 0.9) : Math.min(304, (W - 72) / 2);
+  const expW = stacked ? cardW : Math.min(440, W * 0.86);
+  const expH = short ? 32 : 48;
+  const resumeW = Math.min(360, W * 0.86);
+  const resumeH = hasCkpt ? (short ? 32 : 52) : 0;
+  const footerH = oneRow ? 26 : 96; // 3 stacked links span ~96px
+  const gE = short ? 8 : 16, gR = short ? 8 : 14, gF = short ? 10 : 20;
+  // top-anchor the card block under the picker label, then let the cards grow
+  // to fill the height (capped so two big cards never look stretched); the
+  // region backdrop scenery breathes at the very bottom.
+  const regionBot = H - (short ? 12 : Math.max(22, H * 0.05));
+  const cardsY = pickLabelY + (short ? 10 : 18);
+  const tail = gE + expH + (hasCkpt ? gR + resumeH : 0) + gF + footerH;
+  const roomForCards = regionBot - cardsY - tail;
+  const cardH = short ? 72
+    : stacked ? Math.min(156, Math.max(112, (roomForCards - gap) / 2))
+    : Math.min(196, Math.max(120, Math.min(roomForCards, 150 * s + 20)));
+  const cardsH = stacked ? cardH * 2 + gap : cardH;
+  const expY = cardsY + cardsH + gE;
+  const resumeY = expY + expH + (hasCkpt ? gR : 0);
+  const footerY = resumeY + (hasCkpt ? resumeH : 0) + gF;
   const fW = Math.min(230, (W - 56) / 3);
   return {
     s, short, stacked, oneRow, titleY, titleSize, tagY, pickLabelY,
@@ -114,7 +123,7 @@ function menuLayout() {
       ? { x: W / 2 - cardW / 2, y: cardsY + i * (cardH + gap), w: cardW, h: cardH }
       : { x: W / 2 - cardW - gap / 2 + i * (cardW + gap), y: cardsY, w: cardW, h: cardH },
     exp: { x: W / 2 - expW / 2, y: expY, w: expW, h: expH },
-    resume: hasCkpt ? { x: W / 2 - btnW / 2, y: resumeY, w: btnW, h: resumeH } : null,
+    resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
     dex: oneRow ? { x: W / 2 - fW * 1.5 - 14, y: footerY, w: fW, h: 26 }
       : { x: W / 2 - 170, y: footerY, w: 340, h: 30 },
     trial: oneRow ? { x: W / 2 - fW / 2, y: footerY, w: fW, h: 26 }
@@ -124,29 +133,56 @@ function menuLayout() {
   };
 }
 // PAGE 2 — setup for the chosen mode: starter Pokémon, difficulty, START.
-// Same responsive rules as page 1.
+// Tall portrait phones get 2×2 grids of BIG cards; the sections are then
+// spread down the whole screen (even vGap) instead of crammed at the top.
 function setupLayout() {
   const short = H < 560;
-  const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
-  const headY = short ? 30 : Math.max(52, H * 0.11);
-  const headSize = short ? Math.min(22, W / 18) : Math.min(36, W / 14);
-  const chipGap = 10;
-  const chipW = Math.min(126, (W - 40 - chipGap * 3) / 4);
-  const chipH = short ? 30 : 40 * s + 4;
-  const starterH = short ? 40 : 58 * s + 6; // taller: partner sprite + ability line
-  const startLabelY = headY + headSize + (short ? 22 : 40 * s + 12);
-  const startY = startLabelY + (short ? 10 : 14);
-  const starterInfoY = startY + starterH + (short ? 12 : 16);
-  const chipsLabelY = starterInfoY + (short ? 16 : 34 + 12 * s);
-  const chipsY = chipsLabelY + (short ? 10 : 14);
-  const btnW = Math.min(300, W * 0.84), btnH = short ? 38 : 54 * s + 8;
-  const btnY = chipsY + chipH + (short ? 14 : 44 * s);
+  const narrow = W < 620 && H >= 660; // tall portrait: 2×2 grids, big cards
+  const s = Math.max(0.72, Math.min(1.1, H / 780, W / 720));
+  const cx = W / 2;
+  const marginX = Math.max(16, W * 0.05);
+  const contentW = Math.min(W - marginX * 2, 560);
+  const gap = short ? 8 : 12;
+  const headSize = short ? Math.min(22, W / 16) : Math.min(46, W / 12);
+  const headY = short ? 26 : Math.max(54, H * 0.085);
+  const headBottom = headY + headSize * 0.6 + (short ? 12 : 30);
+  // starter + difficulty grids: 2×2 on tall phones, one row otherwise
+  const stCols = narrow ? 2 : 4, stRows = 4 / stCols;
+  const stW = (contentW - gap * (stCols - 1)) / stCols;
+  const stH = short ? 40 : narrow ? Math.min(104, Math.max(84, stW * 0.56)) : Math.min(86, stW * 0.66);
+  const dfCols = narrow ? 2 : 4, dfRows = 4 / dfCols;
+  const dfW = (contentW - gap * (dfCols - 1)) / dfCols;
+  const dfH = short ? 32 : narrow ? 58 : 52;
+  const btnW = narrow ? contentW : Math.min(340, contentW);
+  const btnH = short ? 40 : narrow ? 70 : 60;
+  const labelGap = short ? 20 : 32; // grid top sits below its section label
+  const infoH = short ? 0 : 42;     // starter ability description block
+  // three section groups distributed with an even gap that soaks up slack
+  const starterGroup = labelGap + stRows * stH + (stRows - 1) * gap + infoH;
+  const diffGroup = labelGap + dfRows * dfH + (dfRows - 1) * gap;
+  const bottomPad = short ? 10 : H * 0.05;
+  const slack = (H - bottomPad) - headBottom - (starterGroup + diffGroup + btnH);
+  const vGap = Math.max(short ? 10 : 18, Math.min(slack / 3, short ? 22 : narrow ? 54 : 40));
+  let y = headBottom + vGap;
+  const starterGridY = y + labelGap;
+  const startLabelY = starterGridY - (short ? 12 : 16);
+  y = starterGridY + stRows * stH + (stRows - 1) * gap;
+  const starterInfoY = short ? y + 8 : y + 18;
+  y = short ? y : y + infoH;
+  y += vGap;
+  const chipsGridY = y + labelGap;
+  const chipsLabelY = chipsGridY - (short ? 12 : 16);
+  y = chipsGridY + dfRows * dfH + (dfRows - 1) * gap;
+  y += vGap;
+  const btnY = y;
   return {
-    s, short, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
+    s, short, narrow, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
     back: { x: 14, y: 14, w: 96, h: 36 },
-    starter: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: startY, w: chipW, h: starterH }),
-    chip: i => ({ x: W / 2 - (chipW * 4 + chipGap * 3) / 2 + i * (chipW + chipGap), y: chipsY, w: chipW, h: chipH }),
-    start: { x: W / 2 - btnW / 2, y: btnY, w: btnW, h: btnH },
+    starter: i => { const c = i % stCols, r = Math.floor(i / stCols);
+      return { x: cx - contentW / 2 + c * (stW + gap), y: starterGridY + r * (stH + gap), w: stW, h: stH }; },
+    chip: i => { const c = i % dfCols, r = Math.floor(i / dfCols);
+      return { x: cx - contentW / 2 + c * (dfW + gap), y: chipsGridY + r * (dfH + gap), w: dfW, h: dfH }; },
+    start: { x: cx - btnW / 2, y: btnY, w: btnW, h: btnH },
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)
