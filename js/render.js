@@ -1983,6 +1983,41 @@ function drawHUD() {
       }
     }
   }
+  drawHurtHealth();
+}
+// when the player is hit, their remaining health flashes as a small bar right
+// above the character (plus the ring pulse from loseLife/absorbHit) — feedback
+// where your eyes already are, not just the corner ring. Fades after ~2s.
+function drawHurtHealth() {
+  if (G.hurtHud <= 0 || (G.state !== 'play' && G.state !== 'serve')) return;
+  const denom = Math.max(1, G.livesMax || G.lives), lives = Math.max(0, G.lives);
+  const danger = lives <= 1;
+  const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : '#5fe0a6';
+  const alpha = Math.min(1, G.hurtHud / 0.5); // hold, then fade out over the last 0.5s
+  const segW = 15, segH = 7, gap = 3, heartW = 15, pad = 9;
+  const barW = denom * segW + (denom - 1) * gap;
+  const totalW = pad * 2 + heartW + 6 + barW;
+  const cx = Math.max(totalW / 2 + 6, Math.min(W - totalW / 2 - 6, G.paddle.x));
+  const cy = shipY() - (G.mode === 'junkie' ? 32 : 46);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  // backdrop pill (with a soft glow so it pops the moment it appears)
+  ctx.shadowColor = col; ctx.shadowBlur = danger ? 12 : 7;
+  roundRect(cx - totalW / 2, cy - 13, totalW, 26, 13);
+  ctx.fillStyle = 'rgba(6,10,26,0.78)'; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1.4; ctx.strokeStyle = col + 'aa'; ctx.stroke();
+  // heart, then one segment per life
+  drawGlyph(ctx, 'heart', cx - totalW / 2 + pad + heartW / 2, cy, 6, col);
+  let sx = cx - totalW / 2 + pad + heartW + 6;
+  for (let i = 0; i < denom; i++) {
+    roundRect(sx, cy - segH / 2, segW, segH, 3);
+    ctx.fillStyle = i < lives ? col : 'rgba(255,255,255,0.13)';
+    ctx.fill();
+    sx += segW + gap;
+  }
+  ctx.restore();
 }
 
 // on-screen buttons for touch play — FIRE, MEGA ring meter, pause, sound

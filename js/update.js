@@ -523,6 +523,7 @@ function absorbHit(x, y) {
   G.shieldCharges--;
   G.invuln = 1.2;
   G.shieldFlash = 1; // render: the bubble flares where it ate the hit
+  G.hurtHud = 2.2;   // flash the health readout around the player
   addFloater(G.paddle.x, y - 46, 'SHIELD!', '#66bb6a', 15);
   burst(x, y, '#66bb6a', 18, 240, 0.5);
   ringFx(G.paddle.x, y, '#a5d6a7', 6, 64, 3, 0.4);
@@ -566,6 +567,7 @@ function loseLife() {
     if (!G.trial) clearCheckpoint(); // a TRUE game over ends the saved journey
     if (!G.trial && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   } else {
+    G.hurtHud = 2.4; // show the remaining health around the player on respawn
     serve();
   }
 }
@@ -611,6 +613,7 @@ function update(dt) {
   G.blasterCD = Math.max(0, G.blasterCD - dt);
   G.muzzle = Math.max(0, G.muzzle - dt);
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
+  G.hurtHud = Math.max(0, (G.hurtHud || 0) - dt); // on-hit health readout at the player
   G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 

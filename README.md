@@ -285,7 +285,10 @@ lives, and **retries the wave**. Real game-over only when the tree is empty.
 Lives show top-right as a **health ring** (`drawLifeRing`, render.js) — a
 glowing arc over a faint track, notched per life, greens→amber→red as it
 drains, last life pulses. Denominator is `G.livesMax` (peak lives held, so a
-POKÉ REVIVE grows the ring); kept at the peak in `tickEffects`.
+POKÉ REVIVE grows the ring); kept at the peak in `tickEffects`. On a hit, a
+matching **health bar flashes above the character** for ~2s (`drawHurtHealth`,
+gated by `G.hurtHud` which `loseLife`/`absorbHit` set and `update` decays) —
+feedback where your eyes already are, not just the corner ring.
 
 ### Starter partners (`STARTER_MON` data.js ~314)
 Charmander/Squirtle/Bulbasaur (or none). Rides the paddle, tints its glow,
