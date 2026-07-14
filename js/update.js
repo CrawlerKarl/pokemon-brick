@@ -265,8 +265,14 @@ function flying(br) { return !!(br.flight && br.flight.state >= 1); }
 // bare mons faint when killed instead of shattering a card.
 function bareMon(br) { return !br.isBoss && !!(br.bare || br.dive || (br.flight && br.flight.state >= 1)); }
 
-// ---- the flight pattern library: a dozen closed curves the free-flying
-// Pokémon cycle around, nose to tail (Space Junkie / Galaga canon) ----
+// ---- the flight pattern library: ~30 curves & formations the free-flying
+// Pokémon ride, nose to tail (Space Junkie / Galaga / Galaxian canon). Two
+// families: FORMATION-HOLDERS (ring/oval/lane/chevron/arc/cross/carousel/
+// phalanx/…) keep a crisp silhouette while the whole body drifts or rotates —
+// riders never cross; and BUSY CURVES (inf/liss/rose/star/vortex/spiral/clover/
+// butterfly/…) that pass through a shared center — the separation solver packs
+// those so they stay distinct. Early regions unlock the clean formation set;
+// the busy showpieces come later (see the `kinds` list in state.js). ----
 function flightPos(F, tAbs) {
   const t = tAbs * (F.spd || 1) * (F.dir || 1); // streams ride faster curves
   const th = (F.phase + t) * Math.PI * 2;
@@ -361,6 +367,52 @@ function flightPos(F, tAbs) {
     }
     case 'weave': // threads left↔right across the open lane, bobbing as it goes
       return { x: F.cx + s * F.rx, y: F.cy + Math.sin(th * 3) * F.ry };
+    // ---- formation-holding shapes (Galaga/Galaxian canon): the flock keeps a
+    // crisp silhouette and the WHOLE body drifts/rotates, so riders never cross
+    case 'chevron': { // a V / arrowhead of wings (geese) that sways side to side
+      const u = F.phase - 0.5; // -0.5..0.5 across the two wings
+      const sway = Math.sin(t * Math.PI * 2) * F.rx * 0.22;
+      return { x: F.cx + u * F.rx * 2 + sway,
+        y: F.cy - F.ry * 0.7 + Math.abs(u) * F.ry * 1.8 + Math.cos(t * Math.PI * 2) * F.ry * 0.12 };
+    }
+    case 'arc': { // a shallow dome / rainbow that slides across the airspace —
+      // riders spaced EVENLY across the full span (a parabola holds the dome)
+      const u = F.phase - 0.5;
+      const drift = Math.sin(t * Math.PI * 2) * F.rx * 0.22;
+      return { x: F.cx + u * F.rx * 2 + drift, y: F.cy - (1 - 4 * u * u) * F.ry };
+    }
+    case 'cross': { // a rigid plus/cross of four arms, turning slowly
+      const arm = Math.floor(((F.phase * 4) % 4 + 4) % 4);
+      const along = 0.28 + 0.72 * ((F.phase * 4) % 1); // center → tip
+      const A = arm * Math.PI / 2 + t * Math.PI * 2 * 0.35;
+      return { x: F.cx + Math.cos(A) * along * F.rx, y: F.cy + Math.sin(A) * along * F.ry };
+    }
+    case 'carousel': { // two concentric rings turning together — a wheel-in-wheel
+      const rr = F.strand ? 0.52 : 1; // odd riders take the inner ring
+      return { x: F.cx + c * F.rx * rr, y: F.cy + s * F.ry * rr };
+    }
+    case 'phalanx': { // a rigid rectangular block that slides side-to-side and
+      // gently bobs — Space Invaders' marching grid, as a flock
+      const n = F.n || 8, cols = Math.max(3, Math.round(Math.sqrt(n * 2)));
+      const idx = Math.round(F.phase * (n - 1));
+      const rows = Math.max(1, Math.ceil(n / cols));
+      const gx = (idx % cols) - (cols - 1) / 2, gy = Math.floor(idx / cols) - (rows - 1) / 2;
+      return { x: F.cx + gx * F.rx * 0.42 + Math.sin(t * Math.PI * 2) * F.rx * 0.4,
+        y: F.cy + gy * F.ry * 0.5 + Math.abs(Math.cos(t * Math.PI * 2)) * F.ry * 0.12 };
+    }
+    // ---- busy showpieces (later regions): riders cross a shared center, the
+    // separation solver packs them so they stay distinct
+    case 'spiral': { // an Archimedean spiral arm turning like a pinwheel galaxy
+      const rr = 0.25 + 0.75 * F.phase;
+      const ang = F.phase * Math.PI * 2 * 2.2 + t * Math.PI * 2;
+      return { x: F.cx + Math.cos(ang) * F.rx * rr, y: F.cy + Math.sin(ang) * F.ry * rr };
+    }
+    case 'clover': // three-petal rose (trefoil)
+      return { x: F.cx + Math.cos(th * 3) * c * F.rx, y: F.cy + Math.cos(th * 3) * s * F.ry };
+    case 'butterfly': { // the butterfly curve — a slow, gorgeous, busy bloom
+      const rr = Math.exp(Math.cos(th)) - 2 * Math.cos(4 * th) + Math.pow(Math.sin(th / 12), 5);
+      return { x: F.cx + Math.sin(th) * rr * F.rx * 0.28, y: F.cy - Math.cos(th) * rr * F.ry * 0.28 };
+    }
     default: // 'ring' / 'oval' / 'olympic': the smooth circle or ellipse
       return { x: F.cx + c * F.rx, y: F.cy + s * F.ry };
   }
@@ -850,13 +902,14 @@ function update(dt) {
       for (const br of G.bricks) {
         if (!br.dead && br.flight && br.flight.state >= 1 && !br.dive && !br.entry) fl.push(br);
       }
+      const gr = G.mode !== 'junkie' ? G.gridRect : null;
       if (fl.length > 1) {
-        for (let it = 0; it < 8; it++) {
+        for (let it = 0; it < 12; it++) {
           let moved = false;
           for (let i = 0; i < fl.length; i++) {
             for (let j = i + 1; j < fl.length; j++) {
               const a = fl[i], b2 = fl[j];
-              const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.58;
+              const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.62;
               let dx = b2.bx - a.bx, dy = b2.by - a.by;
               let d = Math.hypot(dx, dy);
               if (d < minD) {
@@ -868,19 +921,19 @@ function update(dt) {
               }
             }
           }
-          if (!moved) break;
-        }
-        // if a push nudged a flyer INTO the static wall's rectangle, shove it
-        // back out the bottom — but leave the 'square' pattern (which loops
-        // legitimately AROUND the wall) untouched
-        const gr = G.gridRect;
-        if (gr && G.mode !== 'junkie') {
-          for (const br of fl) {
-            if (Math.abs(br.bx - gr.cx) < gr.hw + br.w / 2 &&
-                br.by + br.h / 2 > gr.top && br.by - br.h / 2 < gr.bottom) {
-              br.by = gr.bottom + br.h / 2 + 6;
+          // keep any flyer a push nudged INTO the static wall below it — done
+          // INSIDE the loop so the NEXT pass re-spreads them along the wall's
+          // underside instead of stacking on one line. 'square' loops around
+          // the wall legitimately, so it's never inside the rect.
+          if (gr) {
+            for (const br of fl) {
+              if (Math.abs(br.bx - gr.cx) < gr.hw + br.w / 2 &&
+                  br.by + br.h / 2 > gr.top && br.by - br.h / 2 < gr.bottom) {
+                br.by = gr.bottom + br.h / 2 + 4; moved = true;
+              }
             }
           }
+          if (!moved) break;
         }
       }
     }

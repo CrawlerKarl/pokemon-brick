@@ -358,10 +358,11 @@ function buildLevel(lvl) {
   // spend part of the flyer budget, arriving already broken out.
   const streamSquads = !hasBoss && regionsIn >= 4 ? (regionsIn >= 7 ? 2 : 1) : 0;
   const streamPer = Math.min(8, 4 + Math.floor(regionsIn / 2));
-  const flyerBudget = hasBoss ? 0 : Math.min(24, regionsIn === 0 ? 0 : Math.round(5 + regionsIn * 2));
+  const flyerBudget = hasBoss ? 0 : Math.min(22, regionsIn === 0 ? 0 : Math.round(4.5 + regionsIn * 1.85));
   const gridFlyerBudget = Math.max(0, flyerBudget - streamSquads * streamPer);
-  // boxed bricks: a fuller wall early, thinning region by region
-  const boxedBudget = Math.max(cols, Math.round(cols * (2.85 - regionsIn * 0.18)));
+  // boxed bricks: a fuller wall early, thinning region by region — but not so
+  // full it squeezes the flyer band below it (flyers need room to not overlap)
+  const boxedBudget = Math.max(cols, Math.round(cols * (2.7 - regionsIn * 0.2)));
   // SPACE JUNKIE mode: non-boss waves have NO wall — the whole wave flies
   const junkie = G.mode === 'junkie';
   const rows = hasBoss
@@ -444,12 +445,12 @@ function buildLevel(lvl) {
   // never bumps itself into a blob. The busy self-crossing curves (figure-8s,
   // pretzels, roses, vortices — where riders pass through a shared center)
   // arrive later, once the separation solver's packing is expected chaos.
-  const kinds = ['ring', 'oval', 'lane', 'square'];         // clean loops & lanes
-  if (unlockR >= 2) kinds.push('fountain', 'weave', 'snake');
-  if (unlockR >= 3) kinds.push('diamond', 'swoop', 'pulsar', 'helix');
-  if (unlockR >= 4) kinds.push('inf', 'falls', 'zigzag', 'olympic');
-  if (unlockR >= 5) kinds.push('liss', 'star', 'binary');
-  if (unlockR >= 6) kinds.push('rose', 'pend', 'epi', 'atom', 'vortex');
+  const kinds = ['ring', 'oval', 'lane', 'square', 'chevron']; // clean loops, lanes & the V
+  if (unlockR >= 2) kinds.push('fountain', 'weave', 'snake', 'arc');
+  if (unlockR >= 3) kinds.push('diamond', 'swoop', 'pulsar', 'helix', 'cross', 'carousel');
+  if (unlockR >= 4) kinds.push('inf', 'falls', 'zigzag', 'olympic', 'phalanx');
+  if (unlockR >= 5) kinds.push('liss', 'star', 'binary', 'spiral');
+  if (unlockR >= 6) kinds.push('rose', 'pend', 'epi', 'atom', 'vortex', 'clover', 'butterfly');
   if (!junkie && !hasBoss && regionsIn >= 1) {
     // how many break out of the wall is set by the density budget (above),
     // never a runaway fraction — the boxed wall keeps a real presence
@@ -500,8 +501,9 @@ function buildLevel(lvl) {
             launch: 2.2 + s * 2.8 + j * 0.15, // squadmates burst out together
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
             phase: j / members.length, // nose-to-tail around the curve
+            n: members.length, // squad size (phalanx grid layout)
             dir: s % 2 ? -1 : 1,
-            strand: j % 2, // for helix / snake row offsets
+            strand: j % 2, // for helix / snake / carousel row offsets
           };
         });
       }
@@ -532,7 +534,7 @@ function buildLevel(lvl) {
           flight: {
             kind, state: 1, t: -(0.4 + j * 0.16), sx, sy, // negative t = holds off-screen, then glides on
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
-            phase: j / count, dir: si % 2 ? -1 : 1, strand: j % 2,
+            phase: j / count, n: count, dir: si % 2 ? -1 : 1, strand: j % 2,
           },
         });
       }
@@ -580,7 +582,9 @@ function buildLevel(lvl) {
       // so each flock reads as its own dense knot of motion
       const wrapK = kind === 'snake' || kind === 'helix' || kind === 'swoop';
       if (!wrapK) {
-        g.rx *= 0.55; g.ry *= 0.6;
+        // a tight but not CRAMPED knot — leave room so converging patterns
+        // (cross, carousel, star, vortex) never pinch riders into each other
+        g.rx *= 0.66; g.ry *= 0.68;
         if (nS > 1) g.cx = W / 2 + (s - (nS - 1) / 2) * usable * 0.3;
       } else g.ry *= 0.65;
       g.spd *= 1.25;
@@ -606,7 +610,7 @@ function buildLevel(lvl) {
           flight: {
             kind, state: 1, t: -(0.3 + j * 0.14 + s * 0.5), sx, sy, sq: s,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
-            phase: j / perS, dir: s % 2 ? -1 : 1, strand: j % 2,
+            phase: j / perS, n: perS, dir: s % 2 ? -1 : 1, strand: j % 2,
           },
         });
       }
@@ -679,7 +683,7 @@ function spawnReinforcement() {
   const theme = pickWaveTheme(regionIdx(lvl)); // reinforcements arrive as their own ecology
   const n = Math.min(16, 8 + regionsIn);
   const usable = W * 0.76;
-  const kinds = ['ring', 'lane', 'inf', 'swoop', 'diamond', 'liss', 'helix', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain'];
+  const kinds = ['ring', 'lane', 'chevron', 'arc', 'cross', 'carousel', 'swoop', 'diamond', 'helix', 'spiral', 'inf', 'liss', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain', 'clover', 'butterfly'];
   const kind = kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn + (junkie ? 2 : 0))))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
@@ -711,7 +715,7 @@ function spawnReinforcement() {
         kind, state: 2, launch: 0, sq: 99,
         cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * (junkie ? 0.24 : 0.4), ry,
         spd: (wrap ? 1.7 : 1) * (junkie ? 1.2 : 1),
-        phase: i / n, dir: 1, strand: i % 2,
+        phase: i / n, n, dir: 1, strand: i % 2,
       },
     });
   }
