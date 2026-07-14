@@ -122,7 +122,7 @@ function damageBrick(br, dmg, sx, sy, element) {
       const spR = (170 + diff().lv * 10) * diff().shotSpeed;
       for (let i = 0; i < nRing; i++) {
         const a = (i / nRing) * Math.PI * 2 + (newPhase === 3 ? 0.26 : 0);
-        G.enemyShots.push({ x: bx3, y: by3, vx: Math.cos(a) * spR, vy: Math.sin(a) * spR, boss: true });
+        G.enemyShots.push({ x: bx3, y: by3, vx: Math.cos(a) * spR, vy: Math.sin(a) * spR, boss: true, type: br.poke.t });
       }
       if (newPhase === 3 && !br.addsCalled) {
         br.addsCalled = true; // the last stand summons a guard ring
@@ -949,7 +949,7 @@ function update(dt) {
           const sx2 = br.bx + G.fx, sy2 = br.by + G.fy + br.h / 2;
           const ang = Math.atan2(shipY() - sy2, G.paddle.x - sx2);
           const sp2 = (240 + d.lv * 14) * d.shotSpeed;
-          G.enemyShots.push({ x: sx2, y: sy2, vx: Math.cos(ang) * sp2, vy: Math.sin(ang) * sp2 });
+          G.enemyShots.push({ x: sx2, y: sy2, vx: Math.cos(ang) * sp2, vy: Math.sin(ang) * sp2, type: br.poke.t });
           SFX.enemyShot();
         }
         if (p >= 1) { br.dive = null; br.bx = br.hx; br.by = br.hy; }
@@ -1406,9 +1406,14 @@ function update(dt) {
         const angles = tg.fan ? [-0.5, -0.25, 0, 0.25, 0.5].map(a => base + a)
           : tg.br.phase === 3 ? [base - 0.6, base - 0.3, base, base + 0.3, base + 0.6]
           : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
-        for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true });
+        for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: tg.br.poke.t });
       } else {
-        G.enemyShots.push({ x: bx, y: by, vy: (240 + d.lv * 18) * d.shotSpeed });
+        // evolved elites (tankier, maxHp≥3) fire a bigger, slower HEAVY blast:
+        // larger hit radius + splash, and it punches through your type resist
+        const elite = tg.br.maxHp >= 3;
+        const spd = (240 + d.lv * 18) * d.shotSpeed * (elite ? 0.82 : 1);
+        G.enemyShots.push({ x: bx, y: by, vy: spd, type: tg.br.poke.t,
+          heavy: elite, r: elite ? 15 : 10, splash: elite });
       }
       SFX.enemyShot();
     }
@@ -1445,18 +1450,40 @@ function update(dt) {
     // dodges for a living, so upgrades never widen its hurtbox (base width).
     const jk = G.mode === 'junkie';
     const py = shipY();
-    const hitW = jk ? 26 : (G.mode === 'classic' ? paddleW() : G.paddle.w) / 2 + 6;
-    const hitH = jk ? 24 : G.paddle.h;
+    // heavy elite blasts have SPLASH — a wider hit envelope you can't quite dodge
+    const spl = s.heavy ? (s.r || 12) * 0.7 : 0;
+    const hitW = (jk ? 26 : (G.mode === 'classic' ? paddleW() : G.paddle.w) / 2 + 6) + spl;
+    const hitH = (jk ? 24 : G.paddle.h) + spl;
     if (!s.dead && G.invuln <= 0 && s.y > py - hitH && s.y < py + hitH &&
         Math.abs(s.x - G.paddle.x) < hitW) {
+      const eff = shotEffect(s.type); // +1 super-effective, -1 you resist
+      const pc = TYPE_COLORS[playerType()] || '#90a4ae';
+      // a NORMAL shot your type resists is deflected — no life lost. Heavy elite
+      // blasts punch through your resist (that's what makes elites scary).
+      if (eff === -1 && !s.heavy) {
+        s.dead = true; G.invuln = 0.55;
+        addFloater(G.paddle.x, py - 42, 'RESISTED', pc, 12);
+        burst(s.x, py, pc, 10, 150, 0.4);
+        ringFx(s.x, py, pc, 4, 26, 2, 0.3);
+        tone(300, 0.06, 'sine', 0.04);
+        continue;
+      }
       s.dead = true;
-      // AEGIS: a shield charge absorbs the hit at the moment of impact —
-      // this is what makes the survival path real in the shooter modes,
-      // where enemy fire is the only way to die
+      // elite blast: a splash burst + shake land even if a shield eats the hit
+      if (s.heavy) {
+        const bc = s.type ? TYPE_COLORS[s.type] : '#ff7043';
+        burst(s.x, py, bc, 26, 340, 0.7);
+        ringFx(s.x, py, bc, 8, (s.r || 14) * 3, 4, 0.4);
+        G.shake = Math.min(G.shake + 8, 16);
+      }
       if (absorbHit(s.x, py)) continue;
       G.invuln = 2;
-      addFloater(G.paddle.x, py - 50, 'HIT!', '#ff5252', 22);
-      burst(G.paddle.x, py, '#ff5252', 30, 320);
+      const weak = eff === 1;
+      // super-effective HEAVY blasts really hurt — they take an extra life
+      // (guarded so they never turn a last life into a double white-out)
+      if (weak && s.heavy && G.lives > 1) { G.lives--; G.hurtHud = 2.4; }
+      addFloater(G.paddle.x, py - 50, weak ? (s.heavy ? 'WEAK! −2' : 'WEAK!') : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
+      burst(G.paddle.x, py, weak ? '#ffab40' : '#ff5252', weak ? 40 : 30, weak ? 380 : 320);
       loseLife();
       return;
     }

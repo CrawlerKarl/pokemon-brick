@@ -267,11 +267,14 @@ The draft cards lead with the upgrade NAME and a big high-contrast description
 (what it does) — the readable thing — over path/tier/pips; capstones glow.
 Card/tree/announce text is **mode-aware** (`tierDesc`, data.js — optional
 `sdesc` per tier), so a shooter-mode player never reads about paddles or balls.
-**FULL TREE** (`T` on desktop) opens a **tap-to-inspect** 5-column × 4-tier
-grid: every node is a tappable tile (icon + name + owned/next/locked), and
-selecting one fills a detail panel across the bottom with its full description
-(`treeSel`, input.js; `drawTreeDetail`, render.js). The node rects come from
-`upgradeTreeLayout` so render and hit-testing can't drift. A **HUD build strip**
+**FULL TREE** (`T` on desktop) opens a **tap-to-inspect** grid where **paths
+are rows and tiers build LEFT→RIGHT** (connector rails brighten up to the owned
+tier). Every node tile carries its name + description; tapping one lights it up
+(brighter, bolder) and fills a detail panel across the bottom (`treeSel`,
+input.js; `drawTreeDetail`, render.js). Node rects come from `upgradeTreeLayout`
+so render and hit-testing can't drift. Upgrade **symbols are glossy faux-3D
+badges** (`iconBadge`/`blitBadge`, render.js — baked per colour/size) used in
+the tree and draft cards. A **HUD build strip**
 shows owned paths, every non-junkie tier
 adds a colored hardware socket to the paddle, and Junkie tiers orbit the pilot
 as held items. As authored paths cap, all modes fill empty offers with small
@@ -335,6 +338,14 @@ Trial runs never save best score or Pokédex catches (`G.trial` flag).
   fire block) and drawn compact for non-boss shots (short stub, not a full
   line) in `drawTelegraphs` (render.js). Danger line only shows for a
   descending boxed wall (hidden on static waves).
+- **Typed enemy fire:** every enemy shot carries the firing Pokémon's `type`
+  and renders in that type's colour (`shotSprite` baked per colour). It has an
+  effectiveness relationship to YOUR current type (`playerType`/`shotEffect`,
+  state.js): a shot you resist shows a faint dashed ring and is **deflected —
+  no life lost**; a super-effective shot shows a pulsing red ring. Evolved
+  **elites** (`maxHp≥3`) fire a bigger, slower **HEAVY blast** — wider hit
+  envelope (splash), punches through your resist, and if super-effective takes
+  **an extra life**. All in the `G.enemyShots` hit block, update.js.
 - **Mega/barrier:** `MEGA_DUR`, `barrierCharges` (state.js)
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
 

@@ -46,6 +46,55 @@ function armorColor(br) {
 // many times per frame — enemy shots, flyer auras — is baked ONCE into an
 // offscreen canvas here and drawn with a plain drawImage.
 const fxCache = {};
+// mix two #rrggbb colors, t=0 → a, t=1 → b
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ar = pa >> 16, ag = (pa >> 8) & 255, ab = pa & 255;
+  const br = pb >> 16, bg = (pb >> 8) & 255, bb = pb & 255;
+  const r = Math.round(ar + (br - ar) * t), g = Math.round(ag + (bg - ag) * t), bl = Math.round(ab + (bb - ab) * t);
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | bl).toString(16).slice(1);
+}
+// a modern, glossy, faux-3D badge for an upgrade symbol: soft drop shadow,
+// radial "lit-from-above" body, a gloss highlight, a bright rim, and the glyph
+// in white on top. Baked once per (glyph, color, r, tone) — cheap to draw.
+function iconBadge(glyph, color, r, tone = 'lit') {
+  const ck = 'ib_' + glyph + '_' + color + '_' + r + '_' + tone;
+  if (fxCache[ck]) return fxCache[ck];
+  const pad = Math.ceil(r * 0.55) + 5, size = Math.ceil((r + pad) * 2);
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const cc = c.getContext('2d'), cx = size / 2, cy = size / 2;
+  const dim = tone === 'dim';
+  // drop shadow under the disc
+  cc.save();
+  cc.shadowColor = 'rgba(0,0,0,0.55)'; cc.shadowBlur = r * 0.45; cc.shadowOffsetY = r * 0.2;
+  cc.beginPath(); cc.arc(cx, cy, r, 0, Math.PI * 2); cc.fillStyle = color; cc.fill();
+  cc.restore();
+  // faux-3D body: lit from the top-left, darkening toward the bottom edge
+  const g = cc.createRadialGradient(cx - r * 0.36, cy - r * 0.42, r * 0.08, cx, cy, r * 1.18);
+  g.addColorStop(0, mixHex(color, '#ffffff', dim ? 0.3 : 0.6));
+  g.addColorStop(0.52, dim ? mixHex(color, '#0a0e1c', 0.35) : color);
+  g.addColorStop(1, mixHex(color, '#05060f', dim ? 0.7 : 0.5));
+  cc.beginPath(); cc.arc(cx, cy, r, 0, Math.PI * 2); cc.fillStyle = g; cc.fill();
+  // glossy top highlight
+  cc.save();
+  cc.beginPath(); cc.ellipse(cx, cy - r * 0.34, r * 0.64, r * 0.38, 0, 0, Math.PI * 2); cc.clip();
+  const hg = cc.createLinearGradient(0, cy - r * 0.82, 0, cy + r * 0.05);
+  hg.addColorStop(0, `rgba(255,255,255,${dim ? 0.3 : 0.55})`); hg.addColorStop(1, 'rgba(255,255,255,0)');
+  cc.fillStyle = hg; cc.fillRect(0, 0, size, size);
+  cc.restore();
+  // bright rim
+  cc.beginPath(); cc.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
+  cc.lineWidth = Math.max(1, r * 0.08); cc.strokeStyle = `rgba(255,255,255,${dim ? 0.18 : 0.35})`; cc.stroke();
+  // the symbol, white for contrast on the colored body
+  drawGlyph(cc, glyph, cx, cy + r * 0.02, r * 0.6, dim ? 'rgba(255,255,255,0.72)' : '#ffffff');
+  fxCache[ck] = c;
+  return c;
+}
+// draw a badge centered at (x,y) onto the main ctx
+function blitBadge(glyph, x, y, r, color, tone) {
+  const b = iconBadge(glyph, color, Math.round(r), tone || 'lit');
+  ctx.drawImage(b, x - b.width / 2, y - b.height / 2);
+}
 
 // a soft additive glow disc (white → transparent) for cheap emissive light
 function glowSprite() {
@@ -125,13 +174,13 @@ function drawAtmosphere(genIdx) {
   }
   ctx.drawImage(atmoCanvas, 0, 0);
 }
-function shotSprite(boss) {
-  const key = boss ? 'shotB' : 'shotN';
+// a spiky energy orb baked in an arbitrary type COLOR and radius — enemy shots
+// now come in every type's colour (electric yellow, water blue, …) instead of
+// one red. Cached per (color, r, spikes).
+function shotSprite(color, r, spikes) {
+  const key = 'shot_' + color + '_' + r + '_' + spikes;
   if (fxCache[key]) return fxCache[key];
-  const r = boss ? 13 : 10, spikes = boss ? 8 : 6;
-  const outer = boss ? '#ff5cf0' : '#ff5252';
-  const inner = boss ? '#7b1fa2' : '#b71c1c';
-  const core = boss ? '#fff0fb' : '#ffe0e0';
+  const inner = mixHex(color, '#05060f', 0.55);
   const size = Math.ceil(r * 1.35 + 13) * 2;
   const c = document.createElement('canvas');
   c.width = c.height = size;
@@ -139,7 +188,7 @@ function shotSprite(boss) {
   const cx = size / 2, cy = size / 2;
   // baked halo — replaces the per-frame shadowBlur
   const hg = cc.createRadialGradient(cx, cy, r * 0.4, cx, cy, size / 2);
-  hg.addColorStop(0, outer + '77'); hg.addColorStop(1, outer + '00');
+  hg.addColorStop(0, color + '77'); hg.addColorStop(1, color + '00');
   cc.fillStyle = hg; cc.fillRect(0, 0, size, size);
   cc.beginPath();
   for (let i = 0; i < spikes * 2; i++) {
@@ -148,8 +197,8 @@ function shotSprite(boss) {
     cc[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
   }
   cc.closePath();
-  const g = cc.createRadialGradient(cx, cy, 1, cx, cy, r * 1.35);
-  g.addColorStop(0, core); g.addColorStop(0.55, outer); g.addColorStop(1, inner);
+  const g = cc.createRadialGradient(cx - r * 0.25, cy - r * 0.25, 1, cx, cy, r * 1.35);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, color); g.addColorStop(1, inner);
   cc.fillStyle = g; cc.fill();
   cc.lineWidth = 2; cc.lineJoin = 'round';
   cc.strokeStyle = 'rgba(5,7,18,0.85)';
@@ -1471,21 +1520,30 @@ function drawProjectiles() {
   // — a Last-Stand shockwave of 30 shots costs 30 drawImages, not 60 gradient
   // allocations + 30 shadowBlur stalls, which was stuttering phones
   for (const s of G.enemyShots) {
-    const r = s.boss ? 13 : 10;
+    const r = s.r || (s.boss ? 13 : 10);
     const spin = G.time * (s.boss ? 4 : 6) + s.x * 0.05;
-    const outer = s.boss ? '#ff5cf0' : '#ff5252';
+    const col = s.boss ? '#ff5cf0' : s.type ? TYPE_COLORS[s.type] : '#ff5252';
     // short motion tail shows travel direction (plain alpha stroke, no gradient)
     const sp = Math.hypot(s.vx || 0, s.vy || 0) || 1;
     const ux = (s.vx || 0) / sp, uy = (s.vy || 1) / sp;
     ctx.save();
     ctx.globalAlpha = 0.38;
-    ctx.strokeStyle = outer;
+    ctx.strokeStyle = col;
     ctx.lineWidth = r * 0.9; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(s.x - ux * 6, s.y - uy * 6); ctx.lineTo(s.x - ux * 24, s.y - uy * 24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s.x - ux * 6, s.y - uy * 6); ctx.lineTo(s.x - ux * (s.heavy ? 30 : 24), s.y - uy * (s.heavy ? 30 : 24)); ctx.stroke();
     ctx.globalAlpha = 1;
+    // effectiveness telegraph vs YOUR current type: a bright pulsing ring when
+    // this attack is super-effective on you, a faint dashed ring when you resist
+    const eff = shotEffect(s.type);
+    if (eff !== 0) {
+      ctx.beginPath(); ctx.arc(s.x, s.y, r + 5, 0, Math.PI * 2);
+      if (eff === 1) { ctx.strokeStyle = `rgba(255,90,90,${0.5 + 0.4 * Math.sin(G.time * 9)})`; ctx.lineWidth = 2.4; ctx.setLineDash([]); }
+      else { ctx.strokeStyle = 'rgba(180,200,215,0.5)'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 4]); }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
     ctx.translate(s.x, s.y);
     ctx.rotate(spin);
-    const img = shotSprite(s.boss);
+    const img = shotSprite(col, r, s.boss ? 8 : 6);
     ctx.drawImage(img, -img.width / 2, -img.height / 2);
     ctx.restore();
   }
@@ -2643,46 +2701,72 @@ function drawFullUpgradeTree() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = `900 ${Math.min(22, p.w / 22)}px Orbitron, sans-serif`;
   ctx.fillStyle = '#e3f2fd';
-  ctx.fillText('UPGRADE TREE', p.x + p.w / 2, p.y + 25);
+  ctx.fillText('UPGRADE TREE', p.x + p.w / 2, p.y + 24);
   ctx.font = '600 9px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
-  ctx.fillText(IS_TOUCH ? 'TAP ANY UPGRADE TO SEE WHAT IT DOES' : 'CLICK ANY UPGRADE TO SEE WHAT IT DOES', p.x + p.w / 2, p.y + 42, p.w - 90);
+  ctx.fillText('EACH ROW BUILDS LEFT → RIGHT · ' + (IS_TOUCH ? 'TAP' : 'CLICK') + ' ANY UPGRADE FOR DETAILS', p.x + p.w / 2, p.y + 40, p.w - 90);
   // clamp the stored selection in case the roster/paths changed
   treeSel.pi = Math.max(0, Math.min(PATH_KEYS.length - 1, treeSel.pi | 0));
   treeSel.ti = Math.max(0, Math.min(3, treeSel.ti | 0));
 
-  const cW = T.colW, small = T.compact;
+  const small = T.compact;
   for (let pi = 0; pi < PATH_KEYS.length; pi++) {
-    const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk), cx = T.colX(pi);
-    // column header: path name + role
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk);
+    // row label: path name + role, on the left
+    const lb = T.label(pi);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = `900 ${small ? 9 : 12}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-    ctx.fillText(P.name, cx + cW / 2, T.colHeadY + (small ? 9 : 12), cW - 4);
-    ctx.font = `600 ${small ? 6.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#90a4ae';
-    ctx.fillText(P.role, cx + cW / 2, T.colHeadY + (small ? 21 : 27), cW - 4);
-    // the four tier tiles
+    wrapText(P.name, lb.w).slice(0, 2).forEach((ln, li) => ctx.fillText(ln, lb.x, lb.y + lb.h / 2 - (small ? 8 : 10) + li * (small ? 10 : 13), lb.w));
+    if (!small) { ctx.font = '600 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#90a4ae'; ctx.fillText(P.role, lb.x, lb.y + lb.h / 2 + 16, lb.w); }
+    // connector rail behind the row — brightens up to the owned tier
+    for (let ti = 0; ti < 3; ti++) {
+      const a = T.node(pi, ti), b = T.node(pi, ti + 1);
+      ctx.strokeStyle = ti + 1 <= lvl ? P.color : 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = ti + 1 <= lvl ? 2.5 : 1.5;
+      ctx.beginPath(); ctx.moveTo(a.x + a.w, a.y + a.h / 2); ctx.lineTo(b.x, b.y + b.h / 2); ctx.stroke();
+    }
+    // the four tier tiles, left → right
     for (let ti = 0; ti < 4; ti++) {
       const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
       const sel = treeSel.pi === pi && treeSel.ti === ti;
       const n = T.node(pi, ti);
       ctx.save();
-      if (sel) { ctx.shadowColor = P.color; ctx.shadowBlur = 16; }
-      roundRect(n.x, n.y, n.w, n.h, 8);
-      ctx.fillStyle = owned ? P.color + '30' : next ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.035)'; ctx.fill();
+      if (sel) { ctx.shadowColor = P.color; ctx.shadowBlur = 18; }
+      roundRect(n.x, n.y, n.w, n.h, 9);
+      ctx.fillStyle = sel ? mixHex(P.color, '#0a0e1c', 0.55) : owned ? P.color + '26' : next ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
+      ctx.fill();
       ctx.lineWidth = sel ? 2.5 : next ? 1.8 : 1;
       ctx.strokeStyle = sel ? '#fff' : owned ? P.color : next ? P.color + 'cc' : 'rgba(255,255,255,0.12)';
       ctx.stroke();
       ctx.shadowBlur = 0;
-      const nameCol = owned ? P.color : next ? '#fff' : '#8595a0';
-      drawGlyph(ctx, tier.icon, n.x + n.w / 2, n.y + (small ? 13 : n.h * 0.32), small ? 6 : 8, nameCol);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = `800 ${small ? 6.5 : 8.5}px Orbitron, sans-serif`; ctx.fillStyle = nameCol;
+      // polished badge icon
+      const iconR = Math.max(9, Math.min(small ? 13 : 17, n.h * 0.24));
+      const iconCX = small ? n.x + n.w / 2 : n.x + 6 + iconR;
+      const iconCY = small ? n.y + iconR + 6 : n.y + n.h * 0.32;
+      const badge = iconBadge(tier.icon, P.color, Math.round(iconR), (owned || next || sel) ? 'lit' : 'dim');
+      ctx.globalAlpha = owned || next || sel ? 1 : 0.7;
+      ctx.drawImage(badge, iconCX - badge.width / 2, iconCY - badge.height / 2);
+      ctx.globalAlpha = 1;
+      // name — brighter + bolder when selected
+      const nameCol = sel ? '#fff' : owned ? P.color : next ? '#e8eef6' : '#8595a0';
       const nm = (ti === 3 ? '★ ' : '') + (G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name);
-      wrapText(nm, n.w - 8).slice(0, 2).forEach((line, li) =>
-        ctx.fillText(line, n.x + n.w / 2, n.y + (small ? 26 : n.h * 0.62) + li * (small ? 8 : 10), n.w - 5));
-      if (!small && n.h >= 46) {
-        ctx.font = '800 6.5px Orbitron, sans-serif';
+      if (small) {
+        ctx.textAlign = 'center';
+        ctx.font = `${sel ? 900 : 800} ${sel ? 7.5 : 7}px Orbitron, sans-serif`; ctx.fillStyle = nameCol;
+        wrapText(nm, n.w - 6).slice(0, 2).forEach((ln, li) => ctx.fillText(ln, n.x + n.w / 2, iconCY + iconR + 9 + li * 8, n.w - 4));
+      } else {
+        const tx = n.x + 12 + iconR * 2, tw = n.x + n.w - 8 - tx;
+        ctx.textAlign = 'left';
+        ctx.font = `${sel ? 900 : 800} ${sel ? 10 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = nameCol;
+        ctx.fillText(nm, tx, n.y + 15, tw);
+        // the description text, right in the box (bolder/brighter when selected)
+        ctx.font = bodyFont(sel ? 8.5 : 8, sel ? 700 : 600);
+        ctx.fillStyle = sel ? '#eef3fa' : owned || next ? '#aeb9c8' : '#6b7684';
+        const maxLines = n.h >= 78 ? 3 : 2;
+        wrapText(tierDesc(pk, ti), tw).slice(0, maxLines).forEach((ln, li) => ctx.fillText(ln, tx, n.y + 30 + li * 11, tw));
+        // status tag, bottom-right
+        ctx.textAlign = 'right'; ctx.font = '800 6.5px Orbitron, sans-serif';
         ctx.fillStyle = owned ? P.color : next ? '#cfd8dc' : '#546e7a';
-        ctx.fillText(owned ? 'OWNED' : next ? 'NEXT' : 'TIER ' + (ti + 1), n.x + n.w / 2, n.y + n.h - 8);
+        ctx.fillText(owned ? 'OWNED' : next ? 'NEXT' : 'TIER ' + (ti + 1), n.x + n.w - 8, n.y + n.h - 8);
       }
       ctx.restore();
     }
@@ -2714,12 +2798,13 @@ function drawTreeDetail(T) {
   ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = statusCol;
   ctx.fillText(status, d.x + d.w - pad, d.y + 14, d.w * 0.4);
   // icon + path + tier name (left)
-  drawGlyph(ctx, tier.icon, d.x + pad + 13, d.y + 26, 13, P.color);
+  const db = iconBadge(tier.icon, P.color, 17, 'lit');
+  ctx.drawImage(db, d.x + pad, d.y + 8, 34, 34);
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = '800 9.5px Orbitron, sans-serif'; ctx.fillStyle = P.color;
-  ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + 34, d.y + 12, d.w - 120);
+  ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + 42, d.y + 12, d.w - 130);
   ctx.font = `900 ${Math.min(19, d.w / 22)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
-  ctx.fillText((G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name), d.x + pad + 34, d.y + 26, d.w - 120);
+  ctx.fillText((G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name), d.x + pad + 42, d.y + 26, d.w - 130);
   // the full description — the whole point: readable, wrapped
   ctx.font = bodyFont(Math.min(13, d.w / 34), 600); ctx.fillStyle = '#cfd8ea';
   const descTop = d.y + 52;
@@ -2778,7 +2863,7 @@ function drawOverlays() {
           ctx.stroke();
           ctx.shadowBlur = 0;
           if (L.stacked) {
-            drawGlyph(ctx, c.stack.icon, r.x + 34, r.y + r.h / 2, 17, scol);
+            blitBadge(c.stack.icon, r.x + 34, r.y + r.h / 2, 17, scol);
             ctx.textAlign = 'left';
             ctx.font = '900 9px Orbitron, sans-serif';
             ctx.fillStyle = scol;
@@ -2793,7 +2878,7 @@ function drawOverlays() {
             ctx.textAlign = 'center';
             ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = scol;
             ctx.fillText(G.mode === 'junkie' ? 'HELD ITEM' : 'MASTERY ITEM', r.x + r.w / 2, r.y + 12, r.w - 8);
-            drawGlyph(ctx, c.stack.icon, r.x + r.w / 2, r.y + 39, 14, scol);
+            blitBadge(c.stack.icon, r.x + r.w / 2, r.y + 39, 14, scol);
             ctx.font = '900 11px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 64, r.w - 10);
             ctx.font = bodyFont(8, 600); ctx.fillStyle = '#b0bec5';
@@ -2808,7 +2893,7 @@ function drawOverlays() {
             ctx.font = '700 10px Orbitron, sans-serif';
             ctx.fillStyle = owned ? '#fff' : '#78909c';
             ctx.fillText(owned ? 'OWNED ×' + owned : 'NEW', r.x + r.w / 2, r.y + 38);
-            drawGlyph(ctx, c.stack.icon, r.x + r.w / 2, r.y + 72, 24, scol);
+            blitBadge(c.stack.icon, r.x + r.w / 2, r.y + 72, 22, scol);
             ctx.font = '900 15px Orbitron, sans-serif';
             ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 112, r.w - 20);
@@ -2845,7 +2930,7 @@ function drawOverlays() {
           }
         };
         if (L.stacked) { // phone: icon left, text right
-          drawGlyph(ctx, tier.icon, r.x + 34, r.y + r.h / 2, 18, col);
+          blitBadge(tier.icon, r.x + 34, r.y + r.h / 2, 18, col);
           ctx.textAlign = 'left';
           ctx.font = '900 9.5px Orbitron, sans-serif';
           ctx.fillStyle = col;
@@ -2861,7 +2946,7 @@ function drawOverlays() {
           ctx.font = '900 8.5px Orbitron, sans-serif'; ctx.fillStyle = col;
           ctx.fillText(c.path.name + (isCap ? ' · CAP' : ''), r.x + r.w / 2, r.y + 12, r.w - 8);
           pips(r.x + r.w / 2, r.y + 25);
-          drawGlyph(ctx, tier.icon, r.x + r.w / 2, r.y + 48, 14, col);
+          blitBadge(tier.icon, r.x + r.w / 2, r.y + 48, 15, col);
           ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = isCap ? col : '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + r.w / 2, r.y + 73, r.w - 10);
           ctx.font = bodyFont(9.5, 600); ctx.fillStyle = '#e0e7f0';
@@ -2874,7 +2959,7 @@ function drawOverlays() {
           ctx.fillStyle = col;
           ctx.fillText(c.path.name + (isCap ? ' · CAPSTONE' : ' · TIER ' + (c.tierIdx + 1) + '/4'), r.x + r.w / 2, r.y + 22, r.w - 20);
           pips(r.x + r.w / 2, r.y + 40);
-          drawGlyph(ctx, tier.icon, r.x + r.w / 2, r.y + 74, 26, col);
+          blitBadge(tier.icon, r.x + r.w / 2, r.y + 74, 24, col);
           // the upgrade NAME — the headline
           ctx.font = '900 18px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';

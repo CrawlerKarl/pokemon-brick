@@ -60,6 +60,12 @@ phone — flag anything only verifiable there.
   "0 balls → loseLife" gate (you only die to enemy fire), and fire from
   `shipY()` (junkie) — every "where is the player" check must use `shipY()`,
   not `PADDLE_Y()`.
+- **Enemy fire is TYPED and effectiveness-aware.** Each shot carries a `type`
+  (firing mon's) and renders in that colour. Vs the player's `playerType()`:
+  a resisted normal shot is DEFLECTED (no life lost), super-effective shows a
+  red ring. Elite (`maxHp≥3`) shots are HEAVY: splash hitbox, pierce resist,
+  extra life if super-effective. Keep this in the `G.enemyShots` hit block
+  (update.js); typeless shots (`type` absent) must stay neutral so tests pass.
 - **Classic/blaster: blocks are a STATIC wall; flyers NEVER overlap it.**
   `G.blocksStatic` (`!hasBoss`) skips march/descent/sway. `flightGeom`/
   `clampOpen` place patterns so they can't enter the grid rect (square loops

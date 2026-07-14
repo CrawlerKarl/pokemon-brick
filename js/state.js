@@ -20,6 +20,22 @@ function pilotInfo() {
   return { id: PILOT_NONE.ids[G.starterLvl - 1], t: 'electric', shape: 'volt' };
 }
 function attackElement() { return G.ballElement || pilotInfo().t; }
+// the player's current DEFENSIVE type — how effective an enemy's typed attack
+// is against US. Junkie: the pilot's live element. Paddle modes: the ball's
+// element, else the starter's innate type (no starter → typeless, all neutral).
+function playerType() {
+  if (G.mode === 'junkie') return attackElement();
+  if (G.ballElement) return G.ballElement;
+  return (G.starter && G.starter !== 'none') ? G.starter : null;
+}
+// +1 super-effective vs the player, -1 the player resists, 0 neutral/typeless
+function shotEffect(shotType) {
+  const pt = playerType();
+  if (!shotType || !pt) return 0;
+  if ((EFFECTIVE[shotType] || []).includes(pt)) return 1;
+  if ((RESIST[shotType] || []).includes(pt)) return -1;
+  return 0;
+}
 // SPACE JUNKIE: the ship's vertical position — everywhere the game asks
 // "where is the player", it should ask shipY(), which simply equals the
 // paddle line outside junkie mode. The band gives ~120px of vertical flight.

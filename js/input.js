@@ -253,30 +253,30 @@ function upgradeLayout() {
 }
 // which tree node the player last tapped, so the detail panel can explain it
 let treeSel = { pi: 0, ti: 0 };
-// FULL TREE: a clean 5-column × 4-tier grid of tappable node tiles, with a
-// detail panel across the bottom that explains whichever node is selected.
+// FULL TREE: paths are ROWS, tiers march LEFT→RIGHT (tier 1 … capstone). Each
+// node is a tappable tile with its name + description; the selected one lights
+// up, and a detail panel across the bottom spells it out in big text.
 function upgradeTreeLayout() {
   const panel = { x: Math.max(8, W * 0.02), y: Math.max(8, H * 0.03),
     w: Math.min(W - 16, W * 0.96), h: Math.min(H - 16, H * 0.94) };
-  const compact = W < 640;
-  const pad = compact ? 8 : 12;
-  const headH = 48;
-  const colHeadH = compact ? 30 : 38;
-  const detailH = Math.min(148, Math.max(compact ? 96 : 112, panel.h * 0.22));
-  const cols = PATH_KEYS.length;
-  const colGap = compact ? 4 : 6;
-  const colW = (panel.w - pad * 2 - colGap * (cols - 1)) / cols;
-  const gridTop = panel.y + headH + colHeadH;
+  const compact = W < 720;
+  const pad = compact ? 8 : 14;
+  const headH = 46;
+  const labelW = compact ? 62 : Math.min(120, panel.w * 0.13);
+  const detailH = Math.min(150, Math.max(compact ? 100 : 116, panel.h * 0.2));
+  const colGap = compact ? 5 : 8, rowGap = compact ? 5 : 8;
+  const gridTop = panel.y + headH;
   const gridBot = panel.y + panel.h - detailH - 8;
-  const tierGap = compact ? 4 : 6;
-  const tierH = (gridBot - gridTop - tierGap * 3) / 4;
+  const rows = PATH_KEYS.length;
+  const rowH = (gridBot - gridTop - rowGap * (rows - 1)) / rows;
+  const boxesX = panel.x + pad + labelW + colGap;
+  const nodeW = (panel.x + panel.w - pad - boxesX - colGap * 3) / 4;
   return {
-    panel, compact, colW, colHeadH,
-    colHeadY: panel.y + headH,
+    panel, compact, labelW, nodeW, rowH,
     close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
     detail: { x: panel.x + pad, y: panel.y + panel.h - detailH, w: panel.w - pad * 2, h: detailH - 8 },
-    colX: pi => panel.x + pad + pi * (colW + colGap),
-    node: (pi, ti) => ({ x: panel.x + pad + pi * (colW + colGap), y: gridTop + ti * (tierH + tierGap), w: colW, h: tierH }),
+    label: pi => ({ x: panel.x + pad, y: gridTop + pi * (rowH + rowGap), w: labelW, h: rowH }),
+    node: (pi, ti) => ({ x: boxesX + ti * (nodeW + colGap), y: gridTop + pi * (rowH + rowGap), w: nodeW, h: rowH }),
   };
 }
 function pickUpgrade(i) {
