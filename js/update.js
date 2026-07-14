@@ -22,6 +22,7 @@ function scoreMult() {
 }
 
 function tickEffects(dt) {
+  G.livesMax = Math.max(G.livesMax || G.lives, G.lives); // health ring denominator tracks the peak
   for (const k of ['fx_fire', 'fx_laser', 'fx_wide', 'fx_slow', 'fx_magnet', 'fx_score', 'fx_draco']) {
     if (G[k]) { G[k].t -= dt; if (G[k].t <= 0) G[k] = null; }
   }
@@ -42,8 +43,9 @@ function tickEffects(dt) {
     G.overheat -= dt;
     if (G.overheat <= 0) { G.overheat = 0; G.heat = 0.3; }
   } else {
-    // cools fast — brief pauses recover (junkie cools faster still)
-    G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? 0.36 : 0.26));
+    // vents on a pause — but slower than sustained fire builds, so holding the
+    // trigger (or spamming the charge shot) really can cook the barrel
+    G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? 0.28 : 0.22));
   }
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
@@ -240,6 +242,23 @@ function fireballExplosion(x, y, tier) {
   }
 }
 
+// SPLASH CHARGE (IMPACT path): a charged shot detonates, damaging every brick
+// in a radius. Typed by the pilot's element so matchups still apply; NOVA ROUND
+// (impactX) enlarges the blast and doubles its bite (dmg 1 → 2).
+function chargeSplash(x, y, element, dmg) {
+  const radius = (78 + 34 * dmg) * (1 + 0.2 * upgN('blaze'));
+  const col = element ? TYPE_COLORS[element] : '#ffab40';
+  burst(x, y, col, 26, 340, 0.7);
+  burst(x, y, '#fff3e0', 12, 200, 0.5);
+  ringFx(x, y, col, 8, radius, 4, 0.4);
+  G.shake = Math.min(G.shake + 5, 12);
+  noiseBurst(0.22, 0.09);
+  for (const br of G.bricks) {
+    if (br.dead) continue;
+    const bx = br.bx + G.fx, by = br.by + G.fy;
+    if (Math.hypot(bx - x, by - y) < radius + br.w / 2) damageBrick(br, dmg, bx, by, element);
+  }
+}
 // is this block out of its box and flying a pattern?
 function flying(br) { return !!(br.flight && br.flight.state >= 1); }
 // is this a BARE Pokémon (no box around it) — flyer, diver, or once-dived?
@@ -1264,7 +1283,6 @@ function update(dt) {
         }
         let dmg = L.charged ? L.power : (L.powerMul || 1);
         if (L.heavy) dmg *= 1.15;
-        if (upgN('lockon') && (br.isBoss || br.maxHp >= 3)) dmg *= 1.25;
         if (L.nova) dmg *= 2;
         if (L.mega) dmg *= upgN('megaX') ? 1.5 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
@@ -1273,8 +1291,12 @@ function update(dt) {
         // blaster hits carry the whole tier — twice the classic trickle
         if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + (G.mode !== 'classic' ? 0.004 : 0.002));
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
-        // a fire pilot's spent charge shot detonates — Blaze in shooter form
-        if (L.charged && L.dead && L.shape === 'flame') fireballExplosion(L.x, L.y, 1);
+        // SPLASH CHARGE (IMPACT): a spent charged shot detonates for AoE — the
+        // typed blast supersedes the old flame-only detonation
+        if (L.charged && L.dead) {
+          if (upgN('demo')) chargeSplash(L.x, L.y, L.element, upgN('impactX') ? 2 : 1);
+          else if (L.shape === 'flame') fireballExplosion(L.x, L.y, 1);
+        }
       }
     }
     if (L.y < 40) L.dead = true;

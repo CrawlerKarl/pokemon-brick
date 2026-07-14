@@ -89,10 +89,16 @@ phone — flag anything only verifiable there.
   and mode-aware wiring: shields ABSORB a lethal hit on the player in every
   mode (`absorbHit`, update.js — never regress them to floor-line-only),
   Momentum/Rally charge Mega off blaster hits/kills in the shooter modes, and
-  upgrades never widen the shooter hurtbox. As paths cap, every mode fills empty offers
+  upgrades never widen the shooter hurtbox. IMPACT is the heavy/charge path —
+  its `demo` tier (SPLASH CHARGE) makes charged shots detonate for AoE
+  (`chargeSplash`, update.js). As paths cap, every mode fills empty offers
   with forever-stacking `STACK_ITEMS` (`G.stacks`). Owned tiers orbit the
   junkie pilot; paddle modes show them on the build rail. Runs auto-save at each region (`saveCheckpoint`/
-  `RUN_CKPT`); a true game over clears it. One draft reroll per screen.
+  `RUN_CKPT`); a true game over clears it. One draft reroll per screen. The
+  draft cards lead with the upgrade name + a big description; **FULL TREE is
+  tap-to-inspect** — node rects come from `upgradeTreeLayout`, tap sets
+  `treeSel`, `drawTreeDetail` explains it. Keep render + hit-test using the
+  same `node(pi,ti)` rects.
 - **Readability over density.** The ball/character must never get lost. Caps:
   `flyerBudget` ≤20, junkie squads ≤26, particles ≤450, rings ≤24. The ball's
   glow scales with `clutter`.

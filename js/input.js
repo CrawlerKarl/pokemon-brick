@@ -188,7 +188,9 @@ window.addEventListener('keydown', e => {
   }
   // 1/2/3 pick, R rerolls, T opens the complete tree between waves
   if (e.code === 'KeyT' && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8) {
-    upgradeTreeOpen = !upgradeTreeOpen; SFX.wall();
+    upgradeTreeOpen = !upgradeTreeOpen;
+    if (upgradeTreeOpen) treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
+    SFX.wall();
   }
   if (!upgradeTreeOpen && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
     pickUpgrade(+e.code.slice(5) - 1);
@@ -234,25 +236,48 @@ function upgradeLayout() {
   const short = H < 520;
   const stacked = W < 560 && !short;
   if (stacked) {
-    const cw = Math.min(370, W * 0.92), ch = Math.min(96, H * 0.13);
-    const x = W / 2 - cw / 2, y0 = Math.min(H * 0.4, H - 3 * (ch + 14) - 60);
+    const cw = Math.min(380, W * 0.92), ch = Math.min(108, H * 0.15);
+    const x = W / 2 - cw / 2, y0 = Math.min(H * 0.38, H - 3 * (ch + 14) - 56);
     const ay = Math.min(y0 + 3 * (ch + 14) + 6, H - 44), aw = Math.min(150, (W - 36) / 2);
     return { stacked, short, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }),
       reroll: { x: W / 2 - aw - 6, y: ay, w: aw, h: 32 },
       tree: { x: W / 2 + 6, y: ay, w: aw, h: 32 } };
   }
-  const cw = Math.min(235, (W - 84) / 3), ch = Math.min(240, H * 0.34);
-  const gap = 20, total = cw * 3 + gap * 2;
-  const ay = Math.min(H * 0.4 + ch + 16, H - 48);
-  return { stacked, short, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: H * 0.4, w: cw, h: ch }),
+  const cw = Math.min(250, (W - 84) / 3), ch = Math.min(252, H * 0.4);
+  const gap = 22, total = cw * 3 + gap * 2;
+  const cy = Math.min(H * 0.4, H - ch - 60);
+  const ay = Math.min(cy + ch + 16, H - 48);
+  return { stacked, short, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: cy, w: cw, h: ch }),
     reroll: { x: W / 2 - 188, y: ay, w: 176, h: 34 },
     tree: { x: W / 2 + 12, y: ay, w: 176, h: 34 } };
 }
+// which tree node the player last tapped, so the detail panel can explain it
+let treeSel = { pi: 0, ti: 0 };
+// FULL TREE: a clean 5-column × 4-tier grid of tappable node tiles, with a
+// detail panel across the bottom that explains whichever node is selected.
 function upgradeTreeLayout() {
-  const panel = { x: Math.max(10, W * 0.025), y: Math.max(10, H * 0.035),
-    w: Math.min(W - 20, W * 0.95), h: Math.min(H - 20, H * 0.93) };
-  return { panel, compact: W < 700,
-    close: { x: panel.x + panel.w - 46, y: panel.y + 10, w: 34, h: 34 } };
+  const panel = { x: Math.max(8, W * 0.02), y: Math.max(8, H * 0.03),
+    w: Math.min(W - 16, W * 0.96), h: Math.min(H - 16, H * 0.94) };
+  const compact = W < 640;
+  const pad = compact ? 8 : 12;
+  const headH = 48;
+  const colHeadH = compact ? 30 : 38;
+  const detailH = Math.min(148, Math.max(compact ? 96 : 112, panel.h * 0.22));
+  const cols = PATH_KEYS.length;
+  const colGap = compact ? 4 : 6;
+  const colW = (panel.w - pad * 2 - colGap * (cols - 1)) / cols;
+  const gridTop = panel.y + headH + colHeadH;
+  const gridBot = panel.y + panel.h - detailH - 8;
+  const tierGap = compact ? 4 : 6;
+  const tierH = (gridBot - gridTop - tierGap * 3) / 4;
+  return {
+    panel, compact, colW, colHeadH,
+    colHeadY: panel.y + headH,
+    close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
+    detail: { x: panel.x + pad, y: panel.y + panel.h - detailH, w: panel.w - pad * 2, h: detailH - 8 },
+    colX: pi => panel.x + pad + pi * (colW + colGap),
+    node: (pi, ti) => ({ x: panel.x + pad + pi * (colW + colGap), y: gridTop + ti * (tierH + tierGap), w: colW, h: tierH }),
+  };
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
@@ -308,14 +333,20 @@ function onPress(x, y) {
       const L = upgradeLayout();
       if (upgradeTreeOpen) {
         const T = upgradeTreeLayout();
-        if (inRect(x, y, T.close) || !inRect(x, y, T.panel)) upgradeTreeOpen = false;
+        if (inRect(x, y, T.close) || !inRect(x, y, T.panel)) { upgradeTreeOpen = false; return; }
+        // tap a node tile → select it so the detail panel explains it
+        for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+          for (let ti = 0; ti < 4; ti++) {
+            if (inRect(x, y, T.node(pi, ti))) { treeSel = { pi, ti }; SFX.wall(); return; }
+          }
+        }
         return;
       }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         if (inRect(x, y, L.card(i))) { pickUpgrade(i); return; }
       }
       if (!G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
-      if (inRect(x, y, L.tree)) { upgradeTreeOpen = true; SFX.wall(); return; }
+      if (inRect(x, y, L.tree)) { upgradeTreeOpen = true; treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) }; SFX.wall(); return; }
     }
     return;
   }
@@ -434,7 +465,7 @@ function fireAction(auto = false) {
   const torrent = G.starter === 'water' ? 0.8 - 0.04 * (G.starterLvl - 1) : 1;
   // SPACE JUNKIE runs much cooler — you're a Pokémon using its attack, not a
   // cannon — and NEVER-MELT ICE stacks cool it further still
-  const modeCool = G.mode === 'junkie' ? 0.55 : 1;
+  const modeCool = G.mode === 'junkie' ? 0.88 : 1; // junkie runs a bit cooler, not immune
   const masteryCool = Math.pow(0.94, G.stacks.ice || 0);
   // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
   // heat-limited well below the faster cadence and the capstone adds no DPS
@@ -481,6 +512,15 @@ function fireCharge(c) {
     shape: pil ? pil.shape : null,
     element: pil ? attackElement() : null,
   });
+  // the big shot dumps a decent slug of heat — a full charge is ~0.6 of the
+  // bar, so leaning on the charge (or chaining them) really can overheat you
+  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0);
+  G.heat = Math.min(1, G.heat + (0.30 + 0.30 * c) * heatMods);
+  if (G.heat >= 1) {
+    G.overheat = OVERHEAT_DUR;
+    addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
+    noiseBurst(0.3, 0.09);
+  }
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
   SFX.blaster();

@@ -430,12 +430,12 @@ const PATHS = {
     { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON', desc: 'FIRE TWO BOLTS · EACH DEALS 65% DAMAGE' },
     { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'FIRES 25% FASTER · HEAT PER SHOT −20%' },
   ]},
-  impact: { name: 'IMPACT', role: 'PRECISION FIRE', family: 'offense', color: '#ff8a65',
-    summary: 'FEWER, HEAVIER SHOTS · LINE UP TARGETS', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
-    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT', desc: 'BOLTS ARE 30% WIDER · DAMAGE +15%' },
-    { key: 'lockon',  icon: 'alert',  name: 'ELITE SIGHT', desc: 'DEAL +25% DAMAGE TO ELITES AND BOSSES' },
-    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND', desc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS' },
-    { key: 'impactX', icon: 'star',   name: 'NOVA ROUND', desc: 'PULSE EVERY 4TH VOLLEY · DOUBLE DAMAGE' },
+  impact: { name: 'IMPACT', role: 'HEAVY BLAST', family: 'offense', color: '#ff8a65',
+    summary: 'FEWER, HEAVIER SHOTS · CHARGED HITS DETONATE', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
+    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT',    desc: 'BOLTS ARE 30% WIDER · DAMAGE +15%' },
+    { key: 'demo',    icon: 'fire',   name: 'SPLASH CHARGE', desc: 'CHARGED SHOTS DETONATE — SPLASH DAMAGE AROUND THE HIT' },
+    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND',   desc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS' },
+    { key: 'impactX', icon: 'star',   name: 'NOVA ROUND',    desc: 'PULSE EVERY 4TH VOLLEY · 2× DMG · BIGGER CHARGE BLAST' },
   ]},
   aegis: { name: 'AEGIS', role: 'SURVIVAL', family: 'defense', color: '#66bb6a',
     summary: 'SHIELDS ABSORB LETHAL HITS · RECHARGING DEFENSE', tell: 'GREEN ARMOR SOCKETS + SHIELD BUBBLE', tiers: [
@@ -470,7 +470,7 @@ const PATH_KEYS = Object.keys(PATHS);
 // appearing as a badge orbiting the ship when earned.
 const JUNKIE_ITEMS = {
   arsenal: ['SCOPE LENS', 'MYSTIC WATER', 'CHOICE SPECS', 'QUICK CLAW'],
-  impact:  ['MUSCLE BAND', 'EXPERT BELT', 'RAZOR CLAW', 'LOADED DICE'],
+  impact:  ['MUSCLE BAND', 'BLAST SEED', 'RAZOR CLAW', 'LOADED DICE'],
   aegis:   ['FOCUS BAND', 'EVIOLITE', 'LEFTOVERS', 'ASSAULT VEST'],
   surge:   ['POWER HERB', 'METRONOME', 'CHARCOAL', 'MEGA STONE'],
   bond:    ['MAGNET', 'SOOTHE BELL', 'AMULET COIN', 'MAX REVIVE'],

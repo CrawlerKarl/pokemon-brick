@@ -240,8 +240,13 @@ the screen:
   without the heat cut, sustained fire was heat-limited and the cadence
   bonus added no real DPS). Coolant also builds charge shots 35% faster in
   the shooter modes.
-- **IMPACT** → NOVA ROUND (wide heavy bolts, elite damage, an obvious piercing
-  pulse every fifth volley, then a double-damage pulse every fourth)
+- **IMPACT** (HEAVY BLAST) → NOVA ROUND. Wide heavy bolts, then **SPLASH
+  CHARGE** (`demo`): a spent charged shot **detonates for AoE** — the
+  element-typed blast (`chargeSplash`, update.js) supersedes the old flame-only
+  detonation. Then a piercing pulse every fifth volley, and the capstone doubles
+  pulse damage AND enlarges the charge blast. The charged shot itself dumps a
+  big slug of heat (~0.6 of the bar at full charge), so leaning on the big shot
+  can overheat you — heat now vents slower than sustained fire builds.
 - **AEGIS** → SUPER SHIELD. **A shield charge absorbs a lethal hit on the
   player** (enemy shot or column strike — `absorbHit`, update.js) in every
   mode, plus the classic floor net still saves dropped balls. Tiers: start
@@ -258,12 +263,16 @@ the screen:
   ×2.5 per kill and amplifies combo score +50%.
 - **BOND** → POKÉ REVIVE (+1 life now + per region cleared; more drops/score)
 
-The draft cards label each path's playstyle and show the next tier plus
-capstone. Card/tree/announce text is **mode-aware** (`tierDesc`, data.js —
-optional `sdesc` per tier), so a shooter-mode player never reads about
-paddles or balls. **FULL TREE** (`T` on desktop) opens a five-column atlas with every
-tier, description, owned node, next node, and future node; phones use a compact
-five-row version. A **HUD build strip** shows owned paths, every non-junkie tier
+The draft cards lead with the upgrade NAME and a big high-contrast description
+(what it does) — the readable thing — over path/tier/pips; capstones glow.
+Card/tree/announce text is **mode-aware** (`tierDesc`, data.js — optional
+`sdesc` per tier), so a shooter-mode player never reads about paddles or balls.
+**FULL TREE** (`T` on desktop) opens a **tap-to-inspect** 5-column × 4-tier
+grid: every node is a tappable tile (icon + name + owned/next/locked), and
+selecting one fills a detail panel across the bottom with its full description
+(`treeSel`, input.js; `drawTreeDetail`, render.js). The node rects come from
+`upgradeTreeLayout` so render and hit-testing can't drift. A **HUD build strip**
+shows owned paths, every non-junkie tier
 adds a colored hardware socket to the paddle, and Junkie tiers orbit the pilot
 as held items. As authored paths cap, all modes fill empty offers with small
 forever-stacking mastery items instead of dead reward screens. Caps read via
@@ -273,6 +282,10 @@ own that tier.
 ### White-out (not game-over) — `loseLife()` update.js ~351
 Losing all lives **burns 2 random tree levels** (`regressPath`), refills
 lives, and **retries the wave**. Real game-over only when the tree is empty.
+Lives show top-right as a **health ring** (`drawLifeRing`, render.js) — a
+glowing arc over a faint track, notched per life, greens→amber→red as it
+drains, last life pulses. Denominator is `G.livesMax` (peak lives held, so a
+POKÉ REVIVE grows the ring); kept at the peak in `tickEffects`.
 
 ### Starter partners (`STARTER_MON` data.js ~314)
 Charmander/Squirtle/Bulbasaur (or none). Rides the paddle, tints its glow,

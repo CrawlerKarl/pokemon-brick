@@ -62,7 +62,7 @@ function resumeRun() {
 const G = {
   state: 'menu',
   score: 0, best: Math.max(0, +loadStore('pkbrk-best', '0') || 0),
-  lives: 3, level: 1, combo: 0,
+  lives: 3, livesMax: 3, level: 1, combo: 0, // livesMax = ring denominator (peak lives held)
   paddle: { x: 0, w: 130, h: 18, speed: 0, squash: 0 },
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
   particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
@@ -688,7 +688,7 @@ function spawnReinforcement() {
 
 function resetRun(startLevel = 1, trial = false) {
   const p = preset();
-  G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.level = startLevel; G.combo = 0;
+  G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.megaCalloutDone = false;
   G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false;
