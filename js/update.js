@@ -838,35 +838,43 @@ function update(dt) {
       }
       if (!br.entry && !br.dive) { br.bx = br.hx; br.by = br.hy; }
     }
-    // ---- SPACE JUNKIE crispness: flyers NEVER overlap. A proper little
-    // constraint solver: several full-projection passes push any two
-    // sprites out to a minimum spacing. When a pattern tries to converge
-    // (vortex contracting, star pinching through its center), the squad
-    // packs into a crisp, non-overlapping knot instead of a blob — tightly
-    // knit, but every Pokémon stays distinct and trackable.
-    if (G.mode === 'junkie') {
+    // ---- flyers NEVER overlap. A proper little constraint solver: several
+    // full-projection passes push any two sprites out to a minimum spacing.
+    // When a pattern tries to converge (vortex contracting, star pinching
+    // through its center), the flock packs into a crisp, non-overlapping knot
+    // instead of a blob. Runs in EVERY mode now — so classic/blaster flyers no
+    // longer bump each other either. In the walled modes it clamps to the open
+    // band below the wall so a push can't shove a flyer into the static bricks.
+    {
       const fl = [];
       for (const br of G.bricks) {
         if (!br.dead && br.flight && br.flight.state >= 1 && !br.dive && !br.entry) fl.push(br);
       }
-      for (let it = 0; it < 4; it++) {
-        let moved = false;
-        for (let i = 0; i < fl.length; i++) {
-          for (let j = i + 1; j < fl.length; j++) {
-            const a = fl[i], b2 = fl[j];
-            const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.58;
-            let dx = b2.bx - a.bx, dy = b2.by - a.by;
-            let d = Math.hypot(dx, dy);
-            if (d < minD) {
-              if (d < 0.01) { dx = Math.cos(i * 2.4); dy = Math.sin(i * 2.4); d = 1; }
-              const push = (minD - d) / 2;
-              a.bx -= dx / d * push; a.by -= dy / d * push;
-              b2.bx += dx / d * push; b2.by += dy / d * push;
-              moved = true;
+      if (fl.length > 1) {
+        for (let it = 0; it < 6; it++) {
+          let moved = false;
+          for (let i = 0; i < fl.length; i++) {
+            for (let j = i + 1; j < fl.length; j++) {
+              const a = fl[i], b2 = fl[j];
+              const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.58;
+              let dx = b2.bx - a.bx, dy = b2.by - a.by;
+              let d = Math.hypot(dx, dy);
+              if (d < minD) {
+                if (d < 0.01) { dx = Math.cos(i * 2.4); dy = Math.sin(i * 2.4); d = 1; }
+                const push = (minD - d) / 2;
+                a.bx -= dx / d * push; a.by -= dy / d * push;
+                b2.bx += dx / d * push; b2.by += dy / d * push;
+                moved = true;
+              }
             }
           }
+          if (!moved) break;
         }
-        if (!moved) break;
+        // keep flyers inside their airspace band — never up into the wall
+        const fb = G.flyBand;
+        if (fb && G.mode !== 'junkie') {
+          for (const br of fl) br.by = Math.max(fb.top + br.h / 2, Math.min(fb.floor - br.h / 2, br.by));
+        }
       }
     }
   }

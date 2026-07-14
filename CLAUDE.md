@@ -71,12 +71,20 @@ phone — flag anything only verifiable there.
   `clampOpen` place patterns so they can't enter the grid rect (square loops
   AROUND it; open patterns stay in the band BELOW). **After any flyer-geometry
   change, re-run the overlap-count assertion (must be 0).** The `test.html`
-  suite covers this.
+  suite covers this (flyer↔wall AND flyer↔flyer).
+- **Flyers NEVER overlap EACH OTHER either — in every mode.** The separation
+  solver (update.js, after the flight loop) runs for all modes now; in the
+  walled modes it clamps to `G.flyBand` so a push can't shove a flyer into the
+  wall. Every squad (wall + stream) draws a UNIQUE band slot (`nTotal`, state.js)
+  so two flocks never share a center. **Early patterns are curated CLEAN:** the
+  `kinds` unlock list front-loads non-self-crossing formations (ring/oval/lane/
+  square, then fountain/weave/snake…) and defers the busy center-crossing curves
+  (inf/liss/rose/star/vortex) to later regions, so early waves read as obvious
+  shapes, not blobs.
 - **Junkie: tight, HIGH, non-overlapping flocks.** Small flyers, patterns
   shrunk ~55%, airspace floor high (~42%→56% late) so the low band is the
-  ship's. A per-frame separation solver (update.js, after the flight loop)
-  guarantees flyers never overlap — keep it. Squads periodically run maneuvers
-  (`G.maneuver`: scatter/surge/raid); raids are capped out of the ship band.
+  ship's. Squads periodically run maneuvers (`G.maneuver`: scatter/surge/raid);
+  raids are capped out of the ship band.
 - **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
   mons (flyers, divers, junkie flyers, bosses) FAINT; boxed bricks card-shatter.
 - **Bosses are BARE legendaries** (`drawBossMon`, render.js — no card), with

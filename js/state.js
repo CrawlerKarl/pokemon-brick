@@ -286,7 +286,7 @@ function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
   G.fx = 0; G.fy = 0; G.swayT = 0;
-  G.gustT = 0; G.timeWarpT = 0;
+  G.gustT = 0; G.timeWarpT = 0; G.flyBand = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
   // pack or type cluster, so Pokémon that belong together appear together
@@ -439,12 +439,17 @@ function buildLevel(lvl) {
   // the bricks; the rest weave/circle in the open space below them.
   // SPACE JUNKIE mode unlocks two regions early — variety IS that mode.
   const unlockR = junkie ? regionsIn + 2 : regionsIn;
-  const kinds = ['ring', 'oval', 'square', 'weave'];
-  if (unlockR >= 2) kinds.push('inf', 'snake', 'lane');
-  if (unlockR >= 3) kinds.push('falls', 'diamond', 'swoop', 'fountain');
-  if (unlockR >= 4) kinds.push('olympic', 'liss', 'zigzag');
-  if (unlockR >= 5) kinds.push('rose', 'helix', 'binary', 'star');
-  if (unlockR >= 6) kinds.push('pend', 'epi', 'pulsar', 'atom', 'vortex');
+  // patterns unlock region by region, ordered so EARLY waves read as clean,
+  // obvious formations that hold their shape — riders never cross, so the flock
+  // never bumps itself into a blob. The busy self-crossing curves (figure-8s,
+  // pretzels, roses, vortices — where riders pass through a shared center)
+  // arrive later, once the separation solver's packing is expected chaos.
+  const kinds = ['ring', 'oval', 'lane', 'square'];         // clean loops & lanes
+  if (unlockR >= 2) kinds.push('fountain', 'weave', 'snake');
+  if (unlockR >= 3) kinds.push('diamond', 'swoop', 'pulsar', 'helix');
+  if (unlockR >= 4) kinds.push('inf', 'falls', 'zigzag', 'olympic');
+  if (unlockR >= 5) kinds.push('liss', 'star', 'binary');
+  if (unlockR >= 6) kinds.push('rose', 'pend', 'epi', 'atom', 'vortex');
   if (!junkie && !hasBoss && regionsIn >= 1) {
     // how many break out of the wall is set by the density budget (above),
     // never a runaway fraction — the boxed wall keeps a real presence
@@ -467,20 +472,27 @@ function buildLevel(lvl) {
       // 'square' needs a boxed core left to loop around
       hasCore: G.bricks.length - flyers.length >= 4,
     };
+    // the clear band flyers own — the separation solver clamps to it so a push
+    // can never shove a flyer up into the static wall
+    G.flyBand = { top: geo.openTop, floor: geo.floorY };
     const pickKind = () => {
       let k = kinds[Math.floor(Math.random() * kinds.length)];
       if (k === 'square' && !geo.hasCore) k = 'oval'; // nothing to loop around
       return k;
     };
+    // wall squads AND streams share ONE band, so they must draw DISTINCT slots
+    // — otherwise two flocks land on the same center/curve and sit on top of
+    // each other. Every squad (wall or stream) gets a unique index into nTotal.
+    const wallNS = flyers.length >= 3 ? Math.max(1, Math.min(4, Math.round(flyers.length / 7))) : 0;
+    const nTotal = wallNS + streamSquads;
     // ---- WALL SQUADS: flyers break out a whole SQUAD at a time — the
     // flock pops its boxes within a beat of each other and threads onto
     // its OWN pattern (each squad gets a shape, a center, a direction)
-    if (flyers.length >= 3) {
-      const nS = Math.max(1, Math.min(4, Math.round(flyers.length / 7)));
-      for (let s = 0; s < nS; s++) {
-        const members = flyers.filter((_, i) => i % nS === s);
+    if (wallNS > 0) {
+      for (let s = 0; s < wallNS; s++) {
+        const members = flyers.filter((_, i) => i % wallNS === s);
         const kind = pickKind();
-        const g = flightGeom(kind, geo, s, nS);
+        const g = flightGeom(kind, geo, s, nTotal);
         members.forEach((b, j) => {
           b.flight = {
             kind, state: 0, // 0 = still boxed in the wall, breaks out later
@@ -497,12 +509,13 @@ function buildLevel(lvl) {
     // broken out — a trailing line pours in from off-screen and threads
     // straight into its pattern, one behind the other
     for (let s = 0; s < streamSquads; s++) {
+      const si = wallNS + s; // unique band slot, past the wall squads
       // streams fly OPEN patterns only (a 'square' would have to cross the wall
       // to reach its loop) and pour in from the SIDES at open-zone height, so
       // the trailing line never passes through the bricks
       let kind = pickKind();
       if (kind === 'square') kind = 'oval';
-      const g = flightGeom(kind, geo, s, streamSquads);
+      const g = flightGeom(kind, geo, si, nTotal);
       const count = streamPer;
       const tierPool = themedPool(gen, 2, theme);
       const [id, t] = tierPool[Math.floor(Math.random() * tierPool.length)]; // one species — reads as a flock
@@ -510,7 +523,7 @@ function buildLevel(lvl) {
       const edge = Math.random() < 0.5 ? 'left' : 'right';
       for (let j = 0; j < count; j++) {
         const sx = edge === 'left' ? -60 - j * 44 : W + 60 + j * 44;
-        const sy = geo.openTop + s * 30 + (j % 3) * 22;
+        const sy = geo.openTop + si * 30 + (j % 3) * 22;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: 0, col: j,
           w: bw - gapX, h: bh, hp, maxHp: hp,
@@ -518,7 +531,7 @@ function buildLevel(lvl) {
           flight: {
             kind, state: 1, t: -(0.4 + j * 0.16), sx, sy, // negative t = holds off-screen, then glides on
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
-            phase: j / count, dir: s % 2 ? -1 : 1, strand: j % 2,
+            phase: j / count, dir: si % 2 ? -1 : 1, strand: j % 2,
           },
         });
       }
@@ -548,6 +561,7 @@ function buildLevel(lvl) {
       openTop: Math.max(96, Math.round(H * 0.12)),
       floorY,
     };
+    G.flyBand = { top: geo.openTop, floor: geo.floorY }; // solver clamp band
     // Space Junkie mons: compact but readable — and mostly UNEVOLVED.
     // Tier-1 species are the rank and file; evolved Pokémon arrive as
     // ELITES — noticeably LARGER, much tougher to shoot down, and in

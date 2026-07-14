@@ -342,6 +342,38 @@ window.requestAnimationFrame = function () { return 0; };
   }
   for (const lvl of [5, 8, 14, 20, 26]) test('non-overlap: level ' + lvl, overlapTest(lvl));
 
+  // 3b) flyer↔FLYER non-overlap — the separation solver runs in every mode now,
+  // so flocks never bump each other into a blob (checked in blaster + junkie)
+  function flyerFlyerTest(mode, lvl) {
+    return async () => {
+      const e0 = ERR.length;
+      SETTINGS.mode = mode;
+      resetRun(lvl, true);
+      G.lives = 99;
+      let overlaps = 0, maxFlyers = 0; const samples = [];
+      await runFrames(1400, f => {
+        if (G.state === 'upgrade' || G.state === 'gameover') return false;
+        if (G.state === 'serve') fireAction();
+        steerBallOrAim(mode);
+        const fl = G.bricks.filter(b => !b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.entry);
+        if (fl.length > maxFlyers) maxFlyers = fl.length;
+        for (let i = 0; i < fl.length; i++) for (let j = i + 1; j < fl.length; j++) {
+          const a = fl[i], b = fl[j];
+          const minD = (Math.min(a.w, a.h) + Math.min(b.w, b.h)) * 0.5; // hard overlap only
+          if (Math.hypot((a.bx + G.fx) - (b.bx + G.fx), (a.by + G.fy) - (b.by + G.fy)) < minD) {
+            overlaps++;
+            if (samples.length < 3) samples.push('f' + f + ' ' + (NAMES[a.poke.id] || a.poke.id) + ' vs ' + (NAMES[b.poke.id] || b.poke.id));
+          }
+        }
+      });
+      assert(ERR.length === e0, 'errors during sim: ' + ERR.slice(e0).join(' | '));
+      assert(overlaps === 0, mode + ' L' + lvl + ': ' + overlaps + ' flyer↔flyer overlaps, e.g. ' + samples.join(' ; '));
+      return mode + ' L' + lvl + ' — peak flyers ' + maxFlyers + (maxFlyers < 2 ? ' (few flyers)' : '') + ', flyer overlaps 0';
+    };
+  }
+  test('flyer↔flyer non-overlap: junkie L4', flyerFlyerTest('junkie', 4));
+  test('flyer↔flyer non-overlap: blaster L8', flyerFlyerTest('blaster', 8));
+
   // 4) density budget at build time, levels 1..27
   test('density budget (levels 1–27)', async () => {
     SETTINGS.mode = 'classic';
