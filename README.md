@@ -107,17 +107,19 @@ always lands back on page 1.
   (`drawPilotRig` — aura + jet exhaust, no hull), and it flies VERTICALLY in
   a ~120px band (`G.shipYv`/`shipY()`, `SHIP_BAND` in state.js — every
   "where is the player" check asks `shipY()`, with a small mon hitbox).
-  Enemies are HALF-SIZE and ride patterns shrunk to ~55% — tight, closely
-  knit flocks that live HIGH (airspace floor ~42% of the screen early,
-  creeping to ~56% late; the low band belongs to the ship). Region 1 is
-  calm; dives start in region 2, and from there squads periodically run
+  Enemies are HALF-SIZE and ride patterns shrunk to ~66% — tight but not
+  CRAMPED knots (a tighter shrink made converging patterns pinch riders into
+  each other) that live HIGH (airspace floor ~42% of the screen early,
+  creeping to ~56% late; the low band belongs to the ship). Squad count ramps
+  `1 + ⌊regionsIn/2⌋` — **ONE clean flock in region 1**, up to 4 by region 6.
+  Region 1 is calm; dives start in region 2, and from there squads run
   **maneuvers** (`G.maneuver`, update.js): startle-SCATTER (the knot swells
   ~1.8× then contracts), speed SURGE (~1.8× pattern speed), and from region
   3 a RAID that dips the whole flock toward the ship band and back — capped
   so it never enters the ship's airspace.
-  **Crispness:** a per-frame constraint solver keeps junkie flyers from EVER
-  overlapping (the pass after the flight loop, update.js) — converging
-  patterns pack into readable knots instead of blobs. **Type changes are
+  **Crispness:** the per-frame separation solver (now every mode — see above)
+  keeps flocks from blobbing — converging patterns pack into readable knots.
+  **Type changes are
   temporary** there: `G.ballElement` is only ever an override that counts
   down (HUD shows `TYPE · Ns`) and reverts to the pilot's innate type;
   element orbs drop far more often (junkie branch of the orb block).
@@ -155,20 +157,40 @@ motion/march block (~495–650).
   (`geo.openTop = gridBottom + ~bh`, down to the `flyerRoom` floor). Streams
   fly open patterns only and enter from the SIDES at open-zone height, so a
   trailing line never crosses the wall.
-- **`flightPos(F, tAbs)`** (update.js) — the pattern library: `square` (loop
-  around the bricks), `ring`/`oval` (circle/ellipse), `inf`/`falls` (figure-
-  eights), `olympic`, `rose`, `diamond`, `liss`, `pulsar`, `pend`, `epi`,
-  `weave` (threading sweep), `lane` (bobbing lanes), `star` (five-point
-  circuit), `binary` (counter-rotating twin rings), `atom` (three crossed
-  orbitals), `fountain` (rise-and-fall columns), `zigzag` (hard-cornered
-  switchbacks), `vortex` (breathing spiral arms), plus wrapping
-  `snake`/`helix`/`swoop` that span past both edges (wrap jump off-screen;
-  off-screen flyers can't fire and are de-prioritized by `nearestBrick`).
+- **`flightPos(F, tAbs)`** (update.js) — the ~32-entry pattern library, in two
+  families (Galaga / Galaxian canon):
+  - **FORMATION-HOLDERS** — the flock keeps a crisp silhouette while the whole
+    body drifts/rotates, so riders never cross: `ring`/`oval`/`olympic`
+    (circle/ellipse), `lane` (bobbing lanes), `square` (loops strictly AROUND
+    the brick wall), `chevron` (a V/arrowhead of wings that sways), `arc` (a
+    dome/rainbow that slides), `cross` (a rotating plus), `carousel` (two
+    concentric rings turning together), `phalanx` (a rigid marching grid —
+    uses `flight.n`, the squad size), `fountain` (rise-and-fall columns),
+    `diamond`, `pulsar` (uniformly breathing ring).
+  - **BUSY CURVES** — riders pass through a shared center; the separation
+    solver packs them so they stay distinct: `inf`/`falls` (figure-eights),
+    `liss`, `rose`, `clover` (3-petal), `star`, `binary`, `atom`, `epi`,
+    `pend`, `spiral` (pinwheel-galaxy arm), `vortex`, `butterfly`, `zigzag`.
+  - plus wrapping `snake`/`helix`/`swoop` that span past both edges (wrap jump
+    off-screen; off-screen flyers can't fire and are de-prioritized by
+    `nearestBrick`).
+
   Every non-wrapping pattern is BOUNDED inside its |rx|,|ry| box — that is
-  what keeps the non-overlap zoning provable; keep that true for new ones.
+  what keeps the non-overlap zoning provable; keep that true for new ones, and
+  space riders EVENLY across the shape (a `sin()`-mapped span bunches them at
+  the edges and they pile up — that bug bit `arc`).
   Flyers ride nose-to-tail via `phase`; `F.spd` scales per-squad speed. The
   **`flyerRoom`** floor keeps them above the paddle (generous → ~0-crowding in
   the final region); flyers ride in screen space (`G.fx/G.fy` stripped out).
+- **Separation solver** (update.js, right after the flight loop) — runs in
+  **every mode** (not just junkie): 12 projection passes push any two flyers to
+  a minimum spacing (0.62 × sprite size), so flocks never blob. In the WALLED
+  modes it also shoves any flyer a push nudged INTO the wall rect (`G.gridRect`)
+  back out — **inside** the loop, so the next pass re-spreads them along the
+  wall's underside instead of stacking them on one line. It must NOT clamp
+  flyers into the below-band: that crushes `square`, which loops legitimately
+  AROUND the wall. Every squad (wall + stream) draws a UNIQUE band slot
+  (`nTotal`) so two flocks never share a center.
 - **`br.dive`** — Galaga peel-offs: a flyer/brick swoops at the paddle,
   fires one aimed shot at the bottom, loops home. Up to 3 concurrent
   late-game. A boxed brick that dives **shatters its box first** and stays
@@ -321,19 +343,26 @@ Trial runs never save best score or Pokédex catches (`G.trial` flag).
 - **The one curve:** `diff()` in config.js — reads presets × level × adapt × modifier
 - **Drop rarity:** `dropChance` in `diff()` (currently `0.06`)
 - **Density budget (readability):** `buildLevel` in state.js (`cols` width-
-  driven & capped 10; `flyerBudget` hard-caps moving flyers ≤20; `boxedBudget`
-  shrinks the wall region by region; late-game +hp at regions 5/8)
-- **Flyer patterns & non-overlap zoning:** `flightGeom`/`clampOpen` (state.js
-  ~155–210), pattern math in `flightPos` (update.js ~175); `kinds` unlock list
-  in `buildLevel`
+  driven & capped 10; `flyerBudget` hard-caps moving flyers ≤22; `boxedBudget`
+  shrinks the wall region by region — do NOT over-fill it, a taller wall
+  squeezes the flyer band below it and the flock stops fitting; junkie flock
+  size `per`, capped so `nS × per ≤ 26`; late-game +hp at regions 5/8). The
+  test suite caps classic at ≤40 non-boss bricks and ≤30 flyers.
+- **Flyer patterns & non-overlap zoning:** `flightGeom`/`clampOpen` (state.js),
+  pattern math in `flightPos` (update.js); the region-by-region `kinds` unlock
+  list in `buildLevel` — front-loads the CLEAN formation-holders so early waves
+  read as obvious shapes, and defers the busy center-crossing curves.
 - **Cycle speed:** `G.pathSpeed` (state.js). Blocks are static
   (`G.blocksStatic`); the march (update.js) runs only on boss waves
-- **Blaster feel (fires freely, Space-Junkies style):** cadence `G.blasterCD`
-  and heat-per-shot in `fireAction` (input.js), passive cool in `tickEffects`
-  (update.js), `OVERHEAT_DUR` (state.js). Overheat is now a rare "held it
-  forever" event, not a constant governor.
-- **Difficulty vs the free blaster:** `BRICK_HP_MUL` in `buildLevel` (state.js)
-  — the single knob to make waves tankier/snappier (currently `1.35`).
+- **Blaster feel & HEAT:** cadence `G.blasterCD` and heat-per-shot in
+  `fireAction` (input.js), passive cool in `tickEffects` (update.js),
+  `OVERHEAT_DUR` (state.js). Heat now vents SLOWER than sustained fire builds,
+  so holding the trigger really does overheat (~5s blaster, ~11s junkie), and a
+  **charged shot dumps a big slug of heat** (~0.6 of the bar at full charge, in
+  `fireCharge`) — chaining big shots overheats you.
+- **Difficulty:** `BRICK_HP_MUL` in `buildLevel` (state.js) — the single knob
+  to make waves tankier/snappier (currently `1.35`). Note CLASSIC has no free
+  blaster (see `blasterArmed`), so the ball carries early waves.
 - **Enemy warnings:** telegraphs are capped (≤3 concurrent, `update.js` enemy-
   fire block) and drawn compact for non-boss shots (short stub, not a full
   line) in `drawTelegraphs` (render.js). Danger line only shows for a
@@ -376,6 +405,17 @@ it green when adding menu items.
 
 ## Gotchas / hard-won lessons
 
+- **Power-up drops are TYPE-keyed, and the shooter remap can flood a mode.**
+  `POWER_BY_TYPE` (data.js) picks the drop from the *killed enemy's* type, then
+  `modePower` (update.js) swaps ball-only powers for shooter equivalents. The
+  trap: `ghost`/`dark`/`poison` all map to `multi`, and `multi → draco` in the
+  shooter modes — and **poison is one of the most common early types** (Zubat,
+  Ekans, Nidoran, Weedle, Grimer, Koffing, Gastly…). So a "rare" homing-missile
+  power ends up dropping off half the early roster in BLASTER/JUNKIE and
+  trivialising waves. `fx_draco` is only ever written by `bump()` in
+  `applyPower` (and `resetRun` clears it), so it IS always a real pickup — the
+  bug is the drop *table*, not a phantom grant. **When remapping a power for a
+  mode, check how many types feed it**, not just whether the swap makes sense.
 - **`resize()` has a no-op guard** (setup.js). Setting `canvas.width` blanks
   the canvas for a frame and rebuilds the starfield; spurious resize events
   (scrollbars/zoom/focus) were causing a ~1Hz flicker. Don't remove it.

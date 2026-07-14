@@ -39,8 +39,13 @@ real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
-- **Automated invariants:** open `/test.html` (drives the sim headless, 16
-  checks, sets `window.TEST_RESULTS`). Keep it green.
+- **Automated invariants:** open `/test.html` (drives the sim headless, 18
+  checks, sets `window.TEST_RESULTS`). Keep it green. Two overlap invariants:
+  flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
+  BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
+  sprites is not a blob, and chasing a literal 0 across random patterns is a
+  losing battle). The flyer tests pick patterns randomly — re-run a couple of
+  times before trusting a pass.
 - `npm run check` (syntax all modules), `npm run verify-assets` (every roster id
   is named + has a local sprite). Run after roster/data changes.
 - Test mobile with `?touch` in the URL. Serve locally: `node serve.js`
