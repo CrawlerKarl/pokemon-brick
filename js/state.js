@@ -286,7 +286,7 @@ function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
   G.fx = 0; G.fy = 0; G.swayT = 0;
-  G.gustT = 0; G.timeWarpT = 0; G.flyBand = null;
+  G.gustT = 0; G.timeWarpT = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
   // pack or type cluster, so Pokémon that belong together appear together
@@ -357,11 +357,11 @@ function buildLevel(lvl) {
   // never a wall AND a swarm at once. Streams (below) are pure flyers that
   // spend part of the flyer budget, arriving already broken out.
   const streamSquads = !hasBoss && regionsIn >= 4 ? (regionsIn >= 7 ? 2 : 1) : 0;
-  const streamPer = Math.min(7, 4 + Math.floor(regionsIn / 2));
-  const flyerBudget = hasBoss ? 0 : Math.min(20, regionsIn === 0 ? 0 : Math.round(4 + regionsIn * 1.8));
+  const streamPer = Math.min(8, 4 + Math.floor(regionsIn / 2));
+  const flyerBudget = hasBoss ? 0 : Math.min(24, regionsIn === 0 ? 0 : Math.round(5 + regionsIn * 2));
   const gridFlyerBudget = Math.max(0, flyerBudget - streamSquads * streamPer);
-  // boxed bricks: a generous wall early, thinning region by region
-  const boxedBudget = Math.max(cols, Math.round(cols * (2.6 - regionsIn * 0.2)));
+  // boxed bricks: a fuller wall early, thinning region by region
+  const boxedBudget = Math.max(cols, Math.round(cols * (2.85 - regionsIn * 0.18)));
   // SPACE JUNKIE mode: non-boss waves have NO wall — the whole wave flies
   const junkie = G.mode === 'junkie';
   const rows = hasBoss
@@ -472,9 +472,10 @@ function buildLevel(lvl) {
       // 'square' needs a boxed core left to loop around
       hasCore: G.bricks.length - flyers.length >= 4,
     };
-    // the clear band flyers own — the separation solver clamps to it so a push
-    // can never shove a flyer up into the static wall
-    G.flyBand = { top: geo.openTop, floor: geo.floorY };
+    // the static wall's rectangle — the separation solver shoves any flyer its
+    // pushes nudge INTO the wall back out, without disturbing the 'square'
+    // pattern that legitimately loops AROUND the wall
+    G.gridRect = { top: geo.gridTop, bottom: geo.gridBottom, cx: geo.gridCx, hw: geo.gridHW };
     const pickKind = () => {
       let k = kinds[Math.floor(Math.random() * kinds.length)];
       if (k === 'square' && !geo.hasCore) k = 'oval'; // nothing to loop around
@@ -546,8 +547,11 @@ function buildLevel(lvl) {
     for (const b2 of G.bricks) { if (!b2.isBoss) { b2.bare = true; b2.w *= 0.62; b2.h *= 0.62; } }
   }
   if (junkie && !hasBoss) {
-    const nS = Math.min(4, 2 + Math.floor(regionsIn / 3));
-    let per = Math.min(9, 6 + Math.floor(regionsIn / 2));
+    // ONE clean flock early, then more flocks as the journey hardens — early
+    // waves read as a single obvious shape, later waves layer patterns. Flocks
+    // are bigger too (more enemies), up to the readability cap.
+    const nS = Math.min(4, 1 + Math.floor(regionsIn / 2));
+    let per = Math.min(11, 8 + Math.floor(regionsIn / 2));
     while (nS * per > 26) per--; // the readability cap still rules
     const usable = W - margin * 2;
     // Space Junkie airspace: the flocks live HIGH. The floor starts around
@@ -561,7 +565,6 @@ function buildLevel(lvl) {
       openTop: Math.max(96, Math.round(H * 0.12)),
       floorY,
     };
-    G.flyBand = { top: geo.openTop, floor: geo.floorY }; // solver clamp band
     // Space Junkie mons: compact but readable — and mostly UNEVOLVED.
     // Tier-1 species are the rank and file; evolved Pokémon arrive as
     // ELITES — noticeably LARGER, much tougher to shoot down, and in

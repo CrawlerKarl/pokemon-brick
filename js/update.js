@@ -851,7 +851,7 @@ function update(dt) {
         if (!br.dead && br.flight && br.flight.state >= 1 && !br.dive && !br.entry) fl.push(br);
       }
       if (fl.length > 1) {
-        for (let it = 0; it < 6; it++) {
+        for (let it = 0; it < 8; it++) {
           let moved = false;
           for (let i = 0; i < fl.length; i++) {
             for (let j = i + 1; j < fl.length; j++) {
@@ -870,10 +870,17 @@ function update(dt) {
           }
           if (!moved) break;
         }
-        // keep flyers inside their airspace band — never up into the wall
-        const fb = G.flyBand;
-        if (fb && G.mode !== 'junkie') {
-          for (const br of fl) br.by = Math.max(fb.top + br.h / 2, Math.min(fb.floor - br.h / 2, br.by));
+        // if a push nudged a flyer INTO the static wall's rectangle, shove it
+        // back out the bottom — but leave the 'square' pattern (which loops
+        // legitimately AROUND the wall) untouched
+        const gr = G.gridRect;
+        if (gr && G.mode !== 'junkie') {
+          for (const br of fl) {
+            if (Math.abs(br.bx - gr.cx) < gr.hw + br.w / 2 &&
+                br.by + br.h / 2 > gr.top && br.by - br.h / 2 < gr.bottom) {
+              br.by = gr.bottom + br.h / 2 + 6;
+            }
+          }
         }
       }
     }

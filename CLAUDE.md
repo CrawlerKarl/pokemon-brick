@@ -73,14 +73,16 @@ phone — flag anything only verifiable there.
   change, re-run the overlap-count assertion (must be 0).** The `test.html`
   suite covers this (flyer↔wall AND flyer↔flyer).
 - **Flyers NEVER overlap EACH OTHER either — in every mode.** The separation
-  solver (update.js, after the flight loop) runs for all modes now; in the
-  walled modes it clamps to `G.flyBand` so a push can't shove a flyer into the
-  wall. Every squad (wall + stream) draws a UNIQUE band slot (`nTotal`, state.js)
-  so two flocks never share a center. **Early patterns are curated CLEAN:** the
-  `kinds` unlock list front-loads non-self-crossing formations (ring/oval/lane/
-  square, then fountain/weave/snake…) and defers the busy center-crossing curves
-  (inf/liss/rose/star/vortex) to later regions, so early waves read as obvious
-  shapes, not blobs.
+  solver (update.js, 8 passes after the flight loop) runs for all modes now; in
+  the walled modes it shoves any flyer its pushes nudged INTO the wall rect
+  (`G.gridRect`) back out — WITHOUT touching the `square` pattern that loops
+  legitimately AROUND the wall (don't reintroduce a "clamp to the below-band"
+  here — it crushes `square`). Every squad (wall + stream) draws a UNIQUE band
+  slot (`nTotal`, state.js) so two flocks never share a center. **ONE clean
+  flock early, more later:** junkie squad count ramps `1 + ⌊regionsIn/2⌋`;
+  patterns are curated CLEAN (the `kinds` unlock list front-loads non-self-
+  crossing formations — ring/oval/lane/square, then fountain/weave/snake… —
+  and defers center-crossing curves to later regions).
 - **Junkie: tight, HIGH, non-overlapping flocks.** Small flyers, patterns
   shrunk ~55%, airspace floor high (~42%→56% late) so the low band is the
   ship's. Squads periodically run maneuvers (`G.maneuver`: scatter/surge/raid);
