@@ -75,8 +75,8 @@ window.addEventListener('touchstart', e => {
   for (const t of e.changedTouches) {
     const x = t.clientX, y = t.clientY;
     if (G.state === 'play' || G.state === 'serve') {
-      if (paused) { // pause screen is modal: quit button, else tap resumes
-        if (inRect(x, y, pauseQuitGeom())) quitToMenu(); else paused = false;
+      if (paused) { // pause screen is modal — route taps through onPress
+        onPress(x, y);
         uiTouchIds.add(t.identifier);
         continue;
       }
@@ -230,7 +230,7 @@ function togglePause() { if (G.state === 'play' || G.state === 'serve') paused =
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
   if (G.state !== 'play' && G.state !== 'serve' && !paused) return;
-  if (!G.trial && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
+  if (!G.trial && !G.cheated && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   paused = false;
   G.state = 'menu';
   menuPage = 'modes'; // always land on the title page, not mid-setup
@@ -336,6 +336,27 @@ function pickUpgrade(i) {
 }
 // one fresh hand per draft — reroll keeps drafts from feeling dead when
 // every offer misses your build
+// ✦ grant a cheat item — marks the run so the best score isn't recorded
+function applyCheat(i) {
+  const it = CHEAT_ITEMS[i];
+  if (!it) return;
+  if (!G.cheated) {
+    G.cheated = true;
+    setAnnounce('star', '#ffd54f', '✦ CHEATS ACTIVE ✦',
+      "BEST SCORE WON'T BE SAVED THIS RUN", 2.6);
+  }
+  if (it.k === '_shield') { G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + 1); SFX.shield(); }
+  else if (it.k === '_mega') { G.mega = 1; SFX.mega(); }
+  else if (it.k === '_life') { G.lives++; SFX.power(); }
+  else if (it.k === '_element') {
+    const ts2 = Object.keys(TYPE_COLORS);
+    G.ballElement = ts2[Math.floor(Math.random() * ts2.length)];
+    G.ballElementT = 30; G.resistStreak = 0;
+    SFX.power();
+  } else applyPower(modePower(POWERS[it.k]));
+  addFloater(W / 2, H * 0.3, '✦ ' + it.label + ' ✦', '#ffd54f', 15);
+}
+
 function rerollDraft() {
   G.rerolled = true;
   draftSel = null; // fresh hand, fresh inspection
@@ -472,8 +493,20 @@ function onPress(x, y) {
     if (inRect(x, y, L.adv)) { advOpen = true; return; }
     return;
   }
-  if (paused) { // pause screen is modal: quit button, else click resumes
-    if (inRect(x, y, pauseQuitGeom())) quitToMenu(); else paused = false;
+  if (paused) { // pause screen is modal: cheats, quit, else click resumes
+    if (cheatOpen) {
+      const C2 = cheatLayout();
+      if (inRect(x, y, C2.close) || !inRect(x, y, { x: C2.px, y: C2.py, w: C2.pw, h: C2.ph })) {
+        cheatOpen = false; return;
+      }
+      for (let i = 0; i < CHEAT_ITEMS.length; i++) {
+        if (inRect(x, y, C2.chip(i))) { applyCheat(i); return; }
+      }
+      return;
+    }
+    if (inRect(x, y, cheatBtnGeom())) { cheatOpen = true; SFX.wall(); return; }
+    if (inRect(x, y, pauseQuitGeom())) { cheatOpen = false; quitToMenu(); return; }
+    paused = false;
     return;
   }
   // mega meter click zone (bottom-right) during desktop play

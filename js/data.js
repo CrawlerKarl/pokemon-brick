@@ -764,6 +764,19 @@ const ACTS = [
 function actIdx(lvl) { return Math.min(2, Math.floor(regionIdx(lvl) / 3)); }
 
 // signature boss mechanics, keyed by legendary id
+// ---- CHEAT CODES (pause screen): grant any power-up combination. Using
+// one marks the run G.cheated — best score won't be recorded that run.
+const CHEAT_ITEMS = [
+  { k: 'fire',  label: 'FIREBALL' },  { k: 'laser', label: 'LASER' },
+  { k: 'wide',  label: 'WIDE' },      { k: 'slow',  label: 'SLOW-MO' },
+  { k: 'multi', label: 'MULTIBALL' }, { k: 'star',  label: 'STAR' },
+  { k: 'draco', label: 'DRACO' },     { k: 'magnet', label: 'MAGNET' },
+  { k: '_shield', label: 'SHIELD +1', icon: 'shield' },
+  { k: '_mega',   label: 'FULL MEGA', icon: 'mega' },
+  { k: '_life',   label: '+1 LIFE',   icon: 'heart' },
+  { k: '_element', label: 'ELEMENT',  icon: 'fairy' },
+];
+
 const BOSS_ABILITIES = {
   150:  { cd: 6,   name: 'TELEPORT' },        // Mewtwo blinks across the arena
   249:  { cd: 7,   name: 'AEROBLAST' },       // Lugia summons gusting winds

@@ -38,18 +38,21 @@ function speedScale() { return Math.max(0.62, Math.min(1, W / 900)); }
 function diff() {
   const p = preset(), a = G.adapt, mod = G.modifier;
   const lvl = 1 + (G.level - 1) * 0.55;
-  // each ACT tightens the screws a notch beyond the per-level curve —
-  // progression you can feel at the act boundary, not just per wave
-  const act = actIdx(G.level); // 0..2
+  // ONE smooth journey curve shapes the pressure (replaces the old per-act
+  // steps): a gentle opening third, a moderately challenging middle, and a
+  // genuinely tough finale — on every preset, scaled around NORMAL
+  const jr = Math.min(1, Math.floor((G.level - 1) / STAGES) / 8);
+  const sm = jr * jr * (3 - 2 * jr); // smoothstep 0→1 across the 9 regions
+  const curve = 0.78 + 0.62 * sm;    // ×0.78 opening → ~×1.1 middle → ×1.4 finale
   return {
     lv: lvl,
     descent: (3 + lvl * 1.4) * p.descent * a * (mod?.key === 'swift' ? 1.35 : 1) * Math.max(0.7, Math.min(1, H / 900)),
-    enemyShotInt: Math.max(1.25, 5.5 - lvl * 0.5) / (p.shotRate * a) / (1 + act * 0.08)
+    enemyShotInt: Math.max(1.25, 5.5 - lvl * 0.5) / (p.shotRate * a) / curve
       * (stageIdx(G.level) === 2 ? 1.35 : 1)
       / (mod?.key === 'ambush' ? 1.8 : mod?.key === 'bounty' ? 1.3 : 1),
-    bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a) / (1 + act * 0.06),
+    bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a) / (0.88 + 0.38 * sm),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
-    shotSpeed: p.shotSpeed * speedScale() * (1 + act * 0.05),
+    shotSpeed: p.shotSpeed * speedScale() * (0.9 + 0.24 * sm),
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
       * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
@@ -228,5 +231,24 @@ function dexBtnGeom() { return menuLayout().dex; }
 function pauseQuitGeom() {
   const w = Math.min(260, W * 0.72), h = 46;
   return { x: W / 2 - w / 2, y: H * 0.72, w, h };
+}
+// ---- CHEAT CODES: a small ornate chip on the PAUSE screen (visible when
+// you go looking, never on screen during play — no temptation mid-run)
+let cheatOpen = false;
+function cheatBtnGeom() {
+  const q = pauseQuitGeom();
+  return { x: W / 2 - 84, y: Math.min(H - 44, q.y + q.h + 16), w: 168, h: 30 };
+}
+function cheatLayout() {
+  const pw = Math.min(440, W * 0.94), cols = 3;
+  const rows = Math.ceil(CHEAT_ITEMS.length / cols);
+  const chipW = (pw - 48 - (cols - 1) * 10) / cols, chipH = 46;
+  const ph = Math.min(H - 24, 104 + rows * (chipH + 10) + 18);
+  const px = W / 2 - pw / 2, py = Math.max(12, H / 2 - ph / 2);
+  return {
+    px, py, pw, ph, cols,
+    chip: i => ({ x: px + 24 + (i % cols) * (chipW + 10), y: py + 92 + Math.floor(i / cols) * (chipH + 10), w: chipW, h: chipH }),
+    close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
+  };
 }
 let dragSlider = -1;

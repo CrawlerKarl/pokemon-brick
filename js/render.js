@@ -2742,6 +2742,47 @@ function drawCeremony() {
   if (t >= doneAt) pulse(IS_TOUCH ? 'TAP TO CONTINUE' : 'CLICK TO CONTINUE', H * 0.92);
 }
 
+// ✦ CHEAT CODES: grant any power-up combination (pause screen only).
+// Deliberately ornate — gold, dashed, a little forbidden-looking.
+function drawCheats() {
+  const C2 = cheatLayout();
+  ctx.save();
+  ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 20;
+  roundRect(C2.px, C2.py, C2.pw, C2.ph, 16);
+  ctx.fillStyle = 'rgba(14,11,4,0.97)'; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = 'rgba(255,213,79,0.8)'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 18px Orbitron, sans-serif';
+  ctx.fillStyle = '#ffd54f';
+  ctx.fillText('✦ CHEAT CODES ✦', C2.px + C2.pw / 2, C2.py + 32);
+  ctx.font = bodyFont(10, 600);
+  ctx.fillStyle = '#bfa14a';
+  ctx.fillText("TAP TO GRANT · BEST SCORE WON'T BE SAVED THIS RUN", C2.px + C2.pw / 2, C2.py + 58, C2.pw - 40);
+  for (let i = 0; i < CHEAT_ITEMS.length; i++) {
+    const it = CHEAT_ITEMS[i], g2 = C2.chip(i);
+    const hov = inRect(mouseX, lastMouseY, g2);
+    roundRect(g2.x, g2.y, g2.w, g2.h, 10);
+    ctx.fillStyle = hov ? 'rgba(255,213,79,0.2)' : 'rgba(255,213,79,0.06)';
+    ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = hov ? '#ffd54f' : 'rgba(255,213,79,0.4)'; ctx.stroke();
+    const icon = it.icon || (POWERS[it.k] && POWERS[it.k].icon) || 'star';
+    drawGlyph(ctx, icon, g2.x + 20, g2.y + g2.h / 2, 8, hov ? '#ffe082' : '#d4b45a');
+    ctx.font = `800 ${Math.min(10.5, g2.w / 11)}px Orbitron, sans-serif`;
+    ctx.fillStyle = hov ? '#fff' : '#e6cf8f';
+    ctx.fillText(it.label, g2.x + 20 + (g2.w - 26) / 2, g2.y + g2.h / 2 + 1, g2.w - 42);
+  }
+  const cb = C2.close;
+  ctx.strokeStyle = '#bfa14a'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cb.x + 10, cb.y + 10); ctx.lineTo(cb.x + cb.w - 10, cb.y + cb.h - 10);
+  ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
+  ctx.stroke();
+  ctx.restore();
+}
+
 // trial mode: pick a region + stage, dive straight in (nothing persists)
 function drawTrial() {
   dim(0.6);
@@ -3383,6 +3424,11 @@ function drawOverlays() {
       ctx.fillStyle = G.score >= G.best && G.score > 0 ? '#ffd54f' : '#90a4ae';
       ctx.fillText(G.score >= G.best && G.score > 0 ? '★ NEW BEST ★' : 'BEST  ' + G.best, W / 2, H * 0.62);
     }
+    if (!G.trial && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
+      ctx.font = '700 13px Orbitron, sans-serif';
+      ctx.fillStyle = '#80d8ff';
+      ctx.fillText('YOUR JOURNEY IS SAFE — CONTINUE FROM ' + genFor(RUN_CKPT.lvl).name + ' ON THE TITLE SCREEN', W / 2, H * 0.6, W * 0.92);
+    }
     pulse(IS_TOUCH ? 'TAP FOR TITLE SCREEN' : 'CLICK FOR TITLE SCREEN', H * 0.7);
   }
   if (paused) {
@@ -3414,6 +3460,28 @@ function drawOverlays() {
     ctx.fillStyle = qHov ? '#ff8a80' : '#ef9a9a';
     ctx.fillText('QUIT TO MENU', q.x + q.w / 2, q.y + q.h / 2 + 1);
     ctx.restore();
+    // ✦ CHEAT CODES — a small ornate chip, only ever visible while paused
+    {
+      const cb2 = cheatBtnGeom();
+      const cHov = inRect(mouseX, lastMouseY, cb2);
+      ctx.save();
+      const shimmer = 0.5 + 0.2 * Math.sin(G.time * 2.2);
+      if (cHov) { ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 14; }
+      roundRect(cb2.x, cb2.y, cb2.w, cb2.h, 15);
+      ctx.fillStyle = cHov ? 'rgba(255,213,79,0.16)' : 'rgba(255,213,79,0.06)';
+      ctx.fill();
+      ctx.setLineDash([4, 5]); // the dashed seam marks it as OUTSIDE the rules
+      ctx.lineWidth = 1.3;
+      ctx.strokeStyle = `rgba(255,213,79,${cHov ? 0.95 : shimmer})`;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
+      ctx.font = '800 11px Orbitron, sans-serif';
+      ctx.fillStyle = cHov ? '#ffe082' : `rgba(255,213,79,${shimmer + 0.25})`;
+      ctx.fillText('✦ CHEAT CODES ✦', cb2.x + cb2.w / 2, cb2.y + cb2.h / 2 + 1);
+      ctx.restore();
+    }
+    if (cheatOpen) drawCheats();
   }
   if (G.flashT > 0) {
     ctx.fillStyle = `rgba(255,60,60,${G.flashT * (SETTINGS.reduceFlash ? 0.18 : 0.6)})`;

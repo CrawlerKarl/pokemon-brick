@@ -106,9 +106,14 @@ phone — flag anything only verifiable there.
 - **Sprite kinematics live in update(), never render.** `updateSpriteKinematics`
   smooths `vvx/vvy/bank/face/animPh` with dt (60 Hz == 120 Hz); facing flips
   only after ~150 ms; gaits come from species `MOTION_PROFILES` (data.js,
-  serpentine/heavy/quadruped/biped overrides) with type as fallback. The three
-  acts also tighten `diff()` (+8%/act fire rate, +5%/act shot speed) and the
+  serpentine/heavy/quadruped/biped overrides) with type as fallback. Difficulty rides ONE
+  smooth journey curve in `diff()` (smoothstep over the 9 regions: ×0.78
+  opening → ~×1.1 middle → ×1.4 finale — replaces the per-act steps); the
   act boundary plays the evolution ceremony (`G.ceremony`, drawCeremony).
+  Progress is NEVER wiped: a true game over keeps the region checkpoint
+  (CONTINUE always works, saved from region 1 on). The pause screen hides
+  an ornate ✦ CHEAT CODES panel (CHEAT_ITEMS, data.js) — using it sets
+  `G.cheated` and the run's best score is not recorded.
 - **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
   mons (flyers, divers, junkie flyers, bosses) FAINT; boxed bricks card-shatter.
 - **Every finale is a three-round GAUNTLET** (`gen.gauntlet`, data.js; the

@@ -681,8 +681,9 @@ function loseLife() {
     }
     G.state = 'gameover'; G.stateT = 0;
     SFX.gameOver();
-    if (!G.trial) clearCheckpoint(); // a TRUE game over ends the saved journey
-    if (!G.trial && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
+    // progress is never wiped: the region checkpoint SURVIVES a game over,
+    // so CONTINUE on the title screen always picks the journey back up
+    if (!G.trial && !G.cheated && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   } else {
     G.hurtHud = 2.4; // show the remaining health around the player on respawn
     serve();

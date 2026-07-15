@@ -934,7 +934,7 @@ function buildLevel(lvl) {
   if (junkie) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
   // arriving at a region's doorstep checkpoints the run (post-draft state —
   // buildLevel runs after every pick, and after white-out tree burns too)
-  if (!G.trial && stage === 0 && lvl >= 4) saveCheckpoint();
+  if (!G.trial && stage === 0) saveCheckpoint();
 }
 
 // a fresh attack flight arrives after the main formation falls — pure
@@ -1015,7 +1015,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.torrentCount = 0; G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
-  G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null;
+  G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
   // starting deep? bank the skill-tree advances you'd have earned on the way
