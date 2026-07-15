@@ -2455,7 +2455,7 @@ function drawSetup() {
   for (let i = 0; i < STARTERS.length; i++) {
     const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
     const hov = inRect(mouseX, lastMouseY, pg);
-    const col = st.key === 'none' ? '#90a4ae' : TYPE_COLORS[st.key];
+    const col = st.key === 'none' ? TYPE_COLORS.electric : TYPE_COLORS[st.key];
     const mon = STARTER_MON[st.key];
     const dy = Math.min(11, pg.h * 0.13); // name / ability vertical split, scales with card
     ctx.save();
@@ -2483,12 +2483,22 @@ function drawSetup() {
       ctx.fillStyle = col;
       ctx.fillText(mon.ability, txC, pg.y + pg.h / 2 + dy, tw);
     } else {
-      ctx.font = `900 ${Math.min(18, pg.w / 7.5)}px Orbitron, sans-serif`;
+      // "no partner" IS Pikachu — it takes the controls in SPACE JUNKIE and
+      // stands in for the free-agent pick everywhere, so show the mon itself
+      const img = getSprite(25);
+      const sp = Math.min(60, pg.h * 0.66);
+      const spx = pg.x + Math.max(6, pg.w * 0.05);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, spx, pg.y + pg.h / 2 - sp / 2, sp, sp);
+      else drawGlyph(ctx, 'electric', spx + sp / 2, pg.y + pg.h / 2, sp * 0.28, col);
+      const txL = spx + sp + 6;
+      const txC = txL + (pg.x + pg.w - 8 - txL) / 2;
+      const tw = pg.x + pg.w - 8 - txL;
+      ctx.font = `900 ${Math.min(17, pg.w / 8.5)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h / 2 - dy, pg.w - 12);
-      ctx.font = `500 ${Math.min(10, pg.w / 17)}px Orbitron, sans-serif`;
-      ctx.fillStyle = '#78909c';
-      ctx.fillText('NO PARTNER', pg.x + pg.w / 2, pg.y + pg.h / 2 + dy, pg.w - 12);
+      ctx.fillText('PIKACHU', txC, pg.y + pg.h / 2 - dy, tw);
+      ctx.font = `900 ${Math.min(12, pg.w / 12)}px Orbitron, sans-serif`;
+      ctx.fillStyle = SETTINGS.mode === 'junkie' ? col : '#78909c';
+      ctx.fillText(SETTINGS.mode === 'junkie' ? 'STATIC' : 'NO ABILITY', txC, pg.y + pg.h / 2 + dy, tw);
     }
     ctx.restore();
   }
