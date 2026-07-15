@@ -1088,16 +1088,16 @@ function update(dt) {
     const push = (a3, m2, extra) => G.enemyShots.push(Object.assign(
       { x: bx2, y: by2, vx: Math.cos(a3) * sp4 * m2, vy: Math.sin(a3) * sp4 * m2, type: t3 }, extra));
     switch (t3) {
-      case 'ice': // a wide, slow, five-shot wall of frost
-        for (const off of [-0.5, -0.25, 0, 0.25, 0.5]) push(aim + off, 0.62, { heavy: true, r: 14 });
+      case 'ice': // a wide, slow wall of frost
+        for (const off of [-0.45, -0.15, 0.15, 0.45]) push(aim + off, 0.62, { heavy: true, r: 14 });
         break;
       case 'electric': // column lightning at your position (Zekrom's trick)
         G.columnStrikes.push({ x: G.paddle.x, w: 46, warn: 0.9, strike: 0.3, color: '#80d8ff' });
         tone(1200, 0.25, 'square', 0.04, -800);
         break;
       case 'fire': { // ember rain: a curtain of fireballs beneath its wings
-        for (let k2 = -2; k2 <= 2; k2++) {
-          G.enemyShots.push({ x: bx2 + k2 * 44, y: by2, vy: sp4 * 0.8, type: t3, r: 12 });
+        for (const k2 of [-1.5, -0.5, 0.5, 1.5]) {
+          G.enemyShots.push({ x: bx2 + k2 * 48, y: by2, vy: sp4 * 0.78, type: t3, r: 12 });
         }
         break;
       }
@@ -1117,8 +1117,8 @@ function update(dt) {
         for (let k2 = 0; k2 < 4; k2++) push((k2 / 4) * Math.PI * 2 + 0.4, 0.8);
         break;
       }
-      case 'grass': // spore burst: a slow six-shot bloom
-        for (let k2 = 0; k2 < 6; k2++) push((k2 / 6) * Math.PI * 2, 0.55, { r: 12 });
+      case 'grass': // spore burst: a slow five-shot bloom
+        for (let k2 = 0; k2 < 5; k2++) push((k2 / 5) * Math.PI * 2, 0.55, { r: 12 });
         break;
       default: // dragon/fighting/others: a hard three-shot pulse
         for (const off of [-0.2, 0, 0.2]) push(aim + off, 1.2);
@@ -1161,7 +1161,7 @@ function update(dt) {
       if (gj2.subAbilityCD <= 0) {
         const living = G.bricks.filter(b => !b.dead && b.subBoss);
         if (living.length) {
-          gj2.subAbilityCD = 3.6 + Math.random() * 2.2;
+          gj2.subAbilityCD = 4.8 + Math.random() * 2.6;
           subAbility(living[Math.floor(Math.random() * living.length)]);
         }
       }
@@ -1248,7 +1248,7 @@ function update(dt) {
           // mirrored wing arc slots relative to the boss anchor
           g2.sideF += (g2.targetSide - g2.sideF) * Math.min(1, dt * ts * 1.7);
           const u = (g2.idx + 0.5) / Math.max(1, g2.n);
-          const spanX = Math.min(W * 0.09, 84) + u * Math.min(W * 0.14, 130);
+          const spanX = Math.min(W * 0.07, 66) + u * Math.min(W * 0.11, 100);
           tx = boss.bx + g2.sideF * (boss.w * 0.55 + spanX);
           ty = Math.max(56, boss.by - 20 - Math.sin(u * Math.PI * 0.85) * (64 + u * 44))
             // crossing guards split into over/under lanes — never one center
@@ -1491,7 +1491,7 @@ function update(dt) {
           break;
         case 'swoop': // predator dives along a deep V, corner to corner
           boss.bx = boss.hx + Math.sin(t2 * sp2) * W * 0.26;
-          boss.by = boss.hy + Math.abs(Math.sin(t2 * sp2)) * (jk3 ? 130 : 58);
+          boss.by = boss.hy + Math.abs(Math.sin(t2 * sp2)) * (jk3 ? 92 : 52);
           break;
         case 'phase': // dreamlike lissajous glide between moon stations
           boss.bx = boss.hx + Math.sin(t2 * 0.3) * W * 0.24;
@@ -1507,7 +1507,7 @@ function update(dt) {
           break;
         case 'mythic': // erratic, dreamlike — never where you left it
           boss.bx = boss.hx + Math.sin(t2 * 1.1) * W * 0.2 + Math.sin(t2 * 2.3) * 40;
-          boss.by = boss.hy + (Math.sin(t2 * 1.7) * 48 + Math.sin(t2 * 0.6) * 20) * yAmp;
+          boss.by = boss.hy + (Math.sin(t2 * 1.7) * 36 + Math.sin(t2 * 0.6) * 16) * yAmp;
           break;
         default: // 'anchor' — the classic high, imperious patrol
           boss.bx = boss.hx + (mt >= 1 || bp >= 2
@@ -1882,7 +1882,7 @@ function update(dt) {
       if (Math.abs(L.x - s.x) < 17 && Math.abs(L.y - s.y) < 26) {
         s.dead = true;
         L.hits = (L.hits || 0) + 1;
-        if (L.hits > upgN('intercept')) L.dead = true;
+        if (L.hits > (L.charged ? 2 + upgN('intercept') : upgN('intercept'))) L.dead = true;
         burst(s.x, s.y, '#ffab91', 12, 200, 0.5);
         addFloater(s.x, s.y - 14, 'INTERCEPTED!', '#80d8ff', 11);
         tone(740, 0.08, 'square', 0.05, -300);
@@ -2037,7 +2037,7 @@ function update(dt) {
       if (boss.phaseT > 0) boss.phaseT -= dt;
       G.bossShotCD -= dt * ts;
       if (G.bossShotCD <= 0) {
-        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.4 : boss.phase === 2 ? 0.6 : 1) * (boss.mythic ? 0.6 : 1);
+        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1) * (boss.mythic ? 0.7 : 1);
         G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
       }
     }
@@ -2049,7 +2049,7 @@ function update(dt) {
       if (G.enemyShotCD <= 0) {
         G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
-        const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive
+        const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
           && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
             && G.encounter.squads[b.flight.sq].silenceT > 0));

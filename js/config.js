@@ -45,6 +45,7 @@ function diff() {
     lv: lvl,
     descent: (3 + lvl * 1.4) * p.descent * a * (mod?.key === 'swift' ? 1.35 : 1) * Math.max(0.7, Math.min(1, H / 900)),
     enemyShotInt: Math.max(1.25, 5.5 - lvl * 0.5) / (p.shotRate * a) / (1 + act * 0.08)
+      * (stageIdx(G.level) === 2 ? 1.35 : 1)
       / (mod?.key === 'ambush' ? 1.8 : mod?.key === 'bounty' ? 1.3 : 1),
     bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a) / (1 + act * 0.06),
     ballSpeed: 520 * p.ballSpeed * speedScale(),

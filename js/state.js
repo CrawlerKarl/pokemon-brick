@@ -419,7 +419,7 @@ function buildLevel(lvl) {
   let gridTop = Math.max(110, Math.min(190, Math.round(H * 0.15)));
   // ---- BOSS (legendary stage only — the finale of each region) ----
   if (hasBoss) {
-    const bossW = Math.min(bw * 2.1, W * 0.46), bossH = bh * 1.85;
+    const bossW = Math.min(bw * 1.9, W * 0.4), bossH = bh * 1.75;
     const bossY = 102 + bossH / 2;
     // real boss-fight durability: three phases need room to breathe
     const bossHp = Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp));

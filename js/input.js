@@ -510,7 +510,7 @@ function fireAction(auto = false) {
   // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
   // heat-limited well below the faster cadence and the capstone adds no DPS
   const hyperCool = upgN('hyper') ? 0.85 : 1;
-  G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool);
+  G.heat = Math.min(1, G.heat + 0.12 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
