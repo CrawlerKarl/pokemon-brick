@@ -710,8 +710,8 @@ function buildLevel(lvl) {
         kind: q.kind, kind2: q.kind2 || null,
         cx: W / 2 + (q.cx || 0) * usable * mirror,
         cy: geo.openTop + (q.cy ?? 0.5) * band,
-        rx: usable * 0.3 * (q.rx || 1),
-        ry: band * 0.42 * (q.ry || 1),
+        rx: usable * 0.34 * (q.rx || 1),
+        ry: band * 0.48 * (q.ry || 1),
         dir: (q.dir || 1) * mirror, spd: q.spd || 1, ph: q.ph || 0, role: q.role || 'core',
       };
       clampOpen(g, geo.openTop, geo.floorY);
@@ -728,11 +728,25 @@ function buildLevel(lvl) {
       const tier = g.role === 'elite' && regionsIn >= 3 ? 3
         : (g.role === 'elite' || (s === C.squads.length - 1 && regionsIn >= 2)) ? 2 : 1;
       const sizeMul = tier === 3 ? 1.5 : tier === 2 ? 1.25 : 1;
-      const perS = Math.max(3, Math.round(total * (q.share || 1) / sumShare) - (tier === 3 ? 2 : 0));
+      let perS = Math.max(3, Math.round(total * (q.share || 1) / sumShare) - (tier === 3 ? 2 : 0));
+      // spacing guarantee: never pack more riders than the pattern can hold
+      // with clear daylight between slots. If the separation solver never
+      // engages during hold, a kill leaves an honest Galaga gap — the
+      // survivors don't slide into the dead rider's space.
+      const minGap = Math.min(mw, mh) * sizeMul * 1.45;
+      const closed = g.kind === 'ring' || g.kind === 'oval' || g.kind === 'diamond';
+      const span = closed ? Math.PI * Math.sqrt(2 * (g.rx * g.rx + g.ry * g.ry))
+        : g.rx * 2 * 1.6; // open spans: width plus travel slack
+      perS = Math.max(3, Math.min(perS, Math.floor(span / minGap)));
       const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad
       const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.6 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
       const R = resolved[resolved.length - 1];
+      // SHELL ARMOR: normal bolts plink off — ONE charged shot cracks it.
+      // Kanto's challenge wave teaches it (3 armored rookies + a callout);
+      // afterwards elites wear it, so the charge shot never stops mattering.
+      const shellFor = j2 => lvl === 2 ? (s === 0 && j2 < 3)
+        : regionsIn >= 1 && (tier === 3 || (tier === 2 && actIdx(lvl) >= 1));
       for (let j = 0; j < perS; j++) {
         // members are IN FORMATION from frame 0 (state 2) — spawned on their
         // actual pattern slot relative to the off-screen ingress anchor; the
@@ -746,6 +760,7 @@ function buildLevel(lvl) {
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
           w: mw * sizeMul, h: mh * sizeMul, hp, maxHp: hp,
+          shellArmor: shellFor(j) || undefined,
           poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
           flight: {
             kind: g.kind, state: 2, t: 0, sx, sy, sq: s, launch: 0,
@@ -763,6 +778,25 @@ function buildLevel(lvl) {
       attackSq: resolved.findIndex(q => q.role === 'attacker'),
       openTop: geo.openTop, floorY: geo.floorY,
     };
+    // ---- ROCK TOMB barriers (region 2+): curled-up boulder Pokémon drifting
+    // between the flocks and your airspace. Normal bolts shatter ON them —
+    // only a CHARGED shot cracks the rock. Living cover for the enemy.
+    if (regionsIn >= 1) {
+      const nB = Math.min(3, 1 + Math.floor(regionsIn / 3)) + (stage >= 1 ? 1 : 0) - 1;
+      const rockId = [74, 75, 76][actIdx(lvl)];
+      const by0 = geo.floorY - 26;
+      for (let i = 0; i < nB; i++) {
+        const bxx = W * (0.25 + (i + 0.5) / Math.max(1, nB) * 0.5);
+        G.bricks.push({
+          bx: bxx, by: by0 + (i % 2) * 18, hx: bxx, hy: by0 + (i % 2) * 18,
+          row: 90, col: i, w: 46, h: 42,
+          hp: 3 + Math.floor(regionsIn / 2), maxHp: 3 + Math.floor(regionsIn / 2),
+          bare: true, barrier: { vx: (i % 2 ? 1 : -1) * (22 + regionsIn * 2) },
+          poke: { id: rockId, t: 'rock' }, flash: 0, wobble: Math.random() * Math.PI * 2,
+        });
+      }
+      getSprite(rockId);
+    }
   }
   // late rounds shouldn't melt: reinforcement flights extend each wave,
   // arriving as pure flyers once the first formation falls
@@ -817,6 +851,13 @@ function buildLevel(lvl) {
     if (lvl === 2) setAnnounce('laser', '#4dd0e1', 'ENERGY VEILS!',
       'THE BALL BOUNCES OFF THE GLOWING CASINGS', 3.4,
       'CATCH A LASER DROP — ARM YOUR BLASTER TO BREAK THEM');
+  }
+  // SPACE JUNKIE's Kanto challenge doubles as the CHARGE-SHOT tutorial
+  if (G.mode === 'junkie' && lvl === 2) {
+    setAnnounce('shield', '#4dd0e1', 'SHELL ARMOR!',
+      'NORMAL BOLTS BOUNCE OFF THE ARMORED ONES', 3.6,
+      IS_TOUCH ? 'DOUBLE-TAP + HOLD THE FIRE PAD TO CHARGE A SHOT'
+        : 'HOLD RIGHT-CLICK OR SHIFT TO CHARGE A SHOT');
   }
   // ---- starter evolution: the partner grows with the journey ----
   const sm = STARTER_MON[G.starter];

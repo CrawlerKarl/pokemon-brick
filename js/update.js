@@ -50,6 +50,7 @@ function tickEffects(dt) {
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
   G.veilHintCD = Math.max(0, (G.veilHintCD || 0) - dt);
+  G.chargeHintCD = Math.max(0, (G.chargeHintCD || 0) - dt);
   // never strand a wave behind ENERGY VEILS: if only veiled bricks remain and
   // the blaster is unarmed, command drops an emergency laser from on high
   if (G.state === 'play' && G.mode === 'classic') {
@@ -247,16 +248,16 @@ function damageBrick(br, dmg, sx, sy, element) {
       const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 40, vy: 110, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
-    } else if (br.poke.id > 0 && Math.random() < d.dropChance) {
+    } else if (br.poke.id > 0 && !br.barrier && Math.random() < d.dropChance) {
       const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
       const pu = { x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 };
       if (G.level === 1 && G.dropHint < 2) { pu.hint = true; G.dropHint++; } // first drops get a CATCH! tag
       G.powerups.push(pu);
-    } else if (br.poke.id > 0 && Math.random() < d.catchChance && !DEX.has(br.poke.id)) {
+    } else if (br.poke.id > 0 && !br.barrier && Math.random() < d.catchChance && !DEX.has(br.poke.id)) {
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
     }
     // last brick → dramatic slow-mo
-    if (!G.bricks.some(b => !b.dead)) G.dramaticT = 0.9;
+    if (!G.bricks.some(b => !b.dead && !b.barrier)) G.dramaticT = 0.9;
   } else {
     burst(sx, sy, col, 8, 180, 0.4);
     SFX.hit(G.combo);
@@ -692,7 +693,7 @@ function updateSpriteKinematics(dt) {
 function nearestBrick(x, y) {
   let best = null, bd = Infinity;
   for (const br of G.bricks) {
-    if (br.dead || br.entry) continue; // ignore ranks still flying in
+    if (br.dead || br.entry || br.barrier) continue; // barriers are cover, not targets
     const bx = br.bx + G.fx;
     let d = Math.hypot(bx - x, br.by + G.fy - y);
     if (bx < -10 || bx > W + 10) d += 600; // off-screen flyers are poor targets
@@ -911,7 +912,7 @@ function update(dt) {
     } else if (regionsIn3 >= 1) {
       G.maneuverCD -= dt * ts;
       if (G.maneuverCD <= 0) {
-        G.maneuverCD = 9 + Math.random() * 8;
+        G.maneuverCD = 7 + Math.random() * 6;
         const sqs = [...new Set(G.bricks.filter(b => !b.dead && b.flight && b.flight.state === 2 && b.flight.sq != null)
           .map(b => b.flight.sq))];
         if (sqs.length) {
@@ -1022,6 +1023,17 @@ function update(dt) {
       const F = br.flight;
       F.cx = S.cx; F.cy = S.cy; F.rx = S.rx; F.ry = S.ry;
       F.kind2 = S.kind2; F.blend = S.blend || 0;
+    }
+  }
+  // ---- ROCK TOMB barriers: boulder Pokémon drifting across their band,
+  // turning at the walls — living cover the flocks hide behind
+  if (G.mode === 'junkie' && (G.state === 'play' || G.state === 'serve')) {
+    for (const br of G.bricks) {
+      if (br.dead || !br.barrier) continue;
+      br.bx += br.barrier.vx * ts * dt;
+      if (br.bx < 60) { br.bx = 60; br.barrier.vx = Math.abs(br.barrier.vx); }
+      if (br.bx > W - 60) { br.bx = W - 60; br.barrier.vx = -Math.abs(br.barrier.vx); }
+      br.hx = br.bx; br.hy = br.by;
     }
   }
   // ---- SPACE JUNKIE boss guards: two mirrored wing arcs TETHERED to the
@@ -1238,7 +1250,7 @@ function update(dt) {
         : 0);
     }
     for (const br of G.bricks) {
-      if (br.dead || br.isBoss || br.entry || br.guard) continue; // guards ride the boss controller
+      if (br.dead || br.isBoss || br.entry || br.guard || br.barrier) continue; // guards/barriers have their own controllers
       // GALAGA DIVE: peel off, swoop at the paddle, fire, loop back home
       if (br.dive) {
         const dv = br.dive;
@@ -1304,7 +1316,7 @@ function update(dt) {
         if (diving < maxDivers &&
             // no peel-offs while a junkie encounter is still floating in
             !(jk2 && G.encounter && G.encounter.t < 2.6)) {
-          let pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive && !b.guard);
+          let pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive && !b.guard && !b.barrier);
           if (jk2 && G.encounter && G.encounter.attackSq >= 0) {
             const att = pool2.filter(b => b.flight && b.flight.sq === G.encounter.attackSq);
             if (att.length) pool2 = att;
@@ -1627,6 +1639,27 @@ function update(dt) {
       // charged shots are fat, so they connect over a wider span
       const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0) + (L.heavy ? 6 : 0);
       if (Math.abs(L.x - bx) < xtol && Math.abs(L.y - by) < br.h / 2) {
+        // SHELL ARMOR / ROCK TOMB: normal bolts shatter harmlessly on the
+        // casing — only a CHARGED shot cracks through. One charged hit
+        // breaks shell armor for good; barriers take charged damage only.
+        if ((br.shellArmor || br.barrier) && !L.charged) {
+          L.dead = true;
+          burst(L.x, by + br.h / 2, '#b0bec5', 6, 130, 0.3);
+          tone(1050, 0.05, 'square', 0.03, -260);
+          if ((G.chargeHintCD || 0) <= 0 && G.mode !== 'classic') {
+            G.chargeHintCD = 4;
+            addFloater(bx, by - br.h / 2 - 12,
+              IS_TOUCH ? 'CHARGE IT! DOUBLE-TAP + HOLD FIRE' : 'CHARGE IT! HOLD RIGHT-CLICK / SHIFT', '#4dd0e1', 12);
+          }
+          continue;
+        }
+        if (br.shellArmor && L.charged) {
+          br.shellArmor = false; // the shell CRACKS off — the mon is exposed
+          burst(bx, by, '#e0e0e0', 18, 240, 0.5);
+          ringFx(bx, by, '#b0bec5', 5, 50, 3, 0.4);
+          addFloater(bx, by - br.h / 2 - 12, 'SHELL CRACKED!', '#ffd54f', 13);
+          SFX.wall();
+        }
         // Pulse rounds create occasional, readable line-clears. Charged shots
         // keep their own hold-to-aim pierce; fast Volley bolts never gain it.
         if (L.pulse || L.charged) {
@@ -1749,7 +1782,7 @@ function update(dt) {
         G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive
-          && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
+          && !b.barrier && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
         // cap concurrent warnings so the board never fills with warning lines
         const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
         if (alive.length && activeTel < (blaster ? 5 : 3)) {
@@ -1875,7 +1908,9 @@ function update(dt) {
   G.powerups = G.powerups.filter(p => !p.dead);
 
   // ---- level clear → reinforcements first, then draft and move on ----
-  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead)) {
+  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier)) {
+    // the enemies are gone — any ROCK TOMB barriers crumble on their own
+    for (const b of G.bricks) if (!b.dead && b.barrier) { b.dead = true; burst(b.bx + G.fx, b.by + G.fy, '#a1887f', 12, 180, 0.5); }
     if (G.reinforce > 0) {
       G.reinforce--;
       spawnReinforcement();

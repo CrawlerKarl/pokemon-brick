@@ -441,6 +441,27 @@ function drawBricks() {
         ctx.strokeStyle = frac > 0.5 ? '#9ccc65' : frac > 0.25 ? '#ffd54f' : '#ff7043';
         ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); ctx.stroke();
       }
+      if (br.shellArmor) {
+        // SHELL ARMOR tell: a hard silver casing with a cyan charge-scan —
+        // the unmistakable "charge a shot for this one" read
+        const sa = 0.55 + 0.25 * Math.sin(G.time * 4 + br.wobble);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = `rgba(207,216,220,${sa})`;
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.62, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = 'rgba(77,208,225,0.75)';
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.68, G.time * 1.4 - 0.6, G.time * 1.4 + 0.6); ctx.stroke();
+      }
+      if (br.barrier) {
+        // ROCK TOMB: heavy stone banding + the charge-only cue
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'rgba(161,136,127,0.85)';
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.58, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = 'rgba(120,100,90,0.6)';
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.64, 0.4, Math.PI - 0.4); ctx.stroke();
+        drawGlyph(ctx, 'laser', x, yb - s2 * 0.74, 4.5, '#4dd0e1');
+      }
       ctx.restore();
       continue;
     }

@@ -335,7 +335,21 @@ window.requestAnimationFrame = function () { return 0; };
     SETTINGS.mode = 'junkie';
     resetRun(2, true);
     assert(!G.bricks.some(b => b.veil), 'veils are a classic-mode mechanic only');
-    return 'veils immune to ball/explosions, break to blaster damage; classic-only';
+    // SPACE JUNKIE: Kanto's challenge carries the CHARGE tutorial — armored
+    // rookies that only a charged shot cracks
+    assert(G.bricks.filter(b => b.shellArmor).length >= 2,
+      'junkie Kanto challenge should field ≥2 shell-armored tutors');
+    // region 2+: ROCK TOMB barriers drift as cover — and never hold a wave
+    // hostage (killing every real enemy still clears the stage)
+    resetRun(5, true);
+    G.lives = 99;
+    const bars = G.bricks.filter(b => b.barrier);
+    assert(bars.length >= 1, 'region-2 junkie challenge should have a ROCK TOMB barrier');
+    G.state = 'play'; G.reinforce = 0;
+    for (const b of G.bricks) if (!b.barrier) b.dead = true;
+    await runFrames(300, () => G.state === 'upgrade' ? false : undefined);
+    assert(G.state === 'upgrade', 'wave did not clear with only barriers left (state ' + G.state + ')');
+    return 'veils classic-only; junkie: shell-armor tutors + barriers that never block a clear';
   });
 
   // 2b) classic lose-a-life: park the paddle away and let the ball drain

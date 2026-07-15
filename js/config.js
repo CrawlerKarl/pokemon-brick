@@ -3,10 +3,10 @@
 //  SETTINGS & DIFFICULTY (all knobs in one place)
 // ============================================================
 const PRESETS = {
-  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.46, shotSpeed: 0.65, bossHp: 0.65, brickHp: 0.88, ballSpeed: 0.85, lives: 4 },
-  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 0.85, shotSpeed: 0.88, bossHp: 1.08, brickHp: 1.08, ballSpeed: 0.95, lives: 3 },
-  hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.6,  shotSpeed: 1.15, bossHp: 1.38, brickHp: 1.28, ballSpeed: 1.1,  lives: 3 },
-  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.05, shotSpeed: 1.28, bossHp: 1.58, brickHp: 1.42, ballSpeed: 1.18, lives: 1 },
+  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.5,  shotSpeed: 0.65, bossHp: 0.68, brickHp: 0.9,  ballSpeed: 0.85, lives: 4 },
+  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 1.0,  shotSpeed: 0.9,  bossHp: 1.12, brickHp: 1.15, ballSpeed: 0.95, lives: 3 },
+  hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3 },
+  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1 },
 };
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
@@ -44,7 +44,7 @@ function diff() {
   return {
     lv: lvl,
     descent: (3 + lvl * 1.4) * p.descent * a * (mod?.key === 'swift' ? 1.35 : 1) * Math.max(0.7, Math.min(1, H / 900)),
-    enemyShotInt: Math.max(1.4, 5.5 - lvl * 0.5) / (p.shotRate * a) / (1 + act * 0.08)
+    enemyShotInt: Math.max(1.25, 5.5 - lvl * 0.5) / (p.shotRate * a) / (1 + act * 0.08)
       / (mod?.key === 'ambush' ? 1.8 : mod?.key === 'bounty' ? 1.3 : 1),
     bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a) / (1 + act * 0.06),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
