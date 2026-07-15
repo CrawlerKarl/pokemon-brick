@@ -18,10 +18,10 @@ state.
   offense-path draft (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
   touch FIRE pad is hidden, and the shoot hint is suppressed.
 - **blaster** — same waves, NO ball; you clear everything by shooting. Charge
-  a fat piercing shot with right-click / Shift, or on touch a **double-tap +
-  hold on the FIRE pad** (no separate CHARGE pad — one thumb fires AND charges;
-  a quick double-tap is just two shots). Wiring: `chargePendingId`/
-  `CHARGE_HOLD_MS` (input.js), promoted to `chargeHeld` in update.js.
+  a fat piercing shot with right-click / Shift, or on touch **hold the FIRE
+  pad** (a quick tap fires one normal shot; no separate CHARGE pad). Wiring:
+  `touchFirePendingId`/`TOUCH_CHARGE_HOLD_MS` (input.js), promoted to
+  `chargeHeld` in update.js. Optional AUTO-FIRE pauses during charge intent.
 - **junkie** (SPACE JUNKIE) — the pure-shooter homage: no wall at all, every
   wave is tight high flocks of small flyers, and **your starter IS the ship**
   (Pikachu if none), flying vertically and firing its own typed attack.
@@ -144,8 +144,9 @@ phone — flag anything only verifiable there.
   upgrades never widen the shooter hurtbox. IMPACT is the heavy/charge path —
   its `demo` tier (SPLASH CHARGE) makes charged shots detonate for AoE
   (`chargeSplash`, update.js). As paths cap, every mode fills empty offers
-  with forever-stacking `STACK_ITEMS` (`G.stacks`). Owned tiers orbit the
-  junkie pilot; paddle modes show them on the build rail. Runs auto-save at each region (`saveCheckpoint`/
+  with forever-stacking `STACK_ITEMS` (`G.stacks`). One counted badge per
+  owned path/stack category orbits the junkie pilot; paddle modes show tiers
+  on the build rail. Runs auto-save at each region (`saveCheckpoint`/
   `RUN_CKPT`); a true game over clears it. One draft reroll per screen. The
   draft cards lead with the upgrade name + a big description; **FULL TREE is
   tap-to-inspect** — node rects come from `upgradeTreeLayout`, tap sets

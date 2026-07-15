@@ -321,6 +321,36 @@ const STARTER_MON = {
       'IGNITES THE NEXT 2 HITS',
       'IGNITES THE NEXT 3 HITS AT +2 DAMAGE',
     ],
+    // Mode-aware menu copy. Keep the legacy fields above for older callers.
+    modeCopy: {
+      classic: {
+        ability: 'BLAZE',
+        blurb: 'RETURNS IGNITE THE BALL',
+        tiers: [
+          'PADDLE RETURNS IGNITE THE BALL — NEXT HIT +1 DAMAGE',
+          'PADDLE RETURNS IGNITE THE NEXT 2 HITS AT +1 DAMAGE',
+          'PADDLE RETURNS IGNITE THE NEXT 3 HITS AT +2 DAMAGE',
+        ],
+      },
+      blaster: {
+        ability: 'FIRE TYPE',
+        blurb: 'FIRE-TYPE DEFENSE',
+        tiers: [
+          'FIRE-TYPE DEFENSE',
+          'FIRE-TYPE DEFENSE',
+          'FIRE-TYPE DEFENSE',
+        ],
+      },
+      junkie: {
+        ability: 'FIRE PILOT',
+        blurb: 'FIRE ATTACKS · FIRE DEFENSE',
+        tiers: [
+          'FIRE-SHAPED ATTACKS · FIRE-TYPE OFFENSE AND DEFENSE',
+          'FIRE-SHAPED ATTACKS · FIRE-TYPE OFFENSE AND DEFENSE',
+          'FIRE-SHAPED ATTACKS · FIRE-TYPE OFFENSE AND DEFENSE',
+        ],
+      },
+    },
   },
   water: {
     ids: [7, 8, 9], names: ['SQUIRTLE', 'WARTORTLE', 'BLASTOISE'],
@@ -331,6 +361,35 @@ const STARTER_MON = {
       '30% COOLER · SHIELD EVERY 4 RETURNS',
       '35% COOLER · SHIELD EVERY 3 RETURNS',
     ],
+    modeCopy: {
+      classic: {
+        ability: 'TORRENT',
+        blurb: 'COOLER SHOTS · RETURN SHIELDS',
+        tiers: [
+          'SHOTS BUILD 20% LESS HEAT · SHIELD EVERY 5 RETURNS',
+          'SHOTS BUILD 24% LESS HEAT · SHIELD EVERY 4 RETURNS',
+          'SHOTS BUILD 28% LESS HEAT · SHIELD EVERY 3 RETURNS',
+        ],
+      },
+      blaster: {
+        ability: 'TORRENT',
+        blurb: 'COOLER SHOTS · WATER DEFENSE',
+        tiers: [
+          'SHOTS BUILD 20% LESS HEAT · WATER-TYPE DEFENSE',
+          'SHOTS BUILD 24% LESS HEAT · WATER-TYPE DEFENSE',
+          'SHOTS BUILD 28% LESS HEAT · WATER-TYPE DEFENSE',
+        ],
+      },
+      junkie: {
+        ability: 'TORRENT PILOT',
+        blurb: 'WATER ATTACKS · COOLER SHOTS',
+        tiers: [
+          'WATER-TYPE OFFENSE AND DEFENSE · SHOTS BUILD 20% LESS HEAT',
+          'WATER-TYPE OFFENSE AND DEFENSE · SHOTS BUILD 24% LESS HEAT',
+          'WATER-TYPE OFFENSE AND DEFENSE · SHOTS BUILD 28% LESS HEAT',
+        ],
+      },
+    },
   },
   grass: {
     ids: [1, 2, 3], names: ['BULBASAUR', 'IVYSAUR', 'VENUSAUR'],
@@ -341,8 +400,52 @@ const STARTER_MON = {
       '+35% DROPS · WIDER CATCH',
       '+50% DROPS · HUGE CATCH RANGE',
     ],
+    modeCopy: {
+      classic: {
+        ability: 'OVERGROWTH',
+        blurb: 'MORE DROPS · EASIER PICKUPS',
+        tiers: [
+          '+20% POWER-UP DROPS · EXPANDED PICKUP CATCH',
+          '+35% POWER-UP DROPS · WIDER PICKUP CATCH',
+          '+50% POWER-UP DROPS · WIDEST PICKUP CATCH',
+        ],
+      },
+      blaster: {
+        ability: 'OVERGROWTH',
+        blurb: 'MORE DROPS · GRASS DEFENSE',
+        tiers: [
+          '+20% POWER-UP DROPS · EXPANDED CATCH · GRASS-TYPE DEFENSE',
+          '+35% POWER-UP DROPS · WIDER CATCH · GRASS-TYPE DEFENSE',
+          '+50% POWER-UP DROPS · WIDEST CATCH · GRASS-TYPE DEFENSE',
+        ],
+      },
+      junkie: {
+        ability: 'OVERGROWTH PILOT',
+        blurb: 'GRASS ATTACKS · MORE DROPS',
+        tiers: [
+          'GRASS-TYPE OFFENSE AND DEFENSE · +20% DROPS · EXPANDED CATCH',
+          'GRASS-TYPE OFFENSE AND DEFENSE · +35% DROPS · WIDER CATCH',
+          'GRASS-TYPE OFFENSE AND DEFENSE · +50% DROPS · WIDEST CATCH',
+        ],
+      },
+    },
   },
 };
+
+// Returns copy that describes what the starter actually does in the selected
+// mode. `tier` is one-based (1–3); invalid modes fall back to classic.
+function starterModeCopy(starter, mode = 'classic', tier = 1) {
+  const mon = STARTER_MON[starter];
+  if (!mon) return null;
+  const copy = mon.modeCopy[mode] || mon.modeCopy.classic;
+  const tierIndex = Math.max(0, Math.min(copy.tiers.length - 1, Math.floor(Number(tier) || 1) - 1));
+  return {
+    ability: copy.ability,
+    blurb: copy.blurb,
+    tiers: copy.tiers,
+    tier: copy.tiers[tierIndex],
+  };
+}
 // partner ability level: grows with total regions cleared (evolves at 4 & 7)
 function starterStage(level) {
   const regionsIn = Math.floor((level - 1) / STAGES);
@@ -904,6 +1007,22 @@ preloadGen(GENS[0]); preloadGen(GENS[1]);
 // ---- Pokédex (persistent collection, shinies tracked separately) ----
 const DEX = new Set((v => Array.isArray(v) ? v : [])(loadStore('pkbrk-dex', '[]')));
 const DEXS = new Set((v => Array.isArray(v) ? v : [])(loadStore('pkbrk-dexs', '[]')));
+// Persistent research rewards turn the collection into useful progression.
+// They are deliberately modest: a new player still gets the intended run,
+// while long-term catches create visible, mode-agnostic advantages.
+const DEX_REWARDS = [
+  { at: 10,  key: 'fieldKit', name: 'FIELD KIT',    icon: 'shield', color: '#66bb6a', desc: 'NEW JOURNEYS START WITH 1 SHIELD' },
+  { at: 35,  key: 'lucky',    name: 'LUCKY CHARM',  icon: 'pokeball', color: '#ef5350', desc: '+25% CHANCE TO FIND NEW POKÉMON' },
+  { at: 75,  key: 'megaSpark',name: 'MEGA SPARK',   icon: 'mega', color: '#ab47bc', desc: 'NEW JOURNEYS START 25% MEGA CHARGED' },
+  { at: 150, key: 'veteran',  name: 'VETERAN BADGE',icon: 'heart', color: '#ff8a65', desc: 'NEW JOURNEYS START WITH +1 LIFE' },
+  { at: 250, key: 'shinyCharm', name: 'SHINY CHARM', icon: 'fairy', color: '#ffd700', desc: 'SHINY POKÉMON APPEAR TWICE AS OFTEN' },
+];
+function dexRewardActive(key) {
+  const r = DEX_REWARDS.find(x => x.key === key);
+  return !!r && DEX.size >= r.at;
+}
+function dexRewardAt(n) { return DEX_REWARDS.find(r => r.at === n) || null; }
+function nextDexReward() { return DEX_REWARDS.find(r => DEX.size < r.at) || null; }
 function addToDex(id, shiny) {
   const isNew = !DEX.has(id) || (shiny && !DEXS.has(id));
   DEX.add(id);

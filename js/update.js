@@ -515,11 +515,18 @@ function collectPickup(pu) {
       addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
     }
     const nm = (NAMES[pu.dexId] || 'POKÉMON').toUpperCase();
-    setAnnounce(null, pu.shiny ? '#ffd700' : isNew ? '#66bb6a' : '#ef5350',
-      (pu.shiny ? 'SHINY ' : '') + nm + ' CAUGHT!',
-      G.trial ? 'TRIAL — CATCH NOT REGISTERED · +250 PTS'
-        : isNew ? 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS' : 'ALREADY IN YOUR POKÉDEX · +250 PTS',
-      2.2, null, pu.dexId, pu.shiny);
+    const research = isNew ? dexRewardAt(DEX.size) : null;
+    if (research) {
+      setAnnounce(research.icon, research.color, research.name + ' UNLOCKED!',
+        research.desc, 3.1, DEX.size + ' POKÉMON RESEARCHED', pu.dexId, pu.shiny);
+      SFX.mega();
+    } else {
+      setAnnounce(null, pu.shiny ? '#ffd700' : isNew ? '#66bb6a' : '#ef5350',
+        (pu.shiny ? 'SHINY ' : '') + nm + ' CAUGHT!',
+        G.trial ? 'TRIAL — CATCH NOT REGISTERED · +250 PTS'
+          : isNew ? 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS' : 'ALREADY IN YOUR POKÉDEX · +250 PTS',
+        2.2, null, pu.dexId, pu.shiny);
+    }
     G.score += isNew ? 100 : 250;
   } else {
     applyPower(pu.p, pu.srcType);
@@ -983,15 +990,16 @@ function update(dt) {
 
   tickEffects(dt);
   if (G.state === 'play') G.playT += dt;
-  // ---- shooter modes (BLASTER / SPACE JUNKIE): hold CHARGE to build a heavy
-  // shot, release to fire. While charging, normal auto-fire pauses.
+  // ---- shooter modes (BLASTER / SPACE JUNKIE): hold FIRE to build a heavy
+  // shot, release to fire. While a hold is pending or charging, normal fire
+  // pauses so no stray bolt leaks out before the charged shot.
   G.chargeCD = Math.max(0, G.chargeCD - dt);
-  let charging = false;
+  let charging = false, chargedThisFrame = false;
   if (G.mode !== 'classic' && G.state === 'play') {
-    // a double-tap on FIRE whose second press is still held past the threshold
-    // promotes into a charge — one thumb fires AND charges (input.js)
-    if (chargePendingId !== null && performance.now() - chargePendingT >= CHARGE_HOLD_MS) {
-      chargeHeld = true; chargeTouchId = chargePendingId; chargePendingId = null;
+    // A FIRE touch still down past the intent threshold promotes into a charge;
+    // a quicker release is dispatched as one normal shot by input.js.
+    if (touchFirePendingId !== null && performance.now() - touchFirePendingT >= TOUCH_CHARGE_HOLD_MS) {
+      chargeHeld = true; chargeTouchId = touchFirePendingId; touchFirePendingId = null;
     }
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
@@ -999,11 +1007,17 @@ function update(dt) {
       G.charge = Math.min(1, G.charge + dt / (upgN('heavy') ? 0.8 : 1.1)); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
     } else if (G.charge > 0) {
       fireCharge(G.charge);
+      chargedThisFrame = true;
       G.charge = 0; G.chargeCD = 0.25;
     }
   } else if (G.charge > 0) { G.charge = 0; }
-  // held FIRE keeps shooting — the heat lockout is the only governor
-  if (fireHeld && !charging && G.state === 'play') fireAction(true);
+  // Held desktop/CLASSIC fire keeps shooting. The optional shooter auto-fire
+  // setting does the same without a held pointer, but yields immediately when
+  // a FIRE-pad touch may be turning into (or is already) a charged shot.
+  const autoFiring = G.mode !== 'classic' && !!SETTINGS.autoFire;
+  const touchChargeIntent = touchFirePendingId !== null || chargeTouchId !== null;
+  if (fireHeld && !charging && G.state === 'play') fireAction(true); // preserve desktop/CLASSIC held fire
+  else if (autoFiring && !charging && !chargedThisFrame && !touchChargeIntent && G.state === 'play') fireAction(true);
   // SUPER SHIELD capstone: a floor-shield charge regrows on a timer
   if (G.state === 'play' && upgN('aegisX')) {
     if (G.shieldCharges < shieldCap()) {
@@ -1934,7 +1948,7 @@ function update(dt) {
           if ((G.chargeHintCD || 0) <= 0 && G.mode !== 'classic') {
             G.chargeHintCD = 4;
             addFloater(bx, by - br.h / 2 - 12,
-              IS_TOUCH ? 'CHARGE IT! DOUBLE-TAP + HOLD FIRE' : 'CHARGE IT! HOLD RIGHT-CLICK / SHIFT', '#4dd0e1', 12);
+              IS_TOUCH ? 'CHARGE IT! HOLD FIRE' : 'CHARGE IT! HOLD RIGHT-CLICK / SHIFT', '#4dd0e1', 12);
           }
           continue;
         }

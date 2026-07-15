@@ -69,9 +69,10 @@ the repo: `test.html` (headless invariant suite), `package.json`
 ## Game modes (`SETTINGS.mode`, picked on the title screen)
 The menu is TWO pages (`menuPage`, config.js): page 1 is the title + mode
 select — two big cards for BRICK BREAKER and SPACE JUNKIE plus a smaller
-dashed "experimental" chip for BLASTER — and picking a game leads to page 2,
-setup (starter + difficulty + START, `setupLayout`). Quitting/game over
-always lands back on page 1.
+dashed "experimental" chip for BLASTER. A prominent **QUICK START** launches
+the recommended first run (Brick Breaker · Easy · Charmander) immediately;
+picking a mode leads to page 2, setup (starter + difficulty + START,
+`setupLayout`). Quitting/game over always lands back on page 1.
 - **BRICK BREAKER** (`classic`) — the ball-first brick-breaker described
   below. The ball is THE weapon; there is **no free blaster**. Manual fire is
   gated by `blasterArmed()` (state.js) and unlocks only with a LASER power-up,
@@ -84,13 +85,13 @@ always lands back on page 1.
   gate is skipped), enemies fire ~2× as often and from the first wave, bolts
   render as sleek cyan energy darts, and a **CHARGE** winds up a fat piercing
   shot (`fireCharge`, damage/pierce scale with hold time). Charge is
-  right-click / Shift on desktop; on touch it's a **double-tap + hold on the
-  FIRE pad** — one thumb fires AND charges, so there's no separate CHARGE pad
-  and the other thumb stays free to steer (a quick double-tap is just two
-  shots). Mega, catches, drops, and the skill tree all still work. Wiring:
-  `G.mode`, `G.charge` (state.js); charge build/release + the double-tap→charge
-  promotion (update.js, `chargePendingId`/`CHARGE_HOLD_MS`); charge/fire input
-  (input.js); the FIRE pad's charge ring + bolt visuals (render.js).
+  right-click / Shift on desktop; on touch **tap FIRE for one normal shot or
+  hold FIRE to charge** — one thumb still fires AND charges, so the other stays
+  free to steer. Optional AUTO-FIRE lives in Settings and yields whenever a
+  charge touch begins. Mega, catches, drops, and the skill tree all still work.
+  Wiring: `G.mode`, `G.charge` (state.js); hold-intent promotion (update.js,
+  `touchFirePendingId`/`TOUCH_CHARGE_HOLD_MS`); charge/fire input (input.js);
+  the FIRE pad's charge ring + bolt visuals (render.js).
 - **SPACE JUNKIE** — the full pure-shooter homage to the game's namesake:
   **no wall at all**. Non-boss waves arrive as 100% free-flyers (squads pour
   in from the edges straight onto patterns, built in `buildLevel`'s junkie
@@ -130,7 +131,8 @@ always lands back on page 1.
   down (HUD shows `TYPE · Ns`) and reverts to the pilot's innate type;
   element orbs drop far more often (junkie branch of the orb block).
   **Held items:** the draft re-skins the same 5×4 tree as Pokémon items
-  (`JUNKIE_ITEMS`, data.js), every owned tier orbits the pilot as a badge,
+  (`JUNKIE_ITEMS`, data.js); one counted badge per owned path/stack category
+  orbits the pilot,
   and late drafts offer `STACK_ITEMS` that stack forever (Life Orb damage /
   Never-Melt Ice cooling / Soothe Bell score — `G.stacks`).
   The pilot renders pseudo-3D (silhouette shadow + element rim light) and
@@ -358,10 +360,10 @@ tier). Every node tile carries its name + description; tapping one lights it up
 input.js; `drawTreeDetail`, render.js). Node rects come from `upgradeTreeLayout`
 so render and hit-testing can't drift. Upgrade **symbols are glossy faux-3D
 badges** (`iconBadge`/`blitBadge`, render.js — baked per colour/size) used in
-the tree and draft cards. A **HUD build strip**
-shows owned paths, every non-junkie tier
-adds a colored hardware socket to the paddle, and Junkie tiers orbit the pilot
-as held items. As authored paths cap, all modes fill empty offers with small
+the tree and draft cards. A **HUD build strip** shows owned paths, every
+non-junkie tier adds a colored hardware socket to the paddle, and Junkie shows
+one compact orbiting badge per owned path/stack category (with a count) so the
+pilot stays readable. As authored paths cap, all modes fill empty offers with small
 forever-stacking mastery items instead of dead reward screens. Caps read via
 `shieldCap`/`megaDur`/`barrierCharges` (state.js). `upgN(key)` = does the player
 own that tier.
@@ -462,6 +464,12 @@ Persisted in `localStorage`: `pkbrk-settings`, `pkbrk-best`, `pkbrk-dex`,
 they survive corrupt values and full/blocked storage; raw
 `JSON.parse(localStorage...)` at module scope once bricked startup.
 
+**Pokédex research rewards:** collection milestones at 10 / 35 / 75 / 150 /
+250 catches unlock a starting shield, improved new-catch odds, starting Mega
+charge, +1 starting life, and doubled shiny odds. The Pokédex header shows the
+next reward and remaining catches; milestone rewards apply only to a true new
+journey, never repeatedly on a checkpoint resume or trial jump.
+
 **Region checkpoints:** every non-trial run auto-saves at each region's
 first wave (`saveCheckpoint`, state.js, hooked at the end of `buildLevel`);
 the title screen grows a CONTINUE button (`RUN_CKPT`), and a true game over
@@ -536,17 +544,10 @@ change.
 Not committed to — a menu of high-value work, roughly by leverage. Nothing
 here is started; the game is stable and shippable as-is.
 
-**Onboarding & clarity** (biggest player-facing gap)
-- The three modes are presented as equal buttons before the player understands
-  any. Consider making CLASSIC the guided intro and spotlighting/unlocking
-  BLASTER + SPACE JUNKIE after an early boss.
-- One-wave tutorial per mode: teach movement + primary action first, then
-  layer charge / Mega / rally barrier / type changes / catches progressively.
+**Onboarding & clarity**
 - Boss identity: short named intro cards + one clear counterplay lesson each.
 
 **Gameplay depth**
-- Give the Pokédex a mechanical payoff (milestone perks / unlocks) — it
-  persists but currently only feeds score.
 - Build synergy tags on draft cards ("Ball / Blaster / Defense / Catch").
 - Seeded daily run (date-seeded, local-only leaderboard) — needs the RNG
   service below.

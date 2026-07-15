@@ -808,22 +808,24 @@ function drawPilotRig(x, py) {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
-  // ---- held items orbit the pilot: one badge per skill-tree tier owned
-  // (SPACE JUNKIE names them as Pokémon items) plus every infinite stack
+  // ---- held items orbit the pilot. One badge per PATH/stack category keeps
+  // the build fantasy without allowing 24 separate icons to bury the pilot.
+  // The small count preserves the exact progression information.
   {
     const badges = [];
     for (const pk of PATH_KEYS) {
-      for (let d = 0; d < pathLvl(pk); d++) badges.push({ icon: PATHS[pk].tiers[d].icon, color: PATHS[pk].color });
+      const lvl = pathLvl(pk);
+      if (lvl) badges.push({ icon: PATHS[pk].tiers[lvl - 1].icon, color: PATHS[pk].color, count: lvl });
     }
     for (const si of STACK_ITEMS) {
       const n = (G.stacks && G.stacks[si.key]) || 0;
-      for (let d = 0; d < Math.min(n, 6); d++) badges.push({ icon: si.icon, color: si.color });
+      if (n) badges.push({ icon: si.icon, color: si.color, count: n });
     }
-    const overflowStacks = STACK_ITEMS.reduce((a, si) => a + Math.max(0, ((G.stacks && G.stacks[si.key]) || 0) - 6), 0);
-    const shown = badges.slice(0, 24);
-    const extra = overflowStacks + Math.max(0, badges.length - shown.length);
+    const maxBadges = IS_TOUCH ? 5 : 6;
+    const shown = badges.slice(0, maxBadges);
+    const extra = Math.max(0, badges.length - shown.length);
     if (shown.length) {
-      const orbitR = s * 0.78 + 10;
+      const orbitR = s * 0.68 + 10;
       for (let i = 0; i < shown.length; i++) {
         const a2 = (i / shown.length) * Math.PI * 2 + G.time * 0.55;
         const bx2 = x + Math.cos(a2) * orbitR;
@@ -835,6 +837,12 @@ function drawPilotRig(x, py) {
         ctx.fillStyle = 'rgba(8,12,28,0.85)'; ctx.fill();
         ctx.lineWidth = 1.2; ctx.strokeStyle = shown[i].color; ctx.stroke();
         drawGlyph(ctx, shown[i].icon, bx2, by2, 3.8, shown[i].color);
+        if (shown[i].count > 1) {
+          ctx.font = '900 6.5px Orbitron, sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(String(shown[i].count), bx2 + 6, by2 + 6);
+        }
         ctx.restore();
       }
       if (extra > 0) {
@@ -1825,13 +1833,16 @@ function drawAnnounce() {
 // sits well ABOVE the button row and the ship — it never competes with
 // MEGA/FIRE/CHARGE or covers the pilot
 function drawShootHint() {
+  // Stage, trial, power-up, and evolution announcements own the centre lane.
+  // Tutorials wait their turn instead of stacking a second banner over them.
+  if (G.announce) return;
   // CHARGE TUTOR: while armored/rock targets are on screen and the player has
   // NEVER fired a charged shot, a bright pulsing banner stays up until they
   // do — the one mechanic worth nagging about
-  if (G.state === 'play' && G.mode !== 'classic' && !G.chargedEver &&
+  if (G.state === 'play' && G.mode !== 'classic' && !G.chargedEver && G.hurtHud <= 0 &&
       G.bricks.some(b => !b.dead && (b.shellArmor || b.barrier))) {
     const pa = 0.72 + 0.28 * Math.sin(G.time * 4);
-    const txt = IS_TOUCH ? '⚡ DOUBLE-TAP + HOLD FIRE — CHARGE A SHOT ⚡'
+    const txt = IS_TOUCH ? '⚡ HOLD FIRE — CHARGE A SHOT ⚡'
       : '⚡ HOLD RIGHT-CLICK / SHIFT — CHARGE A SHOT ⚡';
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1847,15 +1858,16 @@ function drawShootHint() {
     ctx.fillStyle = '#e0f7fa';
     ctx.fillText(txt, W / 2, hy2 + 1, tw2 - 20);
     ctx.restore();
+    return; // only one tutorial banner may own the centre lane
   }
   if (G.state !== 'play' || G.shotsFired >= 3 || G.playT > 20) return;
   // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
   if (G.mode === 'classic' && !blasterArmed()) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
-    ? (IS_TOUCH ? 'TAP TO ATTACK · DOUBLE-TAP + HOLD = BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
+    ? (IS_TOUCH ? 'TAP TO ATTACK · HOLD = BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
     : G.mode === 'blaster'
-      ? (IS_TOUCH ? 'TAP TO FIRE · DOUBLE-TAP + HOLD = CHARGE SHOT' : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
+      ? (IS_TOUCH ? 'TAP TO FIRE · HOLD = CHARGE SHOT' : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
       : (IS_TOUCH ? 'HOLD FIRE TO SHOOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT');
   ctx.save();
   ctx.globalAlpha = a;
@@ -2019,17 +2031,29 @@ function drawHUD() {
   // skill tree at a glance — Phoenix-style: your build is always visible
   {
     const treeY = ((G.ballElement || hudElem) ? (G.combo > 1 ? 110 : 92) : (G.combo > 1 ? 92 : 74));
-    let tx3 = 26;
-    for (const pk of PATH_KEYS) {
-      const lvl = pathLvl(pk);
-      if (!lvl) continue;
-      const P = PATHS[pk];
-      drawGlyph(ctx, P.tiers[lvl - 1].icon, tx3, treeY, 6.5, P.color);
-      ctx.font = '700 10px Orbitron, sans-serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = lvl >= 4 ? P.color : '#90a4ae';
-      ctx.fillText(lvl + '/4', tx3 + 11, treeY + 1);
-      tx3 += 48;
+    const compactBuild = W < 560 || IS_TOUCH;
+    if (compactBuild) {
+      const ownedPaths = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
+      const ownedTiers = totalPathLevels();
+      if (ownedPaths) {
+        ctx.font = '700 9.5px Orbitron, sans-serif';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#78909c';
+        ctx.fillText('BUILD ' + ownedTiers + ' · ' + ownedPaths + (ownedPaths === 1 ? ' PATH' : ' PATHS'), 20, treeY);
+      }
+    } else {
+      let tx3 = 26;
+      for (const pk of PATH_KEYS) {
+        const lvl = pathLvl(pk);
+        if (!lvl) continue;
+        const P = PATHS[pk];
+        drawGlyph(ctx, P.tiers[lvl - 1].icon, tx3, treeY, 6.5, P.color);
+        ctx.font = '700 10px Orbitron, sans-serif';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = lvl >= 4 ? P.color : '#90a4ae';
+        ctx.fillText(lvl + '/4', tx3 + 11, treeY + 1);
+        tx3 += 48;
+      }
     }
   }
   ctx.textAlign = 'center';
@@ -2162,7 +2186,7 @@ function drawTouchControls() {
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   // FIRE — absent in CLASSIC until the blaster is earned (touchButtons). In the
-  // shooter modes this one pad also CHARGES: a double-tap + hold winds up a big
+  // shooter modes this one pad also CHARGES: holding winds up a big
   // shot, shown here as a cyan ring filling inside the heat arc.
   const hot = G.overheat > 0;
   const f = B.fire;
@@ -2183,7 +2207,7 @@ function drawTouchControls() {
       ctx.strokeStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : '#ffd54f';
       ctx.stroke();
     }
-    // charge fill — an inner ring winding up as you hold the double-tap
+    // charge fill — an inner ring winding up as you hold
     if (charging) {
       ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 12, -Math.PI / 2, -Math.PI / 2 + Math.min(1, G.charge) * Math.PI * 2);
       ctx.lineWidth = 4; ctx.strokeStyle = full ? '#e0ffff' : '#80deea'; ctx.stroke();
@@ -2223,7 +2247,7 @@ function drawTouchControls() {
   ctx.font = '900 8px Orbitron, sans-serif';
   ctx.fillStyle = ready ? '#ffd54f' : '#90a4ae';
   ctx.fillText('MEGA', m.x, m.y + 13);
-  // (charge now lives on the FIRE pad — double-tap + hold; no separate pad)
+  // (charge now lives on the FIRE pad — hold; no separate pad)
   // pause + sound, top-right under the lives
   for (const [b, icon, on] of [[B.pause, 'pause', true], [B.sound, 'sound', MUSIC.on]]) {
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
@@ -2267,6 +2291,28 @@ function drawMenu() {
   fitText(W < 560 ? 'CATCH POKÉMON ACROSS 9 REGIONS'
     : 'CATCH POKÉMON ACROSS 9 REGIONS · A LEGENDARY GUARDS EVERY THIRD WAVE',
     L.tagY, 12 * Math.max(0.85, L.s), '600', '#cfd8dc', maxW, "Verdana, system-ui, sans-serif");
+  // First-run escape hatch from mode/starter/difficulty choice overload.
+  // The full cards remain directly below for players who want to customize.
+  {
+    const q = L.quick, hovQ = inRect(mouseX, lastMouseY, q);
+    ctx.save();
+    ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = hovQ ? 24 : 12;
+    roundRect(q.x, q.y, q.w, q.h, 12);
+    const qg = ctx.createLinearGradient(0, q.y, 0, q.y + q.h);
+    qg.addColorStop(0, hovQ ? '#fff3b0' : '#ffe082');
+    qg.addColorStop(1, hovQ ? '#ffd54f' : '#f9a825');
+    ctx.fillStyle = qg; ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#1b1305';
+    ctx.font = `900 ${L.short ? 11 : 14}px Orbitron, sans-serif`;
+    ctx.fillText('▶ QUICK START', q.x + q.w / 2, q.y + q.h * (L.short ? 0.5 : 0.38));
+    if (!L.short) {
+      ctx.font = bodyFont(9.5, 700);
+      ctx.fillStyle = '#4a3506';
+      ctx.fillText('RECOMMENDED · BRICK BREAKER · EASY · CHARMANDER', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
+    }
+    ctx.restore();
+  }
   // the two headliner games as full-bleed pseudo-3D dioramas — Geodude
   // holds the brick-breaker world, Rayquaza rules the space one
   drawHeroPanel(MODES[0], L.card(0), 74, L);
@@ -2523,6 +2569,7 @@ function drawSetup() {
     const hov = inRect(mouseX, lastMouseY, pg);
     const col = st.key === 'none' ? TYPE_COLORS.electric : TYPE_COLORS[st.key];
     const mon = STARTER_MON[st.key];
+    const monCopy = mon ? starterModeCopy(st.key, SETTINGS.mode, 1) : null;
     const dy = Math.min(11, pg.h * 0.13); // name / ability vertical split, scales with card
     ctx.save();
     if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 16; }
@@ -2547,7 +2594,7 @@ function drawSetup() {
       ctx.fillText(st.label, txC, pg.y + pg.h / 2 - dy, tw);
       ctx.font = `900 ${Math.min(12, pg.w / 12)}px Orbitron, sans-serif`;
       ctx.fillStyle = col;
-      ctx.fillText(mon.ability, txC, pg.y + pg.h / 2 + dy, tw);
+      ctx.fillText(monCopy.ability, txC, pg.y + pg.h / 2 + dy, tw);
     } else {
       // "no partner" IS Pikachu — it takes the controls in SPACE JUNKIE and
       // stands in for the free-agent pick everywhere, so show the mon itself
@@ -2571,12 +2618,13 @@ function drawSetup() {
   // what the SELECTED partner actually does — full-size, readable
   {
     const selMon = STARTER_MON[SETTINGS.starter];
+    const selCopy = selMon ? starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1) : null;
     const selCol = selMon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
     const narrowM = W < 560;
     const junkie = SETTINGS.mode === 'junkie';
     const BODY = "Verdana, system-ui, sans-serif";
     if (selMon) {
-      fitText(selMon.ability + ' — ' + selMon.tiers[0], L.starterInfoY, 12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
+      fitText(selCopy.ability + ' — ' + selCopy.tier, L.starterInfoY, 12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
       if (!L.short) fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
         : (junkie ? 'YOUR STARTER FLIES THE SHIP' : 'YOUR PARTNER RIDES THE PADDLE') + ' · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
         L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
@@ -2585,6 +2633,11 @@ function drawSetup() {
         L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#f9cc3d', maxW, BODY);
       if (!L.short) fitText('EVOLVES AT REGIONS 4 & 7 — THE ATTACK GROWS EACH TIME',
         L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
+    } else if (SETTINGS.mode === 'blaster') {
+      fitText(narrowM ? 'NO PARTNER — NEUTRAL DEFENSE' : 'NO PARTNER — PLAIN PADDLE · NO DEFENSIVE TYPE',
+        L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#90a4ae', maxW, BODY);
+      if (!L.short) fitText('POWER-UPS STILL ALTER YOUR WEAPON MID-RUN',
+        L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#78909c', maxW, BODY);
     } else {
       fitText(narrowM ? 'NO PARTNER — PLAIN PADDLE' : 'NO PARTNER — A PLAIN PADDLE AND NO SERVE ELEMENT',
         L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#90a4ae', maxW, BODY);
@@ -2941,14 +2994,14 @@ function drawDex() {
   const cols = Math.max(4, Math.floor(Math.min(W * 0.92, 1100) / cellW));
   const gw = cols * cellW;
   const x0 = W / 2 - gw / 2;
-  let y = 118 - dexScroll;
+  let y = 142 - dexScroll;
   const headerH = 54;
   for (const g of GENS) {
     const roster = regionRoster(g);
     const caught = roster.filter(id => DEX.has(id)).length;
     const rows = Math.ceil(roster.length / cols);
     const sectionH = headerH + rows * cellH + 16;
-    if (y + sectionH > 100 && y < H) { // only draw visible sections
+    if (y + sectionH > 132 && y < H) { // only draw visible sections
       // region header + progress bar
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.font = '900 17px Orbitron, sans-serif';
@@ -2968,7 +3021,7 @@ function drawDex() {
       roster.forEach((id, i) => {
         const cx = x0 + (i % cols) * cellW + cellW / 2;
         const cy = y + headerH + Math.floor(i / cols) * cellH + cellH / 2 - 8;
-        if (cy + cellH / 2 < 100 || cy - cellH / 2 > H) return;
+        if (cy + cellH / 2 < 132 || cy - cellH / 2 > H) return;
         const has = DEX.has(id), shiny = DEXS.has(id);
         const half = cellW / 2 - 4;
         roundRect(cx - half, cy - half - 6, half * 2, half * 2 + 12, 10);
@@ -3001,18 +3054,33 @@ function drawDex() {
     y += sectionH;
   }
   // clamp scroll to content
-  const maxScroll = Math.max(0, (y + dexScroll) - 118 - (H - 160));
+  const maxScroll = Math.max(0, (y + dexScroll) - 142 - (H - 176));
   dexScroll = Math.min(dexScroll, maxScroll);
   // ---- fixed header on top ----
-  const hg = ctx.createLinearGradient(0, 0, 0, 108);
+  const hg = ctx.createLinearGradient(0, 0, 0, 136);
   hg.addColorStop(0, 'rgba(5,8,25,0.97)'); hg.addColorStop(0.8, 'rgba(5,8,25,0.9)'); hg.addColorStop(1, 'rgba(5,8,25,0)');
-  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 108);
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 136);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title('POKÉDEX', 44, Math.min(34, W / 12), '#ef5350');
+  title('POKÉDEX', 44, Math.min(34, W / (W < 560 ? 16 : 12)), '#ef5350');
   ctx.font = '700 12px Orbitron, sans-serif';
   ctx.fillStyle = '#b0bec5';
   const total = GENS.reduce((n, g) => n + regionRoster(g).length, 0);
   ctx.fillText(DEX.size + ' / ' + total + ' CAUGHT' + (DEXS.size ? '  ·  ' + DEXS.size + ' SHINY' : '') + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, 82);
+  const nextResearch = nextDexReward();
+  if (nextResearch) {
+    const prevAt = DEX_REWARDS.filter(r => r.at < nextResearch.at).reduce((n, r) => Math.max(n, r.at), 0);
+    const progress = Math.max(0, Math.min(1, (DEX.size - prevAt) / Math.max(1, nextResearch.at - prevAt)));
+    ctx.font = '800 9.5px Orbitron, sans-serif';
+    ctx.fillStyle = nextResearch.color;
+    ctx.fillText('NEXT RESEARCH REWARD · ' + nextResearch.name + ' · ' + Math.max(0, nextResearch.at - DEX.size) + ' TO GO', W / 2, 104, W * 0.84);
+    const rw = Math.min(360, W * 0.72), rx = W / 2 - rw / 2;
+    roundRect(rx, 118, rw, 5, 2.5); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+    if (progress > 0) { roundRect(rx, 118, rw * progress, 5, 2.5); ctx.fillStyle = nextResearch.color; ctx.fill(); }
+  } else {
+    ctx.font = '800 10px Orbitron, sans-serif';
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillText('★ ALL RESEARCH REWARDS UNLOCKED ★', W / 2, 106);
+  }
   // back button
   const cb = dexCloseGeom();
   roundRect(cb.x, cb.y, cb.w, cb.h, 10);
@@ -3150,17 +3218,55 @@ function drawTreeDetail(T) {
     ctx.fillText(line, d.x + pad, descTop + li * 17, d.w - pad * 2));
 }
 
+// Compact journey map shown between every stage. Nine persistent region nodes
+// make the 27-wave campaign, boss cadence, and checkpoint-sized chunks legible
+// without opening another screen.
+function drawJourneyMap(y, compact = false) {
+  const completed = Math.min(GENS.length, Math.floor((Math.max(1, G.level) - 1) / STAGES));
+  const current = Math.min(GENS.length - 1, regionIdx(Math.max(1, G.level)));
+  const mapW = Math.min(W * 0.86, compact ? 470 : 650);
+  const x0 = W / 2 - mapW / 2;
+  const step = mapW / (GENS.length - 1);
+  ctx.save();
+  ctx.lineWidth = compact ? 2 : 3;
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + mapW, y); ctx.stroke();
+  for (let i = 0; i < GENS.length; i++) {
+    const x = x0 + i * step;
+    const done = i < completed;
+    const here = i === current && completed < GENS.length;
+    const col = done || here ? GENS[i].accent : '#455a64';
+    if (here) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
+    ctx.beginPath(); ctx.arc(x, y, here ? 7 : done ? 6 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = done ? col : here ? '#eaf7ff' : '#162235'; ctx.fill();
+    ctx.lineWidth = here ? 2.5 : 1.5; ctx.strokeStyle = col; ctx.stroke();
+    ctx.shadowBlur = 0;
+    if (done) drawGlyph(ctx, 'star', x, y, 2.6, '#fff');
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `800 ${compact ? 8.5 : 10}px Orbitron, sans-serif`;
+  ctx.fillStyle = completed >= GENS.length ? '#ffd54f' : GENS[current].accent;
+  ctx.fillText(completed >= GENS.length ? 'ALL 9 REGIONS CLEARED'
+    : 'REGION ' + (current + 1) + '/9 · ' + GENS[current].name + ' · STAGE ' + (stageIdx(G.level) + 1) + '/3',
+    W / 2, y + (compact ? 17 : 20), mapW);
+  ctx.restore();
+}
+
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
   else if (G.state === 'dex') { drawDex(); }
   else if (G.state === 'serve' && !paused) {
-    pulse(IS_TOUCH ? 'TAP TO LAUNCH' : 'CLICK TO LAUNCH', H * 0.7);
-    // interactive first-wave tutorial: contextual hints
-    if (G.level === 1) {
-      hintPill(IS_TOUCH ? 'DRAG ANYWHERE — MOVE PADDLE · SLIDE WHILE LAUNCHING TO AIM'
-        : 'MOVE THE MOUSE — PADDLE FOLLOWS · SLIDE WHILE LAUNCHING TO AIM', H * 0.7 + 46);
-      hintPill('GET THE BALL ABOVE THE ARMORED WALL — A GOLDEN NET KEEPS IT RALLYING UP THERE', H * 0.7 + 82, '#ffd54f');
+    // The stage card owns the centre first; controls arrive immediately after
+    // it clears. This turns the opening into a sequence instead of a text pile.
+    if (!G.announce) {
+      pulse(IS_TOUCH ? 'TAP TO LAUNCH' : 'CLICK TO LAUNCH', H * 0.7);
+      // interactive first-wave tutorial: contextual hints
+      if (G.level === 1) {
+        hintPill(IS_TOUCH ? 'DRAG ANYWHERE — MOVE PADDLE · SLIDE WHILE LAUNCHING TO AIM'
+          : 'MOVE THE MOUSE — PADDLE FOLLOWS · SLIDE WHILE LAUNCHING TO AIM', H * 0.7 + 46);
+        hintPill('GET THE BALL ABOVE THE ARMORED WALL — A GOLDEN NET KEEPS IT RALLYING UP THERE', H * 0.7 + 82, '#ffd54f');
+      }
     }
   } else if (G.state === 'upgrade') {
     dim(0.55);
@@ -3177,6 +3283,7 @@ function drawOverlays() {
       ctx.fillStyle = genFor(G.level).accent;
       ctx.fillText('NEXT STOP: ' + genFor(G.level).name, W / 2, H * 0.16 + 62);
     }
+    drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
     if (G.upgradeChoices && G.stateT > 0.8) {
       const a = Math.min(1, (G.stateT - 0.8) / 0.4);
       ctx.globalAlpha = a;
@@ -3443,7 +3550,7 @@ function drawOverlays() {
         ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS']
         : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA EVOLVE WHEN METER IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
       : (IS_TOUCH
-        ? ['DRAG ANYWHERE — MOVE', 'TAP FIRE — SHOOT', 'DOUBLE-TAP + HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
+        ? ['DRAG ANYWHERE — MOVE', 'TAP FIRE — SHOOT', 'HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
         : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK OR SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
     ).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.47 + i * 22, W * 0.92));
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);

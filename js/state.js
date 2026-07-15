@@ -6,7 +6,14 @@ const MEGA_DUR = 5;      // Mega Evolution duration in seconds
 // skill-tree-aware caps (capstones raise them)
 function shieldCap() { return 3 + 2 * upgN('bulwark'); }
 function megaDur() { return upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR; }
-function barrierCharges() { return 2 + (upgN('rally') ? 1 : 0); }
+function barrierCharges() {
+  // Kanto's first two classic walls are the learn-to-aim beats: one safety-net
+  // return keeps the rally mechanic visible without letting the ball play an
+  // extended possession above the wall. The full two-charge barrier begins at
+  // the first boss and remains unchanged for the rest of the journey.
+  const openingClassic = G.mode === 'classic' && G.level <= 2;
+  return (openingClassic ? 1 : 2) + (upgN('rally') ? 1 : 0);
+}
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
 // ---- SPACE JUNKIE pilots: in junkie mode your starter IS the ship (Pikachu
 // if you fly without a partner). The attack's SHAPE follows the pilot's
@@ -414,9 +421,17 @@ function buildLevel(lvl) {
   const pitchY = bh + Math.max(9, Math.min(13, bh * 0.3));
   G.brickW = bw; G.brickH = bh;
   const hasBoss = stage === 2;
-  // formation spawns with real headroom above it — the high-ground rally zone
-  // is a playable space from the first serve, not something you wait for
+  // formations normally spawn with real headroom above them for the high-ground
+  // rally zone. Kanto's first two classic walls sit lower, shortening the first
+  // serve and making paddle aim matter sooner; the row-safe cap keeps compact
+  // viewports from losing a rank to the shift.
   let gridTop = Math.max(110, Math.min(190, Math.round(H * 0.15)));
+  if (!hasBoss && regionsIn === 0 && G.mode === 'classic') {
+    const openingRows = stage === 1 ? 4 : 3;
+    const desiredTop = Math.max(gridTop, Math.min(230, Math.round(H * 0.24)));
+    const rowSafeTop = Math.floor(H * 0.58 - openingRows * pitchY);
+    gridTop = Math.max(gridTop, Math.min(desiredTop, rowSafeTop));
+  }
   // ---- BOSS (legendary stage only — the finale of each region) ----
   if (hasBoss) {
     const bossW = Math.min(bw * 1.9, W * 0.4), bossH = bh * 1.75;
@@ -538,11 +553,13 @@ function buildLevel(lvl) {
         poke: { id, t },
         flash: 0, wobble: Math.random() * Math.PI * 2,
       };
-      // easter eggs: glitch block (very rare) > shiny (1/64) > ditto disguise (1/45)
+      // easter eggs: glitch block > shiny (the Pokédex Shiny Charm doubles
+      // its appearance rate) > ditto disguise
       const roll = Math.random();
+      const shinyChance = dexRewardActive('shinyCharm') ? 1 / 32 : 1 / 64;
       if (roll < 1 / 220) { brick.poke = { id: -1, t: 'normal' }; brick.hp = brick.maxHp = 1; }
-      else if (roll < 1 / 220 + 1 / 64) { brick.shiny = true; getSprite(id, true); }
-      else if (roll < 1 / 220 + 1 / 64 + 1 / 45) { brick.isDitto = true; }
+      else if (roll < 1 / 220 + shinyChance) { brick.shiny = true; getSprite(id, true); }
+      else if (roll < 1 / 220 + shinyChance + 1 / 45) { brick.isDitto = true; }
       G.bricks.push(brick);
     }
   }
@@ -912,7 +929,7 @@ function buildLevel(lvl) {
   if (G.mode === 'junkie' && lvl === 2) {
     setAnnounce('shield', '#4dd0e1', 'SHELL ARMOR!',
       'NORMAL BOLTS BOUNCE OFF THE ARMORED ONES', 3.6,
-      IS_TOUCH ? 'DOUBLE-TAP + HOLD THE FIRE PAD TO CHARGE A SHOT'
+      IS_TOUCH ? 'HOLD THE FIRE PAD TO CHARGE A SHOT'
         : 'HOLD RIGHT-CLICK OR SHIFT TO CHARGE A SHOT');
   }
   // ---- starter evolution: the partner grows with the journey ----
@@ -1018,6 +1035,13 @@ function resetRun(startLevel = 1, trial = false) {
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
+  // Pokédex research bonuses apply once at the start of a true new journey.
+  // Region resumes and trial jumps cannot repeatedly farm the start package.
+  if (!trial && startLevel === 1) {
+    if (dexRewardActive('fieldKit')) G.shieldCharges = 1;
+    if (dexRewardActive('megaSpark')) G.mega = 0.25;
+    if (dexRewardActive('veteran')) { G.lives++; G.livesMax++; }
+  }
   // starting deep? bank the skill-tree advances you'd have earned on the way
   let granted = 0;
   if (startLevel > 1) {
@@ -1071,7 +1095,12 @@ function burst(x, y, color, n = 18, speed = 260, life = 0.7) {
   }
 }
 function addFloater(x, y, text, color, size = 16) {
-  G.floaters.push({ x, y, text, color, size, life: 1.1 });
+  // Nearby rewards used to print directly on top of one another (rally, type,
+  // score, and power-up text could all land on the same ball). Give each local
+  // burst a tiny vertical lane and cap the transient queue.
+  const nearby = G.floaters.filter(f => f.life > 0.45 && Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 72).length;
+  G.floaters.push({ x, y: Math.max(28, y - nearby * 20), text, color, size, life: 1.1 });
+  if (G.floaters.length > 14) G.floaters.splice(0, G.floaters.length - 14);
 }
 // expanding shockwave ring — the modern "kill pop". Additive, cheap, capped.
 function ringFx(x, y, color, r0 = 6, r1 = 40, lw = 3, life = 0.38) {

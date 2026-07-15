@@ -516,12 +516,14 @@ window.requestAnimationFrame = function () { return 0; };
     try {
       for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
-        const L = menuLayout(), S = setupLayout(), U = upgradeLayout();
-        const rects = { exp: L.exp, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+        const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
+        const rects = { quick: L.quick, exp: L.exp, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+          advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
         for (let i = 0; i < 2; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = S.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = S.chip(i);
+        for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
         count = Object.keys(rects).length;
         for (const [name, r] of Object.entries(rects)) {
@@ -536,6 +538,18 @@ window.requestAnimationFrame = function () { return 0; };
     }
     assert(bad.length === 0, 'geometry off-screen: ' + bad.join(' ; '));
     return '5 viewports × ' + count + ' rects (both menu pages) all on-screen';
+  });
+
+  test('guided onboarding + Pokédex research progression', async () => {
+    const junkFire = starterModeCopy('fire', 'junkie', 1);
+    const blastWater = starterModeCopy('water', 'blaster', 3);
+    assert(junkFire && !/PADDLE|BALL/.test(junkFire.tier), 'junkie fire copy leaks paddle/ball language');
+    assert(blastWater && /28%/.test(blastWater.tier), 'blaster water tier 3 copy does not match mechanics');
+    assert(DEX_REWARDS.length === 5, 'expected 5 research rewards, got ' + DEX_REWARDS.length);
+    assert(DEX_REWARDS.every((r, i) => r.at > 0 && (!i || r.at > DEX_REWARDS[i - 1].at)),
+      'research thresholds must be positive and strictly increasing');
+    assert(Object.prototype.hasOwnProperty.call(SETTINGS, 'autoFire'), 'auto-fire setting missing');
+    return 'Quick Start geometry; mode-safe starter copy; 5 escalating Pokédex rewards; optional auto-fire';
   });
 
   // 7) storage corruption recovery — never destroys the real save (finally-restore)

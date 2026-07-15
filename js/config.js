@@ -10,7 +10,7 @@ const PRESETS = {
 };
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
-    reduceShake: false, reduceFlash: false, hcBall: false, mode: 'classic' },
+    reduceShake: false, reduceFlash: false, hcBall: false, autoFire: false, mode: 'classic' },
   (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}')));
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
 // game MODE — the FIRST choice, on the title screen. Two headliners (the
@@ -57,7 +57,7 @@ function diff() {
     dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
       * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
       * (1 + 0.5 * upgN('fortune')), // Bond path tier 3
-    catchChance: 0.07,
+    catchChance: 0.07 * (dexRewardActive('lucky') ? 1.25 : 1),
   };
 }
 const SLIDERS = [
@@ -74,6 +74,7 @@ const TOGGLES = [
   { key: 'reduceShake', label: 'REDUCE SCREEN SHAKE' },
   { key: 'reduceFlash', label: 'REDUCE FLASHES' },
   { key: 'hcBall', label: 'HIGH-CONTRAST BALL' },
+  { key: 'autoFire', label: 'AUTO-FIRE (SHOOTER MODES)' },
 ];
 const STARTERS = [
   { key: 'none', label: 'NONE' },
@@ -108,13 +109,17 @@ function menuLayout() {
   const footerH = short ? 22 : 28;
   const padB = short ? 6 : 14;
   const cardsY = tagY + (short ? 10 : 16);
+  const quickH = short ? 28 : 40;
+  const quickW = Math.min(360, W * 0.88);
+  const quickY = cardsY;
+  const heroY = quickY + quickH + (short ? 7 : 10);
   const bottom = H - padB;
   const footerY = bottom - footerH;
   const resumeY = footerY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
   const expY = (hasCkpt ? resumeY : footerY) - expH - (short ? 6 : 10);
   const cardsBot = expY - (short ? 6 : 12);
   const cardW = stacked ? Math.min(W * 0.94, 540) : (Math.min(W * 0.96, 1240) - gap) / 2;
-  const cardsH = Math.max(short ? 110 : 190, cardsBot - cardsY);
+  const cardsH = Math.max(short ? 110 : 190, cardsBot - heroY);
   const cardH = stacked ? (cardsH - gap) / 2 : cardsH;
   const left = stacked ? W / 2 - cardW / 2 : W / 2 - (cardW * 2 + gap) / 2;
   const expW = Math.min(440, W * 0.86);
@@ -122,9 +127,10 @@ function menuLayout() {
   const fW = Math.min(230, (W - 44) / 2);
   return {
     s, short, stacked, oneRow: true, titleY, titleSize, tagY, pickLabelY: tagY,
+    quick: { x: W / 2 - quickW / 2, y: quickY, w: quickW, h: quickH },
     card: i => stacked
-      ? { x: W / 2 - cardW / 2, y: cardsY + i * (cardH + gap), w: cardW, h: cardH }
-      : { x: left + i * (cardW + gap), y: cardsY, w: cardW, h: cardH },
+      ? { x: W / 2 - cardW / 2, y: heroY + i * (cardH + gap), w: cardW, h: cardH }
+      : { x: left + i * (cardW + gap), y: heroY, w: cardW, h: cardH },
     exp: { x: W / 2 - expW / 2, y: expY, w: expW, h: expH },
     resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
     dex: { x: W / 2 - fW - 10, y: footerY, w: fW, h: footerH },
@@ -190,13 +196,15 @@ function setupLayout() {
 // advanced settings overlay (sliders + accessibility toggles)
 function advLayout() {
   const pw = Math.min(440, W * 0.92);
-  const rowH = 52, togH = 40;
-  const ph = 74 + SLIDERS.length * rowH + TOGGLES.length * togH + 54;
-  const px = W / 2 - pw / 2, py = Math.max(20, H / 2 - ph / 2);
+  const compact = H < 560;
+  const rowH = compact ? 38 : 52, togH = compact ? 30 : 40;
+  const top = compact ? 60 : 74, bottom = compact ? 26 : 54;
+  const ph = top + SLIDERS.length * rowH + TOGGLES.length * togH + bottom;
+  const px = W / 2 - pw / 2, py = Math.max(compact ? 8 : 20, H / 2 - ph / 2);
   return {
-    px, py, pw, ph,
-    slider: i => ({ x: px + 36, y: py + 88 + i * rowH, w: pw - 72 }),
-    toggle: i => ({ x: px + 30, y: py + 74 + SLIDERS.length * rowH + i * togH, w: pw - 60, h: togH - 8 }),
+    px, py, pw, ph, compact,
+    slider: i => ({ x: px + 36, y: py + (compact ? 72 : 88) + i * rowH, w: pw - 72 }),
+    toggle: i => ({ x: px + 30, y: py + top + SLIDERS.length * rowH + i * togH, w: pw - 60, h: togH - (compact ? 4 : 8) }),
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };
 }

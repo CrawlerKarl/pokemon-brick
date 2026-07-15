@@ -19,8 +19,8 @@ function touchButtons() {
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
   // and the ball is launched by tapping the playfield, not this pad. In the
-  // shooter modes this ONE pad also charges (double-tap + hold), so there is
-  // no separate CHARGE pad and the other thumb is free to fly/steer.
+  // shooter modes this ONE pad also charges when held, so there is no separate
+  // CHARGE pad and the other thumb is free to fly/steer.
   if (blasterArmed()) b.fire = { x: W - 58, y: base - 42, r: 42 };
   return b;
 }
@@ -35,15 +35,15 @@ window.addEventListener('mouseup', () => { if (dragSlider >= 0) { dragSlider = -
 // ghost click was instantly UN-pausing right after the pause button paused.
 // Any recent touch mutes the mouse path entirely.
 let lastTouchT = -9999;
-// Space Junkie firing: hold the button and the blaster keeps firing until
-// the heat lockout stops you — release, vent on a return, resume
+// Desktop left-click and CLASSIC's earned touch blaster can repeat while held.
+// Shooter-mode touch uses the tap-or-hold intent path below instead.
 let fireHeld = false, fireTouchId = null;
-let chargeHeld = false, chargeTouchId = null; // charge a big shot (right-click / Shift / double-tap-hold FIRE)
-// One thumb does it all: the FIRE pad also charges. A double-tap whose SECOND
-// press is HELD winds up a charged shot (no separate pad, no thumb-switching);
-// a quick double-tap is just two normal shots, so rapid-firing never charges.
-let lastFireDownT = -9999, chargePendingId = null, chargePendingT = 0;
-const DOUBLE_TAP_MS = 300, CHARGE_HOLD_MS = 140;
+let chargeHeld = false, chargeTouchId = null; // charge a big shot (right-click / Shift / hold FIRE)
+// One thumb does it all in shooter modes: release a quick FIRE-pad tap for one
+// normal shot, or keep holding past this short intent threshold to charge. The
+// threshold prevents ordinary taps from becoming tiny accidental charge shots.
+let touchFirePendingId = null, touchFirePendingT = 0;
+const TOUCH_CHARGE_HOLD_MS = 220;
 const uiTouchIds = new Set(); // touches claimed by on-screen buttons
 window.addEventListener('mousedown', e => {
   if (performance.now() - lastTouchT < 900) return;
@@ -86,12 +86,18 @@ window.addEventListener('touchstart', e => {
       // yanking the paddle to the FIRE button's side of the screen)
       if (B.fire && inCircle(x, y, B.fire, 22)) {
         uiTouchIds.add(t.identifier);
-        const now = performance.now();
-        // second tap of a quick double-tap (shooter modes): hold it to CHARGE
-        const dbl = G.mode !== 'classic' && now - lastFireDownT < DOUBLE_TAP_MS;
-        lastFireDownT = now;
-        if (dbl) { chargePendingId = t.identifier; chargePendingT = now; }
-        else { fireAction(); fireHeld = true; fireTouchId = t.identifier; }
+        if (G.mode !== 'classic' && G.state === 'play') {
+          // Delay only shooter-mode touch fire long enough to distinguish a
+          // tap from a hold. A second finger cannot steal an active FIRE touch.
+          if (touchFirePendingId === null && chargeTouchId === null) {
+            touchFirePendingId = t.identifier;
+            touchFirePendingT = performance.now();
+          }
+        } else {
+          // CLASSIC (and serve launch) keep their immediate press/held-fire
+          // behavior exactly as before.
+          fireAction(); fireHeld = true; fireTouchId = t.identifier;
+        }
         continue;
       }
       if (inCircle(x, y, B.mega, 12)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
@@ -140,9 +146,9 @@ window.addEventListener('touchend', e => {
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
     if (t.identifier === chargeTouchId) { chargeTouchId = null; chargeHeld = false; }
-    // a second-tap released before it charged (held < CHARGE_HOLD_MS) is just
-    // a quick second shot, not a charge
-    if (t.identifier === chargePendingId) { chargePendingId = null; fireAction(); }
+    // Releasing before the hold threshold is a normal tap. Once promoted to a
+    // charge, release is handled above and update() fires the built-up shot.
+    if (t.identifier === touchFirePendingId) { touchFirePendingId = null; fireAction(); }
     if (G.state === 'dex' && onPressDexTapPending && Math.abs(t.clientY - dexDragStart) < 10) {
       onPress(onPressDexTapPending.x, onPressDexTapPending.y);
     }
@@ -158,8 +164,11 @@ window.addEventListener('touchcancel', e => {
     uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
-    if (t.identifier === chargeTouchId) { chargeTouchId = null; chargeHeld = false; }
-    if (t.identifier === chargePendingId) chargePendingId = null; // cancelled, no shot
+    if (t.identifier === chargeTouchId) {
+      chargeTouchId = null; chargeHeld = false;
+      G.charge = 0; // a system-cancel is not a deliberate charged-shot release
+    }
+    if (t.identifier === touchFirePendingId) touchFirePendingId = null; // cancelled, no shot
   }
   onPressDexTapPending = null; dexDragY = null;
 });
@@ -483,6 +492,16 @@ function onPress(x, y) {
     // PAGE 1 — pick your game: two headliner cards + the experimental chip
     const L = menuLayout();
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
+    if (inRect(x, y, L.quick)) {
+      // One confident first-run path: the most legible mode, forgiving
+      // difficulty, and a partner whose ability is immediately visible.
+      SETTINGS.mode = 'classic';
+      SETTINGS.preset = 'easy';
+      SETTINGS.starter = 'fire';
+      saveSettings();
+      resetRun();
+      return;
+    }
     for (let i = 0; i < MODES.length; i++) {
       if (inRect(x, y, i < 2 ? L.card(i) : L.exp)) {
         SETTINGS.mode = MODES[i].key; saveSettings();
