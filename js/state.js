@@ -162,7 +162,15 @@ function applyPower(p, srcType) {
   };
   switch (p.key) {
     case 'fire':   bump('fx_fire', 10); break;
-    case 'laser':  bump('fx_laser', 9); break;
+    case 'laser':
+      bump('fx_laser', 9);
+      // first laser of a classic run = the blaster tutorial moment
+      if (G.mode === 'classic' && !G.blasterTutDone) {
+        G.blasterTutDone = true;
+        setAnnounce('laser', '#4dd0e1', 'BLASTER ARMED!',
+          (IS_TOUCH ? 'HOLD THE FIRE PAD' : 'HOLD CLICK') + ' — BOLTS BREAK THE ENERGY VEILS', 3.6);
+      }
+      break;
     case 'wide':   bump('fx_wide', 14); break;
     case 'slow':   bump('fx_slow', 8); break;
     case 'magnet': bump('fx_magnet', 12); break;
@@ -707,7 +715,15 @@ function buildLevel(lvl) {
         dir: (q.dir || 1) * mirror, spd: q.spd || 1, ph: q.ph || 0, role: q.role || 'core',
       };
       clampOpen(g, geo.openTop, geo.floorY);
-      resolved.push({ ...g, cx0: g.cx, cy0: g.cy, rx0: g.rx, ry0: g.ry });
+      // squad-level INGRESS: the whole formation floats in as ONE body —
+      // members hold their pattern slots the entire way (like a flight of
+      // ships arriving already in formation), no per-rider pile-up + shove
+      const inSide = Math.sign(g.cx - W / 2) || (s % 2 ? 1 : -1);
+      resolved.push({
+        ...g, cx0: g.cx, cy0: g.cy, rx0: g.rx, ry0: g.ry,
+        inDx: inSide * (W / 2 + g.rx + 140), inDy: -70 - s * 24,
+        inDelay: s * 0.55, inDur: 1.8,
+      });
       // tiers ride the ROLE: elites are the evolved, larger, tankier flocks
       const tier = g.role === 'elite' && regionsIn >= 3 ? 3
         : (g.role === 'elite' || (s === C.squads.length - 1 && regionsIn >= 2)) ? 2 : 1;
@@ -716,17 +732,23 @@ function buildLevel(lvl) {
       const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad
       const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.6 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
-      const side = Math.sign(g.cx - W / 2) || (s % 2 ? 1 : -1);
+      const R = resolved[resolved.length - 1];
       for (let j = 0; j < perS; j++) {
-        // shared entrance train: the squad pours in nose-to-tail from ITS side
-        const sx = side > 0 ? W + 60 + j * 46 : -60 - j * 46;
-        const sy = geo.openTop + s * 30 + (j % 4) * 22;
+        // members are IN FORMATION from frame 0 (state 2) — spawned on their
+        // actual pattern slot relative to the off-screen ingress anchor; the
+        // encounter controller then glides the whole formed body on station
+        const p0 = flightPos({
+          kind: g.kind, cx: g.cx + R.inDx, cy: Math.max(40, g.cy + R.inDy),
+          rx: g.rx, ry: g.ry, spd: g.spd,
+          phase: j / perS + (g.ph || 0), n: perS, dir: g.dir, strand: j % 2,
+        }, 0);
+        const sx = p0.x, sy = p0.y;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
           w: mw * sizeMul, h: mh * sizeMul, hp, maxHp: hp,
           poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
           flight: {
-            kind: g.kind, state: 1, t: -(0.3 + j * 0.18 + s * 0.55), sx, sy, sq: s,
+            kind: g.kind, state: 2, t: 0, sx, sy, sq: s, launch: 0,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
             phase: j / perS + (g.ph || 0), n: perS, dir: g.dir, strand: j % 2,
           },
@@ -779,6 +801,22 @@ function buildLevel(lvl) {
   } else {
     setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4,
       [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
+  }
+  // ---- ENERGY VEILS (classic challenge waves): cyan casings the BALL can't
+  // crack — only blaster-family fire (bolts, support lasers, missiles) breaks
+  // them. Kanto's challenge wave doubles as the blaster tutorial: it always
+  // seeds a LASER drop (damageBrick) and an emergency one if you're stranded.
+  if (G.mode === 'classic' && !hasBoss && stage === 1) {
+    const vPool = G.bricks.filter(b => !b.isBoss && !b.armored && !b.flight);
+    for (let i = vPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [vPool[i], vPool[j]] = [vPool[j], vPool[i]];
+    }
+    const nV = Math.min(vPool.length, lvl === 2 ? 3 : Math.min(6, 2 + Math.floor(regionsIn / 2)));
+    for (let i = 0; i < nV; i++) vPool[i].veil = true;
+    if (lvl === 2) setAnnounce('laser', '#4dd0e1', 'ENERGY VEILS!',
+      'THE BALL BOUNCES OFF THE GLOWING CASINGS', 3.4,
+      'CATCH A LASER DROP — ARM YOUR BLASTER TO BREAK THEM');
   }
   // ---- starter evolution: the partner grows with the journey ----
   const sm = STARTER_MON[G.starter];
@@ -879,6 +917,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.starterLvl = starterStage(startLevel);
   G.torrentCount = 0; G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
+  G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
   // starting deep? bank the skill-tree advances you'd have earned on the way

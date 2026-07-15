@@ -597,6 +597,28 @@ function drawBricks() {
     // HP dial: ring + number, mirroring the type badge — corner-anchored so
     // it never covers the Pokémon. Small cards only show it once damaged;
     // horde-sized cards never do (the damage dimming carries the info).
+    if (br.veil) {
+      // ENERGY VEIL: a humming cyan casing — the unmistakable tell that only
+      // blaster fire gets through (strokes only, no per-frame gradients)
+      const va = 0.5 + 0.28 * Math.sin(G.time * 3 + br.wobble);
+      ctx.save();
+      roundRect(x - hw - 2.5, y - hh - 2.5, br.w + 5, br.h + 5, 9);
+      ctx.strokeStyle = `rgba(77,208,225,${va})`;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(77,208,225,0.25)';
+      ctx.lineWidth = 1;
+      const sweep = (G.time * 36) % 16;
+      for (let vx2 = -hw - 16; vx2 < hw + 16; vx2 += 16) {
+        ctx.beginPath();
+        ctx.moveTo(x + vx2 + sweep, y - hh);
+        ctx.lineTo(x + vx2 + sweep - 9, y + hh);
+        ctx.stroke();
+      }
+      ctx.restore();
+      drawGlyph(ctx, 'laser', x + hw - 8, y - hh + 8, 4.5, '#4dd0e1');
+    }
     if (!br.isBoss && br.maxHp > 1 && !tinyCard && !(smallCard && br.hp >= br.maxHp)) {
       const cRad = smallCard ? 6.5 : Math.min(10, br.h * 0.22);
       const cX = x - hw + cRad + (smallCard ? 3 : 5);

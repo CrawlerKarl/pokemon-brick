@@ -3,10 +3,10 @@
 //  SETTINGS & DIFFICULTY (all knobs in one place)
 // ============================================================
 const PRESETS = {
-  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.42, shotSpeed: 0.65, bossHp: 0.6,  brickHp: 0.85, ballSpeed: 0.85, lives: 4 },
-  normal:   { label: 'NORMAL',   descent: 0.85, shotRate: 0.75, shotSpeed: 0.85, bossHp: 1,    brickHp: 1,    ballSpeed: 0.95, lives: 3 },
-  hard:     { label: 'HARD',     descent: 1.35, shotRate: 1.45, shotSpeed: 1.12, bossHp: 1.3,  brickHp: 1.2,  ballSpeed: 1.1,  lives: 3 },
-  nuzlocke: { label: 'NUZLOCKE', descent: 1.6,  shotRate: 1.9,  shotSpeed: 1.25, bossHp: 1.5,  brickHp: 1.35, ballSpeed: 1.18, lives: 1 },
+  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.46, shotSpeed: 0.65, bossHp: 0.65, brickHp: 0.88, ballSpeed: 0.85, lives: 4 },
+  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 0.85, shotSpeed: 0.88, bossHp: 1.08, brickHp: 1.08, ballSpeed: 0.95, lives: 3 },
+  hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.6,  shotSpeed: 1.15, bossHp: 1.38, brickHp: 1.28, ballSpeed: 1.1,  lives: 3 },
+  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.05, shotSpeed: 1.28, bossHp: 1.58, brickHp: 1.42, ballSpeed: 1.18, lives: 1 },
 };
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
@@ -52,7 +52,7 @@ function diff() {
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
       * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
-      * (1 + 0.6 * upgN('fortune')), // Bond path tier 3
+      * (1 + 0.5 * upgN('fortune')), // Bond path tier 3
     catchChance: 0.07,
   };
 }

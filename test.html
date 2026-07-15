@@ -233,8 +233,8 @@ window.requestAnimationFrame = function () { return 0; };
   test('mode smoke: blaster', () => modeSmoke('blaster', 3000));
   test('mode smoke: junkie', () => modeSmoke('junkie', 3000));
 
-  test('upgrade tree: five balanced paths + two weapon identities', async () => {
-    assert(PATH_KEYS.length === 5, 'expected 5 paths, got ' + PATH_KEYS.length);
+  test('upgrade tree: six balanced paths + two weapon identities', async () => {
+    assert(PATH_KEYS.length === 6, 'expected 6 paths, got ' + PATH_KEYS.length);
     assert(PATH_KEYS.filter(k => PATHS[k].family === 'offense').length === 2,
       'expected exactly 2 offense paths');
     assert(PATH_KEYS.every(k => PATHS[k].tiers.length === 4), 'every path must have exactly 4 tiers');
@@ -248,11 +248,11 @@ window.requestAnimationFrame = function () { return 0; };
     G.state = 'play'; G.blasterCD = 0; G.shotsFired = 3; G.lasers = [];
     fireAction(); // fourth volley: Twin + Nova Round + Hyper Cycle
     assert(G.lasers.length === 2, 'Twin Cannon should create 2 bolts, got ' + G.lasers.length);
-    assert(G.lasers.every(l => l.powerMul === 0.65), 'Twin bolts must each deal 65% base damage');
+    assert(G.lasers.every(l => l.powerMul === 0.6), 'Twin bolts must each deal 60% base damage');
     assert(G.lasers.every(l => l.pulse && l.nova), 'fourth capped Impact volley was not a Nova pulse');
     assert(G.lasers.every(l => !l.hyper), 'old always-on Hyper pierce flag returned');
-    assert(Math.abs(G.blasterCD - 0.225) < 0.0001, 'Hyper Cycle cadence is not 25% faster');
-    return '5×4 tree; fair draft; Twin=2×65%; Nova every 4th; Hyper Cycle=−25% cooldown';
+    assert(Math.abs(G.blasterCD - 0.24) < 0.0001, 'Hyper Cycle cadence is not 20% faster');
+    return '6×4 tree; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−20% cooldown';
   });
 
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
@@ -317,6 +317,25 @@ window.requestAnimationFrame = function () { return 0; };
     assert(ERR.length === e0, 'errors during choreography test: ' + ERR.slice(e0).join(' | '));
     assert(fails.length === 0, fails.join(' ; '));
     return 'authored families across all 3 acts; Mewtwo wings anchored, re-centered after teleport';
+  });
+
+  // 2a-iii) ENERGY VEILS: classic challenge waves gate bricks behind the
+  // blaster — the ball and explosions can't scratch them, and the wave can
+  // never soft-lock (a laser drop is seeded/rescued).
+  test('energy veils: blaster-only bricks on classic challenge waves', async () => {
+    SETTINGS.mode = 'classic';
+    resetRun(2, true); // Kanto challenge — the blaster tutorial wave
+    const veils = G.bricks.filter(b => b.veil);
+    assert(veils.length >= 2, 'Kanto challenge should have ≥2 veiled bricks, got ' + veils.length);
+    const v = veils[0], hp0 = v.hp;
+    fireballExplosion(v.bx + G.fx, v.by + G.fy, 2); // explosions bounce off too
+    assert(v.hp === hp0, 'an explosion damaged a veiled brick (' + hp0 + ' → ' + v.hp + ')');
+    damageBrick(v, 1, v.bx, v.by, null); // blaster-family damage still works
+    assert(v.hp === hp0 - 1, 'direct blaster damage should still hurt a veiled brick');
+    SETTINGS.mode = 'junkie';
+    resetRun(2, true);
+    assert(!G.bricks.some(b => b.veil), 'veils are a classic-mode mechanic only');
+    return 'veils immune to ball/explosions, break to blaster damage; classic-only';
   });
 
   // 2b) classic lose-a-life: park the paddle away and let the ball drain

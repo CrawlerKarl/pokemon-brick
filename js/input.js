@@ -495,7 +495,7 @@ function fireAction(auto = false) {
   if (!blasterArmed()) return;
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
-  G.blasterCD = upgN('hyper') ? 0.225 : 0.3;
+  G.blasterCD = upgN('hyper') ? 0.24 : 0.3;
   G.shotsFired++;
   G.muzzle = 0.12;
   // heat: fire freely like a shooter — a long sustained stream (~15+ shots)
@@ -509,7 +509,7 @@ function fireAction(auto = false) {
   const masteryCool = Math.pow(0.94, G.stacks.ice || 0);
   // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
   // heat-limited well below the faster cadence and the capstone adds no DPS
-  const hyperCool = upgN('hyper') ? 0.8 : 1;
+  const hyperCool = upgN('hyper') ? 0.85 : 1;
   G.heat = Math.min(1, G.heat + 0.13 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
@@ -528,7 +528,7 @@ function fireAction(auto = false) {
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
       y: shipY() - 16, basic: true, // fires from wherever the ship flies
       explosive: !!G.fx_fire || G.megaT > 0,
-      powerMul: nBolts > 1 ? 0.65 : 1,
+      powerMul: nBolts > 1 ? 0.6 : 1,
       heavy: !!upgN('heavy'), pulse, nova: pulse && !!upgN('impactX'),
       mega: G.megaT > 0,
       shape: pil ? pil.shape : null,

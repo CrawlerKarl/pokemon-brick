@@ -121,7 +121,7 @@ phone — flag anything only verifiable there.
   ids are constrained to their region's roster — `verify-assets` + the test
   suite catch stragglers. Evolved species are bigger + tankier elites.
 - **Progression: paths + mastery + checkpoints.** Drafts advance the same
-  5-path × 4-tier tree (two distinct offense paths); junkie re-skins tiers as
+  6-path × 4-tier tree (two distinct offense paths; PRISM owns type-matchup mastery); junkie re-skins tiers as
   Pokémon items (`JUNKIE_ITEMS`). **Every tier must stay live in all three
   modes** — tiers carry an optional `sdesc` (shooter-mode text, `tierDesc`)
   and mode-aware wiring: shields ABSORB a lethal hit on the player in every

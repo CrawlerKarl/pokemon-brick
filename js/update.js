@@ -49,6 +49,22 @@ function tickEffects(dt) {
   }
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
+  G.veilHintCD = Math.max(0, (G.veilHintCD || 0) - dt);
+  // never strand a wave behind ENERGY VEILS: if only veiled bricks remain and
+  // the blaster is unarmed, command drops an emergency laser from on high
+  if (G.state === 'play' && G.mode === 'classic') {
+    G.rescueCD = Math.max(0, (G.rescueCD || 0) - dt);
+    if (G.rescueCD <= 0) {
+      const alive = G.bricks.filter(b => !b.dead);
+      if (alive.length && alive.every(b => b.veil) && !blasterArmed() &&
+          !G.powerups.some(p2 => p2.p && p2.p.key === 'laser')) {
+        G.rescueCD = 10;
+        G.powerups.push({ x: G.paddle.x, y: 60, vy: 100, p: POWERS.laser, rot: 0, hint: true });
+        addFloater(G.paddle.x, 95, 'EMERGENCY ARMAMENT!', '#4dd0e1', 14);
+        SFX.power();
+      } else G.rescueCD = 1.5;
+    }
+  }
 }
 
 // ball-only power-ups make no sense in the no-ball shooter modes — swap them
@@ -77,17 +93,18 @@ function damageBrick(br, dmg, sx, sy, element) {
   // Late-run mastery remains useful in every mode (ball, bolts, missiles,
   // explosions) without recreating the old giant weapon-capstone spike.
   if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
-  // type effectiveness: super effective ×2, resisted ×¼
+  // type effectiveness: super effective ×2 (PRISM AMPLIFY pushes it further),
+  // resisted ×¼ — unless the OMNI LENS capstone ignores resistances outright
   if (element && dmg < 90) {
     if ((EFFECTIVE[element] || []).includes(br.poke.t)) {
-      dmg *= 2;
+      dmg *= 2 * (upgN('amplify') ? 1.3 : 1);
       if (element === G.ballElement) G.resistStreak = 0;
       if (G.seCD <= 0) {
         addFloater(sx, sy - 20, 'SUPER EFFECTIVE!', '#ffd54f', 13);
         SFX.superFx();
         G.seCD = 0.45;
       }
-    } else if ((RESIST[element] || []).includes(br.poke.t)) {
+    } else if ((RESIST[element] || []).includes(br.poke.t) && !upgN('prismX')) {
       // resisted hits barely scratch — gentler on Easy, brutal beyond
       dmg *= SETTINGS.preset === 'easy' ? 0.5 : 0.25;
       if (G.seCD <= 0) {
@@ -95,8 +112,9 @@ function damageBrick(br, dmg, sx, sy, element) {
         tone(180, 0.1, 'sine', 0.04, -60);
         G.seCD = 0.45;
       }
-      // a badly-matched element eventually wears off — punishing, never a soft-lock
-      if (element === G.ballElement && ++G.resistStreak >= 4) {
+      // a badly-matched element eventually wears off — punishing, never a
+      // soft-lock. PRISM TRANSFUSE keeps your element lit no matter what.
+      if (!upgN('transfuse') && element === G.ballElement && ++G.resistStreak >= 4) {
         G.ballElement = null; G.resistStreak = 0;
         addFloater(sx, sy - 38, 'ELEMENT WORE OFF', '#cfd8dc', 12);
       }
@@ -217,6 +235,11 @@ function damageBrick(br, dmg, sx, sy, element) {
       if (stageIdx(G.level) === 0 && !br.isBoss && G.mode === 'classic') {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 95, p: POWERS.warp, rot: 0, hint: G.level === 1 });
       }
+      // Kanto's challenge wave TEACHES the blaster: the first kill always
+      // drops a LASER so the energy veils are breakable from the start
+      if (G.level === 2 && G.mode === 'classic') {
+        G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 30, vy: 105, p: POWERS.laser, rot: 0, hint: true });
+      }
     }
     // drops: power-up tied to type, or a catchable pokéball
     const d = diff();
@@ -247,7 +270,7 @@ function fireballExplosion(x, y, tier) {
   G.shake = Math.min(G.shake + 6, 12);
   noiseBurst(0.25, 0.1);
   for (const br of G.bricks) {
-    if (br.dead) continue;
+    if (br.dead || br.veil) continue; // veils shrug off explosions too
     const bx = br.bx + G.fx, by = br.by + G.fy;
     if (Math.hypot(bx - x, by - y) < radius + br.w / 2) damageBrick(br, 1, bx, by, 'fire');
   }
@@ -458,7 +481,7 @@ function collectPickup(pu) {
     // SPACE JUNKIE type changes are shorter-lived: they revert to the
     // pilot's base type on a visible timer
     G.ballElement = pu.p.t;
-    G.ballElementT = G.mode === 'junkie' ? 20 : 30;
+    G.ballElementT = (G.mode === 'junkie' ? 20 : 30) * (1 + 0.5 * upgN('attune')); // PRISM: ATTUNE
     G.resistStreak = 0;
     SFX.power();
     burst(pu.x, pu.y, TYPE_COLORS[pu.p.t], 16, 200);
@@ -797,7 +820,7 @@ function update(dt) {
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
       // COOLANT's shooter translation: a cooler barrel also charges faster
-      G.charge = Math.min(1, G.charge + dt / (upgN('coolant') ? 0.8 : 1.1)); // ~1.1s to full (0.8 w/ Coolant)
+      G.charge = Math.min(1, G.charge + dt / (upgN('heavy') ? 0.8 : 1.1)); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
     } else if (G.charge > 0) {
       fireCharge(G.charge);
       G.charge = 0; G.chargeCD = 0.25;
@@ -853,7 +876,8 @@ function update(dt) {
       const struggling = curEl && resisted >= alive.length * (jkOrbs ? 0.35 : 0.5);
       // orbs are a rescue mechanic, not a scheduled shower: quick when you're
       // genuinely walled off, otherwise scarce
-      G.elementOrbCD = struggling ? (jkOrbs ? 4 : 8) : jkOrbs ? 10 + Math.random() * 8 : 34 + Math.random() * 20;
+      G.elementOrbCD = (struggling ? (jkOrbs ? 4 : 8) : jkOrbs ? 10 + Math.random() * 8 : 34 + Math.random() * 20)
+        * (upgN('transfuse') ? 0.6 : 1); // PRISM: orbs flow faster
       if (struggling || Math.random() < (jkOrbs ? 0.7 : 0.22)) {
         // offer an element that's super effective against the dominant type
         const counts = {};
@@ -979,6 +1003,14 @@ function update(dt) {
         case 'blend': // mastery: the silhouette ITSELF morphs between kinds
           blend = 0.5 - 0.5 * Math.cos(et * Math.PI / 8); // full morph every 16s
           break;
+      }
+      // squad-level ingress: the whole formed body floats in from off-screen
+      // on an eased glide — decays to zero once the squad is on station
+      const ip = Math.min(1, Math.max(0, (et - (S.inDelay || 0)) / (S.inDur || 1.8)));
+      if (ip < 1) {
+        const e3 = 1 - Math.pow(1 - ip, 3);
+        cx += (S.inDx || 0) * (1 - e3);
+        cy += (S.inDy || 0) * (1 - e3);
       }
       S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;
     }
@@ -1269,7 +1301,9 @@ function update(dt) {
         const maxDivers = jk2 ? (regionsIn2 >= 7 ? 2 : 1) : 1 + Math.floor(regionsIn2 / 3);
         const diving = G.bricks.filter(b => !b.dead && b.dive).length;
         G.diveCD = Math.max(2.2, 7 - regionsIn2 * 0.5) * (0.7 + Math.random() * 0.5);
-        if (diving < maxDivers) {
+        if (diving < maxDivers &&
+            // no peel-offs while a junkie encounter is still floating in
+            !(jk2 && G.encounter && G.encounter.t < 2.6)) {
           let pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive && !b.guard);
           if (jk2 && G.encounter && G.encounter.attackSq >= 0) {
             const att = pool2.filter(b => b.flight && b.flight.sq === G.encounter.attackSq);
@@ -1491,13 +1525,29 @@ function update(dt) {
       const cy = Math.max(by - hh, Math.min(b.y, by + hh));
       const dx = b.x - cx, dy = b.y - cy;
       if (dx * dx + dy * dy < b.r * b.r) {
+        if (br.veil) {
+          // ENERGY VEIL: the ball simply can't crack it — solid bounce, zero
+          // damage (even pierced/mega balls). Blaster fire is the only answer.
+          const ox = (hw + b.r) - Math.abs(b.x - bx);
+          const oy = (hh + b.r) - Math.abs(b.y - by);
+          if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
+          else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
+          burst(b.x, b.y, '#4dd0e1', 6, 140, 0.3);
+          tone(980, 0.05, 'square', 0.03, -220);
+          if ((G.veilHintCD || 0) <= 0) {
+            G.veilHintCD = 4;
+            addFloater(bx, by - br.h / 2 - 10,
+              blasterArmed() ? 'BLASTER ONLY!' : 'NEED THE BLASTER — CATCH A LASER DROP', '#4dd0e1', 12);
+          }
+          break;
+        }
         const pierce = G.fx_fire || G.megaT > 0;
         if (pierce && !br.isBoss) {
           // Fireball torches blocks outright; bare Mega punches through for 3
           // with brief contact i-frames so a surviving block isn't melted
           // frame-by-frame as the ball ghosts through it
           if (br.flash <= 0.5) {
-            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 4.5 : 3), b.x, b.y, G.ballElement);
+            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 4.2 : 3), b.x, b.y, G.ballElement);
             if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
             awardRally(b, b.x, b.y);
           }
@@ -1507,7 +1557,7 @@ function update(dt) {
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
           // Blaze embers from the last paddle return add burn damage
-          let dmg = pierce ? (upgN('megaX') ? 4.5 : 3) : 1;
+          let dmg = pierce ? (upgN('megaX') ? 4.2 : 3) : 1;
           if (b.ember > 0) {
             b.ember--;
             dmg += G.starterLvl >= 3 ? 2 : 1;
@@ -1589,7 +1639,7 @@ function update(dt) {
         let dmg = L.charged ? L.power : (L.powerMul || 1);
         if (L.heavy) dmg *= 1.15;
         if (L.nova) dmg *= 2;
-        if (L.mega) dmg *= upgN('megaX') ? 1.5 : 1.25;
+        if (L.mega) dmg *= upgN('megaX') ? 1.4 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
         // MOMENTUM: in the shooter modes there are no paddle returns, so

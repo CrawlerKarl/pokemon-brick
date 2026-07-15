@@ -447,19 +447,26 @@ const MODIFIERS = [
 // ============================================================
 const PATHS = {
   arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', family: 'offense', color: '#80d8ff',
-    summary: 'COVER MORE LANES · LOWER DAMAGE PER BOLT', tell: 'CYAN MULTI-BARREL RIG', tiers: [
+    summary: 'RATE OF FIRE · COVER MORE LANES', tell: 'CYAN MULTI-BARREL RIG', tiers: [
+    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',     desc: 'BLASTER HEAT PER SHOT −25%' },
     { key: 'intercept', icon: 'target', name: 'INTERCEPTOR', desc: 'BOLTS DESTROY +1 ENEMY SHOT BEFORE FADING' },
-    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',     desc: 'BLASTER HEAT PER SHOT −25%',
-      sdesc: 'HEAT PER SHOT −25% · CHARGE SHOTS BUILD 35% FASTER' },
-    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON', desc: 'FIRE TWO BOLTS · EACH DEALS 65% DAMAGE' },
-    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'FIRES 25% FASTER · HEAT PER SHOT −20%' },
+    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON', desc: 'FIRE TWO BOLTS · EACH DEALS 60% DAMAGE' },
+    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'FIRES 20% FASTER · HEAT PER SHOT −15%' },
   ]},
-  impact: { name: 'IMPACT', role: 'HEAVY BLAST', family: 'offense', color: '#ff8a65',
+  impact: { name: 'IMPACT', role: 'HEAVY & CHARGE', family: 'offense', color: '#ff8a65',
     summary: 'FEWER, HEAVIER SHOTS · CHARGED HITS DETONATE', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
-    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT',    desc: 'BOLTS ARE 30% WIDER · DAMAGE +15%' },
+    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT',    desc: 'BOLTS ARE 30% WIDER · DAMAGE +15%',
+      sdesc: 'BOLTS 30% WIDER · DAMAGE +15% · CHARGE BUILDS 35% FASTER' },
     { key: 'demo',    icon: 'fire',   name: 'SPLASH CHARGE', desc: 'CHARGED SHOTS DETONATE — SPLASH DAMAGE AROUND THE HIT' },
     { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND',   desc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS' },
     { key: 'impactX', icon: 'star',   name: 'NOVA ROUND',    desc: 'PULSE EVERY 4TH VOLLEY · 2× DMG · BIGGER CHARGE BLAST' },
+  ]},
+  prism: { name: 'PRISM', role: 'TYPE MASTERY', family: 'element', color: '#26c6da',
+    summary: 'BEND TYPE MATCHUPS IN YOUR FAVOR', tell: 'TEAL PRISM FACETS', tiers: [
+    { key: 'attune',    icon: 'psychic',  name: 'ATTUNE',    desc: 'ELEMENT PICKUPS LAST 50% LONGER' },
+    { key: 'amplify',   icon: 'electric', name: 'AMPLIFY',   desc: 'SUPER-EFFECTIVE HITS DEAL +30% DAMAGE' },
+    { key: 'transfuse', icon: 'fairy',    name: 'TRANSFUSE', desc: 'ELEMENT ORBS ARRIVE 40% SOONER · BAD MATCHUPS NEVER BURN YOUR ELEMENT OFF' },
+    { key: 'prismX',    icon: 'dragon',   name: 'OMNI LENS', desc: 'RESISTANCES IGNORED — NOTHING SHRUGS OFF YOUR ELEMENT' },
   ]},
   aegis: { name: 'AEGIS', role: 'SURVIVAL', family: 'defense', color: '#66bb6a',
     summary: 'SHIELDS ABSORB LETHAL HITS · RECHARGING DEFENSE', tell: 'GREEN ARMOR SOCKETS + SHIELD BUBBLE', tiers: [
@@ -477,14 +484,14 @@ const PATHS = {
     { key: 'rally',     icon: 'star', name: 'RALLY MASTER',   desc: 'KILLS CHARGE MEGA · BARRIER +1 · RALLY SCORE +50%',
       sdesc: 'KILLS CHARGE MEGA ×2.5 · COMBO SCORE +50%' },
     { key: 'blaze',     icon: 'fire', name: 'OVERDRIVE CORE', desc: 'MEGA LASTS 7s · FIRE BLASTS 35% LARGER' },
-    { key: 'megaX',     icon: 'mega', name: 'APEX MEGA',      desc: 'MEGA LASTS 9s · ATTACK DAMAGE +50%' },
+    { key: 'megaX',     icon: 'mega', name: 'APEX MEGA',      desc: 'MEGA LASTS 9s · ATTACK DAMAGE +40%' },
   ]},
   bond: { name: 'BOND', role: 'PICKUPS & SCORE', family: 'utility', color: '#ec407a',
     summary: 'MORE DROPS · SAFER CATCHES · EXTRA LIVES', tell: 'PINK MAGNET NODE', tiers: [
     { key: 'magnetize', icon: 'magnet',   name: 'ITEM MAGNET',    desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE',
       sdesc: 'PICKUPS DRIFT TOWARD YOU' },
     { key: 'bond',      icon: 'pokeball', name: "TRAINER'S BOND", desc: 'EACH CATCH: PERMANENT +6% SCORE' },
-    { key: 'fortune',   icon: 'coin',     name: 'FORTUNE',        desc: 'POWER-UP DROP CHANCE +60%' },
+    { key: 'fortune',   icon: 'coin',     name: 'FORTUNE',        desc: 'POWER-UP DROP CHANCE +50%' },
     { key: 'revive',    icon: 'heart',    name: 'POKÉ REVIVE',    desc: '+1 LIFE NOW · +1 LIFE EVERY REGION CLEARED' },
   ]},
 };
@@ -493,8 +500,9 @@ const PATH_KEYS = Object.keys(PATHS);
 // Pokémon items your pilot would actually hold — one per path tier, each
 // appearing as a badge orbiting the ship when earned.
 const JUNKIE_ITEMS = {
-  arsenal: ['SCOPE LENS', 'MYSTIC WATER', 'CHOICE SPECS', 'QUICK CLAW'],
+  arsenal: ['MYSTIC WATER', 'SCOPE LENS', 'CHOICE SPECS', 'QUICK CLAW'],
   impact:  ['MUSCLE BAND', 'BLAST SEED', 'RAZOR CLAW', 'LOADED DICE'],
+  prism:   ['PRISM SCALE', 'WISE GLASSES', 'CELL BATTERY', 'LEGEND PLATE'],
   aegis:   ['FOCUS BAND', 'EVIOLITE', 'LEFTOVERS', 'ASSAULT VEST'],
   surge:   ['POWER HERB', 'METRONOME', 'CHARCOAL', 'MEGA STONE'],
   bond:    ['MAGNET', 'SOOTHE BELL', 'AMULET COIN', 'MAX REVIVE'],

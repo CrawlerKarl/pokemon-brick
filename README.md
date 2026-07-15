@@ -257,7 +257,7 @@ i-frame, so a per-render-frame decay would couple DPS to the display's refresh
 rate. **Rule: mutate any field gameplay reads in `update`; render only reads.**
 
 ### Skill tree (`PATHS` in data.js ~423)
-Five paths × four tiers, **permanent**, drafted between every wave. Advancing
+Six paths × four tiers, **permanent**, drafted between every wave. Advancing
 is `advancePath(key)`. The hand guarantees an offense option and a non-offense
 option while both groups remain, so damage never crowds survival/utility off
 the screen:
