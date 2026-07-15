@@ -1,5 +1,14 @@
 # Space Junkie Motion Plan V2 — Rigid Bodies, Living Slots
 
+> **STATUS: EXECUTED (2026-07-15).** All five steps shipped, plus the
+> sentinel-trio redesign (three cycling formations + typed specials).
+> Notable deviations found during implementation: anchor patrol must share
+> ONE phase across squads (concentric rings drift apart otherwise); frozen
+> `lane` slots need `ry × 0.28` (sine scatter reads as a ragged band);
+> concentric families startle with a SPIN because a scatter-swollen inner
+> ring collides with its outer; the solver returns as a safety net only
+> while a maneuver runs.
+
 ## Goal
 
 Make every Space Junkie wave read like the 1997 original and its Galaga

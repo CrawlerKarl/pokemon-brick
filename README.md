@@ -12,7 +12,9 @@ plus **BLASTER**, the experimental ball-less hybrid. Runs auto-save at each
 region — pick up with CONTINUE. The journey is a three-act play (gens 1–3 /
 4–6 / 7–9): each act boundary lands on a partner evolution and plays a full
 evolution ceremony, and Space Junkie's wave choreography develops one
-movement verb per act — ASSEMBLE, TRANSFORM, COMBINE.
+movement verb per act — ASSEMBLE, TRANSFORM, COMBINE. Every region's finale
+is THE GAUNTLET: a three-round title fight (sub-legendary sentinels → the
+legendary → the mythical).
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -233,6 +235,62 @@ region's roster — `verify-assets` + the test suite catch stragglers. Packs
 span evolution tiers, so an unevolved squad flies under an evolved elite of
 its own line. The stage banner names the ecology.
 
+### Space Junkie motion V2 — rigid bodies, living slots
+(Design doc: `SPACE_JUNKIE_MOTION_PLAN_V2.md` — EXECUTED.) Every junkie wave
+is ONE authored encounter (`JUNKIE_CHOREO`, state.js): squads never roll
+their own pattern. Hold-state slots are FROZEN lattices (`flight.spd = 0`;
+only `rotary` families — carousel/nested/moons/eclipse/bloom — keep a capped
+slow spin). The BODY does the moving: one shared patrol glide (~14% W, 8s,
+all squads on ONE phase — concentric rings must never drift apart), the
+Galaga THROB (slot frame breathes ±5%, squad-synced clock), squad-synced
+idle bob phases. Squads ENTER as spline trains (corner → across mid-screen
+→ up into the formation edge; riders nose-to-tail 0.22s apart, firing on
+the way, ease-out-back settle; `flight.entering` excludes them from the
+solver + tests). The separation solver is BYPASSED for settled slot members
+and returns only while a maneuver runs; concentric families startle with a
+SPIN (a scatter-swollen inner ring collides with its outer). Dives veer
+toward the player's LIVE position; a squad falls silent ~1.5s when its
+elite dies. Kill-release is smooth: eased sep offsets (fast build, ~0.4s
+drain) mean a death leaves an honest Galaga gap, never a snap.
+
+### Charge-gated content (the charge shot always matters)
+- **ENERGY VEILS** (classic challenge waves): cyan casings the BALL cannot
+  crack — only blaster-family fire breaks them. Kanto 2/3 is the blaster
+  tutorial (guaranteed LASER drop, BLASTER ARMED callout, emergency rescue
+  drop so a wave can never soft-lock).
+- **SHELL ARMOR** (junkie, region 2+ elites; 3 tutors on Kanto 2/3): normal
+  bolts plink off; ONE charged shot cracks the shell. A bright persistent
+  banner teaches the charge until the player's first charged shot
+  (`G.chargedEver`).
+- **ROCK TOMB barriers** (junkie, region 2+): drifting boulder Pokémon
+  (Geodude line by act) that absorb normal bolts — charged only. They never
+  block a wave clear (crumble when the last real enemy falls), drop nothing.
+- Charged shots also punch THROUGH up to two enemy shots (+Interceptor).
+
+### THE GAUNTLET — every region's finale (`gen.gauntlet`, data.js)
+Three rounds, difficulty scaling: **Round 1** — the SENTINELS (Kanto: the
+legendary birds; each gen has its trio + mythical authored in data.js) run a
+dedicated controller cycling THREE formations (rotating triangle, sweeping
+battle line, weaving sentry posts) with TYPED specials on a 4.8–7.4s cadence
+(`subAbility`: Frost Fan, Bolt Strike columns, Ember Rain, Tidal Line,
+Boulder Toss, Flash Cannon, Warp Pulse, Spore Burst, Dragon Pulse) — they
+are OUT of the regular fire pool. The legendary lies `dormant` (parked at
+x=-2000, skipped everywhere). **Round 2** — `gauntletWake()`: the legendary
+descends with its wing guards. **Round 3** — `gauntletSummonMythic()`: the
+mythical (0.6× HP, 0.7× fire interval, MYTHIC BLINK teleport-burst, erratic
+drift). Trial mode can jump straight to any round. Fire-by-rank everywhere:
+unevolved = straight bolt; evolved elites (`br.elite ≥ 2`) = AIMED heavy
+splash; sentinels = aimed 3-shot fans.
+
+### Boss arena archetypes (`BOSS_STYLE`, data.js)
+Every legendary owns its arena differently: Mewtwo's still high anchor,
+Lugia's mid-air figure-eight, Rayquaza's full-width serpent wave, Dialga
+locked mid-arena with CLOCKWORK rotating fire, Zekrom slamming flank to
+flank, Yveltal's corner-to-corner predator V, Lunala's lissajous glide,
+Eternatus riding the top rim raining straight bombs, Koraidon sprinting.
+Classic damps the vertical play (guard wall stays clear); wing arcs hug the
+boss; low-diving styles stay above the ship band.
+
 ### Boss battles (`drawBossMon` render.js, phases in `damageBrick`)
 Legendaries are **BARE** — a huge bare Pokémon holding the arena (breathing
 aura, orbiting energy ring, silhouette shadow + rim light, its own gait), never
@@ -334,10 +392,26 @@ possession, `barrierCharges`) that bounces the ball back up in empty columns
 only — it pinballs off lower blocks. `rally` counter on each ball → escalating
 score + Mega charge. **Sky Warp** power-up phases balls up through blocks.
 
-### Trial mode
-Menu → Trial → region×stage grid. `resetRun(startLevel, trial=true)` jumps in
-with authentic difficulty AND grants the tree advances you'd have earned.
-Trial runs never save best score or Pokédex catches (`G.trial` flag).
+### Trial mode (per-game, with gauntlet round picker)
+Trial lives on each game's SETUP page (inherits the chosen mode). Region ×
+stage grid; picking a LEGENDARY stage reveals a ROUND row (FULL GAUNTLET /
+★ the legendary by name / ✦ the mythical) — start jumps straight to that
+round via `gauntletWake()`/`gauntletSummonMythic()`. `resetRun(startLevel,
+trial=true)` grants the tree advances you'd have earned. Trial runs never
+save best score or Pokédex catches (`G.trial` flag).
+
+### Difficulty, progress safety, and cheats
+- **One journey curve** (`diff()`, config.js): smoothstep across the 9
+  regions — ×0.78 opening, ~×1.1 middle, ×1.4 finale — on minion fire,
+  boss cadence, and shot speed. Finale stages ease minion fire ×1.35 (the
+  boss is the show).
+- **Progress never wipes**: the region checkpoint saves from region 1 and
+  SURVIVES a true game over — CONTINUE always works. White-out still burns
+  2 tree levels and retries the wave.
+- **✦ CHEAT CODES** (`CHEAT_ITEMS` data.js, panel via pause screen only):
+  an ornate dashed-gold chip under QUIT TO MENU grants any power-up combo
+  (+shield/mega/life/element). First use sets `G.cheated` — best score is
+  not recorded that run.
 
 ---
 
