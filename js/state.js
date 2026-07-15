@@ -276,7 +276,7 @@ const JUNKIE_CHOREO = [
       { kind: 'arc', rx: 1, ry: 0.8, cy: 0.42, spd: 0.8, role: 'core' }] },
     challenge: { family: 'vanguardV', squads: [
       { kind: 'chevron', rx: 1, ry: 0.9, cy: 0.45, spd: 0.9, role: 'attacker' }] } },
-  { arrival: { family: 'carousel', squads: [
+  { arrival: { family: 'carousel', rotary: true, squads: [
       { kind: 'ring', rx: 1, ry: 1, cy: 0.5, spd: 0.8, role: 'wing', share: 3 },
       { kind: 'ring', rx: 0.4, ry: 0.4, cy: 0.5, spd: 0.8, ph: 0.5, role: 'core', share: 1 }] },
     challenge: { family: 'twinCurrent', squads: [
@@ -304,20 +304,20 @@ const JUNKIE_CHOREO = [
       { kind: 'lane', rx: 1, ry: 0.34, cy: 0.22, spd: 1.05, role: 'core' },
       { kind: 'lane', rx: 1, ry: 0.34, cy: 0.5, spd: 1.05, ph: 0.33, role: 'wing' },
       { kind: 'lane', rx: 1, ry: 0.34, cy: 0.78, spd: 1.05, ph: 0.66, role: 'attacker' }] } },
-  { arrival: { family: 'nestedCarousel', squads: [
+  { arrival: { family: 'nestedCarousel', rotary: true, squads: [
       { kind: 'ring', rx: 1, ry: 1, cy: 0.5, dir: 1, spd: 0.7, role: 'wing' },
       { kind: 'ring', rx: 0.64, ry: 0.64, cy: 0.5, dir: -1, spd: 0.7, role: 'core' },
       { kind: 'ring', rx: 0.34, ry: 0.34, cy: 0.5, dir: 1, spd: 0.7, ph: 0.5, role: 'elite' }] },
-    challenge: { family: 'bloom', morph: 'bloom', squads: [
+    challenge: { family: 'bloom', rotary: true, morph: 'bloom', squads: [
       { kind: 'ring', rx: 0.9, ry: 0.9, cy: 0.5, spd: 0.75, role: 'core', share: 2 },
       { kind: 'ring', rx: 0.5, ry: 0.5, cy: 0.5, dir: -1, spd: 0.75, role: 'attacker' }] } },
   // ---- ACT 3 · MASTERY ----
-  { arrival: { family: 'binaryMoons', squads: [
+  { arrival: { family: 'binaryMoons', rotary: true, squads: [
       { kind: 'ring', rx: 0.42, ry: 0.6, cx: -0.24, cy: 0.42, spd: 0.9, role: 'core' },
       { kind: 'ring', rx: 0.2, ry: 0.3, cx: -0.24, cy: 0.42, dir: -1, spd: 0.9, role: 'wing' },
       { kind: 'ring', rx: 0.42, ry: 0.6, cx: 0.24, cy: 0.58, spd: 0.9, ph: 0.5, role: 'orbit' },
       { kind: 'ring', rx: 0.2, ry: 0.3, cx: 0.24, cy: 0.58, dir: -1, spd: 0.9, ph: 0.5, role: 'attacker' }] },
-    challenge: { family: 'eclipse', morph: 'eclipse', squads: [
+    challenge: { family: 'eclipse', rotary: true, morph: 'eclipse', squads: [
       { kind: 'ring', rx: 1, ry: 1, cy: 0.5, spd: 0.7, role: 'wing', share: 2 },
       { kind: 'ring', rx: 0.5, ry: 0.5, cy: 0.5, dir: -1, spd: 0.7, role: 'core' },
       { kind: 'ring', rx: 0.24, ry: 0.24, cy: 0.5, spd: 0.7, ph: 0.5, role: 'attacker' }] } },
@@ -442,22 +442,18 @@ function buildLevel(lvl) {
       const legend = G.bricks[G.bricks.length - 1];
       legend.dormant = true;
       legend.bx = legend.hx = -2000; // parked off-stage until round 2
-      G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp };
+      G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp, subT: 0, subAbilityCD: 4 };
       const subs = gen.gauntlet.subs;
-      const subHp = Math.max(4, Math.round(bossHp * (subs.length === 1 ? 0.7 : 0.3)));
+      const subHp = Math.max(5, Math.round(bossHp * (subs.length === 1 ? 0.85 : 0.42)));
       for (let i = 0; i < subs.length; i++) {
         const [sid, st2] = subs[i];
         G.bricks.push({
           bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -2, col: i,
           w: Math.min(92, bw * 1.25), h: Math.min(80, bh * 1.4),
           hp: subHp, maxHp: subHp, bare: true, subBoss: true, elite: 3,
+          subIdx: i, subN: subs.length,
           poke: { id: sid, t: st2, n: NAMES[sid] },
-          flash: 0, wobble: Math.random() * Math.PI * 2,
-          flight: {
-            kind: 'arc', state: 2, launch: 0, sq: null, t: 0,
-            cx: W / 2, cy: 148, rx: Math.min(W * 0.3, 300), ry: 42,
-            spd: 1.6, phase: i / subs.length, n: subs.length, dir: 1, strand: i % 2,
-          },
+          flash: 0, wobble: i * 2.1,
         });
         getSprite(sid);
       }
@@ -747,18 +743,28 @@ function buildLevel(lvl) {
         cx: W / 2 + (q.cx || 0) * usable * mirror,
         cy: geo.openTop + (q.cy ?? 0.5) * band,
         rx: usable * 0.34 * (q.rx || 1),
-        ry: band * 0.48 * (q.ry || 1),
-        dir: (q.dir || 1) * mirror, spd: (q.spd || 1) * 2.1, ph: q.ph || 0, role: q.role || 'core',
+        ry: band * 0.44 * (q.ry || 1),
+        // RIGID BODY, LIVING SLOTS: lattice families FREEZE their slots
+        // (spd 0 — the anchor, breath and entrance trains do the moving);
+        // only explicitly rotary families keep a capped, slow circulation
+        dir: (q.dir || 1) * mirror, spd: C.rotary ? (q.spd || 1) * 0.7 : 0,
+        ph: q.ph || 0, role: q.role || 'core',
       };
+      // frozen LANES are clean rows: with slots rigid, 'lane''s ry is pure
+      // vertical scatter — shrink it so ranks read as ranks and two lane
+      // squads can never statically interleave
+      if (!C.rotary && q.kind === 'lane') g.ry *= 0.28;
       clampOpen(g, geo.openTop, geo.floorY);
-      // squad-level INGRESS: the whole formation floats in as ONE body —
-      // members hold their pattern slots the entire way (like a flight of
-      // ships arriving already in formation), no per-rider pile-up + shove
+      // ENTRANCE TRAIN: a swooping 3-point spline from a top corner, across
+      // mid-screen, curving up into the formation's near edge — riders follow
+      // nose-to-tail and peel into their slots with a spring settle
       const inSide = Math.sign(g.cx - W / 2) || (s % 2 ? 1 : -1);
       resolved.push({
         ...g, cx0: g.cx, cy0: g.cy, rx0: g.rx, ry0: g.ry,
-        inDx: inSide * (W / 2 + g.rx + 140), inDy: -70 - s * 24,
-        inDelay: s * 0.55, inDur: 1.8,
+        e0x: inSide > 0 ? W + 90 : -90, e0y: 54,
+        e1x: W / 2 - inSide * W * 0.18, e1y: g.cy + band * 0.3,
+        e2x: g.cx - inSide * (g.rx * 0.7 + 30), e2y: g.cy,
+        inSide,
       });
       // tiers ride the ROLE: elites are the evolved, larger, tankier flocks
       const tier = g.role === 'elite' && regionsIn >= 3 ? 3
@@ -789,21 +795,19 @@ function buildLevel(lvl) {
         // members are IN FORMATION from frame 0 (state 2) — spawned on their
         // actual pattern slot relative to the off-screen ingress anchor; the
         // encounter controller then glides the whole formed body on station
-        const p0 = flightPos({
-          kind: g.kind, cx: g.cx + R.inDx, cy: Math.max(40, g.cy + R.inDy),
-          rx: g.rx, ry: g.ry, spd: g.spd,
-          phase: j / perS + (g.ph || 0), n: perS, dir: g.dir, strand: j % 2,
-        }, 0);
-        const sx = p0.x, sy = p0.y;
+        // riders wait OFF-SCREEN in train order at the spline's mouth
+        const sx = R.e0x + R.inSide * (30 + j * 34), sy = R.e0y + (j % 3) * 10;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
           w: mw * sizeMul, h: mh * sizeMul, hp, maxHp: hp,
           shellArmor: shellFor(j) || undefined, elite: tier >= 2 ? tier : 0,
-          poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
+          poke: { id, t }, flash: 0,
+          // squad-SYNCED idle phase: random phases make a clean rank shimmer
+          wobble: s * 1.3 + j * 0.35,
           flight: {
-            kind: g.kind, state: 2, t: 0, sx, sy, sq: s, launch: 0,
+            kind: g.kind, state: 2, t: 0, sx, sy, sq: s, launch: 0, choreo: true,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
-            inDelay: s * 0.9 + j * 0.32, inDx: R.inDx, inDy: R.inDy, entering: true,
+            inDelay: s * 0.9 + j * 0.22, inDur: 2.8, entering: true,
             phase: j / perS + (g.ph || 0), n: perS, dir: g.dir, strand: j % 2,
           },
         });
@@ -812,7 +816,7 @@ function buildLevel(lvl) {
     G.encounter = {
       family: C.family, act: actIdx(lvl) + 1,
       actBeat: stage === 0 ? 'establish' : 'escalate',
-      morph: C.morph || null, rotateAttack: C.rotateAttack || 0, t: 0,
+      morph: C.morph || null, rotateAttack: C.rotateAttack || 0, rotary: !!C.rotary, t: 0,
       squads: resolved, mirror,
       attackSq: resolved.findIndex(q => q.role === 'attacker'),
       openTop: geo.openTop, floorY: geo.floorY,

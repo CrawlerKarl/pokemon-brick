@@ -184,6 +184,11 @@ function damageBrick(br, dmg, sx, sy, element) {
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     // tuned so Mega comes online roughly once per region (3 waves)
+    // a squad falls briefly SILENT when its elite falls — the Galaga nod
+    if (G.mode === 'junkie' && G.encounter && br.flight && br.flight.sq != null && (br.elite || 0) >= 2) {
+      const Sq = G.encounter.squads[br.flight.sq];
+      if (Sq) Sq.silenceT = 1.5;
+    }
     // RALLY MASTER's shooter translation: kills are the only tempo there, so
     // they charge much harder (×2.5 total) — mega lands roughly every 2 waves
     const rallyKill = upgN('rally') ? (br.isBoss ? 0.04 : (G.mode !== 'classic' ? 0.012 : 0.004)) : 0;
@@ -942,7 +947,7 @@ function update(dt) {
           .map(b => b.flight.sq))];
         if (sqs.length) {
           const sq = sqs[Math.floor(Math.random() * sqs.length)];
-          const opts = ['scatter', 'surge'];
+          const opts = (G.encounter && G.encounter.rotary) ? ['surge'] : ['scatter'];
           if (regionsIn3 >= 2) opts.push('raid');
           const mv = { sq, kind: opts[Math.floor(Math.random() * opts.length)], t: 0 };
           if (mv.kind === 'raid') {
@@ -1034,11 +1039,16 @@ function update(dt) {
           blend = 0.5 - 0.5 * Math.cos(et * Math.PI / 8); // full morph every 16s
           break;
       }
-      // the formation is ALWAYS under way: a gentle patrol sway on every
-      // anchor — side to side with a slow breath of altitude — so even a
-      // parked ring keeps visibly cruising
-      cx += Math.sin(et * 0.5 + s * 1.9) * W * 0.095;
-      cy += Math.sin(et * 0.4 + s * 1.3) * 14;
+      // the RIGID body is what moves: a slow patrol glide (eased sine,
+      // ~8s period, ~14% of the screen) plus the Galaga THROB — the whole
+      // slot frame breathes ±5% on one squad-synced clock
+      // ONE body: every squad shares the same patrol phase — concentric
+      // families (carousel rings, eclipse, moons) must never drift apart
+      cx += Math.sin(et * 0.75) * W * 0.07;
+      cy += Math.sin(et * 0.5) * 5;
+      const breath = 1 + 0.05 * Math.sin(et * 1.4 + s * 0.9);
+      rx *= breath; ry *= breath;
+      if (S.silenceT > 0) S.silenceT = Math.max(0, S.silenceT - dt * ts);
       S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;
     }
     // write the controller's frame into every member — one clock, one body
@@ -1060,6 +1070,101 @@ function update(dt) {
       if (br.bx < 60) { br.bx = 60; br.barrier.vx = Math.abs(br.barrier.vx); }
       if (br.bx > W - 60) { br.bx = W - 60; br.barrier.vx = -Math.abs(br.barrier.vx); }
       br.hx = br.bx; br.hy = br.by;
+    }
+  }
+  // ---- SENTINEL specials: each sub-legendary attacks BY ITS TYPE ----
+  const SUB_ABILITY_NAMES = {
+    ice: 'FROST FAN', electric: 'BOLT STRIKE', fire: 'EMBER RAIN',
+    water: 'TIDAL LINE', rock: 'BOULDER TOSS', steel: 'FLASH CANNON',
+    psychic: 'WARP PULSE', grass: 'SPORE BURST', dragon: 'DRAGON PULSE',
+    ground: 'FISSURE', fairy: 'DAZZLE', fighting: 'AURA SPHERE',
+  };
+  function subAbility(br2) {
+    const t3 = br2.poke.t;
+    const bx2 = br2.bx + G.fx, by2 = br2.by + G.fy + br2.h / 2;
+    const dd = diff();
+    const sp4 = (230 + dd.lv * 14) * dd.shotSpeed;
+    const aim = Math.atan2(shipY() - by2, G.paddle.x - bx2);
+    const push = (a3, m2, extra) => G.enemyShots.push(Object.assign(
+      { x: bx2, y: by2, vx: Math.cos(a3) * sp4 * m2, vy: Math.sin(a3) * sp4 * m2, type: t3 }, extra));
+    switch (t3) {
+      case 'ice': // a wide, slow, five-shot wall of frost
+        for (const off of [-0.5, -0.25, 0, 0.25, 0.5]) push(aim + off, 0.62, { heavy: true, r: 14 });
+        break;
+      case 'electric': // column lightning at your position (Zekrom's trick)
+        G.columnStrikes.push({ x: G.paddle.x, w: 46, warn: 0.9, strike: 0.3, color: '#80d8ff' });
+        tone(1200, 0.25, 'square', 0.04, -800);
+        break;
+      case 'fire': { // ember rain: a curtain of fireballs beneath its wings
+        for (let k2 = -2; k2 <= 2; k2++) {
+          G.enemyShots.push({ x: bx2 + k2 * 44, y: by2, vy: sp4 * 0.8, type: t3, r: 12 });
+        }
+        break;
+      }
+      case 'water': // a low, fast three-shot wave
+        for (const off of [-0.18, 0, 0.18]) push(aim + off, 1.05);
+        break;
+      case 'rock': case 'ground': // two heavy, slow, splashing boulders
+        for (const off of [-0.14, 0.14]) push(aim + off, 0.55, { heavy: true, r: 17, splash: true });
+        break;
+      case 'steel': // one precise, very fast shot
+        push(aim, 1.6, { r: 12 });
+        break;
+      case 'psychic': case 'fairy': { // warp pulse: blink + a 4-shot ring
+        burst(bx2, by2 - br2.h / 2, '#ec407a', 20, 260, 0.5);
+        br2.bx = 90 + Math.random() * (W - 180) - G.fx;
+        br2.flash = 1;
+        for (let k2 = 0; k2 < 4; k2++) push((k2 / 4) * Math.PI * 2 + 0.4, 0.8);
+        break;
+      }
+      case 'grass': // spore burst: a slow six-shot bloom
+        for (let k2 = 0; k2 < 6; k2++) push((k2 / 6) * Math.PI * 2, 0.55, { r: 12 });
+        break;
+      default: // dragon/fighting/others: a hard three-shot pulse
+        for (const off of [-0.2, 0, 0.2]) push(aim + off, 1.2);
+    }
+    addFloater(br2.bx + G.fx, br2.by + G.fy - br2.h / 2 - 26,
+      (SUB_ABILITY_NAMES[t3] || 'ONSLAUGHT') + '!', TYPE_COLORS[t3], 14);
+    SFX.enemyShot();
+  }
+  // ---- SENTINEL choreography: the trio cycles through THREE formations on
+  // one clock — a rotating triangle, a sweeping battle line, and spread
+  // sentry posts — never parked, each bird springing between eased slots
+  if (G.gauntlet && G.gauntlet.phase === 0 && (G.state === 'play' || G.state === 'serve')) {
+    const gj2 = G.gauntlet;
+    gj2.subT += dt * ts;
+    const t4 = gj2.subT;
+    const formIdx = Math.floor(t4 / 8) % 3;
+    for (const br2 of G.bricks) {
+      if (br2.dead || !br2.subBoss) continue;
+      const k2 = br2.subIdx || 0, n2 = Math.max(1, br2.subN || 1);
+      let tx2, ty2;
+      if (formIdx === 0) { // rotating triangle / ring around the arena heart
+        const a3 = (k2 / n2) * Math.PI * 2 + t4 * 0.55;
+        tx2 = W / 2 + Math.cos(a3) * W * 0.22;
+        ty2 = 176 + Math.sin(a3) * 66;
+      } else if (formIdx === 1) { // battle line sweeping the full width
+        tx2 = W / 2 + Math.sin(t4 * 0.7) * W * 0.28 + (k2 - (n2 - 1) / 2) * 118;
+        ty2 = 150 + (k2 % 2) * 36;
+      } else { // spread sentry posts, each weaving its own watch
+        tx2 = W * (0.5 + (k2 - (n2 - 1) / 2) * 0.3) + Math.sin(t4 * 0.9 + k2 * 2.1) * 44;
+        ty2 = 168 + Math.sin(t4 * 0.6 + k2 * 1.7) * 52;
+      }
+      const kk2 = Math.min(1, dt * ts * 3);
+      br2.bx += (tx2 - G.fx - br2.bx) * kk2;
+      br2.by += (ty2 - G.fy - br2.by) * kk2;
+      br2.hx = br2.bx; br2.hy = br2.by;
+    }
+    // typed specials on a shared cadence — round 1 presses the attack
+    if (G.state === 'play') {
+      gj2.subAbilityCD -= dt * ts;
+      if (gj2.subAbilityCD <= 0) {
+        const living = G.bricks.filter(b => !b.dead && b.subBoss);
+        if (living.length) {
+          gj2.subAbilityCD = 3.6 + Math.random() * 2.2;
+          subAbility(living[Math.floor(Math.random() * living.length)]);
+        }
+      }
     }
   }
   // ---- THE GAUNTLET: three rounds per finale. Round 1 the sentinels hold
@@ -1199,14 +1304,25 @@ function update(dt) {
           pos.y = F.cy + (pos.y - F.cy) * (1 + 0.8 * pr);
         } else if (mv.kind === 'raid') pos.y += mv.dy * pr;
       }
-      // SPACE JUNKIE choreo members float in ONE BY ONE: each rider glides
-      // from off-screen to its slot in sequence, firing once it's on screen
+      // SPACE JUNKIE entrance TRAIN: riders follow the squad's swooping
+      // spline nose-to-tail (firing on the way), then PEEL into their slot
+      // with a spring settle — the formation visibly assembles itself
       if (F.inDelay != null && G.encounter) {
-        const ipm = Math.min(1, Math.max(0, (G.encounter.t - F.inDelay) / 1.5));
-        if (ipm < 1) {
-          const em = 1 - Math.pow(1 - ipm, 3);
-          pos.x += (F.inDx || 0) * (1 - em);
-          pos.y += (F.inDy || 0) * (1 - em);
+        const S2 = G.encounter.squads[F.sq];
+        const pIn = (G.encounter.t - F.inDelay) / (F.inDur || 2.8);
+        if (S2 && pIn < 1) {
+          if (pIn <= 0) { // waiting off-screen at the spline's mouth
+            pos.x = S2.e0x + S2.inSide * 40; pos.y = S2.e0y;
+          } else if (pIn < 0.72) { // the swoop: corner → across → up
+            const q2 = pIn / 0.72, u2 = 1 - q2;
+            pos.x = u2 * u2 * S2.e0x + 2 * u2 * q2 * S2.e1x + q2 * q2 * S2.e2x;
+            pos.y = u2 * u2 * S2.e0y + 2 * u2 * q2 * S2.e1y + q2 * q2 * S2.e2y;
+          } else { // peel: formation edge → slot, slight overshoot, settle
+            const u = (pIn - 0.72) / 0.28;
+            const eb = 1 + 2.3 * Math.pow(u - 1, 3) + 1.3 * Math.pow(u - 1, 2);
+            pos.x = S2.e2x + (pos.x - S2.e2x) * eb;
+            pos.y = S2.e2y + (pos.y - S2.e2y) * eb;
+          }
         } else { F.inDelay = null; F.entering = false; }
       }
       if (F.state === 1) { // breaking out: glide from the wall onto the pattern
@@ -1237,7 +1353,8 @@ function update(dt) {
         // every frame while the glide lerp snapped them back — a visible
         // jitter on every wave entrance. Entries are transient; the overlap
         // invariant (and its test) covers settled flyers (state 2).
-        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && !br.flight.entering) fl.push(br);
+        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && !br.flight.entering
+            && !(G.mode === 'junkie' && br.flight.choreo && !G.maneuver)) fl.push(br);
       }
       const gr = G.mode !== 'junkie' ? G.gridRect : null;
       // SPACE JUNKIE separation is SMOOTHED: pushes build into a per-rider
@@ -1329,7 +1446,7 @@ function update(dt) {
     if (!G.blocksStatic) {
       let minX = Infinity, maxX = -Infinity;
       for (const br of G.bricks) {
-        if (br.dead || br.isBoss || br.dive || br.entry || br.dormant || br.guard || br.barrier || flying(br)) continue;
+        if (br.dead || br.isBoss || br.dive || br.entry || br.dormant || br.guard || br.barrier || br.subBoss || flying(br)) continue;
         minX = Math.min(minX, br.hx - br.w / 2);
         maxX = Math.max(maxX, br.hx + br.w / 2);
       }
@@ -1399,11 +1516,13 @@ function update(dt) {
       }
     }
     for (const br of G.bricks) {
-      if (br.dead || br.isBoss || br.entry || br.guard || br.barrier) continue; // guards/barriers have their own controllers
+      if (br.dead || br.isBoss || br.entry || br.guard || br.barrier || br.subBoss) continue; // guards/barriers/sentinels have their own controllers
       // GALAGA DIVE: peel off, swoop at the paddle, fire, loop back home
       if (br.dive) {
         const dv = br.dive;
         dv.t += dt * ts;
+        // butterfly veer: the descent tracks the player's CURRENT position
+        if (dv.t / dv.dur < 0.5) dv.tx += ((G.paddle.x - G.fx) - dv.tx) * Math.min(1, dt * ts * 0.9);
         const p = Math.min(1, dv.t / dv.dur);
         const lowY = PADDLE_Y() - 130 - G.fy;
         if (p < 0.5) {
@@ -1931,7 +2050,9 @@ function update(dt) {
         G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive
-          && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
+          && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
+          && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
+            && G.encounter.squads[b.flight.sq].silenceT > 0));
         // cap concurrent warnings so the board never fills with warning lines
         const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
         if (alive.length && activeTel < (blaster ? 5 : 3)) {
