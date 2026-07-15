@@ -308,6 +308,15 @@ function bareMon(br) { return !br.isBoss && !!(br.bare || br.dive || (br.flight 
 // butterfly/…) that pass through a shared center — the separation solver packs
 // those so they stay distinct. Early regions unlock the clean formation set;
 // the busy showpieces come later (see the `kinds` list in state.js). ----
+// change a rider's pattern speed WITHOUT teleporting it: flightPos scales
+// ABSOLUTE time by spd, so an instant spd change would jump the rider to a
+// different point on its curve — re-base the phase to keep it continuous
+function setFlightSpd(F, newSpd) {
+  const tAbs = G.swayT * G.pathSpeed;
+  F.phase += tAbs * (F.dir || 1) * ((F.spd || 1) - newSpd);
+  F.spd = newSpd;
+}
+
 function flightPos(F, tAbs) {
   const t = tAbs * (F.spd || 1) * (F.dir || 1); // streams ride faster curves
   const th = (F.phase + t) * Math.PI * 2;
@@ -904,12 +913,12 @@ function update(dt) {
       if (G.maneuver.t >= G.maneuver.dur) {
         if (G.maneuver.kind === 'surge') {
           for (const br of G.bricks) if (br.flight && br.flight.sq === G.maneuver.sq && br.flight.spd0) {
-            br.flight.spd = br.flight.spd0; br.flight.spd0 = null;
+            setFlightSpd(br.flight, br.flight.spd0); br.flight.spd0 = null; // ease back, no jump
           }
         }
         G.maneuver = null;
       }
-    } else if (regionsIn3 >= 1) {
+    } else if (regionsIn3 >= 1 && (!G.encounter || G.encounter.t > 3)) {
       G.maneuverCD -= dt * ts;
       if (G.maneuverCD <= 0) {
         G.maneuverCD = 7 + Math.random() * 6;
@@ -931,7 +940,8 @@ function update(dt) {
           mv.dur = mv.kind === 'raid' ? 4.2 : mv.kind === 'scatter' ? 2.6 : 3;
           if (mv.kind === 'surge') {
             for (const br of G.bricks) if (!br.dead && br.flight && br.flight.sq === sq) {
-              br.flight.spd0 = br.flight.spd; br.flight.spd *= 1.8;
+              br.flight.spd0 = br.flight.spd;
+              setFlightSpd(br.flight, br.flight.spd * 1.8); // phase-preserving — no teleport
             }
             tone(620, 0.16, 'sawtooth', 0.04, 260);
           } else {
@@ -973,24 +983,27 @@ function update(dt) {
           }
           break;
         }
-        case 'swapCy': { // relay: the two bodies continuously exchange layers
+        case 'swapCy': { // relay: the two bodies exchange layers — and slide
+          // AROUND each other laterally while crossing, never through
           if (E.squads.length >= 2) {
             const other = E.squads[s === 0 ? 1 : 0];
             const sw = 0.5 - 0.5 * Math.cos(et * Math.PI / 7); // full exchange every 7s
             cy = S.cy0 + (other.cy0 - S.cy0) * sw;
+            cx += Math.sin(sw * Math.PI) * W * 0.13 * (s === 0 ? -1 : 1);
           }
           break;
         }
-        case 'bloom': { // ring smoothly opens into petals and closes again
+        case 'bloom': { // ring smoothly opens into petals and closes again —
+          // contraction is capped so slots never pack tighter than daylight
           const b2 = 0.5 + 0.5 * Math.sin(et * 0.4);
-          ry = S.ry0 * (0.55 + 0.75 * b2);
-          rx = S.rx0 * (1.1 - 0.35 * b2);
+          ry = S.ry0 * (0.72 + 0.45 * b2);
+          rx = S.rx0 * (1.08 - 0.24 * b2);
           break;
         }
         case 'eclipse': { // rings align (radii converge), darken, separate
           const e2 = Math.pow(Math.max(0, Math.sin(et * 0.3)), 2);
-          if (S.role === 'wing') rx = S.rx0 * (1 - 0.42 * e2), ry = S.ry0 * (1 - 0.42 * e2);
-          else if (S.role === 'core') rx = S.rx0 * (1 + 0.45 * e2), ry = S.ry0 * (1 + 0.45 * e2);
+          if (S.role === 'wing') rx = S.rx0 * (1 - 0.28 * e2), ry = S.ry0 * (1 - 0.28 * e2);
+          else if (S.role === 'core') rx = S.rx0 * (1 + 0.3 * e2), ry = S.ry0 * (1 + 0.3 * e2);
           break;
         }
         case 'orbit': { // the whole set of anchors slowly wheels as one vortex
@@ -1165,7 +1178,9 @@ function update(dt) {
           for (let i = 0; i < fl.length; i++) {
             for (let j = i + 1; j < fl.length; j++) {
               const a = fl[i], b2 = fl[j];
-              const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.62;
+              // 0.7: sprites draw at ~1.25× their hitbox, so anything tighter
+              // than 1.4× min-dimension still LOOKS like an overlap
+              const minD = (Math.min(a.w, a.h) + Math.min(b2.w, b2.h)) * 0.7;
               let dx = b2.bx - a.bx, dy = b2.by - a.by;
               let d = Math.hypot(dx, dy);
               if (d < minD) {

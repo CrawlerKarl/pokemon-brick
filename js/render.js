@@ -1825,6 +1825,29 @@ function drawAnnounce() {
 // sits well ABOVE the button row and the ship — it never competes with
 // MEGA/FIRE/CHARGE or covers the pilot
 function drawShootHint() {
+  // CHARGE TUTOR: while armored/rock targets are on screen and the player has
+  // NEVER fired a charged shot, a bright pulsing banner stays up until they
+  // do — the one mechanic worth nagging about
+  if (G.state === 'play' && G.mode !== 'classic' && !G.chargedEver &&
+      G.bricks.some(b => !b.dead && (b.shellArmor || b.barrier))) {
+    const pa = 0.72 + 0.28 * Math.sin(G.time * 4);
+    const txt = IS_TOUCH ? '⚡ DOUBLE-TAP + HOLD FIRE — CHARGE A SHOT ⚡'
+      : '⚡ HOLD RIGHT-CLICK / SHIFT — CHARGE A SHOT ⚡';
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '800 15px Orbitron, sans-serif';
+    const tw2 = ctx.measureText(txt).width + 44;
+    const hy2 = H * 0.62;
+    ctx.globalAlpha = pa;
+    ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 18;
+    roundRect(W / 2 - tw2 / 2, hy2 - 19, tw2, 38, 19);
+    ctx.fillStyle = 'rgba(6,14,28,0.92)'; ctx.fill();
+    ctx.lineWidth = 2.2; ctx.strokeStyle = '#4dd0e1'; ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#e0f7fa';
+    ctx.fillText(txt, W / 2, hy2 + 1, tw2 - 20);
+    ctx.restore();
+  }
   if (G.state !== 'play' || G.shotsFired >= 3 || G.playT > 20) return;
   // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
   if (G.mode === 'classic' && !blasterArmed()) return;

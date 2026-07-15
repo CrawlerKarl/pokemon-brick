@@ -733,10 +733,12 @@ function buildLevel(lvl) {
       // with clear daylight between slots. If the separation solver never
       // engages during hold, a kill leaves an honest Galaga gap — the
       // survivors don't slide into the dead rider's space.
-      const minGap = Math.min(mw, mh) * sizeMul * 1.45;
+      const minGap = Math.min(mw, mh) * sizeMul * 1.6;
       const closed = g.kind === 'ring' || g.kind === 'oval' || g.kind === 'diamond';
-      const span = closed ? Math.PI * Math.sqrt(2 * (g.rx * g.rx + g.ry * g.ry))
-        : g.rx * 2 * 1.6; // open spans: width plus travel slack
+      // morphing families contract — size capacity for their SMALLEST frame
+      const shrink = (C.morph === 'bloom' || C.morph === 'eclipse') ? 0.72 : 1;
+      const span = (closed ? Math.PI * Math.sqrt(2 * (g.rx * g.rx + g.ry * g.ry))
+        : g.rx * 2 * 1.6) * shrink; // open spans: width plus travel slack
       perS = Math.max(3, Math.min(perS, Math.floor(span / minGap)));
       const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad
@@ -835,6 +837,16 @@ function buildLevel(lvl) {
   } else {
     setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4,
       [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
+  }
+  // hard readability cap: random form-skips + stream squads can land the
+  // walled modes a brick or two over budget — trim boxed filler to the cap
+  if (!hasBoss && G.mode !== 'junkie') {
+    const filler = G.bricks.filter(b => !b.isBoss && !b.armored && !b.flight && !b.veil);
+    while (G.bricks.filter(b => !b.isBoss).length > 40 && filler.length) {
+      const i = Math.floor(Math.random() * filler.length);
+      G.bricks.splice(G.bricks.indexOf(filler[i]), 1);
+      filler.splice(i, 1);
+    }
   }
   // ---- ENERGY VEILS (classic challenge waves): cyan casings the BALL can't
   // crack — only blaster-family fire (bolts, support lasers, missiles) breaks
@@ -959,6 +971,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.torrentCount = 0; G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
+  G.chargedEver = false; G.chargeHintCD = 0;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
   // starting deep? bank the skill-tree advances you'd have earned on the way

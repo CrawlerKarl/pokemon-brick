@@ -541,6 +541,7 @@ function fireAction(auto = false) {
 // the charge (c in 0..1). Distinct fat visual + a deeper report.
 function fireCharge(c) {
   if (G.state !== 'play') return;
+  G.chargedEver = true; // the charge tutor banner retires once you've done it
   const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1); // 1..5, capstone +25%
   const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
