@@ -775,6 +775,21 @@ const BOSS_ABILITIES = {
   890:  { cd: 8,   name: 'DYNAMAX CANNON' },  // Eternatus fires a warned beam
   1007: { cd: 7,   name: 'WILD CHARGE' },     // Koraidon dashes across the arena
 };
+// ---- how each legendary OWNS its arena: a movement archetype that makes
+// every fight look and feel different — not every boss looms large up top.
+// 'anchor' = the classic high patrol; the rest are read by the boss patrol
+// switch in update.js (and 'bastion'/'perimeter' also reshape its base fire).
+const BOSS_STYLE = {
+  150: 'anchor',     // Mewtwo: still, imperious — teleports do the moving
+  249: 'infinity',   // Lugia: a wide figure-eight through mid-air
+  384: 'serpent',    // Rayquaza: threads a long wave across the whole width
+  483: 'bastion',    // Dialga: locked in the arena's heart, clockwork fire
+  644: 'flank',      // Zekrom: slams between the left and right flanks
+  717: 'swoop',      // Yveltal: corner-to-corner predator dives along a V
+  792: 'phase',      // Lunala: dreamlike lissajous glide between moons
+  890: 'perimeter',  // Eternatus: rides the top rim end to end, raining bombs
+  1007: 'charge',    // Koraidon: tears back and forth at full sprint
+};
 
 // names for everything in the rosters — the Pokédex shows them
 const NAMES = {

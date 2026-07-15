@@ -456,7 +456,7 @@ function buildLevel(lvl) {
           flight: {
             kind: 'arc', state: 2, launch: 0, sq: null, t: 0,
             cx: W / 2, cy: 148, rx: Math.min(W * 0.3, 300), ry: 42,
-            spd: 1.1, phase: i / subs.length, n: subs.length, dir: 1, strand: i % 2,
+            spd: 1.6, phase: i / subs.length, n: subs.length, dir: 1, strand: i % 2,
           },
         });
         getSprite(sid);
@@ -748,7 +748,7 @@ function buildLevel(lvl) {
         cy: geo.openTop + (q.cy ?? 0.5) * band,
         rx: usable * 0.34 * (q.rx || 1),
         ry: band * 0.48 * (q.ry || 1),
-        dir: (q.dir || 1) * mirror, spd: (q.spd || 1) * 1.6, ph: q.ph || 0, role: q.role || 'core',
+        dir: (q.dir || 1) * mirror, spd: (q.spd || 1) * 2.1, ph: q.ph || 0, role: q.role || 'core',
       };
       clampOpen(g, geo.openTop, geo.floorY);
       // squad-level INGRESS: the whole formation floats in as ONE body —

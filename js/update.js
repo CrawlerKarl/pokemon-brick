@@ -1037,8 +1037,8 @@ function update(dt) {
       // the formation is ALWAYS under way: a gentle patrol sway on every
       // anchor — side to side with a slow breath of altitude — so even a
       // parked ring keeps visibly cruising
-      cx += Math.sin(et * 0.55 + s * 1.9) * W * 0.045;
-      cy += Math.sin(et * 0.4 + s * 1.3) * 9;
+      cx += Math.sin(et * 0.5 + s * 1.9) * W * 0.095;
+      cy += Math.sin(et * 0.4 + s * 1.3) * 14;
       S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;
     }
     // write the controller's frame into every member — one clock, one body
@@ -1348,11 +1348,55 @@ function update(dt) {
     // ---- choreography rides ON TOP of the march. Boss guards instead
     // ripple in rings around their legendary, who patrols its arena.
     if (boss) {
-      // the patrol widens and quickens with each phase — a cornered legendary
+      // every legendary OWNS its arena differently (BOSS_STYLE, data.js) —
+      // the patrol widens and quickens with each phase either way
       const bp = boss.phase || 1;
-      boss.bx = boss.hx + (mt >= 1 || bp >= 2
-        ? Math.sin(G.swayT * (0.45 + bp * 0.22)) * Math.min(90 + bp * 26, W * (0.07 + bp * 0.02))
-        : 0);
+      const t2 = G.swayT, sp2 = 0.45 + bp * 0.22;
+      const jk3 = G.mode === 'junkie';
+      const yAmp = jk3 ? 1 : 0.45; // classic keeps clear of its guard wall
+      const style = boss.mythic ? 'mythic' : (BOSS_STYLE[boss.poke.id] || 'anchor');
+      switch (style) {
+        case 'infinity': // a wide figure-eight through mid-air
+          boss.bx = boss.hx + Math.sin(t2 * sp2) * W * (0.16 + bp * 0.02);
+          boss.by = boss.hy + (30 + Math.sin(t2 * sp2 * 2) * 52) * yAmp;
+          break;
+        case 'serpent': // threads a long slow wave across the whole width
+          boss.bx = boss.hx + Math.sin(t2 * (0.3 + bp * 0.14)) * W * 0.3;
+          boss.by = boss.hy + Math.sin(t2 * (0.9 + bp * 0.2)) * 40 * yAmp;
+          break;
+        case 'bastion': // locked mid-arena — the fight comes to YOU
+          boss.bx = boss.hx + Math.sin(t2 * 0.2) * 30;
+          boss.by = boss.hy + (jk3 ? 64 : 22) + Math.sin(t2 * 0.35) * 12 * yAmp;
+          break;
+        case 'flank': // slams flank to flank, hanging low at each turn
+          boss.bx = boss.hx + Math.tanh(Math.sin(t2 * 0.35) * 2.4) * W * (0.24 + bp * 0.03);
+          boss.by = boss.hy + Math.abs(Math.cos(t2 * 0.35)) * 46 * yAmp;
+          break;
+        case 'swoop': // predator dives along a deep V, corner to corner
+          boss.bx = boss.hx + Math.sin(t2 * sp2) * W * 0.26;
+          boss.by = boss.hy + Math.abs(Math.sin(t2 * sp2)) * (jk3 ? 130 : 58);
+          break;
+        case 'phase': // dreamlike lissajous glide between moon stations
+          boss.bx = boss.hx + Math.sin(t2 * 0.3) * W * 0.24;
+          boss.by = boss.hy + (Math.cos(t2 * 0.6) * 36 + 16) * yAmp;
+          break;
+        case 'perimeter': // rides the top rim end to end
+          boss.bx = W / 2 - G.fx + Math.sin(t2 * (0.3 + bp * 0.06)) * W * 0.38;
+          boss.by = boss.hy - 16;
+          break;
+        case 'charge': // tears back and forth at full sprint
+          boss.bx = boss.hx + Math.sin(t2 * (0.75 + bp * 0.25)) * W * 0.3;
+          boss.by = boss.hy + Math.abs(Math.sin(t2 * 1.5)) * 26 * yAmp;
+          break;
+        case 'mythic': // erratic, dreamlike — never where you left it
+          boss.bx = boss.hx + Math.sin(t2 * 1.1) * W * 0.2 + Math.sin(t2 * 2.3) * 40;
+          boss.by = boss.hy + (Math.sin(t2 * 1.7) * 48 + Math.sin(t2 * 0.6) * 20) * yAmp;
+          break;
+        default: // 'anchor' — the classic high, imperious patrol
+          boss.bx = boss.hx + (mt >= 1 || bp >= 2
+            ? Math.sin(t2 * sp2) * Math.min(90 + bp * 26, W * (0.07 + bp * 0.02))
+            : 0);
+      }
     }
     for (const br of G.bricks) {
       if (br.dead || br.isBoss || br.entry || br.guard || br.barrier) continue; // guards/barriers have their own controllers
@@ -1905,7 +1949,19 @@ function update(dt) {
       if (tg.boss) {
         const base = Math.atan2(shipY() - by, G.paddle.x - bx);
         const sp = (230 + d.lv * 12) * d.shotSpeed;
+        const bStyle = BOSS_STYLE[tg.br.poke.id];
+        const DOWN = Math.PI / 2;
+        // each arena fires differently: Dialga's clockwork hands SWEEP the
+        // arena; Eternatus rains bombs straight off the rim; everyone else
+        // aims at you (their signature ability carries the rest)
         const angles = tg.fan ? [-0.5, -0.25, 0, 0.25, 0.5].map(a => base + a)
+          : bStyle === 'bastion'
+            ? (tg.br.phase >= 2
+              ? [G.swayT * 0.9, G.swayT * 0.9 + Math.PI * 2 / 3, G.swayT * 0.9 + Math.PI * 4 / 3]
+              : [G.swayT * 0.9, G.swayT * 0.9 + Math.PI])
+          : bStyle === 'perimeter'
+            ? (tg.br.phase === 3 ? [DOWN - 0.32, DOWN, DOWN + 0.32]
+              : tg.br.phase === 2 ? [DOWN - 0.2, DOWN + 0.2] : [DOWN])
           : tg.br.phase === 3 ? [base - 0.6, base - 0.3, base, base + 0.3, base + 0.6]
           : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
         for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: tg.br.poke.t });
