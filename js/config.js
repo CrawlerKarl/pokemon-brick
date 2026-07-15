@@ -199,17 +199,23 @@ function advLayout() {
 }
 // trial mode overlay: 3×3 region grid + stage picker + start
 let trialOpen = false;
-const trialSel = { region: 0, stage: 0 };
+const trialSel = { region: 0, stage: 0, round: 0 };
 function trialLayout() {
   const pw = Math.min(470, W * 0.94);
   const chipW = (pw - 60 - 20) / 3, chipH = 48, stageH = 38;
   const gridY = 96;
-  const ph = gridY + 3 * (chipH + 10) + 30 + stageH + 84;
+  // picking a LEGENDARY stage reveals a round row: jump straight to the
+  // sentinels, the legendary, or the mythical of that region's gauntlet
+  const rounds = trialSel.stage === 2;
+  const roundH = 34, roundGap = rounds ? roundH + 14 : 0;
+  const ph = gridY + 3 * (chipH + 10) + 30 + stageH + roundGap + 84;
   const px = W / 2 - pw / 2, py = Math.max(16, H / 2 - ph / 2);
+  const stageY = py + gridY + 3 * (chipH + 10) + 24;
   return {
-    px, py, pw, ph,
+    px, py, pw, ph, rounds,
     region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + 10), w: chipW, h: chipH }),
-    stage: i => ({ x: px + 30 + i * (chipW + 10), y: py + gridY + 3 * (chipH + 10) + 24, w: chipW, h: stageH }),
+    stage: i => ({ x: px + 30 + i * (chipW + 10), y: stageY, w: chipW, h: stageH }),
+    round: i => ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
     start: { x: px + pw / 2 - 110, y: py + ph - 60, w: 220, h: 44 },
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };

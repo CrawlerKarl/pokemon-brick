@@ -399,11 +399,26 @@ function onPress(x, y) {
         if (inRect(x, y, T.region(i))) { trialSel.region = i; SFX.wall(); return; }
       }
       for (let i = 0; i < STAGES; i++) {
-        if (inRect(x, y, T.stage(i))) { trialSel.stage = i; SFX.wall(); return; }
+        if (inRect(x, y, T.stage(i))) { trialSel.stage = i; trialSel.round = 0; SFX.wall(); return; }
+      }
+      if (T.rounds) {
+        for (let i = 0; i < 3; i++) {
+          if (inRect(x, y, T.round(i))) { trialSel.round = i; SFX.wall(); return; }
+        }
       }
       if (inRect(x, y, T.start)) {
         trialOpen = false;
         resetRun(trialSel.region * STAGES + trialSel.stage + 1, true);
+        // jump straight to a specific gauntlet round — test just the
+        // legendary (round 2) or just the mythical (round 3)
+        if (trialSel.stage === 2 && trialSel.round > 0 && G.gauntlet) {
+          for (const b of G.bricks) if (b.subBoss) b.dead = true;
+          gauntletWake();
+          if (trialSel.round === 2) {
+            for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+            gauntletSummonMythic();
+          }
+        }
         return;
       }
       return;

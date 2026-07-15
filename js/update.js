@@ -693,6 +693,150 @@ function loseLife() {
 // dt-smoothed (identical at 60 Hz and 120 Hz) — render only READS them.
 // (They used to be derived in render from position-delta × 60, which tied
 // banking and animation speed to the display's refresh rate.)
+// ---- SENTINEL specials (top-level: shared by update + trial jumps): each sub-legendary attacks BY ITS TYPE ----
+const SUB_ABILITY_NAMES = {
+  ice: 'FROST FAN', electric: 'BOLT STRIKE', fire: 'EMBER RAIN',
+  water: 'TIDAL LINE', rock: 'BOULDER TOSS', steel: 'FLASH CANNON',
+  psychic: 'WARP PULSE', grass: 'SPORE BURST', dragon: 'DRAGON PULSE',
+  ground: 'FISSURE', fairy: 'DAZZLE', fighting: 'AURA SPHERE',
+};
+function subAbility(br2) {
+  const t3 = br2.poke.t;
+  const bx2 = br2.bx + G.fx, by2 = br2.by + G.fy + br2.h / 2;
+  const dd = diff();
+  const sp4 = (230 + dd.lv * 14) * dd.shotSpeed;
+  const aim = Math.atan2(shipY() - by2, G.paddle.x - bx2);
+  const push = (a3, m2, extra) => G.enemyShots.push(Object.assign(
+    { x: bx2, y: by2, vx: Math.cos(a3) * sp4 * m2, vy: Math.sin(a3) * sp4 * m2, type: t3 }, extra));
+  switch (t3) {
+    case 'ice': // a wide, slow wall of frost
+      for (const off of [-0.45, -0.15, 0.15, 0.45]) push(aim + off, 0.62, { heavy: true, r: 14 });
+      break;
+    case 'electric': // column lightning at your position (Zekrom's trick)
+      G.columnStrikes.push({ x: G.paddle.x, w: 46, warn: 0.9, strike: 0.3, color: '#80d8ff' });
+      tone(1200, 0.25, 'square', 0.04, -800);
+      break;
+    case 'fire': { // ember rain: a curtain of fireballs beneath its wings
+      for (const k2 of [-1.5, -0.5, 0.5, 1.5]) {
+        G.enemyShots.push({ x: bx2 + k2 * 48, y: by2, vy: sp4 * 0.78, type: t3, r: 12 });
+      }
+      break;
+    }
+    case 'water': // a low, fast three-shot wave
+      for (const off of [-0.18, 0, 0.18]) push(aim + off, 1.05);
+      break;
+    case 'rock': case 'ground': // two heavy, slow, splashing boulders
+      for (const off of [-0.14, 0.14]) push(aim + off, 0.55, { heavy: true, r: 17, splash: true });
+      break;
+    case 'steel': // one precise, very fast shot
+      push(aim, 1.6, { r: 12 });
+      break;
+    case 'psychic': case 'fairy': { // warp pulse: blink + a 4-shot ring
+      burst(bx2, by2 - br2.h / 2, '#ec407a', 20, 260, 0.5);
+      br2.bx = 90 + Math.random() * (W - 180) - G.fx;
+      br2.flash = 1;
+      for (let k2 = 0; k2 < 4; k2++) push((k2 / 4) * Math.PI * 2 + 0.4, 0.8);
+      break;
+    }
+    case 'grass': // spore burst: a slow five-shot bloom
+      for (let k2 = 0; k2 < 5; k2++) push((k2 / 5) * Math.PI * 2, 0.55, { r: 12 });
+      break;
+    default: // dragon/fighting/others: a hard three-shot pulse
+      for (const off of [-0.2, 0, 0.2]) push(aim + off, 1.2);
+  }
+  addFloater(br2.bx + G.fx, br2.by + G.fy - br2.h / 2 - 26,
+    (SUB_ABILITY_NAMES[t3] || 'ONSLAUGHT') + '!', TYPE_COLORS[t3], 14);
+  SFX.enemyShot();
+}
+// ---- SENTINEL choreography: the trio cycles through THREE formations on
+// one clock — a rotating triangle, a sweeping battle line, and spread
+// sentry posts — never parked, each bird springing between eased slots.
+// Called from update() each frame.
+function updateSentinels(dt, ts) {
+  if (!G.gauntlet || G.gauntlet.phase !== 0 || (G.state !== 'play' && G.state !== 'serve')) return;
+  const gj2 = G.gauntlet;
+  gj2.subT += dt * ts;
+  const t4 = gj2.subT;
+  const formIdx = Math.floor(t4 / 8) % 3;
+  for (const br2 of G.bricks) {
+    if (br2.dead || !br2.subBoss) continue;
+    const k2 = br2.subIdx || 0, n2 = Math.max(1, br2.subN || 1);
+    let tx2, ty2;
+    if (formIdx === 0) { // rotating triangle / ring around the arena heart
+      const a3 = (k2 / n2) * Math.PI * 2 + t4 * 0.55;
+      tx2 = W / 2 + Math.cos(a3) * W * 0.22;
+      ty2 = 176 + Math.sin(a3) * 66;
+    } else if (formIdx === 1) { // battle line sweeping the full width
+      tx2 = W / 2 + Math.sin(t4 * 0.7) * W * 0.28 + (k2 - (n2 - 1) / 2) * 118;
+      ty2 = 150 + (k2 % 2) * 36;
+    } else { // spread sentry posts, each weaving its own watch
+      tx2 = W * (0.5 + (k2 - (n2 - 1) / 2) * 0.3) + Math.sin(t4 * 0.9 + k2 * 2.1) * 44;
+      ty2 = 168 + Math.sin(t4 * 0.6 + k2 * 1.7) * 52;
+    }
+    const kk2 = Math.min(1, dt * ts * 3);
+    br2.bx += (tx2 - G.fx - br2.bx) * kk2;
+    br2.by += (ty2 - G.fy - br2.by) * kk2;
+    br2.hx = br2.bx; br2.hy = br2.by;
+  }
+  // typed specials on a shared cadence — round 1 presses the attack
+  if (G.state === 'play') {
+    gj2.subAbilityCD -= dt * ts;
+    if (gj2.subAbilityCD <= 0) {
+      const living = G.bricks.filter(b => !b.dead && b.subBoss);
+      if (living.length) {
+        gj2.subAbilityCD = 4.8 + Math.random() * 2.6;
+        subAbility(living[Math.floor(Math.random() * living.length)]);
+      }
+    }
+  }
+}
+
+// ---- gauntlet round transitions — used by the controller AND trial jumps
+function gauntletWake() {
+  const gj = G.gauntlet;
+  if (!gj) return;
+  gj.phase = 1;
+  for (const b of G.bricks) {
+    if (!b.dormant) continue;
+    b.dormant = false;
+    if (b.isBoss) {
+      b.bx = b.hx = gj.origX;
+      burst(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 44, 400, 0.9);
+      ringFx(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 8, 180, 5, 0.6);
+    }
+  }
+  G.bossIntro = 1.4;
+  G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
+  SFX.roar();
+  const gen2 = genFor(G.level);
+  setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
+    'ROUND 2 — THE LEGENDARY', 3);
+}
+function gauntletSummonMythic() {
+  const gj = G.gauntlet;
+  if (!gj) return;
+  gj.phase = 2;
+  const gen2 = genFor(G.level);
+  const [mid, mt2] = gen2.gauntlet.myth;
+  const mHp = Math.max(6, Math.round(gj.legendHp * 0.6));
+  G.bricks.push({
+    bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
+    w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
+    hp: mHp, maxHp: mHp, phase: 1, mythic: true,
+    poke: { id: mid, t: mt2, n: NAMES[mid] },
+    isBoss: true, flash: 0, wobble: Math.random() * Math.PI * 2,
+    abilityCD: 3.5,
+  });
+  getSprite(mid);
+  burst(W / 2, 150, '#ff80ab', 40, 380, 0.9);
+  ringFx(W / 2, 150, '#ff80ab', 8, 170, 5, 0.6);
+  G.bossIntro = 1.4;
+  G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
+  SFX.roar();
+  setAnnounce('fairy', '#ff80ab', NAMES[mid].toUpperCase() + ' — THE MYTHICAL!',
+    'FINAL ROUND — FASTER AND WILDER', 3.2);
+}
+
 function updateSpriteKinematics(dt) {
   if (dt <= 0) return;
   for (const br of G.bricks) {
@@ -1072,144 +1216,16 @@ function update(dt) {
       br.hx = br.bx; br.hy = br.by;
     }
   }
-  // ---- SENTINEL specials: each sub-legendary attacks BY ITS TYPE ----
-  const SUB_ABILITY_NAMES = {
-    ice: 'FROST FAN', electric: 'BOLT STRIKE', fire: 'EMBER RAIN',
-    water: 'TIDAL LINE', rock: 'BOULDER TOSS', steel: 'FLASH CANNON',
-    psychic: 'WARP PULSE', grass: 'SPORE BURST', dragon: 'DRAGON PULSE',
-    ground: 'FISSURE', fairy: 'DAZZLE', fighting: 'AURA SPHERE',
-  };
-  function subAbility(br2) {
-    const t3 = br2.poke.t;
-    const bx2 = br2.bx + G.fx, by2 = br2.by + G.fy + br2.h / 2;
-    const dd = diff();
-    const sp4 = (230 + dd.lv * 14) * dd.shotSpeed;
-    const aim = Math.atan2(shipY() - by2, G.paddle.x - bx2);
-    const push = (a3, m2, extra) => G.enemyShots.push(Object.assign(
-      { x: bx2, y: by2, vx: Math.cos(a3) * sp4 * m2, vy: Math.sin(a3) * sp4 * m2, type: t3 }, extra));
-    switch (t3) {
-      case 'ice': // a wide, slow wall of frost
-        for (const off of [-0.45, -0.15, 0.15, 0.45]) push(aim + off, 0.62, { heavy: true, r: 14 });
-        break;
-      case 'electric': // column lightning at your position (Zekrom's trick)
-        G.columnStrikes.push({ x: G.paddle.x, w: 46, warn: 0.9, strike: 0.3, color: '#80d8ff' });
-        tone(1200, 0.25, 'square', 0.04, -800);
-        break;
-      case 'fire': { // ember rain: a curtain of fireballs beneath its wings
-        for (const k2 of [-1.5, -0.5, 0.5, 1.5]) {
-          G.enemyShots.push({ x: bx2 + k2 * 48, y: by2, vy: sp4 * 0.78, type: t3, r: 12 });
-        }
-        break;
-      }
-      case 'water': // a low, fast three-shot wave
-        for (const off of [-0.18, 0, 0.18]) push(aim + off, 1.05);
-        break;
-      case 'rock': case 'ground': // two heavy, slow, splashing boulders
-        for (const off of [-0.14, 0.14]) push(aim + off, 0.55, { heavy: true, r: 17, splash: true });
-        break;
-      case 'steel': // one precise, very fast shot
-        push(aim, 1.6, { r: 12 });
-        break;
-      case 'psychic': case 'fairy': { // warp pulse: blink + a 4-shot ring
-        burst(bx2, by2 - br2.h / 2, '#ec407a', 20, 260, 0.5);
-        br2.bx = 90 + Math.random() * (W - 180) - G.fx;
-        br2.flash = 1;
-        for (let k2 = 0; k2 < 4; k2++) push((k2 / 4) * Math.PI * 2 + 0.4, 0.8);
-        break;
-      }
-      case 'grass': // spore burst: a slow five-shot bloom
-        for (let k2 = 0; k2 < 5; k2++) push((k2 / 5) * Math.PI * 2, 0.55, { r: 12 });
-        break;
-      default: // dragon/fighting/others: a hard three-shot pulse
-        for (const off of [-0.2, 0, 0.2]) push(aim + off, 1.2);
-    }
-    addFloater(br2.bx + G.fx, br2.by + G.fy - br2.h / 2 - 26,
-      (SUB_ABILITY_NAMES[t3] || 'ONSLAUGHT') + '!', TYPE_COLORS[t3], 14);
-    SFX.enemyShot();
-  }
-  // ---- SENTINEL choreography: the trio cycles through THREE formations on
-  // one clock — a rotating triangle, a sweeping battle line, and spread
-  // sentry posts — never parked, each bird springing between eased slots
-  if (G.gauntlet && G.gauntlet.phase === 0 && (G.state === 'play' || G.state === 'serve')) {
-    const gj2 = G.gauntlet;
-    gj2.subT += dt * ts;
-    const t4 = gj2.subT;
-    const formIdx = Math.floor(t4 / 8) % 3;
-    for (const br2 of G.bricks) {
-      if (br2.dead || !br2.subBoss) continue;
-      const k2 = br2.subIdx || 0, n2 = Math.max(1, br2.subN || 1);
-      let tx2, ty2;
-      if (formIdx === 0) { // rotating triangle / ring around the arena heart
-        const a3 = (k2 / n2) * Math.PI * 2 + t4 * 0.55;
-        tx2 = W / 2 + Math.cos(a3) * W * 0.22;
-        ty2 = 176 + Math.sin(a3) * 66;
-      } else if (formIdx === 1) { // battle line sweeping the full width
-        tx2 = W / 2 + Math.sin(t4 * 0.7) * W * 0.28 + (k2 - (n2 - 1) / 2) * 118;
-        ty2 = 150 + (k2 % 2) * 36;
-      } else { // spread sentry posts, each weaving its own watch
-        tx2 = W * (0.5 + (k2 - (n2 - 1) / 2) * 0.3) + Math.sin(t4 * 0.9 + k2 * 2.1) * 44;
-        ty2 = 168 + Math.sin(t4 * 0.6 + k2 * 1.7) * 52;
-      }
-      const kk2 = Math.min(1, dt * ts * 3);
-      br2.bx += (tx2 - G.fx - br2.bx) * kk2;
-      br2.by += (ty2 - G.fy - br2.by) * kk2;
-      br2.hx = br2.bx; br2.hy = br2.by;
-    }
-    // typed specials on a shared cadence — round 1 presses the attack
-    if (G.state === 'play') {
-      gj2.subAbilityCD -= dt * ts;
-      if (gj2.subAbilityCD <= 0) {
-        const living = G.bricks.filter(b => !b.dead && b.subBoss);
-        if (living.length) {
-          gj2.subAbilityCD = 4.8 + Math.random() * 2.6;
-          subAbility(living[Math.floor(Math.random() * living.length)]);
-        }
-      }
-    }
-  }
+  updateSentinels(dt, ts);
   // ---- THE GAUNTLET: three rounds per finale. Round 1 the sentinels hold
   // the arena; felling them wakes the LEGENDARY (and its wings); felling
   // the legendary summons the MYTHICAL — smaller, faster, wilder.
   if (G.gauntlet && G.state === 'play') {
     const gj = G.gauntlet;
     if (gj.phase === 0 && !G.bricks.some(b => !b.dead && b.subBoss)) {
-      gj.phase = 1;
-      for (const b of G.bricks) {
-        if (!b.dormant) continue;
-        b.dormant = false;
-        if (b.isBoss) {
-          b.bx = b.hx = gj.origX;
-          burst(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 44, 400, 0.9);
-          ringFx(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 8, 180, 5, 0.6);
-        }
-      }
-      G.bossIntro = 1.4;
-      G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
-      SFX.roar();
-      const gen2 = genFor(G.level);
-      setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
-        'ROUND 2 — THE LEGENDARY', 3);
+      gauntletWake();
     } else if (gj.phase === 1 && !G.bricks.some(b => !b.dead && b.isBoss)) {
-      gj.phase = 2;
-      const gen2 = genFor(G.level);
-      const [mid, mt2] = gen2.gauntlet.myth;
-      const mHp = Math.max(6, Math.round(gj.legendHp * 0.6));
-      G.bricks.push({
-        bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
-        w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
-        hp: mHp, maxHp: mHp, phase: 1, mythic: true,
-        poke: { id: mid, t: mt2, n: NAMES[mid] },
-        isBoss: true, flash: 0, wobble: Math.random() * Math.PI * 2,
-        abilityCD: 3.5,
-      });
-      getSprite(mid);
-      burst(W / 2, 150, '#ff80ab', 40, 380, 0.9);
-      ringFx(W / 2, 150, '#ff80ab', 8, 170, 5, 0.6);
-      G.bossIntro = 1.4;
-      G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
-      SFX.roar();
-      setAnnounce('fairy', '#ff80ab', NAMES[mid].toUpperCase() + ' — THE MYTHICAL!',
-        'FINAL ROUND — FASTER AND WILDER', 3.2);
+      gauntletSummonMythic();
     }
   }
   // ---- SPACE JUNKIE boss guards: two mirrored wing arcs TETHERED to the

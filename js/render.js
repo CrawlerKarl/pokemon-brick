@@ -2799,6 +2799,25 @@ function drawTrial() {
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
     ctx.fillText((i + 1) + '/3 ' + STAGE_NAMES[i], r.x + r.w / 2, r.y + r.h / 2 + 1, r.w - 8);
   }
+  // LEGENDARY stage → pick your gauntlet round (test just Mewtwo, or Mew)
+  if (T.rounds) {
+    const gsel = GENS[trialSel.region];
+    const labels = ['FULL GAUNTLET', '★ ' + gsel.boss.n.toUpperCase(),
+      gsel.gauntlet ? '✦ ' + (NAMES[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL'];
+    for (let i = 0; i < 3; i++) {
+      const rr2 = T.round(i), sel2 = trialSel.round === i;
+      const hov2 = inRect(mouseX, lastMouseY, rr2);
+      roundRect(rr2.x, rr2.y, rr2.w, rr2.h, 9);
+      ctx.fillStyle = sel2 ? 'rgba(255,128,171,0.22)' : hov2 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+      ctx.fill();
+      ctx.lineWidth = sel2 ? 2 : 1;
+      ctx.strokeStyle = sel2 ? '#ff80ab' : 'rgba(255,255,255,0.22)';
+      ctx.stroke();
+      ctx.font = `900 ${Math.min(10, rr2.w / 11)}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel2 ? '#ff80ab' : '#cfd8dc';
+      ctx.fillText(labels[i], rr2.x + rr2.w / 2, rr2.y + rr2.h / 2 + 1, rr2.w - 8);
+    }
+  }
   // start button
   const b = T.start;
   const hov = inRect(mouseX, lastMouseY, b);
