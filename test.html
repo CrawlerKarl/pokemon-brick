@@ -549,7 +549,9 @@ window.requestAnimationFrame = function () { return 0; };
     assert(DEX_REWARDS.every((r, i) => r.at > 0 && (!i || r.at > DEX_REWARDS[i - 1].at)),
       'research thresholds must be positive and strictly increasing');
     assert(Object.prototype.hasOwnProperty.call(SETTINGS, 'autoFire'), 'auto-fire setting missing');
-    return 'Quick Start geometry; mode-safe starter copy; 5 escalating Pokédex rewards; optional auto-fire';
+    const lvl0 = G.level;
+    G.level = 4; drawJourneyMap(H * 0.25, true); G.level = lvl0;
+    return 'Quick Start; mode-safe starter copy; journey map; 5 Pokédex rewards; optional auto-fire';
   });
 
   // 7) storage corruption recovery — never destroys the real save (finally-restore)

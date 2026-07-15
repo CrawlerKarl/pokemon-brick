@@ -1865,9 +1865,9 @@ function drawShootHint() {
   if (G.mode === 'classic' && !blasterArmed()) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
-    ? (IS_TOUCH ? 'TAP TO ATTACK · HOLD = BIG ATTACK' : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
+    ? (IS_TOUCH ? (SETTINGS.autoFire ? 'AUTO-FIRE ON · HOLD FIRE = BIG ATTACK' : 'TAP TO ATTACK · HOLD = BIG ATTACK') : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
     : G.mode === 'blaster'
-      ? (IS_TOUCH ? 'TAP TO FIRE · HOLD = CHARGE SHOT' : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
+      ? (IS_TOUCH ? (SETTINGS.autoFire ? 'AUTO-FIRE ON · HOLD FIRE = CHARGE SHOT' : 'TAP TO FIRE · HOLD = CHARGE SHOT') : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
       : (IS_TOUCH ? 'HOLD FIRE TO SHOOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT');
   ctx.save();
   ctx.globalAlpha = a;
@@ -2220,7 +2220,7 @@ function drawTouchControls() {
     drawGlyph(ctx, charging ? 'warp' : 'target', f.x, f.y - 6, 13, hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#b2ebf2') : '#b3e5fc');
     ctx.font = '900 9px Orbitron, sans-serif';
     ctx.fillStyle = hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#80deea') : '#b3e5fc';
-    ctx.fillText(hot ? 'HOT!' : charging ? 'CHARGE' : 'FIRE', f.x, f.y + 16);
+    ctx.fillText(hot ? 'HOT!' : charging ? 'CHARGE' : (SETTINGS.autoFire && G.mode !== 'classic' ? 'AUTO' : 'FIRE'), f.x, f.y + 16);
   }
   // MEGA — the button IS the meter (fills as a ring)
   const m = B.mega;
@@ -3550,7 +3550,7 @@ function drawOverlays() {
         ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS']
         : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA EVOLVE WHEN METER IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
       : (IS_TOUCH
-        ? ['DRAG ANYWHERE — MOVE', 'TAP FIRE — SHOOT', 'HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
+        ? ['DRAG ANYWHERE — MOVE', SETTINGS.autoFire ? 'AUTO-FIRE — ON' : 'TAP FIRE — SHOOT', 'HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
         : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK OR SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
     ).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.47 + i * 22, W * 0.92));
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);
