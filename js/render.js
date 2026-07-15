@@ -341,10 +341,10 @@ function drawBossMon(br, x, y) {
 }
 
 function drawBricks() {
-  const boss = G.bricks.find(b => b.isBoss);
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant) || G.bricks.find(b => b.isBoss);
   const introOff = G.bossIntro > 0 ? -Math.pow(G.bossIntro / 1.6, 2) * (H * 0.4) : 0;
   for (const br of G.bricks) {
-    if (br.dead) continue;
+    if (br.dead || br.dormant) continue;
     const x = br.bx + G.fx;
     // idle bob is OFF while a brick is entering (out-of-phase bobbing on top
     // of the glide read as stutter) and eases back in once it lands (settleT)
@@ -703,7 +703,7 @@ function drawBricks() {
     ctx.shadowBlur = 0;
     ctx.font = '700 16px Orbitron, sans-serif';
     ctx.fillStyle = '#fff';
-    ctx.fillText('GUARDIAN OF ' + genFor(G.level).name, W / 2, H * 0.42 + 40);
+    ctx.fillText((boss.mythic ? 'MYTHICAL OF ' : boss.subBoss ? 'SENTINEL OF ' : 'GUARDIAN OF ') + genFor(G.level).name, W / 2, H * 0.42 + 40);
     ctx.restore();
   }
 }
@@ -1236,7 +1236,7 @@ function drawRallyZone() {
   if (G.state !== 'play') return;
   let rallyFloor = -Infinity;
   for (const br of G.bricks) {
-    if (br.dead) continue;
+    if (br.dead || br.dormant) continue;
     if (!br.isBoss && !br.dive) rallyFloor = Math.max(rallyFloor, br.by + G.fy + br.h / 2);
   }
   rallyFloor += 14;

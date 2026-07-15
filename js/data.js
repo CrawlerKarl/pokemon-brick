@@ -554,6 +554,7 @@ const GENS = [
   { name: 'KANTO', scene: 'hills',
     sky: ['#081226', '#10254a', '#16324a'], land: ['#0c2e22', '#0a2118', '#06140f'], accent: '#7ee08a',
     boss: { id: 150, n: 'Mewtwo', t: 'psychic' },
+    gauntlet: { subs: [[144,'ice'],[145,'electric'],[146,'fire']], myth: [151,'psychic'] },
     tiers: {
       1: [[16,'flying'],[19,'normal'],[10,'bug'],[41,'poison'],[129,'water'],[43,'grass'],[60,'water'],[74,'rock'],[133,'normal'],[25,'electric'],[7,'water'],[4,'fire'],[1,'grass'],[39,'fairy'],[54,'water'],[92,'ghost'],[52,'normal'],[23,'poison'],[109,'poison'],[35,'fairy']],
       2: [[17,'flying'],[8,'water'],[5,'fire'],[2,'grass'],[64,'psychic'],[93,'ghost'],[67,'fighting'],[61,'water'],[26,'electric'],[75,'rock'],[53,'normal'],[24,'poison'],[110,'poison'],[36,'fairy']],
@@ -562,6 +563,7 @@ const GENS = [
   { name: 'JOHTO', scene: 'pagoda',
     sky: ['#140d26', '#2a1a4a', '#3a2348'], land: ['#241433', '#1a0e26', '#100818'], accent: '#c79bff',
     boss: { id: 249, n: 'Lugia', t: 'psychic' },
+    gauntlet: { subs: [[243,'electric'],[244,'fire'],[245,'water']], myth: [251,'grass'] },
     tiers: {
       1: [[152,'grass'],[155,'fire'],[158,'water'],[161,'normal'],[163,'flying'],[167,'bug'],[179,'electric'],[183,'water'],[187,'grass'],[194,'water'],[209,'fairy'],[218,'fire'],[220,'ice'],[228,'dark'],[231,'ground'],[246,'rock']],
       2: [[153,'grass'],[156,'fire'],[159,'water'],[180,'electric'],[176,'fairy'],[196,'psychic'],[197,'dark'],[198,'dark'],[210,'fairy'],[247,'rock']],
@@ -570,6 +572,7 @@ const GENS = [
   { name: 'HOENN', scene: 'waves',
     sky: ['#04182b', '#0a2f4d', '#0d4a5e'], land: ['#06283d', '#04202f', '#031622'], accent: '#5ad7d2',
     boss: { id: 384, n: 'Rayquaza', t: 'dragon' },
+    gauntlet: { subs: [[377,'rock'],[378,'ice'],[379,'steel']], myth: [385,'psychic'] },
     tiers: {
       1: [[252,'grass'],[255,'fire'],[258,'water'],[261,'dark'],[263,'normal'],[265,'bug'],[280,'psychic'],[285,'grass'],[287,'normal'],[304,'steel'],[309,'electric'],[322,'fire'],[363,'ice'],[371,'dragon'],[278,'water'],[300,'normal']],
       2: [[253,'grass'],[256,'fire'],[259,'water'],[281,'psychic'],[286,'grass'],[305,'steel'],[310,'electric'],[323,'fire'],[364,'ice'],[372,'dragon']],
@@ -578,6 +581,7 @@ const GENS = [
   { name: 'SINNOH', scene: 'mountain',
     sky: ['#0a1126', '#15234d', '#23365e'], land: ['#1b2a4a', '#131f38', '#0c1426'], accent: '#9fb8ff',
     boss: { id: 483, n: 'Dialga', t: 'dragon' },
+    gauntlet: { subs: [[480,'psychic'],[481,'psychic'],[482,'psychic']], myth: [491,'dark'] },
     tiers: {
       1: [[387,'grass'],[390,'fire'],[393,'water'],[396,'flying'],[399,'normal'],[403,'electric'],[406,'grass'],[427,'normal'],[431,'normal'],[434,'poison'],[436,'steel'],[447,'fighting'],[449,'ground'],[459,'ice'],[453,'poison'],[418,'water']],
       2: [[388,'grass'],[391,'fire'],[394,'water'],[397,'flying'],[404,'electric'],[426,'ghost'],[428,'normal'],[444,'dragon'],[448,'fighting'],[454,'poison']],
@@ -586,6 +590,7 @@ const GENS = [
   { name: 'UNOVA', scene: 'skyline',
     sky: ['#0d0d1a', '#1a1a33', '#26264d'], land: ['#15152b', '#0f0f20', '#090914'], accent: '#ffd166',
     boss: { id: 644, n: 'Zekrom', t: 'electric' },
+    gauntlet: { subs: [[638,'steel'],[639,'rock'],[640,'grass']], myth: [494,'fire'] },
     tiers: {
       1: [[495,'grass'],[498,'fire'],[501,'water'],[504,'normal'],[506,'normal'],[509,'dark'],[519,'flying'],[522,'electric'],[524,'rock'],[527,'psychic'],[543,'bug'],[551,'ground'],[570,'dark'],[572,'normal'],[607,'ghost'],[610,'dragon']],
       2: [[496,'grass'],[499,'fire'],[502,'water'],[507,'normal'],[523,'electric'],[552,'ground'],[571,'dark'],[608,'ghost'],[611,'dragon'],[525,'rock']],
@@ -594,6 +599,7 @@ const GENS = [
   { name: 'KALOS', scene: 'tower',
     sky: ['#160d22', '#321a40', '#4a2440'], land: ['#2a1533', '#1d0e24', '#120818'], accent: '#ff9ecb',
     boss: { id: 717, n: 'Yveltal', t: 'dark' },
+    gauntlet: { subs: [[718,'dragon']], myth: [719,'fairy'] },
     tiers: {
       1: [[650,'grass'],[653,'fire'],[656,'water'],[659,'normal'],[661,'flying'],[664,'bug'],[667,'fire'],[669,'fairy'],[672,'grass'],[674,'fighting'],[677,'psychic'],[679,'steel'],[686,'dark'],[694,'electric'],[708,'ghost'],[712,'ice']],
       2: [[651,'grass'],[654,'fire'],[657,'water'],[662,'flying'],[675,'fighting'],[680,'steel'],[705,'dragon'],[700,'fairy'],[695,'electric'],[709,'ghost']],
@@ -602,6 +608,7 @@ const GENS = [
   { name: 'ALOLA', scene: 'palms',
     sky: ['#1a0d26', '#40204d', '#6e3640'], land: ['#2e1733', '#1f0f24', '#120818'], accent: '#ffb74d',
     boss: { id: 792, n: 'Lunala', t: 'psychic' },
+    gauntlet: { subs: [[785,'electric'],[786,'psychic'],[787,'grass']], myth: [802,'fighting'] },
     tiers: {
       1: [[722,'grass'],[725,'fire'],[728,'water'],[731,'flying'],[734,'normal'],[736,'bug'],[744,'rock'],[761,'grass'],[764,'fairy'],[767,'bug'],[769,'ghost'],[775,'normal'],[779,'psychic'],[781,'ghost'],[782,'dragon'],[755,'grass']],
       2: [[723,'grass'],[726,'fire'],[729,'water'],[737,'electric'],[745,'rock'],[762,'grass'],[768,'bug'],[783,'dragon'],[750,'ground'],[741,'fire']],
@@ -610,6 +617,7 @@ const GENS = [
   { name: 'GALAR', scene: 'stadium',
     sky: ['#0d1218', '#1c2733', '#2c3e4d'], land: ['#16222e', '#101822', '#0a0f16'], accent: '#ff5e7e',
     boss: { id: 890, n: 'Eternatus', t: 'dragon' },
+    gauntlet: { subs: [[894,'electric'],[895,'dragon'],[896,'ice']], myth: [893,'grass'] },
     tiers: {
       1: [[810,'grass'],[813,'fire'],[816,'water'],[819,'normal'],[821,'flying'],[824,'bug'],[827,'dark'],[831,'normal'],[835,'electric'],[837,'rock'],[840,'dragon'],[843,'ground'],[856,'psychic'],[859,'dark'],[872,'ice'],[868,'fairy']],
       2: [[811,'grass'],[814,'fire'],[817,'water'],[822,'flying'],[836,'electric'],[838,'rock'],[844,'ground'],[857,'psychic'],[860,'dark'],[825,'bug']],
@@ -618,6 +626,7 @@ const GENS = [
   { name: 'PALDEA', scene: 'mesa',
     sky: ['#190f1f', '#3a1d33', '#5e2e33'], land: ['#33202a', '#241620', '#150c15'], accent: '#ffcf5e',
     boss: { id: 1007, n: 'Koraidon', t: 'dragon' },
+    gauntlet: { subs: [[1001,'grass'],[1002,'ice'],[1003,'ground']], myth: [1025,'poison'] },
     tiers: {
       1: [[906,'grass'],[909,'fire'],[912,'water'],[915,'normal'],[917,'bug'],[919,'bug'],[921,'electric'],[926,'fairy'],[928,'grass'],[932,'rock'],[935,'fire'],[957,'fairy'],[940,'electric'],[971,'ghost'],[996,'dragon'],[978,'dragon']],
       2: [[907,'grass'],[910,'fire'],[913,'water'],[922,'electric'],[933,'rock'],[936,'fire'],[937,'ghost'],[958,'fairy'],[997,'dragon'],[972,'ghost']],
@@ -769,6 +778,7 @@ const BOSS_ABILITIES = {
 
 // names for everything in the rosters — the Pokédex shows them
 const NAMES = {
+  243:'Raikou',244:'Entei',245:'Suicune',251:'Celebi',377:'Regirock',378:'Regice',379:'Registeel',385:'Jirachi',480:'Uxie',481:'Mesprit',482:'Azelf',491:'Darkrai',494:'Victini',638:'Cobalion',639:'Terrakion',640:'Virizion',718:'Zygarde',719:'Diancie',785:'Tapu Koko',786:'Tapu Lele',787:'Tapu Bulu',802:'Marshadow',893:'Zarude',894:'Regieleki',895:'Regidrago',896:'Glastrier',1001:'Wo-Chien',1002:'Chien-Pao',1003:'Ting-Lu',1025:'Pecharunt',
   1:'Bulbasaur',2:'Ivysaur',3:'Venusaur',4:'Charmander',5:'Charmeleon',6:'Charizard',7:'Squirtle',8:'Wartortle',9:'Blastoise',10:'Caterpie',
   16:'Pidgey',17:'Pidgeotto',19:'Rattata',23:'Ekans',24:'Arbok',25:'Pikachu',26:'Raichu',35:'Clefairy',36:'Clefable',39:'Jigglypuff',41:'Zubat',43:'Oddish',52:'Meowth',53:'Persian',54:'Psyduck',60:'Poliwag',
   61:'Poliwhirl',64:'Kadabra',65:'Alakazam',67:'Machoke',68:'Machamp',74:'Geodude',75:'Graveler',92:'Gastly',93:'Haunter',94:'Gengar',109:'Koffing',110:'Weezing',

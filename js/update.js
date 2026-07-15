@@ -525,7 +525,7 @@ function collectPickup(pu) {
 // signature legendary mechanics — each region's boss fights differently
 function bossAbility(boss) {
   const id = boss.poke.id;
-  const ab = BOSS_ABILITIES[id];
+  const ab = BOSS_ABILITIES[id] || (boss.mythic ? { name: 'MYTHIC BLINK', cd: 5 } : null);
   if (!ab) return;
   const bx = boss.bx + G.fx, by = boss.by + G.fy;
   switch (id) {
@@ -570,6 +570,22 @@ function bossAbility(boss) {
     case 1007: // Koraidon: wild charge toward you
       boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.5, fast: true };
       SFX.enrage();
+      break;
+    default:
+      if (boss.mythic) { // MYTHIC BLINK: vanish, reappear, radial burst
+        burst(bx, by, '#ff80ab', 26, 300, 0.6);
+        const lim2 = boss.w / 2 + 24;
+        boss.hx = lim2 + Math.random() * (W - lim2 * 2) - G.fx;
+        boss.bx = boss.hx;
+        boss.flash = 1;
+        burst(boss.bx + G.fx, by, '#ff80ab', 26, 300, 0.6);
+        const nR = 6, spR2 = (200 + diff().lv * 10) * diff().shotSpeed;
+        for (let i2 = 0; i2 < nR; i2++) {
+          const a2 = (i2 / nR) * Math.PI * 2 + Math.random() * 0.4;
+          G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a2) * spR2, vy: Math.sin(a2) * spR2, boss: true, type: boss.poke.t });
+        }
+        tone(920, 0.16, 'sine', 0.06, -420);
+      }
       break;
   }
   addFloater(boss.bx + G.fx, by - boss.h / 2 - 44, ab.name + '!', TYPE_COLORS[boss.poke.t], 16);
@@ -675,7 +691,7 @@ function loseLife() {
 function updateSpriteKinematics(dt) {
   if (dt <= 0) return;
   for (const br of G.bricks) {
-    if (br.dead || br.isBoss) continue;
+    if (br.dead || br.isBoss || br.dormant) continue;
     if (!bareMon(br) && !br.guard) { br.pbx = br.bx; br.pby = br.by; continue; }
     const ivx = (br.bx - (br.pbx ?? br.bx)) / dt, ivy = (br.by - (br.pby ?? br.by)) / dt;
     br.pbx = br.bx; br.pby = br.by;
@@ -702,7 +718,7 @@ function updateSpriteKinematics(dt) {
 function nearestBrick(x, y) {
   let best = null, bd = Infinity;
   for (const br of G.bricks) {
-    if (br.dead || br.entry || br.barrier) continue; // barriers are cover, not targets
+    if (br.dead || br.entry || br.barrier || br.dormant) continue; // barriers are cover, not targets
     const bx = br.bx + G.fx;
     let d = Math.hypot(bx - x, br.by + G.fy - y);
     if (bx < -10 || bx > W + 10) d += 600; // off-screen flyers are poor targets
@@ -1018,14 +1034,11 @@ function update(dt) {
           blend = 0.5 - 0.5 * Math.cos(et * Math.PI / 8); // full morph every 16s
           break;
       }
-      // squad-level ingress: the whole formed body floats in from off-screen
-      // on an eased glide — decays to zero once the squad is on station
-      const ip = Math.min(1, Math.max(0, (et - (S.inDelay || 0)) / (S.inDur || 1.8)));
-      if (ip < 1) {
-        const e3 = 1 - Math.pow(1 - ip, 3);
-        cx += (S.inDx || 0) * (1 - e3);
-        cy += (S.inDy || 0) * (1 - e3);
-      }
+      // the formation is ALWAYS under way: a gentle patrol sway on every
+      // anchor — side to side with a slow breath of altitude — so even a
+      // parked ring keeps visibly cruising
+      cx += Math.sin(et * 0.55 + s * 1.9) * W * 0.045;
+      cy += Math.sin(et * 0.4 + s * 1.3) * 9;
       S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;
     }
     // write the controller's frame into every member — one clock, one body
@@ -1049,12 +1062,57 @@ function update(dt) {
       br.hx = br.bx; br.hy = br.by;
     }
   }
+  // ---- THE GAUNTLET: three rounds per finale. Round 1 the sentinels hold
+  // the arena; felling them wakes the LEGENDARY (and its wings); felling
+  // the legendary summons the MYTHICAL — smaller, faster, wilder.
+  if (G.gauntlet && G.state === 'play') {
+    const gj = G.gauntlet;
+    if (gj.phase === 0 && !G.bricks.some(b => !b.dead && b.subBoss)) {
+      gj.phase = 1;
+      for (const b of G.bricks) {
+        if (!b.dormant) continue;
+        b.dormant = false;
+        if (b.isBoss) {
+          b.bx = b.hx = gj.origX;
+          burst(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 44, 400, 0.9);
+          ringFx(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 8, 180, 5, 0.6);
+        }
+      }
+      G.bossIntro = 1.4;
+      G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
+      SFX.roar();
+      const gen2 = genFor(G.level);
+      setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
+        'ROUND 2 — THE LEGENDARY', 3);
+    } else if (gj.phase === 1 && !G.bricks.some(b => !b.dead && b.isBoss)) {
+      gj.phase = 2;
+      const gen2 = genFor(G.level);
+      const [mid, mt2] = gen2.gauntlet.myth;
+      const mHp = Math.max(6, Math.round(gj.legendHp * 0.6));
+      G.bricks.push({
+        bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
+        w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
+        hp: mHp, maxHp: mHp, phase: 1, mythic: true,
+        poke: { id: mid, t: mt2, n: NAMES[mid] },
+        isBoss: true, flash: 0, wobble: Math.random() * Math.PI * 2,
+        abilityCD: 3.5,
+      });
+      getSprite(mid);
+      burst(W / 2, 150, '#ff80ab', 40, 380, 0.9);
+      ringFx(W / 2, 150, '#ff80ab', 8, 170, 5, 0.6);
+      G.bossIntro = 1.4;
+      G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
+      SFX.roar();
+      setAnnounce('fairy', '#ff80ab', NAMES[mid].toUpperCase() + ' — THE MYTHICAL!',
+        'FINAL ROUND — FASTER AND WILDER', 3.2);
+    }
+  }
   // ---- SPACE JUNKIE boss guards: two mirrored wing arcs TETHERED to the
   // legendary. They trail its sweeps, compress + reform through teleports,
   // exchange sides in phase 2, and become counter-rotating orbits in the
   // last stand — never an unrelated marching grid.
   if (G.mode === 'junkie' && (G.state === 'play' || G.state === 'serve')) {
-    const boss = G.bricks.find(b => b.isBoss && !b.dead);
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (boss) {
       if (boss.reformT > 0) boss.reformT = Math.max(0, boss.reformT - dt * ts);
       // phase 2+: wings periodically EXCHANGE sides along split verticals
@@ -1141,6 +1199,16 @@ function update(dt) {
           pos.y = F.cy + (pos.y - F.cy) * (1 + 0.8 * pr);
         } else if (mv.kind === 'raid') pos.y += mv.dy * pr;
       }
+      // SPACE JUNKIE choreo members float in ONE BY ONE: each rider glides
+      // from off-screen to its slot in sequence, firing once it's on screen
+      if (F.inDelay != null && G.encounter) {
+        const ipm = Math.min(1, Math.max(0, (G.encounter.t - F.inDelay) / 1.5));
+        if (ipm < 1) {
+          const em = 1 - Math.pow(1 - ipm, 3);
+          pos.x += (F.inDx || 0) * (1 - em);
+          pos.y += (F.inDy || 0) * (1 - em);
+        } else { F.inDelay = null; F.entering = false; }
+      }
       if (F.state === 1) { // breaking out: glide from the wall onto the pattern
         F.t += dt * ts;
         // negative t = a stream rider still holding off-screen for its turn
@@ -1169,9 +1237,21 @@ function update(dt) {
         // every frame while the glide lerp snapped them back — a visible
         // jitter on every wave entrance. Entries are transient; the overlap
         // invariant (and its test) covers settled flyers (state 2).
-        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry) fl.push(br);
+        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && !br.flight.entering) fl.push(br);
       }
       const gr = G.mode !== 'junkie' ? G.gridRect : null;
+      // SPACE JUNKIE separation is SMOOTHED: pushes build into a per-rider
+      // offset that eases in AND out — so when a neighbour dies, the released
+      // pressure drains over ~0.4s instead of snapping the survivor sideways
+      const eased = G.mode === 'junkie';
+      if (eased) {
+        for (const br of fl) {
+          br.sepX = (br.sepX || 0) * (1 - Math.min(1, dt * ts * 2.5));
+          br.sepY = (br.sepY || 0) * (1 - Math.min(1, dt * ts * 2.5));
+          br.slotX = br.bx; br.slotY = br.by;
+          br.bx += br.sepX; br.by += br.sepY;
+        }
+      }
       if (fl.length > 1) {
         for (let it = 0; it < 12; it++) {
           let moved = false;
@@ -1207,6 +1287,16 @@ function update(dt) {
           if (!moved) break;
         }
       }
+      if (eased) { // blend the raw pushes into the persistent offset
+        const k2 = Math.min(1, dt * ts * 14);
+        for (const br of fl) {
+          const wantX = br.bx - br.slotX, wantY = br.by - br.slotY;
+          br.sepX += (wantX - br.sepX) * k2;
+          br.sepY += (wantY - br.sepY) * k2;
+          br.bx = br.slotX + br.sepX;
+          br.by = br.slotY + br.sepY;
+        }
+      }
     }
   }
   if (G.state === 'play' || G.state === 'serve') {
@@ -1226,7 +1316,7 @@ function update(dt) {
   }
   if (G.state === 'play' && G.bossIntro <= 0) {
     G.swayT += dt * ts;
-    const boss = G.bricks.find(b => b.isBoss && !b.dead);
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     const mt = G.motionTier;
     const style = G.motionStyle;
     const alive = G.bricks.filter(b => !b.dead).length;
@@ -1239,7 +1329,7 @@ function update(dt) {
     if (!G.blocksStatic) {
       let minX = Infinity, maxX = -Infinity;
       for (const br of G.bricks) {
-        if (br.dead || br.isBoss || br.dive || br.entry || flying(br)) continue;
+        if (br.dead || br.isBoss || br.dive || br.entry || br.dormant || br.guard || br.barrier || flying(br)) continue;
         minX = Math.min(minX, br.hx - br.w / 2);
         maxX = Math.max(maxX, br.hx + br.w / 2);
       }
@@ -1330,7 +1420,7 @@ function update(dt) {
         G.diveCD = Math.max(2.2, 7 - regionsIn2 * 0.5) * (0.7 + Math.random() * 0.5);
         if (diving < maxDivers &&
             // no peel-offs while a junkie encounter is still floating in
-            !(jk2 && G.encounter && G.encounter.t < 2.6)) {
+            !(jk2 && G.encounter && G.encounter.t < 4)) {
           let pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive && !b.guard && !b.barrier);
           if (jk2 && G.encounter && G.encounter.attackSq >= 0) {
             const att = pool2.filter(b => b.flight && b.flight.sq === G.encounter.attackSq);
@@ -1749,13 +1839,13 @@ function update(dt) {
 
   // ---- enemy fire (telegraphed — a warning flashes before every shot) ----
   if (G.state === 'play' && G.bossIntro <= 0) {
-    const boss = G.bricks.find(b => b.isBoss && !b.dead);
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (boss) {
       // signature ability (teleport, winds, sweeps, time warp...)
-      if (BOSS_ABILITIES[boss.poke.id]) {
+      if (BOSS_ABILITIES[boss.poke.id] || boss.mythic) {
         boss.abilityCD -= dt * ts;
         if (boss.abilityCD <= 0) {
-          boss.abilityCD = BOSS_ABILITIES[boss.poke.id].cd * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1);
+          boss.abilityCD = (BOSS_ABILITIES[boss.poke.id]?.cd || 5) * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1);
           bossAbility(boss);
         }
       }
@@ -1784,7 +1874,7 @@ function update(dt) {
       if (boss.phaseT > 0) boss.phaseT -= dt;
       G.bossShotCD -= dt * ts;
       if (G.bossShotCD <= 0) {
-        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.4 : boss.phase === 2 ? 0.6 : 1);
+        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.4 : boss.phase === 2 ? 0.6 : 1) * (boss.mythic ? 0.6 : 1);
         G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
       }
     }
@@ -1797,7 +1887,7 @@ function update(dt) {
         G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.entry && !b.dive
-          && !b.barrier && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
+          && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30);
         // cap concurrent warnings so the board never fills with warning lines
         const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
         if (alive.length && activeTel < (blaster ? 5 : 3)) {
@@ -1820,12 +1910,28 @@ function update(dt) {
           : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
         for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: tg.br.poke.t });
       } else {
-        // evolved elites (tankier, maxHp≥3) fire a bigger, slower HEAVY blast:
-        // larger hit radius + splash, and it punches through your type resist
-        const elite = tg.br.maxHp >= 3;
-        const spd = (240 + d.lv * 18) * d.shotSpeed * (elite ? 0.82 : 1);
-        G.enemyShots.push({ x: bx, y: by, vy: spd, type: tg.br.poke.t,
-          heavy: elite, r: elite ? 15 : 10, splash: elite });
+        // FIRE BY RANK: the unevolved rank-and-file keep the classic straight
+        // bolt; evolved elites AIM at you with a heavy splash blast; the
+        // sub-legendary sentinels and apex elites sweep a three-shot fan
+        const src = tg.br;
+        const eliteT = src.subBoss ? 3 : Math.max(src.elite || 0, src.maxHp >= 3 ? 2 : 0);
+        const heavy = eliteT >= 2;
+        const spd = (240 + d.lv * 18) * d.shotSpeed * (heavy ? 0.82 : 1);
+        if (eliteT >= 3) {
+          const base2 = Math.atan2(shipY() - by, G.paddle.x - bx);
+          for (const off of [-0.26, 0, 0.26]) {
+            G.enemyShots.push({ x: bx, y: by,
+              vx: Math.cos(base2 + off) * spd, vy: Math.sin(base2 + off) * spd,
+              type: src.poke.t, heavy: true, r: 15, splash: true });
+          }
+        } else if (eliteT === 2) {
+          const base2 = Math.atan2(shipY() - by, G.paddle.x - bx);
+          G.enemyShots.push({ x: bx, y: by,
+            vx: Math.cos(base2) * spd, vy: Math.sin(base2) * spd,
+            type: src.poke.t, heavy: true, r: 15, splash: true });
+        } else {
+          G.enemyShots.push({ x: bx, y: by, vy: spd, type: src.poke.t, r: 10 });
+        }
       }
       SFX.enemyShot();
     }

@@ -111,6 +111,15 @@ phone — flag anything only verifiable there.
   act boundary plays the evolution ceremony (`G.ceremony`, drawCeremony).
 - **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
   mons (flyers, divers, junkie flyers, bosses) FAINT; boxed bricks card-shatter.
+- **Every finale is a three-round GAUNTLET** (`gen.gauntlet`, data.js; the
+  controller lives in update.js): sub-legendaries → the legendary (dormant
+  until round 2, `br.dormant` parks it off-stage) → the mythical
+  (`br.mythic`: 0.6× HP, 0.6× fire interval, generic MYTHIC BLINK ability).
+  Sub-legendaries (`br.subBoss`) fire aimed 3-shot fans; evolved elites
+  (`br.elite ≥ 2`) fire AIMED heavy bolts; only the unevolved rank-and-file
+  keep the classic straight bolt. Junkie separation is EASED (per-rider
+  sepX/sepY: fast build, ~0.4s release) so a kill never snaps neighbours;
+  riders float in one by one (`flight.entering`, excluded from solver+tests).
 - **Bosses are BARE legendaries** (`drawBossMon`, render.js — no card), with
   **three phases** at ⅔/⅓ HP (`br.phase`, set in `damageBrick`): each transition
   fires a shockwave, and phase 3 (last stand) summons a minion ring + faster,

@@ -299,14 +299,21 @@ window.requestAnimationFrame = function () { return 0; };
         }
       }
     }
-    resetRun(3, true); // Kanto legendary — Mewtwo's psychic lattice
+    resetRun(3, true); // Kanto finale — the three-round GAUNTLET
     G.lives = 99;
-    const boss = G.bricks.find(b => b.isBoss);
-    const guards = G.bricks.filter(b => b.guard);
-    assert(boss && guards.length >= 10, 'Mewtwo wave needs ≥10 wing guards, got ' + guards.length);
-    assert(G.bricks.every(b => b.isBoss || b.guard), 'junkie boss wave must not contain legacy grid bricks');
+    assert(G.gauntlet && G.gauntlet.phase === 0, 'the finale should open at gauntlet round 1');
+    const subs = G.bricks.filter(b => b.subBoss && !b.dead);
+    assert(subs.length === 3, 'round 1 should field the three legendary birds, got ' + subs.length);
+    assert(G.bricks.some(b => b.isBoss && b.dormant), 'the legendary should lie dormant in round 1');
+    assert(G.bricks.every(b => b.isBoss || b.guard || b.subBoss), 'junkie boss wave must not contain legacy grid bricks');
     assert(G.encounter && G.encounter.actBeat === 'climax', 'boss wave must expose the climax beat');
     G.state = 'play';
+    for (const b of subs) b.dead = true; // fell the sentinels
+    await runFrames(30);
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
+    assert(boss && G.gauntlet.phase === 1, 'felling the birds should wake Mewtwo (round 2)');
+    const guards = G.bricks.filter(b => b.guard && !b.dead);
+    assert(guards.length >= 10 && guards.every(g => !g.dormant), 'Mewtwo should wake with ≥10 wing guards');
     await runFrames(240);
     boss.hx = W * 0.2; boss.bx = boss.hx; // hard teleport across the arena
     await runFrames(240);
@@ -314,9 +321,16 @@ window.requestAnimationFrame = function () { return 0; };
     const avgX = wings.reduce((a, b) => a + b.bx, 0) / Math.max(1, wings.length);
     assert(Math.abs(avgX - boss.bx) < 130,
       'guards did not re-center on the teleported boss (avgX ' + (avgX | 0) + ' vs boss ' + (boss.bx | 0) + ')');
+    // ROUND 3: fell the legendary — the mythical answers
+    boss.dead = true;
+    for (const b of G.bricks) if (b.guard) b.dead = true;
+    await runFrames(30);
+    const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
+    assert(myth && G.gauntlet.phase === 2, 'felling Mewtwo should summon Mew (round 3)');
+    assert(myth.poke.id === 151, 'the Kanto mythical should be Mew, got #' + myth.poke.id);
     assert(ERR.length === e0, 'errors during choreography test: ' + ERR.slice(e0).join(' | '));
     assert(fails.length === 0, fails.join(' ; '));
-    return 'authored families across all 3 acts; Mewtwo wings anchored, re-centered after teleport';
+    return 'authored families; 3-round gauntlet: birds → Mewtwo (wings anchored) → Mew';
   });
 
   // 2a-iii) ENERGY VEILS: classic challenge waves gate bricks behind the
@@ -428,7 +442,7 @@ window.requestAnimationFrame = function () { return 0; };
         if (G.state === 'upgrade' || G.state === 'gameover') return false;
         if (G.state === 'serve') fireAction();
         steerBallOrAim(mode);
-        const fl = G.bricks.filter(b => !b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.entry);
+        const fl = G.bricks.filter(b => !b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.entry && !b.flight.entering);
         if (fl.length > maxFlyers) maxFlyers = fl.length;
         for (let i = 0; i < fl.length; i++) for (let j = i + 1; j < fl.length; j++) {
           const a = fl[i], b = fl[j];

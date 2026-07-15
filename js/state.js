@@ -280,8 +280,8 @@ const JUNKIE_CHOREO = [
       { kind: 'ring', rx: 1, ry: 1, cy: 0.5, spd: 0.8, role: 'wing', share: 3 },
       { kind: 'ring', rx: 0.4, ry: 0.4, cy: 0.5, spd: 0.8, ph: 0.5, role: 'core', share: 1 }] },
     challenge: { family: 'twinCurrent', squads: [
-      { kind: 'weave', rx: 1, ry: 0.45, cy: 0.32, spd: 1, role: 'core' },
-      { kind: 'weave', rx: 1, ry: 0.45, cy: 0.64, spd: 1, ph: 0.18, role: 'attacker' }] } },
+      { kind: 'lane', rx: 1, ry: 0.45, cy: 0.32, spd: 1, role: 'core' },
+      { kind: 'lane', rx: 1, ry: 0.45, cy: 0.64, spd: 1, ph: 0.18, role: 'attacker' }] } },
   { arrival: { family: 'pairedEllipse', squads: [
       { kind: 'oval', rx: 0.55, ry: 0.8, cx: -0.22, cy: 0.5, dir: 1, spd: 0.85, role: 'core' },
       { kind: 'oval', rx: 0.55, ry: 0.8, cx: 0.22, cy: 0.5, dir: -1, spd: 0.85, ph: 0.5, role: 'wing' }] },
@@ -301,9 +301,9 @@ const JUNKIE_CHOREO = [
       { kind: 'lane', rx: 0.8, ry: 0.32, cy: 0.5, spd: 1, ph: 0.33, role: 'wing' },
       { kind: 'lane', rx: 0.8, ry: 0.32, cx: 0.08, cy: 0.8, spd: 1, ph: 0.66, role: 'attacker' }] },
     challenge: { family: 'braid', squads: [
-      { kind: 'weave', rx: 1, ry: 0.34, cy: 0.22, spd: 1.05, role: 'core' },
-      { kind: 'weave', rx: 1, ry: 0.34, cy: 0.5, spd: 1.05, ph: 0.33, role: 'wing' },
-      { kind: 'weave', rx: 1, ry: 0.34, cy: 0.78, spd: 1.05, ph: 0.66, role: 'attacker' }] } },
+      { kind: 'lane', rx: 1, ry: 0.34, cy: 0.22, spd: 1.05, role: 'core' },
+      { kind: 'lane', rx: 1, ry: 0.34, cy: 0.5, spd: 1.05, ph: 0.33, role: 'wing' },
+      { kind: 'lane', rx: 1, ry: 0.34, cy: 0.78, spd: 1.05, ph: 0.66, role: 'attacker' }] } },
   { arrival: { family: 'nestedCarousel', squads: [
       { kind: 'ring', rx: 1, ry: 1, cy: 0.5, dir: 1, spd: 0.7, role: 'wing' },
       { kind: 'ring', rx: 0.64, ry: 0.64, cy: 0.5, dir: -1, spd: 0.7, role: 'core' },
@@ -381,6 +381,7 @@ function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
   G.fx = 0; G.fy = 0; G.swayT = 0;
+  if (stageIdx(lvl) !== 2) G.gauntlet = null;
   G.gustT = 0; G.timeWarpT = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
@@ -431,6 +432,40 @@ function buildLevel(lvl) {
       abilityCD: (BOSS_ABILITIES[gen.boss.id]?.cd || 8) * 0.7,
     });
     gridTop = bossY + bossH / 2 + 26;
+    // ---- THE GAUNTLET: every region's finale is a three-round title fight.
+    // ROUND 1 — the SUB-LEGENDARIES (Kanto: the legendary birds) hold the
+    // arena while the legendary lies in wait off-stage. ROUND 2 — the
+    // LEGENDARY descends (full current fight). ROUND 3 — the MYTHICAL
+    // (Kanto: Mew) closes the show, faster and wilder. Difficulty scales
+    // round by round; the controller lives in update.js.
+    if (gen.gauntlet) {
+      const legend = G.bricks[G.bricks.length - 1];
+      legend.dormant = true;
+      legend.bx = legend.hx = -2000; // parked off-stage until round 2
+      G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp };
+      const subs = gen.gauntlet.subs;
+      const subHp = Math.max(4, Math.round(bossHp * (subs.length === 1 ? 0.7 : 0.3)));
+      for (let i = 0; i < subs.length; i++) {
+        const [sid, st2] = subs[i];
+        G.bricks.push({
+          bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -2, col: i,
+          w: Math.min(92, bw * 1.25), h: Math.min(80, bh * 1.4),
+          hp: subHp, maxHp: subHp, bare: true, subBoss: true, elite: 3,
+          poke: { id: sid, t: st2, n: NAMES[sid] },
+          flash: 0, wobble: Math.random() * Math.PI * 2,
+          flight: {
+            kind: 'arc', state: 2, launch: 0, sq: null, t: 0,
+            cx: W / 2, cy: 148, rx: Math.min(W * 0.3, 300), ry: 42,
+            spd: 1.1, phase: i / subs.length, n: subs.length, dir: 1, strand: i % 2,
+          },
+        });
+        getSprite(sid);
+      }
+      getSprite(gen.gauntlet.myth[0]);
+      setAnnounce('alert', gen.accent, 'THE ' + gen.name + ' GAUNTLET',
+        'ROUND 1 — THE SENTINELS: ' + subs.map(x => NAMES[x[0]].toUpperCase()).join(' · '), 3.6,
+        'THREE ROUNDS — EACH HARDER THAN THE LAST');
+    } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
     // never pays a cache-miss hitch mid-fight
     setTimeout(() => {
@@ -503,7 +538,7 @@ function buildLevel(lvl) {
         hy: gridTop + r * pitchY + bh / 2,
         row: r, col: c, entry,
         w: bw - gapX, h: bh,
-        hp, maxHp: hp, armored,
+        hp, maxHp: hp, armored, elite: !armored && tier >= 2 ? tier : 0,
         poke: { id, t },
         flash: 0, wobble: Math.random() * Math.PI * 2,
       };
@@ -650,7 +685,7 @@ function buildLevel(lvl) {
     // stay compositionally tethered to it — they compress and reform through
     // teleports, exchange sides in phase 2, and become counter-rotating
     // orbits in the last stand (see the guard controller in update.js).
-    G.bricks = G.bricks.filter(b2 => b2.isBoss);
+    G.bricks = G.bricks.filter(b2 => b2.isBoss || b2.subBoss);
     const nG = Math.min(12, 10 + (regionsIn >= 5 ? 2 : 0));
     const perWing = nG / 2;
     const gw = Math.min(52, Math.max(IS_TOUCH ? 40 : 34, bw * 0.55));
@@ -668,6 +703,7 @@ function buildLevel(lvl) {
         bx: sx0, by: 70 + idx * 26, hx: sx0, hy: 70 + idx * 26, row: 0, col: i,
         w: gw, h: gh, hp: gHp, maxHp: gHp, bare: true,
         guard: { side, sideF: side, targetSide: side, idx, n: perWing },
+        dormant: G.gauntlet ? true : undefined, // wings wake WITH the legendary
         poke: { id: gid, t: gt }, flash: 0, wobble: Math.random() * Math.PI * 2,
       });
       getSprite(gid);
@@ -712,7 +748,7 @@ function buildLevel(lvl) {
         cy: geo.openTop + (q.cy ?? 0.5) * band,
         rx: usable * 0.34 * (q.rx || 1),
         ry: band * 0.48 * (q.ry || 1),
-        dir: (q.dir || 1) * mirror, spd: q.spd || 1, ph: q.ph || 0, role: q.role || 'core',
+        dir: (q.dir || 1) * mirror, spd: (q.spd || 1) * 1.6, ph: q.ph || 0, role: q.role || 'core',
       };
       clampOpen(g, geo.openTop, geo.floorY);
       // squad-level INGRESS: the whole formation floats in as ONE body —
@@ -742,7 +778,7 @@ function buildLevel(lvl) {
       perS = Math.max(3, Math.min(perS, Math.floor(span / minGap)));
       const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
       const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad
-      const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.6 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
+      const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.9 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
       const R = resolved[resolved.length - 1];
       // SHELL ARMOR: normal bolts plink off — ONE charged shot cracks it.
       // Kanto's challenge wave teaches it (3 armored rookies + a callout);
@@ -762,11 +798,12 @@ function buildLevel(lvl) {
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
           w: mw * sizeMul, h: mh * sizeMul, hp, maxHp: hp,
-          shellArmor: shellFor(j) || undefined,
+          shellArmor: shellFor(j) || undefined, elite: tier >= 2 ? tier : 0,
           poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
           flight: {
             kind: g.kind, state: 2, t: 0, sx, sy, sq: s, launch: 0,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
+            inDelay: s * 0.9 + j * 0.32, inDx: R.inDx, inDy: R.inDy, entering: true,
             phase: j / perS + (g.ph || 0), n: perS, dir: g.dir, strand: j % 2,
           },
         });
@@ -823,7 +860,9 @@ function buildLevel(lvl) {
       ? MODIFIERS[Math.floor(Math.random() * MODIFIERS.length)] : null);
   // ---- stage presentation ----
   if (hasBoss) {
-    G.bossIntro = 1.6;
+    // gauntlet finales announce ROUND 1 instead — the legendary's own intro
+    // card plays when it actually descends (round 2)
+    G.bossIntro = G.gauntlet ? 0 : 1.6;
     SFX.roar();
   } else if (stage === 0) {
     // a region that OPENS an act carries the act name on its banner
@@ -864,6 +903,7 @@ function buildLevel(lvl) {
       'THE BALL BOUNCES OFF THE GLOWING CASINGS', 3.4,
       'CATCH A LASER DROP — ARM YOUR BLASTER TO BREAK THEM');
   }
+  if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = 0.9; // they fire as they float in
   // SPACE JUNKIE's Kanto challenge doubles as the CHARGE-SHOT tutorial
   if (G.mode === 'junkie' && lvl === 2) {
     setAnnounce('shield', '#4dd0e1', 'SHELL ARMOR!',
@@ -971,7 +1011,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.torrentCount = 0; G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
-  G.chargedEver = false; G.chargeHintCD = 0;
+  G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
   // starting deep? bank the skill-tree advances you'd have earned on the way
