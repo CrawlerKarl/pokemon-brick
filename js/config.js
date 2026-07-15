@@ -38,13 +38,17 @@ function speedScale() { return Math.max(0.62, Math.min(1, W / 900)); }
 function diff() {
   const p = preset(), a = G.adapt, mod = G.modifier;
   const lvl = 1 + (G.level - 1) * 0.55;
+  // each ACT tightens the screws a notch beyond the per-level curve —
+  // progression you can feel at the act boundary, not just per wave
+  const act = actIdx(G.level); // 0..2
   return {
     lv: lvl,
     descent: (3 + lvl * 1.4) * p.descent * a * (mod?.key === 'swift' ? 1.35 : 1) * Math.max(0.7, Math.min(1, H / 900)),
-    enemyShotInt: Math.max(1.4, 5.5 - lvl * 0.5) / (p.shotRate * a) / (mod?.key === 'ambush' ? 1.8 : mod?.key === 'bounty' ? 1.3 : 1),
-    bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a),
+    enemyShotInt: Math.max(1.4, 5.5 - lvl * 0.5) / (p.shotRate * a) / (1 + act * 0.08)
+      / (mod?.key === 'ambush' ? 1.8 : mod?.key === 'bounty' ? 1.3 : 1),
+    bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a) / (1 + act * 0.06),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
-    shotSpeed: p.shotSpeed * speedScale(),
+    shotSpeed: p.shotSpeed * speedScale() * (1 + act * 0.05),
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
       * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
@@ -87,49 +91,40 @@ let menuPage = 'modes';
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
   const short = H < 560;
-  const stacked = W < 560; // headliner cards side-by-side, or stacked on phones
+  const stacked = W < 560; // hero panels side-by-side, or stacked on phones
   const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
-  const titleSize = short ? Math.min(30, W / 16) : Math.min(52, W / 11) * Math.max(0.8, s);
-  const titleY = short ? 24 : Math.max(54, H * 0.09);
-  const tagY = short ? titleY + titleSize + 10 : titleY + titleSize * 1.4 + 12;
-  const pickLabelY = tagY + (short ? 14 : 24);
-  const gap = 14;
-  const oneRow = short || stacked || (hasCkpt && H < 820);
-  const cardW = stacked ? Math.min(430, W * 0.9) : Math.min(304, (W - 72) / 2);
-  const expW = stacked ? cardW : Math.min(440, W * 0.86);
-  const expH = short ? 32 : 48;
-  const resumeW = Math.min(360, W * 0.86);
-  const resumeH = hasCkpt ? (short ? 32 : 52) : 0;
-  const footerH = oneRow ? 26 : 96; // 3 stacked links span ~96px
-  const gE = short ? 8 : 16, gR = short ? 8 : 14, gF = short ? 10 : 20;
-  // top-anchor the card block under the picker label, then let the cards grow
-  // to fill the height (capped so two big cards never look stretched); the
-  // region backdrop scenery breathes at the very bottom.
-  const regionBot = H - (short ? 12 : Math.max(22, H * 0.05));
-  const cardsY = pickLabelY + (short ? 10 : 18);
-  const tail = gE + expH + (hasCkpt ? gR + resumeH : 0) + gF + footerH;
-  const roomForCards = regionBot - cardsY - tail;
-  const cardH = short ? 72
-    : stacked ? Math.min(156, Math.max(112, (roomForCards - gap) / 2))
-    : Math.min(196, Math.max(120, Math.min(roomForCards, 150 * s + 20)));
-  const cardsH = stacked ? cardH * 2 + gap : cardH;
-  const expY = cardsY + cardsH + gE;
-  const resumeY = expY + expH + (hasCkpt ? gR : 0);
-  const footerY = resumeY + (hasCkpt ? resumeH : 0) + gF;
-  const fW = Math.min(230, (W - 56) / 3);
+  const titleSize = short ? Math.min(24, W / 18) : Math.min(44, W / 13) * Math.max(0.8, s);
+  const titleY = short ? 18 : Math.max(36, H * 0.055);
+  const tagY = titleY + titleSize * (short ? 1.05 : 1.42) + (short ? 4 : 8);
+  // the two hero panels FILL everything between the title band and the
+  // bottom stack (blaster chip → continue → footer row) — no dead space
+  const gap = short ? 10 : 16;
+  const expH = short ? 26 : 34;
+  const resumeH = hasCkpt ? (short ? 30 : 44) : 0;
+  const footerH = short ? 22 : 28;
+  const padB = short ? 6 : 14;
+  const cardsY = tagY + (short ? 10 : 16);
+  const bottom = H - padB;
+  const footerY = bottom - footerH;
+  const resumeY = footerY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
+  const expY = (hasCkpt ? resumeY : footerY) - expH - (short ? 6 : 10);
+  const cardsBot = expY - (short ? 6 : 12);
+  const cardW = stacked ? Math.min(W * 0.94, 540) : (Math.min(W * 0.96, 1240) - gap) / 2;
+  const cardsH = Math.max(short ? 110 : 190, cardsBot - cardsY);
+  const cardH = stacked ? (cardsH - gap) / 2 : cardsH;
+  const left = stacked ? W / 2 - cardW / 2 : W / 2 - (cardW * 2 + gap) / 2;
+  const expW = Math.min(440, W * 0.86);
+  const resumeW = Math.min(380, W * 0.86);
+  const fW = Math.min(230, (W - 44) / 2);
   return {
-    s, short, stacked, oneRow, titleY, titleSize, tagY, pickLabelY,
+    s, short, stacked, oneRow: true, titleY, titleSize, tagY, pickLabelY: tagY,
     card: i => stacked
       ? { x: W / 2 - cardW / 2, y: cardsY + i * (cardH + gap), w: cardW, h: cardH }
-      : { x: W / 2 - cardW - gap / 2 + i * (cardW + gap), y: cardsY, w: cardW, h: cardH },
+      : { x: left + i * (cardW + gap), y: cardsY, w: cardW, h: cardH },
     exp: { x: W / 2 - expW / 2, y: expY, w: expW, h: expH },
     resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
-    dex: oneRow ? { x: W / 2 - fW * 1.5 - 14, y: footerY, w: fW, h: 26 }
-      : { x: W / 2 - 170, y: footerY, w: 340, h: 30 },
-    trial: oneRow ? { x: W / 2 - fW / 2, y: footerY, w: fW, h: 26 }
-      : { x: W / 2 - 170, y: footerY + 34, w: 340, h: 28 },
-    adv: oneRow ? { x: W / 2 + fW / 2 + 14, y: footerY, w: fW, h: 26 }
-      : { x: W / 2 - 130, y: footerY + 66, w: 260, h: 28 },
+    dex: { x: W / 2 - fW - 10, y: footerY, w: fW, h: footerH },
+    adv: { x: W / 2 + 10, y: footerY, w: fW, h: footerH },
   };
 }
 // PAGE 2 — setup for the chosen mode: starter Pokémon, difficulty, START.
@@ -160,8 +155,9 @@ function setupLayout() {
   // three section groups distributed with an even gap that soaks up slack
   const starterGroup = labelGap + stRows * stH + (stRows - 1) * gap + infoH;
   const diffGroup = labelGap + dfRows * dfH + (dfRows - 1) * gap;
+  const trialH = short ? 24 : 30; // per-game TRIAL link under START
   const bottomPad = short ? 10 : H * 0.05;
-  const slack = (H - bottomPad) - headBottom - (starterGroup + diffGroup + btnH);
+  const slack = (H - bottomPad) - headBottom - (starterGroup + diffGroup + btnH + trialH + (short ? 6 : 10));
   const vGap = Math.max(short ? 10 : 18, Math.min(slack / 3, short ? 22 : narrow ? 54 : 40));
   let y = headBottom + vGap;
   const starterGridY = y + labelGap;
@@ -183,6 +179,8 @@ function setupLayout() {
     chip: i => { const c = i % dfCols, r = Math.floor(i / dfCols);
       return { x: cx - contentW / 2 + c * (dfW + gap), y: chipsGridY + r * (dfH + gap), w: dfW, h: dfH }; },
     start: { x: cx - btnW / 2, y: btnY, w: btnW, h: btnH },
+    // TRIAL lives with the game it belongs to — jump to any stage OF THIS MODE
+    trial: { x: cx - btnW / 2, y: btnY + btnH + (short ? 6 : 10), w: btnW, h: trialH },
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)

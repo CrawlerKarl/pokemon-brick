@@ -9,7 +9,10 @@ starter partner whose paddle ability evolves, and catch Pokémon for a
 persistent Pokédex. Two headline modes — **BRICK BREAKER** (`classic`, ball +
 blaster) and **SPACE JUNKIE** (pilot your Pokémon through all-flying waves) —
 plus **BLASTER**, the experimental ball-less hybrid. Runs auto-save at each
-region — pick up with CONTINUE.
+region — pick up with CONTINUE. The journey is a three-act play (gens 1–3 /
+4–6 / 7–9): each act boundary lands on a partner evolution and plays a full
+evolution ceremony, and Space Junkie's wave choreography develops one
+movement verb per act — ASSEMBLE, TRANSFORM, COMBINE.
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -90,7 +93,8 @@ always lands back on page 1.
   **no wall at all**. Non-boss waves arrive as 100% free-flyers (squads pour
   in from the edges straight onto patterns, built in `buildLevel`'s junkie
   block); boss waves keep their choreography but guards ride **bare**.
-  Pattern unlocks come two regions early (`unlockR`), dives start at wave 2,
+  Pattern unlocks come one region early (`unlockR` — region 1 stays on the
+  clean shapes in every mode), dives start at wave 2,
   and reinforcements from region 1. **Your starter IS the ship** (Pikachu→
   Raichu if none): `pilotInfo()`/`attackElement()` (state.js). The attack's
   SHAPE follows the pilot species — flame / water jet / razor leaf /

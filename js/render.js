@@ -346,7 +346,10 @@ function drawBricks() {
   for (const br of G.bricks) {
     if (br.dead) continue;
     const x = br.bx + G.fx;
-    let y = br.by + G.fy + Math.sin(G.time * 2 + br.wobble) * (br.isBoss ? 4 : 2.5);
+    // idle bob is OFF while a brick is entering (out-of-phase bobbing on top
+    // of the glide read as stutter) and eases back in once it lands (settleT)
+    const bobAmp = br.entry ? 0 : (br.settleT == null ? 1 : br.settleT);
+    let y = br.by + G.fy + Math.sin(G.time * 2 + br.wobble) * (br.isBoss ? 4 : 2.5) * bobAmp;
     if (br.isBoss) y += introOff;
     const col = TYPE_COLORS[br.poke.t];
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
@@ -360,45 +363,52 @@ function drawBricks() {
       const img2 = getSprite(br.poke.id, br.shiny);
       ctx.save();
       const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1);
-      // ---- NATURAL LOCOMOTION: nothing floats like a stamp. Velocity
-      // comes from the frame delta; the mon's type picks its gait — a
-      // Dragonite beats its wings, a Persian pads along its pattern, a
-      // Gastly drifts, a Wooper swims. Every mon also faces and banks
-      // into its direction of travel.
-      const vx = (br.bx - (br.pbx ?? br.bx)) * 60, vy = (br.by - (br.pby ?? br.by)) * 60;
-      br.pbx = br.bx; br.pby = br.by;
-      const spd2 = Math.hypot(vx, vy);
-      if (vx > 25) br.face = -1; else if (vx < -25) br.face = 1; // hysteresis: no flip-jitter
+      // ---- NATURAL LOCOMOTION: nothing floats like a stamp. All motion
+      // state (velocity, facing, bank, gait phase) is computed in update()
+      // with dt — render only READS it, so 60 Hz and 120 Hz look identical.
+      // The gait comes from a SPECIES motion profile (type is the fallback):
+      // a serpent undulates, a boulder barely bobs, a ground dragon strides.
       const face = br.face || 1;
-      const T2 = br.poke.t, ph2 = br.wobble, t2 = G.time;
+      const ph3 = br.animPh ?? br.wobble;
+      const amp = Math.min(1, (br.vspd || 0) / 42 + 0.35); // parked = breathing
       let bobY = 0, gaitRot = 0, sclX = 1, sclY = 1;
-      if (GAIT_FLAP.has(T2)) {
-        // wing-beats: quick flap bob, body pumping with each stroke
-        const flap = Math.sin(t2 * 9 + ph2 * 3);
-        bobY = flap * 3.4;
-        sclY = 1 + 0.07 * Math.sin(t2 * 18 + ph2 * 3);
-        gaitRot = flap * 0.05;
-      } else if (GAIT_SWIM.has(T2)) {
-        // swimming: slow full-body undulation, nosing along the path
-        gaitRot = Math.sin(t2 * 4.5 + ph2 * 2) * 0.12;
-        bobY = Math.sin(t2 * 2.2 + ph2) * 2.4;
-      } else if (GAIT_HOVER.has(T2)) {
-        // eerie hover: deep slow bob with a lazy roll
-        bobY = Math.sin(t2 * 1.8 + ph2) * 3.8;
-        gaitRot = Math.sin(t2 * 1.2 + ph2 * 2) * 0.07;
-      } else {
-        // ground gait: a footfall bounce that quickens with speed — the
-        // mon WALKS its pattern, springing off each stride
-        const stride = t2 * (4 + Math.min(6, spd2 * 0.03)) + ph2 * 2;
-        const step = Math.abs(Math.sin(stride));
-        bobY = -step * 3.4;
-        sclY = 0.95 + step * 0.07;
-        sclX = 1.03 - step * 0.03;
-        gaitRot = Math.sin(stride * 2) * 0.035;
+      switch (motionProfile(br.poke)) {
+        case 'winged': { // wing-beats: quick flap bob, body pumping each stroke
+          const flap = Math.sin(ph3 * 2.2);
+          bobY = flap * 3.4;
+          sclY = 1 + 0.07 * Math.sin(ph3 * 4.4);
+          gaitRot = flap * 0.05;
+          break;
+        }
+        case 'swim': // slow full-body undulation, nosing along the path
+          gaitRot = Math.sin(ph3 * 1.5) * 0.12;
+          bobY = Math.sin(ph3 * 0.75) * 2.4;
+          break;
+        case 'hover': // eerie hover: deep slow bob with a lazy roll
+          bobY = Math.sin(ph3 * 0.55) * 3.8;
+          gaitRot = Math.sin(ph3 * 0.38) * 0.07;
+          break;
+        case 'serpentine': // the whole body threads side to side
+          gaitRot = Math.sin(ph3 * 1.7) * 0.16 * amp;
+          sclX = 1 + 0.05 * Math.sin(ph3 * 0.85);
+          bobY = Math.sin(ph3 * 0.8) * 1.6;
+          break;
+        case 'heavy': { // ponderous: tiny footfall, almost no roll
+          const hstep = Math.abs(Math.sin(ph3 * 0.55));
+          bobY = -hstep * 1.6 * amp;
+          gaitRot = Math.sin(ph3 * 1.1) * 0.015;
+          sclY = 0.98 + hstep * 0.03;
+          break;
+        }
+        default: { // biped/quadruped footfall — springs off each stride
+          const step = Math.abs(Math.sin(ph3));
+          bobY = -step * 3.4 * amp;
+          sclY = 0.95 + step * 0.07 * amp;
+          sclX = 1.03 - step * 0.03 * amp;
+          gaitRot = Math.sin(ph3 * 2) * 0.035 * amp;
+        }
       }
-      // bank into travel, pitch a touch with climb/dive
-      const bank = Math.max(-0.3, Math.min(0.3, vx * 0.0011))
-        + Math.max(-0.13, Math.min(0.13, vy * 0.0005));
+      const bank = br.bank || 0;
       const yb = y + bobY;
       // cached aura sprite — one gradient per TYPE ever, not per flyer per frame
       const aur = auraSprite(col);
@@ -2056,7 +2066,9 @@ function drawHurtHealth() {
   const barW = denom * segW + (denom - 1) * gap;
   const totalW = pad * 2 + heartW + 6 + barW;
   const cx = Math.max(totalW / 2 + 6, Math.min(W - totalW / 2 - 6, G.paddle.x));
-  const cy = shipY() - (G.mode === 'junkie' ? 32 : 46);
+  // well above the character — clear of the mon's head, the shield bubble
+  // (r≈40/52 + pips) and the muzzle, so it never covers what you're steering
+  const cy = Math.max(30, shipY() - (G.mode === 'junkie' ? 78 : 86));
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -2189,42 +2201,10 @@ function drawMenu() {
   fitText(W < 560 ? 'CATCH POKÉMON ACROSS 9 REGIONS'
     : 'CATCH POKÉMON ACROSS 9 REGIONS · A LEGENDARY GUARDS EVERY THIRD WAVE',
     L.tagY, 12 * Math.max(0.85, L.s), '600', '#cfd8dc', maxW, "Verdana, system-ui, sans-serif");
-  ctx.font = '700 12px Orbitron, sans-serif';
-  ctx.fillStyle = '#78909c';
-  ctx.fillText('— CHOOSE YOUR GAME —', W / 2, L.pickLabelY);
-  // the two headliner cards: BRICK BREAKER and SPACE JUNKIE
-  for (let i = 0; i < 2; i++) {
-    const m = MODES[i], cg = L.card(i);
-    const hov = inRect(mouseX, lastMouseY, cg);
-    ctx.save();
-    ctx.shadowColor = m.accent; ctx.shadowBlur = hov ? 26 : 12;
-    roundRect(cg.x, cg.y, cg.w, cg.h, 14);
-    ctx.fillStyle = hov ? m.accent + '30' : m.accent + '14';
-    ctx.fill();
-    ctx.lineWidth = hov ? 2.5 : 1.5;
-    ctx.strokeStyle = hov ? m.accent : m.accent + 'aa';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    const compact = L.stacked || L.short; // one-row card: icon left, text right
-    const iconR = compact ? Math.min(46, cg.h * 0.30) : Math.min(40, cg.h * 0.22);
-    const iconX = compact ? cg.x + cg.h * 0.52 : cg.x + cg.w / 2;
-    const iconY = compact ? cg.y + cg.h / 2 : cg.y + cg.h * 0.26;
-    const tx = compact ? cg.x + cg.h * 1.0 + (cg.w - cg.h) / 2 : cg.x + cg.w / 2;
-    drawModeIcon(m.key, iconX, iconY, iconR, m.accent);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `900 ${Math.min(compact ? 20 : 24, cg.w / (compact ? 13 : 9))}px Orbitron, sans-serif`;
-    ctx.fillStyle = hov ? '#fff' : m.accent;
-    ctx.fillText(m.label, tx, compact ? cg.y + cg.h * 0.34 : cg.y + cg.h * 0.55, compact ? cg.w - cg.h * 1.2 : cg.w - 16);
-    ctx.font = bodyFont(Math.min(12, cg.w / 26), 600);
-    ctx.fillStyle = hov ? '#e3f2fd' : '#90a4ae';
-    if (compact) {
-      ctx.fillText(m.lines.join(' · '), tx, cg.y + cg.h * 0.68, cg.w - cg.h * 1.2);
-    } else {
-      m.lines.forEach((l, li) =>
-        ctx.fillText(l, tx, cg.y + cg.h * (0.72 + li * 0.13), cg.w - 20));
-    }
-    ctx.restore();
-  }
+  // the two headliner games as full-bleed pseudo-3D dioramas — Geodude
+  // holds the brick-breaker world, Rayquaza rules the space one
+  drawHeroPanel(MODES[0], L.card(0), 74, L);
+  drawHeroPanel(MODES[1], L.card(1), 384, L);
   // the experimental third — a deliberately smaller chip
   {
     const m = MODES[2], eg = L.exp;
@@ -2273,33 +2253,144 @@ function drawMenu() {
     }
     ctx.restore();
   }
-  // pokédex / trial / settings — stacked links, or one compact row when tight
+  // footer: pokédex + settings — trial now lives with each game's setup page
   const db = dexBtnGeom();
   ctx.textAlign = 'center';
-  if (L.oneRow) {
-    const rowFont = '700 11px Orbitron, sans-serif';
-    for (const [g, label, colBase] of [
-      [db, '◓ POKÉDEX ' + DEX.size, '#90a4ae'],
-      [L.trial, '▶ TRIAL', '#80d8ff'],
-      [L.adv, '⚙ SETTINGS', '#78909c'],
-    ]) {
-      ctx.font = rowFont;
-      ctx.fillStyle = inRect(mouseX, lastMouseY, g) ? '#ffd54f' : colBase;
-      ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2, g.w - 6);
-    }
-  } else {
-    ctx.font = '700 14px Orbitron, sans-serif';
-    ctx.fillStyle = inRect(mouseX, lastMouseY, db) ? '#ffd54f' : '#90a4ae';
-    ctx.fillText('◓  POKÉDEX: ' + DEX.size + ' CAUGHT — VIEW', W / 2, db.y + db.h / 2);
-    ctx.font = '700 13px Orbitron, sans-serif';
-    ctx.fillStyle = inRect(mouseX, lastMouseY, L.trial) ? '#ffd54f' : '#80d8ff';
-    ctx.fillText('▶  TRIAL MODE — JUMP TO ANY REGION', W / 2, L.trial.y + L.trial.h / 2);
-    ctx.font = '700 12px Orbitron, sans-serif';
-    ctx.fillStyle = inRect(mouseX, lastMouseY, L.adv) ? '#ffd54f' : '#78909c';
-    ctx.fillText('⚙  ADVANCED SETTINGS', W / 2, L.adv.y + L.adv.h / 2);
+  const rowFont = `700 ${L.short ? 11 : 12}px Orbitron, sans-serif`;
+  for (const [g, label, colBase] of [
+    [db, '◓ POKÉDEX ' + DEX.size, '#90a4ae'],
+    [L.adv, '⚙ SETTINGS', '#78909c'],
+  ]) {
+    ctx.font = rowFont;
+    ctx.fillStyle = inRect(mouseX, lastMouseY, g) ? '#ffd54f' : colBase;
+    ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2, g.w - 6);
   }
   if (advOpen) drawAdvanced();
   if (trialOpen) drawTrial();
+}
+// a headline game as a pseudo-3D diorama: extruded slab, its own sky,
+// a perspective floor grid, and a BIG breathing Pokémon grounded by a
+// floor shadow — Geodude for the brick world, Rayquaza for space
+function drawHeroPanel(m, cg, monId, L) {
+  const hov = inRect(mouseX, lastMouseY, cg);
+  const junk = m.key !== 'classic';
+  const lift = hov ? 4 : 0;
+  const x = cg.x, y = cg.y - lift, w = cg.w, h = cg.h;
+  ctx.save();
+  // extrusion: a dark slab under the face makes the panel sit UP off the page
+  roundRect(x + 5, y + 8 + lift, w, h, 18);
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fill();
+  roundRect(x, y, w, h, 18);
+  ctx.save();
+  ctx.clip();
+  // sky — each game is its own world
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  if (junk) { g.addColorStop(0, '#0b0620'); g.addColorStop(0.55, '#241143'); g.addColorStop(1, '#3a1d5e'); }
+  else { g.addColorStop(0, '#0a1a30'); g.addColorStop(0.55, '#173a52'); g.addColorStop(1, '#1d5a46'); }
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  // perspective floor grid — the cheap 3D read
+  const horizon = y + h * 0.68, vpx = x + w / 2;
+  ctx.strokeStyle = junk ? 'rgba(171,71,188,0.35)' : 'rgba(102,187,106,0.32)';
+  ctx.lineWidth = 1;
+  for (let i = -5; i <= 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(vpx + i * w * 0.022, horizon);
+    ctx.lineTo(vpx + i * w * 0.24, y + h);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4.2, gy = horizon + (y + h - horizon) * t * t;
+    ctx.globalAlpha = 0.55 - t * 0.35;
+    ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // glowing horizon line
+  ctx.strokeStyle = junk ? 'rgba(213,134,255,0.55)' : 'rgba(126,224,138,0.5)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(x, horizon); ctx.lineTo(x + w, horizon); ctx.stroke();
+  if (junk) {
+    // twinkling starfield + a distant ringed planet
+    for (let i = 0; i < 26; i++) {
+      const sx2 = x + ((i * 73.7 + 11) % w), sy2 = y + ((i * 41.3 + 7) % (horizon - y - 8));
+      const tw = 0.5 + 0.5 * Math.sin(G.time * 2 + i * 1.7);
+      ctx.fillStyle = `rgba(255,255,255,${0.12 + tw * 0.3})`;
+      ctx.fillRect(sx2, sy2, 2, 2);
+    }
+    const px2 = x + w * 0.82, py2 = y + h * 0.2, pr = Math.min(w, h) * 0.07;
+    ctx.fillStyle = 'rgba(120,80,200,0.8)';
+    ctx.beginPath(); ctx.arc(px2, py2, pr, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(213,134,255,0.6)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(px2, py2, pr * 1.7, pr * 0.5, -0.3, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    // a glossy brick arch over the mon + the ball mid-flight
+    const bw2 = Math.min(60, w * 0.16), bh2 = bw2 * 0.42;
+    const arc = [[-1.6, -0.1], [-0.55, -0.32], [0.55, -0.32], [1.6, -0.1]];
+    for (let i = 0; i < arc.length; i++) {
+      const bx2 = x + w / 2 + arc[i][0] * bw2 * 1.25 - bw2 / 2;
+      const by2 = y + h * 0.24 + arc[i][1] * h * 0.3;
+      roundRect(bx2, by2, bw2, bh2, 4);
+      ctx.fillStyle = ['#ef9a9a', '#90caf9', '#ffe082', '#a5d6a7'][i] + 'cc';
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(bx2 + 2, by2 + 2, bw2 - 4, bh2 * 0.3);
+    }
+    const ballA = G.time * 1.3;
+    const bx3 = x + w / 2 + Math.sin(ballA) * w * 0.3, by3 = y + h * 0.14 + Math.abs(Math.cos(ballA)) * h * 0.07;
+    ctx.fillStyle = '#e3f2fd';
+    ctx.shadowColor = '#90caf9'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(bx3, by3, Math.min(7, w * 0.02), 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  // THE POKÉMON — big, breathing, grounded by a floor shadow
+  const ms = Math.min(w, h) * (junk ? 0.66 : 0.52);
+  const bob = Math.sin(G.time * (junk ? 1.3 : 2.1) + (junk ? 1 : 0)) * h * 0.016;
+  const mx = x + w / 2, my = y + h * (junk ? 0.4 : 0.45) + bob;
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.beginPath();
+  ctx.ellipse(mx, horizon + h * 0.05, Math.max(10, ms * 0.32 - bob * 2.5), ms * 0.075, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const img = getSprite(monId);
+  if (img.complete && img.naturalWidth) {
+    const sil = getSilhouette(monId, '#04060e');
+    if (sil) { ctx.globalAlpha = 0.5; ctx.drawImage(sil, mx - ms / 2 + ms * 0.05, my - ms / 2 + ms * 0.07, ms, ms); ctx.globalAlpha = 1; }
+    if (hov) {
+      const rim = getSilhouette(monId, m.accent);
+      if (rim) { ctx.globalAlpha = 0.5; ctx.drawImage(rim, mx - ms / 2 - 2, my - ms / 2 - 2, ms + 4, ms + 4); ctx.globalAlpha = 1; }
+    }
+    ctx.drawImage(img, mx - ms / 2, my - ms / 2, ms, ms);
+  }
+  // glass gloss sweep
+  const gl = ctx.createLinearGradient(x, y, x + w * 0.55, y + h * 0.55);
+  gl.addColorStop(0, 'rgba(255,255,255,0.1)');
+  gl.addColorStop(0.45, 'rgba(255,255,255,0.02)');
+  gl.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.fillRect(x, y, w, h);
+  // label band along the bottom
+  const bandH = Math.max(42, h * 0.24);
+  const bg2 = ctx.createLinearGradient(0, y + h - bandH, 0, y + h);
+  bg2.addColorStop(0, 'rgba(4,7,16,0)');
+  bg2.addColorStop(0.45, 'rgba(4,7,16,0.8)');
+  bg2.addColorStop(1, 'rgba(4,7,16,0.94)');
+  ctx.fillStyle = bg2;
+  ctx.fillRect(x, y + h - bandH, w, bandH);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `900 ${Math.min(26, w / 11)}px Orbitron, sans-serif`;
+  ctx.fillStyle = hov ? '#fff' : m.accent;
+  ctx.fillText(m.label, x + w / 2, y + h - bandH * 0.58, w - 20);
+  ctx.font = bodyFont(Math.min(11, w / 30), 600);
+  ctx.fillStyle = hov ? '#e3f2fd' : '#90a4ae';
+  ctx.fillText(m.lines.join(' · '), x + w / 2, y + h - bandH * 0.22, w - 24);
+  ctx.restore(); // unclip
+  ctx.shadowColor = m.accent; ctx.shadowBlur = hov ? 30 : 14;
+  roundRect(x, y, w, h, 18);
+  ctx.lineWidth = hov ? 3 : 2;
+  ctx.strokeStyle = hov ? m.accent : m.accent + 'aa';
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 // small vector icons that give each mode card an identity at a glance —
 // pure strokes/fills, cheap enough to draw live (menu only, few per frame)
@@ -2462,6 +2553,117 @@ function drawSetup() {
   ctx.fillStyle = '#1a1205';
   ctx.fillText((typeof RUN_CKPT !== 'undefined' && RUN_CKPT ? 'NEW JOURNEY' : 'START JOURNEY'), b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 24);
   ctx.restore();
+  // per-game TRIAL — jump to any stage OF THIS MODE (score/dex not saved)
+  {
+    const tb = L.trial, hovT = inRect(mouseX, lastMouseY, tb);
+    ctx.font = `700 ${L.short ? 11 : 13}px Orbitron, sans-serif`;
+    ctx.fillStyle = hovT ? '#ffd54f' : '#80d8ff';
+    ctx.fillText('▶ TRIAL — JUMP TO ANY ' + mode.label + ' STAGE', tb.x + tb.w / 2, tb.y + tb.h / 2, tb.w - 8);
+  }
+  if (trialOpen) drawTrial();
+  if (advOpen) drawAdvanced();
+}
+
+// ---- ACT-BOUNDARY CEREMONY: the game's biggest beat. The partner pulses
+// white faster and faster, whites out, and is REVEALED evolved — then the
+// act title card lands: "ACT II — TRANSFORMATION". Without a partner the
+// act card alone takes the stage. All state mutation happens in update();
+// this only reads G.ceremony.
+function drawCeremony() {
+  const c = G.ceremony;
+  if (!c) return;
+  const A = ACTS[c.act], t = c.t;
+  dim(Math.min(0.8, t * 1.6));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const cx = W / 2, cy = H * 0.36;
+  const doneAt = c.evo ? 3.4 : 2.2;
+  // act-colored light rays wheeling behind the stage
+  const rayA = Math.min(0.22, t * 0.1);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(G.time * 0.12);
+  for (let i = 0; i < 10; i++) {
+    ctx.rotate(Math.PI / 5);
+    const rg = Math.min(W, H) * 0.65;
+    ctx.globalAlpha = rayA * (i % 2 ? 0.6 : 1);
+    ctx.fillStyle = A.color;
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(rg, -rg * 0.08); ctx.lineTo(rg, rg * 0.08);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  if (c.evo) {
+    const ms = Math.min(W, H) * 0.34;
+    const col = TYPE_COLORS[c.evo.type] || '#ffd54f';
+    const showNew = t >= 2.45;
+    const id = showNew ? c.evo.toId : c.evo.fromId;
+    const img = getSprite(id);
+    // accelerating white pulses build the tension, then the white-out
+    const pulse = t < 1.9 ? Math.max(0, Math.sin(t * t * 5.5)) : 1;
+    const whiteout = t >= 1.9 && t < 2.45;
+    const grow = t < 1.9 ? 1 + t * 0.04 : whiteout ? 1.1 + (t - 1.9) * 0.55 : 1.12;
+    const sz = ms * grow;
+    const bob = Math.sin(G.time * 2) * 5;
+    if (img.complete && img.naturalWidth) {
+      ctx.save();
+      ctx.translate(cx, cy + bob);
+      if (whiteout) {
+        const sil = getSilhouette(c.evo.fromId, '#ffffff');
+        if (sil) ctx.drawImage(sil, -sz / 2, -sz / 2, sz, sz);
+      } else {
+        if (showNew) { // evolved: rim light + soft glow behind
+          const rim = getSilhouette(c.evo.toId, col);
+          if (rim) { ctx.globalAlpha = 0.6; ctx.drawImage(rim, -sz / 2 - 3, -sz / 2 - 3, sz + 6, sz + 6); ctx.globalAlpha = 1; }
+        }
+        ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+        if (!showNew && pulse > 0.55) { // tension pulses: white overlay flickers
+          const sil = getSilhouette(c.evo.fromId, '#ffffff');
+          if (sil) { ctx.globalAlpha = (pulse - 0.55) * 1.6; ctx.drawImage(sil, -sz / 2, -sz / 2, sz, sz); ctx.globalAlpha = 1; }
+        }
+      }
+      ctx.restore();
+    }
+    if (t < 1.9) {
+      ctx.font = '700 13px Orbitron, sans-serif';
+      ctx.fillStyle = '#e3f2fd';
+      ctx.fillText('WHAT? ' + c.evo.fromName + ' IS EVOLVING!', cx, cy + ms * 0.66);
+    } else if (showNew) {
+      title(c.evo.toName + '!', cy + ms * 0.62, Math.min(30, W / 16), col);
+      ctx.font = bodyFont(Math.min(12, W / 46), 600);
+      ctx.fillStyle = '#cfd8dc';
+      ctx.fillText(c.evo.ability, cx, cy + ms * 0.62 + Math.min(30, W / 16) * 0.95, W * 0.9);
+    }
+  } else {
+    // no partner — the act emblem holds the stage: a big ringed numeral
+    const er = Math.min(W, H) * 0.16;
+    ctx.save();
+    ctx.shadowColor = A.color; ctx.shadowBlur = 24;
+    ctx.strokeStyle = A.color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, er, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = A.color + '66'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, er + 10 + Math.sin(G.time * 3) * 3, 0, Math.PI * 2); ctx.stroke();
+    title(A.n, cy + er * 0.08, er * 1.05, A.color);
+    ctx.restore();
+  }
+  // the ACT title card lands after the reveal
+  const tt = t - (c.evo ? 2.7 : 0.6);
+  if (tt > 0) {
+    const a = Math.min(1, tt / 0.45);
+    const slide = (1 - a) * 24;
+    ctx.globalAlpha = a;
+    const ty = H * (c.evo ? 0.76 : 0.66) + slide;
+    title('ACT ' + A.n + ' — ' + A.name, ty, Math.min(34, W / 14), A.color);
+    ctx.font = '700 12px Orbitron, sans-serif';
+    ctx.fillStyle = '#e3f2fd';
+    ctx.fillText(A.gens, cx, ty + Math.min(34, W / 14) * 0.95, W * 0.9);
+    ctx.font = bodyFont(11, 600);
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillText(A.verb, cx, ty + Math.min(34, W / 14) * 0.95 + 20, W * 0.9);
+    ctx.globalAlpha = 1;
+  }
+  if (t >= doneAt) pulse(IS_TOUCH ? 'TAP TO CONTINUE' : 'CLICK TO CONTINUE', H * 0.92);
 }
 
 // trial mode: pick a region + stage, dive straight in (nothing persists)
@@ -2845,21 +3047,66 @@ function drawOverlays() {
       ctx.font = '700 14px Orbitron, sans-serif';
       ctx.fillStyle = '#e3f2fd';
       const L = upgradeLayout();
-      ctx.fillText(G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE', W / 2, L.card(0).y - (L.stacked || L.short ? 16 : 22));
+      // header strip: before a selection it's the prompt; once a card is
+      // inspected it becomes THAT pick's place in its path — owned tiers
+      // filled, the pick glowing, future tiers dim — so the player sees the
+      // upgrade path right here without flipping to the FULL TREE screen
+      const headerY = L.card(0).y - (L.stacked || L.short ? 16 : 22);
+      const selC = draftSel != null && G.upgradeChoices[draftSel];
+      if (!selC) {
+        ctx.fillText((G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE') +
+          (IS_TOUCH ? ' — TAP A CARD TO INSPECT' : ' — INSPECT, THEN CONFIRM'), W / 2, headerY, W * 0.94);
+      } else if (selC.stack) {
+        const owned0 = (G.stacks && G.stacks[selC.stack.key]) || 0;
+        ctx.font = '800 11px Orbitron, sans-serif';
+        ctx.fillStyle = selC.stack.color;
+        ctx.fillText('∞ ' + selC.stack.name + ' — STACKS FOREVER · ×' + owned0 + ' → ×' + (owned0 + 1), W / 2, headerY, W * 0.94);
+      } else {
+        const P = selC.path, lvlSel = pathLvl(selC.pathKey);
+        const chainW = Math.min(W * 0.92, 640);
+        const nh = L.stacked || L.short ? 20 : 24;
+        const nw = (chainW - 3 * 14) / 4;
+        const x0 = W / 2 - chainW / 2, ny = headerY - nh / 2;
+        ctx.font = '800 8.5px Orbitron, sans-serif';
+        ctx.fillStyle = P.color;
+        ctx.fillText(P.name + ' PATH · ' + P.role, W / 2, ny - 8, chainW);
+        for (let ti = 0; ti < 4; ti++) {
+          const nx = x0 + ti * (nw + 14);
+          const ownedT = ti < lvlSel, isPick = ti === selC.tierIdx;
+          if (ti) {
+            ctx.font = '800 10px Orbitron, sans-serif';
+            ctx.fillStyle = ti <= lvlSel ? P.color : 'rgba(255,255,255,0.3)';
+            ctx.fillText('›', nx - 8, headerY);
+          }
+          roundRect(nx, ny, nw, nh, 6);
+          ctx.fillStyle = ownedT ? P.color + '30' : isPick ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)';
+          ctx.fill();
+          if (isPick) { ctx.shadowColor = P.color; ctx.shadowBlur = 10; }
+          ctx.lineWidth = isPick ? 2 : 1;
+          ctx.strokeStyle = ownedT ? P.color : isPick ? '#ffffff' : 'rgba(255,255,255,0.16)';
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.font = `800 ${nh < 24 ? 6.5 : 8}px Orbitron, sans-serif`;
+          ctx.fillStyle = ownedT ? P.color : isPick ? '#fff' : '#78909c';
+          ctx.fillText((ti === 3 ? '★ ' : '') + junkieTierName(selC.pathKey, ti), nx + nw / 2, headerY, nw - 8);
+        }
+      }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         const c = G.upgradeChoices[i], r = L.card(i);
         // SPACE JUNKIE stack-item card: the tree is full — these stack forever
         if (c.stack) {
           const scol = c.stack.color;
-          const hov2 = inRect(mouseX, lastMouseY, r);
+          const sel = draftSel === i;
+          const hov2 = sel || inRect(mouseX, lastMouseY, r);
           const owned = (G.stacks && G.stacks[c.stack.key]) || 0;
           ctx.save();
-          if (hov2) { ctx.shadowColor = scol; ctx.shadowBlur = 22; }
+          ctx.globalAlpha = a * (draftSel != null && !sel ? 0.55 : 1);
+          if (hov2) { ctx.shadowColor = sel ? '#ffffff' : scol; ctx.shadowBlur = sel ? 26 : 22; }
           roundRect(r.x, r.y, r.w, r.h, 14);
           ctx.fillStyle = hov2 ? 'rgba(20,28,58,0.97)' : 'rgba(10,15,36,0.93)';
           ctx.fill();
-          ctx.lineWidth = hov2 ? 2.5 : 1.5;
-          ctx.strokeStyle = hov2 ? scol : scol + '77';
+          ctx.lineWidth = sel ? 3 : hov2 ? 2.5 : 1.5;
+          ctx.strokeStyle = sel ? '#ffffff' : hov2 ? scol : scol + '77';
           ctx.stroke();
           ctx.shadowBlur = 0;
           if (L.stacked) {
@@ -2883,8 +3130,8 @@ function drawOverlays() {
             ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 64, r.w - 10);
             ctx.font = bodyFont(8, 600); ctx.fillStyle = '#b0bec5';
             wrapText(c.stack.desc, r.w - 14).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 82 + li * 11));
-            ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#546e7a';
-            ctx.fillText(IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 8);
+            ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = sel ? '#a5d6a7' : '#546e7a';
+            ctx.fillText(sel ? '✓ SELECTED' : (IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1)), r.x + r.w / 2, r.y + r.h - 8);
           } else {
             ctx.textAlign = 'center';
             ctx.font = '900 10px Orbitron, sans-serif';
@@ -2903,23 +3150,26 @@ function drawOverlays() {
             ctx.font = '700 9.5px Orbitron, sans-serif';
             ctx.fillStyle = scol;
             ctx.fillText('∞ NO CAP — TAKE IT EVERY TIME', r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
-            ctx.fillStyle = '#546e7a';
+            ctx.fillStyle = sel ? '#a5d6a7' : '#546e7a';
             ctx.font = '700 11px Orbitron, sans-serif';
-            ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 16);
+            ctx.fillText(sel ? (IS_TOUCH ? '✓ SELECTED — TAP CONFIRM' : '✓ SELECTED — ENTER CONFIRMS')
+              : (IS_TOUCH ? 'TAP TO INSPECT' : 'INSPECT: CLICK OR PRESS ' + (i + 1)), r.x + r.w / 2, r.y + r.h - 16, r.w - 14);
           }
           ctx.restore();
           continue;
         }
         const col = c.path.color, tier = c.tier;
         const isCap = c.tierIdx === 3;
-        const hov = inRect(mouseX, lastMouseY, r);
+        const sel = draftSel === i;
+        const hov = sel || inRect(mouseX, lastMouseY, r);
         ctx.save();
-        if (hov || isCap) { ctx.shadowColor = col; ctx.shadowBlur = isCap ? 26 : 22; }
+        ctx.globalAlpha = a * (draftSel != null && !sel ? 0.55 : 1);
+        if (hov || isCap) { ctx.shadowColor = sel ? '#ffffff' : col; ctx.shadowBlur = sel ? 26 : isCap ? 26 : 22; }
         roundRect(r.x, r.y, r.w, r.h, 14);
         ctx.fillStyle = hov ? 'rgba(20,28,58,0.97)' : 'rgba(10,15,36,0.93)';
         ctx.fill();
-        ctx.lineWidth = hov || isCap ? 2.5 : 1.5;
-        ctx.strokeStyle = hov || isCap ? col : col + '77';
+        ctx.lineWidth = sel ? 3 : hov || isCap ? 2.5 : 1.5;
+        ctx.strokeStyle = sel ? '#ffffff' : hov || isCap ? col : col + '77';
         ctx.stroke();
         ctx.shadowBlur = 0;
         const pips = (px2, py2) => {
@@ -2951,8 +3201,8 @@ function drawOverlays() {
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + r.w / 2, r.y + 73, r.w - 10);
           ctx.font = bodyFont(9.5, 600); ctx.fillStyle = '#e0e7f0';
           wrapText(tierDesc(c.pathKey, c.tierIdx), r.w - 16).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 90 + li * 12, r.w - 12));
-          ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = hov ? '#cfd8dc' : '#546e7a';
-          ctx.fillText(IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 8);
+          ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = sel ? '#a5d6a7' : hov ? '#cfd8dc' : '#546e7a';
+          ctx.fillText(sel ? '✓ SELECTED' : (IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1)), r.x + r.w / 2, r.y + r.h - 8);
         } else { // desktop: tall card
           ctx.textAlign = 'center';
           ctx.font = '900 10px Orbitron, sans-serif';
@@ -2972,9 +3222,10 @@ function drawOverlays() {
           ctx.font = '600 9px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#78909c';
           ctx.fillText(isCap ? 'PATH COMPLETE' : '↑ NEXT: ' + junkieTierName(c.pathKey, c.tierIdx + 1), r.x + r.w / 2, r.y + r.h - 34, r.w - 16);
-          ctx.fillStyle = hov ? '#e3f2fd' : '#607d8b';
+          ctx.fillStyle = sel ? '#a5d6a7' : hov ? '#e3f2fd' : '#607d8b';
           ctx.font = '800 11px Orbitron, sans-serif';
-          ctx.fillText(IS_TOUCH ? 'TAP TO PICK' : 'CLICK OR PRESS ' + (i + 1), r.x + r.w / 2, r.y + r.h - 15);
+          ctx.fillText(sel ? (IS_TOUCH ? '✓ SELECTED — TAP CONFIRM' : '✓ SELECTED — ENTER CONFIRMS')
+            : (IS_TOUCH ? 'TAP TO INSPECT' : 'INSPECT: CLICK OR PRESS ' + (i + 1)), r.x + r.w / 2, r.y + r.h - 15, r.w - 14);
         }
         ctx.restore();
       }
@@ -2991,7 +3242,22 @@ function drawOverlays() {
       ctx.stroke();
       ctx.font = '700 12px Orbitron, sans-serif';
       ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-      ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1);
+      ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+      // CONFIRM — the only thing that actually applies the inspected pick
+      const cf = L.confirm, canCF = draftSel != null;
+      const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
+      ctx.globalAlpha = a * (canCF ? 1 : 0.4);
+      if (canCF) { ctx.shadowColor = '#66bb6a'; ctx.shadowBlur = hovCF ? 20 : 12; }
+      roundRect(cf.x, cf.y, cf.w, cf.h, 16);
+      ctx.fillStyle = canCF ? (hovCF ? 'rgba(102,187,106,0.38)' : 'rgba(102,187,106,0.22)') : 'rgba(255,255,255,0.07)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = canCF ? 2 : 1.5;
+      ctx.strokeStyle = canCF ? '#66bb6a' : 'rgba(255,255,255,0.15)';
+      ctx.stroke();
+      ctx.font = '800 12px Orbitron, sans-serif';
+      ctx.fillStyle = canCF ? '#d7ffd9' : '#546e7a';
+      ctx.fillText(canCF ? (IS_TOUCH ? '✓ CONFIRM' : '✓ CONFIRM (ENTER)') : 'PICK A CARD', cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
       ctx.globalAlpha = a;
       const tr = L.tree, hovTR = inRect(mouseX, lastMouseY, tr);
       roundRect(tr.x, tr.y, tr.w, tr.h, 16);
@@ -3003,6 +3269,8 @@ function drawOverlays() {
       ctx.textAlign = 'center';
       if (upgradeTreeOpen) drawFullUpgradeTree();
     }
+  } else if (G.state === 'ceremony') {
+    drawCeremony();
   } else if (G.state === 'gameover') {
     dim(0.65);
     title('GAME OVER', H * 0.34, 52, '#ff5252');

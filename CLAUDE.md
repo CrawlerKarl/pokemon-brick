@@ -39,7 +39,7 @@ real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
-- **Automated invariants:** open `/test.html` (drives the sim headless, 18
+- **Automated invariants:** open `/test.html` (drives the sim headless, 19
   checks, sets `window.TEST_RESULTS`). Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
@@ -92,6 +92,23 @@ phone — flag anything only verifiable there.
   shrunk ~55%, airspace floor high (~42%→56% late) so the low band is the
   ship's. Squads periodically run maneuvers (`G.maneuver`: scatter/surge/raid);
   raids are capped out of the ship band.
+- **Junkie waves are AUTHORED encounters, never random overlays.**
+  `JUNKIE_CHOREO` (state.js) names one motion FAMILY per region × stage; every
+  squad's pattern/anchor/phase/role rides ONE shared clock via `G.encounter`
+  (family, act 1–3, actBeat establish/escalate/climax). The controller
+  (update.js) runs formation-level morphs (breathe/swapCy/bloom/eclipse/
+  orbit/blend) and ONE attack group at a time (two from Galar). Junkie BOSS
+  waves never use the legacy guard grid: two mirrored wing arcs tethered to
+  the boss (`br.guard`), which compress/reform through teleports (Mewtwo's is
+  deferred 0.5s for anticipation), swap sides in phase 2, and counter-rotate
+  as boss-centered orbits in phase 3. Reinforcements reuse the wave's theme +
+  family (`G.waveThemeObj`). The test suite asserts all of this.
+- **Sprite kinematics live in update(), never render.** `updateSpriteKinematics`
+  smooths `vvx/vvy/bank/face/animPh` with dt (60 Hz == 120 Hz); facing flips
+  only after ~150 ms; gaits come from species `MOTION_PROFILES` (data.js,
+  serpentine/heavy/quadruped/biped overrides) with type as fallback. The three
+  acts also tighten `diff()` (+8%/act fire rate, +5%/act shot speed) and the
+  act boundary plays the evolution ceremony (`G.ceremony`, drawCeremony).
 - **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
   mons (flyers, divers, junkie flyers, bosses) FAINT; boxed bricks card-shatter.
 - **Bosses are BARE legendaries** (`drawBossMon`, render.js — no card), with

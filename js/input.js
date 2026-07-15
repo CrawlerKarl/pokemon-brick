@@ -179,6 +179,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     if (G.state === 'upgrade' && upgradeTreeOpen) upgradeTreeOpen = false;
     else if (G.state === 'upgrade') return;
+    else if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); }
     else if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
     else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
@@ -193,7 +194,16 @@ window.addEventListener('keydown', e => {
     SFX.wall();
   }
   if (!upgradeTreeOpen && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
-    pickUpgrade(+e.code.slice(5) - 1);
+    // digits SELECT (inspect); Enter / the same digit again confirms
+    const i = +e.code.slice(5) - 1;
+    if (G.upgradeChoices[i]) {
+      if (draftSel === i) pickUpgrade(i);
+      else { draftSel = i; SFX.wall(); }
+    }
+  }
+  if (!upgradeTreeOpen && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 &&
+      (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && draftSel != null) {
+    pickUpgrade(draftSel);
   }
   if (!upgradeTreeOpen && e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices && !G.rerolled && G.stateT > 0.8) {
     rerollDraft();
@@ -212,6 +222,10 @@ window.addEventListener('keydown', e => {
 });
 let paused = false;
 let upgradeTreeOpen = false;
+// draft pick is two-step: tap a card to INSPECT it (highlight + its path chain
+// shown in place), then CONFIRM applies it — no more accidental picks while
+// just reading, and no flipping to another screen for path context
+let draftSel = null;
 function togglePause() { if (G.state === 'play' || G.state === 'serve') paused = !paused; }
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
@@ -237,19 +251,25 @@ function upgradeLayout() {
   const stacked = W < 560 && !short;
   if (stacked) {
     const cw = Math.min(380, W * 0.92), ch = Math.min(108, H * 0.15);
-    const x = W / 2 - cw / 2, y0 = Math.min(H * 0.38, H - 3 * (ch + 14) - 56);
-    const ay = Math.min(y0 + 3 * (ch + 14) + 6, H - 44), aw = Math.min(150, (W - 36) / 2);
+    const x = W / 2 - cw / 2, y0 = Math.min(H * 0.38, H - 3 * (ch + 14) - 100);
+    const ay = Math.min(y0 + 3 * (ch + 14) + 6, H - 86), aw = Math.min(150, (W - 36) / 2);
+    const cbw = Math.min(240, aw * 2);
     return { stacked, short, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }),
-      reroll: { x: W / 2 - aw - 6, y: ay, w: aw, h: 32 },
-      tree: { x: W / 2 + 6, y: ay, w: aw, h: 32 } };
+      confirm: { x: W / 2 - cbw / 2, y: ay, w: cbw, h: 36 },
+      reroll: { x: W / 2 - aw - 6, y: ay + 44, w: aw, h: 32 },
+      tree: { x: W / 2 + 6, y: ay + 44, w: aw, h: 32 } };
   }
   const cw = Math.min(250, (W - 84) / 3), ch = Math.min(252, H * 0.4);
   const gap = 22, total = cw * 3 + gap * 2;
   const cy = Math.min(H * 0.4, H - ch - 60);
   const ay = Math.min(cy + ch + 16, H - 48);
+  // three-button row: REROLL · CONFIRM (widest — it's the primary action) · TREE
+  const bw = Math.min(150, (W - 72) / 3.5), cbw = Math.min(200, bw * 1.35), bgap = 12;
+  const row = bw * 2 + cbw + bgap * 2;
   return { stacked, short, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: cy, w: cw, h: ch }),
-    reroll: { x: W / 2 - 188, y: ay, w: 176, h: 34 },
-    tree: { x: W / 2 + 12, y: ay, w: 176, h: 34 } };
+    reroll: { x: W / 2 - row / 2, y: ay, w: bw, h: 34 },
+    confirm: { x: W / 2 - cbw / 2, y: ay, w: cbw, h: 34 },
+    tree: { x: W / 2 + row / 2 - bw, y: ay, w: bw, h: 34 } };
 }
 // which tree node the player last tapped, so the detail panel can explain it
 let treeSel = { pi: 0, ti: 0 };
@@ -282,6 +302,7 @@ function upgradeTreeLayout() {
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
+  draftSel = null;
   // late-run mastery STACK pick (literal held item in SPACE JUNKIE)
   if (c.stack) {
     G.stacks[c.stack.key] = (G.stacks[c.stack.key] || 0) + 1;
@@ -317,10 +338,21 @@ function pickUpgrade(i) {
 // every offer misses your build
 function rerollDraft() {
   G.rerolled = true;
+  draftSel = null; // fresh hand, fresh inspection
   rollUpgradeChoices();
   SFX.wall();
 }
 function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
+// act-boundary ceremony: a tap mid-scene jumps to the reveal; once the act
+// card is up, a tap moves on to the draft
+function advanceCeremony() {
+  const c = G.ceremony;
+  if (!c) { G.state = 'upgrade'; G.stateT = 0; return; }
+  const doneAt = c.evo ? 3.4 : 2.2;
+  if (c.t >= doneAt) { G.ceremony = null; G.state = 'upgrade'; G.stateT = 0; SFX.power(); }
+  else if (c.evo && c.t < 1.85) c.t = 1.85;
+  else if (!c.evo) c.t = doneAt;
+}
 function onPress(x, y) {
   audio();
   if (G.state === 'dex') {
@@ -328,6 +360,7 @@ function onPress(x, y) {
     else if (!IS_TOUCH) { G.state = 'menu'; dexScroll = 0; } // desktop: click anywhere returns
     return;
   }
+  if (G.state === 'ceremony') { advanceCeremony(); return; }
   if (G.state === 'upgrade') {
     if (G.upgradeChoices && G.stateT > 0.8) {
       const L = upgradeLayout();
@@ -343,8 +376,14 @@ function onPress(x, y) {
         return;
       }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
-        if (inRect(x, y, L.card(i))) { pickUpgrade(i); return; }
+        // first tap INSPECTS (highlight + path chain shown in place); only
+        // CONFIRM applies it — no accidental picks while just reading
+        if (inRect(x, y, L.card(i))) {
+          if (draftSel !== i) { draftSel = i; SFX.wall(); }
+          return;
+        }
       }
+      if (draftSel != null && inRect(x, y, L.confirm)) { pickUpgrade(draftSel); return; }
       if (!G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
       if (inRect(x, y, L.tree)) { upgradeTreeOpen = true; treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) }; SFX.wall(); return; }
     }
@@ -401,6 +440,8 @@ function onPress(x, y) {
         if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
       }
       if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
+      // TRIAL is per-game now — opened from the mode you're setting up
+      if (inRect(x, y, L.trial)) { trialOpen = true; SFX.wall(); return; }
       return;
     }
     // PAGE 1 — pick your game: two headliner cards + the experimental chip
@@ -413,7 +454,6 @@ function onPress(x, y) {
       }
     }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }
-    if (inRect(x, y, L.trial)) { trialOpen = true; return; }
     if (inRect(x, y, L.adv)) { advOpen = true; return; }
     return;
   }
@@ -537,6 +577,7 @@ function primaryAction() {
     return;
   }
   if (G.state === 'gameover') { G.state = 'menu'; menuPage = 'modes'; return; }
+  if (G.state === 'ceremony') { advanceCeremony(); return; }
   if (G.state === 'upgrade') return;
   fireAction();
 }

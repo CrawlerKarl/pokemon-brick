@@ -279,6 +279,46 @@ window.requestAnimationFrame = function () { return 0; };
     return 'shielded hit absorbed (1 charge, grace i-frames); unshielded hit cost a life';
   });
 
+  // 2a-ii) SPACE JUNKIE choreography: every wave is ONE authored encounter —
+  // a named family, an act + beat, members only in spec'd squads; boss waves
+  // use boss-anchored wing guards (never the legacy grid) that re-center on
+  // the legendary after a teleport.
+  test('junkie choreography: authored encounters + anchored boss wings', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'junkie';
+    const fails = [];
+    for (const lvl of [1, 2, 4, 5, 13, 14, 25, 26]) {
+      resetRun(lvl, true);
+      const E = G.encounter;
+      if (!E || !E.family) { fails.push('L' + lvl + ': no encounter'); continue; }
+      if (!(E.act >= 1 && E.act <= 3)) fails.push('L' + lvl + ': bad act ' + E.act);
+      if (!['establish', 'escalate', 'climax'].includes(E.actBeat)) fails.push('L' + lvl + ': bad beat ' + E.actBeat);
+      for (const b of G.bricks) {
+        if (b.flight && (b.flight.sq == null || !E.squads[b.flight.sq])) {
+          fails.push('L' + lvl + ': member outside the encounter spec'); break;
+        }
+      }
+    }
+    resetRun(3, true); // Kanto legendary — Mewtwo's psychic lattice
+    G.lives = 99;
+    const boss = G.bricks.find(b => b.isBoss);
+    const guards = G.bricks.filter(b => b.guard);
+    assert(boss && guards.length >= 10, 'Mewtwo wave needs ≥10 wing guards, got ' + guards.length);
+    assert(G.bricks.every(b => b.isBoss || b.guard), 'junkie boss wave must not contain legacy grid bricks');
+    assert(G.encounter && G.encounter.actBeat === 'climax', 'boss wave must expose the climax beat');
+    G.state = 'play';
+    await runFrames(240);
+    boss.hx = W * 0.2; boss.bx = boss.hx; // hard teleport across the arena
+    await runFrames(240);
+    const wings = G.bricks.filter(b => b.guard && !b.dead && b.guard.ring == null);
+    const avgX = wings.reduce((a, b) => a + b.bx, 0) / Math.max(1, wings.length);
+    assert(Math.abs(avgX - boss.bx) < 130,
+      'guards did not re-center on the teleported boss (avgX ' + (avgX | 0) + ' vs boss ' + (boss.bx | 0) + ')');
+    assert(ERR.length === e0, 'errors during choreography test: ' + ERR.slice(e0).join(' | '));
+    assert(fails.length === 0, fails.join(' ; '));
+    return 'authored families across all 3 acts; Mewtwo wings anchored, re-centered after teleport';
+  });
+
   // 2b) classic lose-a-life: park the paddle away and let the ball drain
   test('classic: lose a life cleanly', async () => {
     const e0 = ERR.length;
@@ -430,8 +470,8 @@ window.requestAnimationFrame = function () { return 0; };
       for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
         const L = menuLayout(), S = setupLayout(), U = upgradeLayout();
-        const rects = { exp: L.exp, dex: L.dex, trial: L.trial, adv: L.adv, back: S.back, start: S.start,
-          reroll: U.reroll, fullTree: U.tree };
+        const rects = { exp: L.exp, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+          reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
         for (let i = 0; i < 2; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = S.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = S.chip(i);

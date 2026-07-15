@@ -349,6 +349,30 @@ function starterStage(level) {
   return regionsIn >= 6 ? 3 : regionsIn >= 3 ? 2 : 1;
 }
 
+// ---- species-aware MOTION PROFILES (type is only the fallback) ----
+// A ground dragon should not flap; a serpent should undulate; a boulder
+// should barely bob. Ids listed here override the type-derived gait.
+const MOTION_PROFILES = {
+  serpentine: [23, 24, 95, 130, 147, 148, 149, 206, 230, 336, 350, 384, 634, 635, 691, 704, 705, 706],
+  heavy: [74, 75, 76, 143, 208, 306, 376, 377, 464, 486, 68, 112, 232, 248, 526],
+  biped: [104, 105, 106, 107, 122, 125, 126, 236, 237, 532, 533, 534, 619, 620],
+  quadruped: [58, 59, 77, 78, 111, 128, 133, 134, 135, 136, 155, 156, 157, 209, 210, 234, 261, 262, 447, 448],
+};
+const MOTION_BY_ID = {};
+for (const [prof, ids] of Object.entries(MOTION_PROFILES)) for (const id of ids) MOTION_BY_ID[id] = prof;
+// gait families by TYPE — the fallback when no species override exists
+const GAIT_FLAP_T = new Set(['flying', 'dragon', 'bug']);
+const GAIT_SWIM_T = new Set(['water', 'ice']);
+const GAIT_HOVER_T = new Set(['ghost', 'psychic', 'fairy', 'poison']);
+function motionProfile(poke) {
+  const o = MOTION_BY_ID[poke.id];
+  if (o) return o;
+  if (GAIT_FLAP_T.has(poke.t)) return 'winged';
+  if (GAIT_SWIM_T.has(poke.t)) return 'swim';
+  if (GAIT_HOVER_T.has(poke.t)) return 'hover';
+  return 'biped';
+}
+
 const POWER_BY_TYPE = {
   fire: 'fire',
   electric: 'laser',
@@ -708,6 +732,19 @@ const STAGE_NAMES = ['ARRIVAL', 'CHALLENGE', 'LEGENDARY'];
 function regionIdx(lvl) { return Math.floor((lvl - 1) / STAGES) % GENS.length; }
 function stageIdx(lvl) { return (lvl - 1) % STAGES; } // 0 arrival · 1 challenge · 2 boss
 function genFor(level) { return GENS[regionIdx(level)]; }
+// ---- THE THREE ACTS. The journey is a three-act play: gens 1–3 teach the
+// flocks to ASSEMBLE, 4–6 teach them to TRANSFORM, 7–9 COMBINE everything.
+// Act boundaries land exactly on the partner evolutions (regions 4 & 7) and
+// are celebrated with a full evolution ceremony between waves.
+const ACTS = [
+  { n: 'I',   name: 'FORMATION',      color: '#66bb6a', gens: 'GENERATIONS 1–3',
+    verb: 'THE FLOCKS LEARN TO ASSEMBLE' },
+  { n: 'II',  name: 'TRANSFORMATION', color: '#ffd54f', gens: 'GENERATIONS 4–6',
+    verb: 'THE FORMATIONS BEGIN TO TRANSFORM' },
+  { n: 'III', name: 'MASTERY',        color: '#ff8a65', gens: 'GENERATIONS 7–9',
+    verb: 'EVERY MOTION THEY KNOW, COMBINED' },
+];
+function actIdx(lvl) { return Math.min(2, Math.floor(regionIdx(lvl) / 3)); }
 
 // signature boss mechanics, keyed by legendary id
 const BOSS_ABILITIES = {

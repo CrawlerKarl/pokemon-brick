@@ -52,10 +52,13 @@ function tickEffects(dt) {
 }
 
 // ball-only power-ups make no sense in the no-ball shooter modes — swap them
-// for shooter-useful equivalents at drop time
+// for shooter-useful equivalents at drop time. Multiball's stand-in is DRACO
+// MISSILES, but homing missiles trivialise region 1's small 1-hp flocks (the
+// two hinted "CATCH!" drops made them near-guaranteed) — so the first region
+// swaps to a score star instead and draco waits for tankier waves.
 function modePower(p) {
   if (G.mode === 'classic' || !p || !p.key) return p;
-  const swap = { multi: 'draco', magnet: 'shield', warp: 'star' };
+  const swap = { multi: regionIdx(G.level) >= 1 ? 'draco' : 'star', magnet: 'shield', warp: 'star' };
   return swap[p.key] ? POWERS[swap[p.key]] : p;
 }
 
@@ -129,19 +132,27 @@ function damageBrick(br, dmg, sx, sy, element) {
         const gen2 = genFor(G.level);
         const pool4 = gen2.tiers[1];
         const nAdd = 5;
+        const [idA, tA] = pool4[Math.floor(Math.random() * pool4.length)];
         for (let i = 0; i < nAdd; i++) {
-          const [id2, t2] = pool4[Math.floor(Math.random() * pool4.length)];
-          G.bricks.push({
-            bx: bx3, by: by3, hx: bx3 - G.fx, hy: by3 - G.fy, row: 0, col: i,
+          const add = {
+            bx: bx3 - G.fx, by: by3 - G.fy, hx: bx3 - G.fx, hy: by3 - G.fy, row: 0, col: i,
             w: Math.min(48, Math.max(34, G.brickW * 0.5)), h: Math.min(42, Math.max(30, G.brickH * 0.7)),
-            hp: 2, maxHp: 2, poke: { id: id2, t: t2 },
+            hp: 2, maxHp: 2, poke: { id: idA, t: tA },
             flash: 0, wobble: Math.random() * Math.PI * 2,
-            flight: {
+          };
+          if (G.mode === 'junkie') {
+            // last-stand adds are the INNER counter-rotating ring — anchored
+            // to the boss every update, so a teleport carries them with it
+            add.bare = true;
+            add.guard = { side: 1, sideF: 1, targetSide: 1, idx: i, n: nAdd, ring: 1 };
+          } else {
+            add.flight = {
               kind: 'ring', state: 2, launch: 0, sq: null,
               cx: bx3, cy: Math.min(by3 + 60, H * 0.42), rx: Math.min(150, W * 0.16), ry: 90,
               spd: 1.4, phase: i / nAdd, dir: 1, strand: i % 2,
-            },
-          });
+            };
+          }
+          G.bricks.push(add);
         }
       }
       setAnnounce('alert', newPhase === 3 ? '#ff1744' : '#ff5252',
@@ -485,13 +496,13 @@ function bossAbility(boss) {
   if (!ab) return;
   const bx = boss.bx + G.fx, by = boss.by + G.fy;
   switch (id) {
-    case 150: { // Mewtwo: teleport across the arena
-      burst(bx, by, '#ec407a', 34, 340, 0.7);
+    case 150: { // Mewtwo: teleport — a 0.5s anticipation (guards compress,
+      // psychic flash) THEN the jump, so the wings vanish and reform WITH it
+      burst(bx, by, '#ec407a', 20, 260, 0.5);
       const lim = boss.w / 2 + 20;
-      boss.hx = lim + Math.random() * (W - lim * 2) - G.fx;
-      boss.bx = boss.hx;
-      boss.flash = 1;
-      burst(boss.bx + G.fx, by, '#ec407a', 34, 340, 0.7);
+      boss.tpX = lim + Math.random() * (W - lim * 2) - G.fx;
+      boss.teleportAt = 0.5;
+      boss.reformT = 1.0; // compress now, reform after the jump
       tone(880, 0.18, 'sine', 0.06, -400);
       break;
     }
@@ -624,6 +635,37 @@ function loseLife() {
   }
 }
 
+// ---- sprite kinematics: velocity, facing, bank and gait phase live HERE,
+// dt-smoothed (identical at 60 Hz and 120 Hz) — render only READS them.
+// (They used to be derived in render from position-delta × 60, which tied
+// banking and animation speed to the display's refresh rate.)
+function updateSpriteKinematics(dt) {
+  if (dt <= 0) return;
+  for (const br of G.bricks) {
+    if (br.dead || br.isBoss) continue;
+    if (!bareMon(br) && !br.guard) { br.pbx = br.bx; br.pby = br.by; continue; }
+    const ivx = (br.bx - (br.pbx ?? br.bx)) / dt, ivy = (br.by - (br.pby ?? br.by)) / dt;
+    br.pbx = br.bx; br.pby = br.by;
+    const k = Math.min(1, dt * 9);
+    br.vvx = (br.vvx ?? 0) + (ivx - (br.vvx ?? 0)) * k;
+    br.vvy = (br.vvy ?? 0) + (ivy - (br.vvy ?? 0)) * k;
+    br.vspd = Math.hypot(br.vvx, br.vvy);
+    // gait phase integrates distance travelled plus a slow idle breath —
+    // stride quickens with real speed, and a parked mon still breathes
+    br.animPh = (br.animPh ?? br.wobble) + br.vspd * dt * 0.045 + dt * 1.6;
+    // facing flips only after the direction HOLDS ~150ms — no apex flicker
+    const want = br.vvx > 22 ? -1 : br.vvx < -22 ? 1 : (br.face || 1);
+    if (want !== (br.face || 1)) {
+      br.faceT = (br.faceT || 0) + dt;
+      if (br.faceT >= 0.15) { br.face = want; br.faceT = 0; }
+    } else br.faceT = 0;
+    // bank follows the path tangent; vertical velocity adds a touch of pitch
+    const bankTgt = Math.max(-0.3, Math.min(0.3, br.vvx * 0.0011))
+      + Math.max(-0.13, Math.min(0.13, br.vvy * 0.0005));
+    br.bank = (br.bank ?? 0) + (bankTgt - (br.bank ?? 0)) * Math.min(1, dt * 7);
+  }
+}
+
 function nearestBrick(x, y) {
   let best = null, bd = Infinity;
   for (const br of G.bricks) {
@@ -692,7 +734,11 @@ function update(dt) {
   // piercing Fireball/Mega i-frame (`br.flash <= 0.5` in the ball loop), so a
   // fixed per-render-frame decay coupled that DPS to the display's refresh
   // rate and desynced during hit-stop. 4.8/s ≈ the old 0.08/frame at 60fps.
-  for (const br of G.bricks) if (br.flash > 0) br.flash = Math.max(0, br.flash - dt * 4.8);
+  for (const br of G.bricks) {
+    if (br.flash > 0) br.flash = Math.max(0, br.flash - dt * 4.8);
+    // after an entry lands, its idle bob eases in instead of popping on
+    if (br.settleT != null && br.settleT < 1) br.settleT = Math.min(1, br.settleT + dt * 1.4);
+  }
   // HUD juice: the score COUNTS up instead of teleporting; combo pops on kills
   G.scoreShown += (G.score - G.scoreShown) * Math.min(1, dt * 9);
   if (Math.abs(G.score - G.scoreShown) < 1) G.scoreShown = G.score;
@@ -703,6 +749,36 @@ function update(dt) {
   if (G.state === 'upgrade') {
     // no draftable upgrades left → brief breather, then straight on
     if (!G.upgradeChoices && G.stateT > 2.2) { buildLevel(G.level); serve(); }
+    return;
+  }
+  if (G.state === 'ceremony') {
+    // act-boundary evolution ceremony: a scripted beat sheet. The white-out
+    // burst and the reveal shower fire exactly once each; render only reads.
+    const c = G.ceremony;
+    if (!c) { G.state = 'upgrade'; G.stateT = 0; return; }
+    c.t += dt;
+    const cx = W / 2, cy = H * 0.36;
+    if (c.evo) {
+      if (!c.burst1 && c.t >= 1.9) { // white-out: the change begins
+        c.burst1 = true;
+        G.flashT = 0.25;
+        ringFx(cx, cy, '#ffffff', 8, Math.min(W, H) * 0.34, 4, 0.6);
+        SFX.mega();
+      }
+      if (!c.burst2 && c.t >= 2.45) { // the reveal — congratulations!
+        c.burst2 = true;
+        burst(cx, cy, '#ffffff', 40, 420, 1);
+        burst(cx, cy, ACTS[c.act].color, 30, 340, 0.9);
+        sparkle(cx, cy, 14, true);
+        ringFx(cx, cy, ACTS[c.act].color, 10, Math.min(W, H) * 0.42, 5, 0.7);
+        G.shake = 10;
+        SFX.gotcha();
+      }
+    } else if (!c.burst1 && c.t >= 0.5) { // no partner: the act card itself lands
+      c.burst1 = true;
+      ringFx(cx, H * 0.4, ACTS[c.act].color, 8, Math.min(W, H) * 0.4, 4, 0.7);
+      SFX.mega();
+    }
     return;
   }
 
@@ -848,6 +924,127 @@ function update(dt) {
   // ---- FLYERS: Pokémon that break out of their boxes and fly one of a
   // dozen patterns, each following the one ahead of it. Their moving slot
   // means divers rejoin the train wherever it's cycled to.
+  // ---- SPACE JUNKIE encounter controller: the wave's ONE shared clock.
+  // Formation-level morphs (breathe/relay/bloom/eclipse/orbit/blend) mutate
+  // every squad's anchor/radii together, so multi-squad waves act as one
+  // choreographed body instead of overlaid random patterns.
+  if (G.mode === 'junkie' && G.encounter && (G.state === 'play' || G.state === 'serve')) {
+    const E = G.encounter;
+    E.t += dt * ts;
+    const et = E.t;
+    if (E.rotateAttack) { // late-act families ROTATE which role attacks
+      const nSq = E.squads.length;
+      if (nSq) E.attackSq = (Math.max(0, E.squads.findIndex(q => q.role === 'attacker')) + Math.floor(et / E.rotateAttack)) % nSq;
+    }
+    for (let s = 0; s < E.squads.length; s++) {
+      const S = E.squads[s];
+      let cx = S.cx0, cy = S.cy0, rx = S.rx0, ry = S.ry0, blend = 0;
+      switch (E.morph) {
+        case 'breathe': { // pincer: wings open wide, warn, close on the gap
+          if (S.role !== 'core') {
+            const b2 = 0.5 + 0.5 * Math.sin(et * 0.55);
+            cx = W / 2 + (S.cx0 - W / 2) * (0.55 + 0.65 * b2);
+            rx = S.rx0 * (0.8 + 0.4 * b2);
+          }
+          break;
+        }
+        case 'swapCy': { // relay: the two bodies continuously exchange layers
+          if (E.squads.length >= 2) {
+            const other = E.squads[s === 0 ? 1 : 0];
+            const sw = 0.5 - 0.5 * Math.cos(et * Math.PI / 7); // full exchange every 7s
+            cy = S.cy0 + (other.cy0 - S.cy0) * sw;
+          }
+          break;
+        }
+        case 'bloom': { // ring smoothly opens into petals and closes again
+          const b2 = 0.5 + 0.5 * Math.sin(et * 0.4);
+          ry = S.ry0 * (0.55 + 0.75 * b2);
+          rx = S.rx0 * (1.1 - 0.35 * b2);
+          break;
+        }
+        case 'eclipse': { // rings align (radii converge), darken, separate
+          const e2 = Math.pow(Math.max(0, Math.sin(et * 0.3)), 2);
+          if (S.role === 'wing') rx = S.rx0 * (1 - 0.42 * e2), ry = S.ry0 * (1 - 0.42 * e2);
+          else if (S.role === 'core') rx = S.rx0 * (1 + 0.45 * e2), ry = S.ry0 * (1 + 0.45 * e2);
+          break;
+        }
+        case 'orbit': { // the whole set of anchors slowly wheels as one vortex
+          const midY = (E.openTop + E.floorY) / 2;
+          const dx = S.cx0 - W / 2, dy = S.cy0 - midY;
+          const a2 = et * 0.22, ca = Math.cos(a2), sa = Math.sin(a2);
+          cx = W / 2 + dx * ca - dy * sa;
+          cy = midY + dx * sa + dy * ca;
+          break;
+        }
+        case 'blend': // mastery: the silhouette ITSELF morphs between kinds
+          blend = 0.5 - 0.5 * Math.cos(et * Math.PI / 8); // full morph every 16s
+          break;
+      }
+      S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;
+    }
+    // write the controller's frame into every member — one clock, one body
+    for (const br of G.bricks) {
+      if (br.dead || !br.flight) continue;
+      const S = E.squads[br.flight.sq];
+      if (!S) continue;
+      const F = br.flight;
+      F.cx = S.cx; F.cy = S.cy; F.rx = S.rx; F.ry = S.ry;
+      F.kind2 = S.kind2; F.blend = S.blend || 0;
+    }
+  }
+  // ---- SPACE JUNKIE boss guards: two mirrored wing arcs TETHERED to the
+  // legendary. They trail its sweeps, compress + reform through teleports,
+  // exchange sides in phase 2, and become counter-rotating orbits in the
+  // last stand — never an unrelated marching grid.
+  if (G.mode === 'junkie' && (G.state === 'play' || G.state === 'serve')) {
+    const boss = G.bricks.find(b => b.isBoss && !b.dead);
+    if (boss) {
+      if (boss.reformT > 0) boss.reformT = Math.max(0, boss.reformT - dt * ts);
+      // phase 2+: wings periodically EXCHANGE sides along split verticals
+      if ((boss.phase || 1) >= 2 && G.state === 'play') {
+        G.guardSwapCD -= dt * ts;
+        if (G.guardSwapCD <= 0) {
+          G.guardSwapCD = 8;
+          for (const br of G.bricks) {
+            if (!br.dead && br.guard && br.guard.ring == null) br.guard.targetSide = -br.guard.targetSide;
+          }
+        }
+      }
+      for (const br of G.bricks) {
+        if (br.dead || !br.guard) continue;
+        const g2 = br.guard;
+        // last stand: surviving wing guards become the OUTER orbit
+        if ((boss.phase || 1) >= 3 && g2.ring == null) g2.ring = 0;
+        let tx, ty;
+        if (g2.ring != null) {
+          // counter-rotating orbits, centered on the boss EVERY update
+          const a2 = (g2.idx / Math.max(1, g2.n)) * Math.PI * 2
+            + (g2.side > 0 ? 0 : Math.PI)
+            + G.time * (g2.ring ? 0.9 : -0.5);
+          const R = g2.ring ? boss.w * 0.7 + 26 : boss.w * 0.95 + 64;
+          tx = boss.bx + Math.cos(a2) * R;
+          ty = boss.by + Math.sin(a2) * R * 0.7;
+        } else {
+          // mirrored wing arc slots relative to the boss anchor
+          g2.sideF += (g2.targetSide - g2.sideF) * Math.min(1, dt * ts * 1.7);
+          const u = (g2.idx + 0.5) / Math.max(1, g2.n);
+          const spanX = Math.min(W * 0.09, 84) + u * Math.min(W * 0.14, 130);
+          tx = boss.bx + g2.sideF * (boss.w * 0.55 + spanX);
+          ty = Math.max(56, boss.by - 20 - Math.sin(u * Math.PI * 0.85) * (64 + u * 44))
+            // crossing guards split into over/under lanes — never one center
+            + (1 - Math.abs(g2.sideF)) * 96 * (g2.idx % 2 ? -1 : 1);
+        }
+        if (boss.reformT > 0) { // teleport: compress INTO the boss, then reform
+          tx = boss.bx + (tx - boss.bx) * 0.12;
+          ty = boss.by + (ty - boss.by) * 0.12;
+        }
+        const kk = Math.min(1, dt * ts * (boss.reformT > 0 ? 10 : 5));
+        br.bx += (tx - br.bx) * kk;
+        br.by += (ty - br.by) * kk;
+        br.hx = br.bx; br.hy = br.by;
+      }
+    }
+  }
   if (G.state === 'play' || G.state === 'serve') {
     const tAbs = G.swayT * G.pathSpeed;
     for (const br of G.bricks) {
@@ -867,6 +1064,16 @@ function update(dt) {
       // out so flyers ride their pattern in screen coords — immune to the
       // march's downward creep, so the breathing-room floor actually holds
       const pos = flightPos(F, tAbs);
+      // masteryMorph: the formation SILHOUETTE itself eases between two
+      // kinds (chevron→ring→phalanx) — blend the two paths per member
+      if (F.kind2 && F.blend > 0.001) {
+        const k0 = F.kind;
+        F.kind = F.kind2;
+        const p2 = flightPos(F, tAbs);
+        F.kind = k0;
+        pos.x += (p2.x - pos.x) * F.blend;
+        pos.y += (p2.y - pos.y) * F.blend;
+      }
       // squad maneuver post-transform: a startle-scatter swells the knot
       // around its own center; a raid eases the whole flock down and back
       const mv = G.maneuver;
@@ -880,7 +1087,7 @@ function update(dt) {
       if (F.state === 1) { // breaking out: glide from the wall onto the pattern
         F.t += dt * ts;
         // negative t = a stream rider still holding off-screen for its turn
-        const p = Math.max(0, Math.min(1, F.t / 1.1));
+        const p = Math.max(0, Math.min(1, F.t / 1.35));
         const q = 1 - Math.pow(1 - p, 2);
         br.hx = (F.sx + (pos.x - F.sx) * q) - G.fx;
         br.hy = (F.sy + (pos.y - F.sy) * q) - G.fy;
@@ -900,7 +1107,12 @@ function update(dt) {
     {
       const fl = [];
       for (const br of G.bricks) {
-        if (!br.dead && br.flight && br.flight.state >= 1 && !br.dive && !br.entry) fl.push(br);
+        // state 1 (still gliding in) is EXCLUDED: entering riders trail
+        // nose-to-tail from one edge point, so the solver shoved them apart
+        // every frame while the glide lerp snapped them back — a visible
+        // jitter on every wave entrance. Entries are transient; the overlap
+        // invariant (and its test) covers settled flyers (state 2).
+        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry) fl.push(br);
       }
       const gr = G.mode !== 'junkie' ? G.gridRect : null;
       if (fl.length > 1) {
@@ -946,11 +1158,11 @@ function update(dt) {
       if (e.t > 0) { br.bx = e.sx; br.by = e.sy; continue; }
       const p = Math.min(1, -e.t / e.dur);
       const q = 1 - Math.pow(1 - p, 2.2); // ease out into the slot
-      const u = 1 - q;
-      const cx2 = (e.sx + br.hx) / 2, cy2 = br.hy - 150; // swoop over the top
-      br.bx = u * u * e.sx + 2 * u * q * cx2 + q * q * br.hx;
-      br.by = u * u * e.sy + 2 * u * q * cy2 + q * q * br.hy;
-      if (p >= 1) br.entry = null;
+      // straight eased glide from above — the old 150px swoop-over-the-top,
+      // layered with the render bob, read as fast/stuttery on wave 1
+      br.bx = e.sx + (br.hx - e.sx) * q;
+      br.by = e.sy + (br.hy - e.sy) * q;
+      if (p >= 1) { br.entry = null; br.settleT = 0; } // bob fades IN after landing
     }
   }
   if (G.state === 'play' && G.bossIntro <= 0) {
@@ -994,7 +1206,7 @@ function update(dt) {
         : 0);
     }
     for (const br of G.bricks) {
-      if (br.dead || br.isBoss || br.entry) continue;
+      if (br.dead || br.isBoss || br.entry || br.guard) continue; // guards ride the boss controller
       // GALAGA DIVE: peel off, swoop at the paddle, fire, loop back home
       if (br.dive) {
         const dv = br.dive;
@@ -1050,11 +1262,19 @@ function update(dt) {
       G.diveCD -= dt * ts;
       if (G.diveCD <= 0) {
         const regionsIn2 = Math.floor((G.level - 1) / STAGES);
-        const maxDivers = 1 + Math.floor(regionsIn2 / 3);
+        // SPACE JUNKIE keeps ONE attack group at a time (two only from Galar);
+        // choreographed waves pick their divers from the designated attacker
+        // squad, so the rest of the formation stays a stable frame of reference
+        const jk2 = G.mode === 'junkie';
+        const maxDivers = jk2 ? (regionsIn2 >= 7 ? 2 : 1) : 1 + Math.floor(regionsIn2 / 3);
         const diving = G.bricks.filter(b => !b.dead && b.dive).length;
         G.diveCD = Math.max(2.2, 7 - regionsIn2 * 0.5) * (0.7 + Math.random() * 0.5);
         if (diving < maxDivers) {
-          const pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive);
+          let pool2 = G.bricks.filter(b => !b.dead && !b.isBoss && !b.armored && !b.entry && !b.dive && !b.guard);
+          if (jk2 && G.encounter && G.encounter.attackSq >= 0) {
+            const att = pool2.filter(b => b.flight && b.flight.sq === G.encounter.attackSq);
+            if (att.length) pool2 = att;
+          }
           if (pool2.length) {
             const dvb = pool2[Math.floor(Math.random() * pool2.length)];
             if (!flying(dvb) && !dvb.bare) {
@@ -1088,6 +1308,9 @@ function update(dt) {
       }
     }
   }
+
+  // every system that writes positions has run — settle the sprite kinematics
+  if (G.state === 'play' || G.state === 'serve') updateSpriteKinematics(dt * ts);
 
   // ---- balls ----
   const windy = G.modifier?.key === 'winds' || G.gustT > 0; // Lugia gusts reuse the wind physics
@@ -1145,6 +1368,17 @@ function update(dt) {
     b.x += b.vx * bts * dt; b.y += b.vy * bts * dt;
     if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); SFX.wall(); }
     if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); SFX.wall(); }
+    // never let the ball ride near-horizontal — a flat ball shuttles wall to
+    // wall for ages before it comes back down. Enforce ≥ ~16° of pitch,
+    // preserving speed and travel direction (a one-frame nudge, imperceptible)
+    {
+      const spb = Math.hypot(b.vx, b.vy);
+      const minVy = spb * 0.28;
+      if (spb > 1 && Math.abs(b.vy) < minVy) {
+        b.vy = (b.vy === 0 ? 1 : Math.sign(b.vy)) * minVy;
+        b.vx = Math.sign(b.vx || 1) * Math.sqrt(Math.max(0, spb * spb - minVy * minVy));
+      }
+    }
     if (b.y < 56 + b.r) {
       b.y = 56 + b.r; b.vy = Math.abs(b.vy); SFX.wall();
       // reaching the very top is a skill beat — reward it (points + a little Mega)
@@ -1427,6 +1661,18 @@ function update(dt) {
           bossAbility(boss);
         }
       }
+      // deferred teleport (Mewtwo): anticipation ran, now the jump lands
+      if (boss.teleportAt != null) {
+        boss.teleportAt -= dt * ts;
+        if (boss.teleportAt <= 0) {
+          boss.teleportAt = null;
+          burst(boss.bx + G.fx, boss.by + G.fy, '#ec407a', 34, 340, 0.7);
+          boss.hx = boss.tpX;
+          boss.bx = boss.hx;
+          boss.flash = 1;
+          burst(boss.bx + G.fx, boss.by + G.fy, '#ec407a', 34, 340, 0.7);
+        }
+      }
       // sweep motion (Rayquaza crossing / Koraidon charging)
       if (boss.sweep) { // sweeps move the boss's HOME so patrol/rings track it
         boss.hx += boss.sweep.dir * (boss.sweep.fast ? 460 : 280) * ts * dt;
@@ -1599,7 +1845,36 @@ function update(dt) {
     // draft: advance one of up to three paths (skip maxed ones)
     rollUpgradeChoices();
     upgradeTreeOpen = false;
+    draftSel = null; // nothing inspected yet on a fresh draft
     G.rerolled = false; // one fresh reroll per draft screen
+    // ---- ACT BOUNDARY: clearing Hoenn (→ act II) or Kalos (→ act III) is
+    // the game's biggest beat — a full evolution ceremony plays before the
+    // draft. The ceremony OWNS the partner evolution (bumps starterLvl now),
+    // so buildLevel won't re-announce it with the plain banner later.
+    if (!G.trial && actIdx(G.level) > actIdx(G.level - 1)) {
+      const sm = STARTER_MON[G.starter];
+      const junkie = G.mode === 'junkie';
+      const newLvl = starterStage(G.level);
+      let evo = null;
+      if ((sm || junkie) && newLvl > G.starterLvl) {
+        const ids = sm ? sm.ids : PILOT_NONE.ids;
+        const names = sm ? sm.names : PILOT_NONE.names;
+        if (ids[newLvl - 1] !== ids[G.starterLvl - 1]) {
+          evo = {
+            fromId: ids[G.starterLvl - 1], toId: ids[newLvl - 1],
+            fromName: names[G.starterLvl - 1], toName: names[newLvl - 1],
+            type: sm ? G.starter : 'electric',
+            ability: sm ? sm.ability + ' ' + romanTier(newLvl) + ' — ' + sm.tiers[newLvl - 1]
+              : "THE PILOT'S ATTACK GROWS",
+          };
+          getSprite(evo.toId);
+          getSprite(evo.fromId);
+        }
+        G.starterLvl = newLvl;
+      }
+      G.ceremony = { act: actIdx(G.level), t: 0, evo, burst1: false, burst2: false };
+      G.state = 'ceremony'; G.stateT = 0;
+    }
     SFX.levelUp();
     // confetti!
     const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];

@@ -100,6 +100,9 @@ const G = {
   trial: false,
   // starter partner: which one, its ability tier, Torrent's return counter
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
+  ceremony: null, // act-boundary evolution ceremony (end of Hoenn / Kalos)
+  encounter: null, // SPACE JUNKIE choreography: one authored encounter per wave
+  guardSwapCD: 8, waveThemeObj: null,
   motionTier: 0, motionStyle: 'march',
   marchDir: 1, divers: false, diveCD: 6, gridCols: 10, pathSpeed: 0.04,
   blocksStatic: false, // boxed bricks are anchored; only the Pokémon move
@@ -248,6 +251,90 @@ function flyerRoom(lvl) {
 //   • OPEN patterns — everything else, confined to the clear band BELOW the
 //     grid (top of the pattern clamped under the lowest rank).
 // Flyers can thread past each other, but no pattern overlaps the bricks.
+// ============================================================
+//  SPACE JUNKIE CHOREOGRAPHY — every wave is ONE authored aerial encounter.
+//  Per region × stage, an entry names the wave's motion FAMILY and lays out
+//  each squad's pattern, anchor, phase and role on ONE shared clock — no
+//  squad ever rolls its own pattern. Acts develop a verb: act 1 ASSEMBLES
+//  (single anchors, mirrored pairs), act 2 TRANSFORMS (breathing pincers,
+//  relays, blooms), act 3 COMBINES (four roles, rotation, morph reprise).
+//  Units: cx = offset from centre in fractions of usable width; cy = 0..1
+//  within the airspace band; rx/ry scale the family's base radius; share
+//  weights the member split; role feeds elite tiers and attack-group picks.
+// ============================================================
+const JUNKIE_CHOREO = [
+  // ---- ACT 1 · FORMATION ----
+  { arrival: { family: 'cadetArc', squads: [
+      { kind: 'arc', rx: 1, ry: 0.8, cy: 0.42, spd: 0.8, role: 'core' }] },
+    challenge: { family: 'vanguardV', squads: [
+      { kind: 'chevron', rx: 1, ry: 0.9, cy: 0.45, spd: 0.9, role: 'attacker' }] } },
+  { arrival: { family: 'carousel', squads: [
+      { kind: 'ring', rx: 1, ry: 1, cy: 0.5, spd: 0.8, role: 'wing', share: 3 },
+      { kind: 'ring', rx: 0.4, ry: 0.4, cy: 0.5, spd: 0.8, ph: 0.5, role: 'core', share: 1 }] },
+    challenge: { family: 'twinCurrent', squads: [
+      { kind: 'weave', rx: 1, ry: 0.45, cy: 0.32, spd: 1, role: 'core' },
+      { kind: 'weave', rx: 1, ry: 0.45, cy: 0.64, spd: 1, ph: 0.18, role: 'attacker' }] } },
+  { arrival: { family: 'pairedEllipse', squads: [
+      { kind: 'oval', rx: 0.55, ry: 0.8, cx: -0.22, cy: 0.5, dir: 1, spd: 0.85, role: 'core' },
+      { kind: 'oval', rx: 0.55, ry: 0.8, cx: 0.22, cy: 0.5, dir: -1, spd: 0.85, ph: 0.5, role: 'wing' }] },
+    challenge: { family: 'evolutionRelay', morph: 'swapCy', squads: [
+      { kind: 'arc', rx: 1, ry: 0.7, cy: 0.28, spd: 0.9, role: 'wing', share: 2 },
+      { kind: 'fountain', rx: 0.35, ry: 0.85, cy: 0.66, spd: 1, role: 'elite', share: 1 }] } },
+  // ---- ACT 2 · TRANSFORMATION ----
+  { arrival: { family: 'diamondLattice', squads: [
+      { kind: 'diamond', rx: 1, ry: 1, cy: 0.48, spd: 0.7, role: 'core' },
+      { kind: 'diamond', rx: 0.55, ry: 0.55, cy: 0.48, spd: 0.7, ph: 0.5, role: 'wing' }] },
+    challenge: { family: 'pincer', morph: 'breathe', squads: [
+      { kind: 'ring', rx: 0.32, ry: 0.45, cy: 0.52, spd: 0.8, role: 'core' },
+      { kind: 'arc', rx: 0.5, ry: 0.55, cx: -0.28, cy: 0.4, spd: 0.9, role: 'wing' },
+      { kind: 'arc', rx: 0.5, ry: 0.55, cx: 0.28, cy: 0.4, spd: 0.9, ph: 0.5, role: 'attacker' }] } },
+  { arrival: { family: 'echelon', squads: [
+      { kind: 'lane', rx: 0.8, ry: 0.32, cx: -0.08, cy: 0.2, spd: 1, role: 'core' },
+      { kind: 'lane', rx: 0.8, ry: 0.32, cy: 0.5, spd: 1, ph: 0.33, role: 'wing' },
+      { kind: 'lane', rx: 0.8, ry: 0.32, cx: 0.08, cy: 0.8, spd: 1, ph: 0.66, role: 'attacker' }] },
+    challenge: { family: 'braid', squads: [
+      { kind: 'weave', rx: 1, ry: 0.34, cy: 0.22, spd: 1.05, role: 'core' },
+      { kind: 'weave', rx: 1, ry: 0.34, cy: 0.5, spd: 1.05, ph: 0.33, role: 'wing' },
+      { kind: 'weave', rx: 1, ry: 0.34, cy: 0.78, spd: 1.05, ph: 0.66, role: 'attacker' }] } },
+  { arrival: { family: 'nestedCarousel', squads: [
+      { kind: 'ring', rx: 1, ry: 1, cy: 0.5, dir: 1, spd: 0.7, role: 'wing' },
+      { kind: 'ring', rx: 0.64, ry: 0.64, cy: 0.5, dir: -1, spd: 0.7, role: 'core' },
+      { kind: 'ring', rx: 0.34, ry: 0.34, cy: 0.5, dir: 1, spd: 0.7, ph: 0.5, role: 'elite' }] },
+    challenge: { family: 'bloom', morph: 'bloom', squads: [
+      { kind: 'ring', rx: 0.9, ry: 0.9, cy: 0.5, spd: 0.75, role: 'core', share: 2 },
+      { kind: 'ring', rx: 0.5, ry: 0.5, cy: 0.5, dir: -1, spd: 0.75, role: 'attacker' }] } },
+  // ---- ACT 3 · MASTERY ----
+  { arrival: { family: 'binaryMoons', squads: [
+      { kind: 'ring', rx: 0.42, ry: 0.6, cx: -0.24, cy: 0.42, spd: 0.9, role: 'core' },
+      { kind: 'ring', rx: 0.2, ry: 0.3, cx: -0.24, cy: 0.42, dir: -1, spd: 0.9, role: 'wing' },
+      { kind: 'ring', rx: 0.42, ry: 0.6, cx: 0.24, cy: 0.58, spd: 0.9, ph: 0.5, role: 'orbit' },
+      { kind: 'ring', rx: 0.2, ry: 0.3, cx: 0.24, cy: 0.58, dir: -1, spd: 0.9, ph: 0.5, role: 'attacker' }] },
+    challenge: { family: 'eclipse', morph: 'eclipse', squads: [
+      { kind: 'ring', rx: 1, ry: 1, cy: 0.5, spd: 0.7, role: 'wing', share: 2 },
+      { kind: 'ring', rx: 0.5, ry: 0.5, cy: 0.5, dir: -1, spd: 0.7, role: 'core' },
+      { kind: 'ring', rx: 0.24, ry: 0.24, cy: 0.5, spd: 0.7, ph: 0.5, role: 'attacker' }] } },
+  { arrival: { family: 'vortexLanes', morph: 'orbit', squads: [
+      { kind: 'arc', rx: 0.5, ry: 0.45, cx: -0.25, cy: 0.3, spd: 0.9, role: 'core' },
+      { kind: 'arc', rx: 0.5, ry: 0.45, cx: 0.25, cy: 0.3, spd: 0.9, ph: 0.25, role: 'wing' },
+      { kind: 'arc', rx: 0.5, ry: 0.45, cx: -0.25, cy: 0.7, spd: 0.9, ph: 0.5, role: 'orbit' },
+      { kind: 'arc', rx: 0.5, ry: 0.45, cx: 0.25, cy: 0.7, spd: 0.9, ph: 0.75, role: 'attacker' }] },
+    challenge: { family: 'raidCarousel', rotateAttack: 12, squads: [
+      { kind: 'arc', rx: 1, ry: 0.45, cy: 0.18, spd: 0.85, role: 'core' },
+      { kind: 'arc', rx: 0.8, ry: 0.45, cy: 0.45, spd: 0.85, ph: 0.33, role: 'wing' },
+      { kind: 'arc', rx: 0.6, ry: 0.45, cy: 0.72, spd: 0.85, ph: 0.66, role: 'orbit' },
+      { kind: 'ring', rx: 0.28, ry: 0.4, cy: 0.45, spd: 1.1, role: 'attacker' }] } },
+  { arrival: { family: 'fourWingRelay', squads: [
+      { kind: 'chevron', rx: 0.45, ry: 0.5, cx: -0.26, cy: 0.3, spd: 0.9, role: 'core' },
+      { kind: 'chevron', rx: 0.45, ry: 0.5, cx: 0.26, cy: 0.3, spd: 0.9, ph: 0.5, role: 'wing' },
+      { kind: 'chevron', rx: 0.45, ry: 0.5, cx: -0.26, cy: 0.7, spd: 0.9, ph: 0.25, role: 'orbit' },
+      { kind: 'chevron', rx: 0.45, ry: 0.5, cx: 0.26, cy: 0.7, spd: 0.9, ph: 0.75, role: 'attacker' }] },
+    // the finale recapitulates: act-1 chevron discipline morphing through
+    // act-2 ring exchanges into an act-3 phalanx — announced by the blend
+    challenge: { family: 'masteryMorph', morph: 'blend', rotateAttack: 10, squads: [
+      { kind: 'chevron', kind2: 'ring', rx: 0.9, ry: 0.75, cy: 0.42, spd: 0.8, role: 'core', share: 2 },
+      { kind: 'ring', kind2: 'phalanx', rx: 0.5, ry: 0.5, cy: 0.6, dir: -1, spd: 0.8, role: 'attacker' }] } },
+];
+
 function flightGeom(kind, geo, s, nS) {
   if (kind === 'square') {
     // a rectangle loop hugging OUTSIDE the grid — margin beyond every edge,
@@ -291,6 +378,7 @@ function buildLevel(lvl) {
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
   // pack or type cluster, so Pokémon that belong together appear together
   const theme = pickWaveTheme(rIdx);
+  G.waveThemeObj = theme; // reinforcements arrive as the SECOND BEAT of this ecology
   G.waveTheme = theme.name;
   preloadGen(gen);
   preloadGen(genFor(lvl + STAGES));
@@ -390,13 +478,15 @@ function buildLevel(lvl) {
       const BRICK_HP_MUL = 1.35;
       let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp * BRICK_HP_MUL) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
       if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
-      // Space Junkie entrance: ranks pour in from off-screen, swooping along
-      // a curve into their slot — alternating sides per row, staggered
+      // Wave entrance: each ROW arrives as ONE line — every brick starts
+      // directly above its own column (slight alternating diagonal drift per
+      // row for life) and the whole rank glides down together, row after
+      // row. No per-column stagger — a row that ripples in reads as stutter.
       const entry = {
-        t: 0.25 + r * 0.28 + c * 0.04,
-        dur: 0.85,
-        sx: r % 2 ? -70 : W + 70,
-        sy: -50 - r * 26,
+        t: 0.3 + r * 0.38,
+        dur: 1.15,
+        sx: margin + c * bw + bw / 2 + (r % 2 ? -36 : 36),
+        sy: -60 - r * 30,
       };
       const brick = {
         bx: entry.sx,
@@ -438,8 +528,10 @@ function buildLevel(lvl) {
   G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
   // unlocked flight patterns grow region by region. 'square' loops around
   // the bricks; the rest weave/circle in the open space below them.
-  // SPACE JUNKIE mode unlocks two regions early — variety IS that mode.
-  const unlockR = junkie ? regionsIn + 2 : regionsIn;
+  // SPACE JUNKIE mode unlocks one region early — variety is that mode's
+  // thing, but region 1 stays on the clean, obvious shapes everywhere:
+  // complexity ramps gradually and peaks only by the journey's end.
+  const unlockR = junkie ? regionsIn + 1 : regionsIn;
   // patterns unlock region by region, ordered so EARLY waves read as clean,
   // obvious formations that hold their shape — riders never cross, so the flock
   // never bumps itself into a blob. The busy self-crossing curves (figure-8s,
@@ -545,16 +637,37 @@ function buildLevel(lvl) {
   // Boss waves keep their choreography, but the guards ride BARE (no boxes:
   // nothing in this mode is ever a framed brick).
   if (junkie && hasBoss) {
-    // bare, Space-Junkie-sized guards around the legendary
-    for (const b2 of G.bricks) { if (!b2.isBoss) { b2.bare = true; b2.w *= 0.62; b2.h *= 0.62; } }
+    // SPACE JUNKIE boss encounters do NOT reuse the legacy guard grid: the
+    // legendary holds the arena with two mirrored WING ARCS of guards that
+    // stay compositionally tethered to it — they compress and reform through
+    // teleports, exchange sides in phase 2, and become counter-rotating
+    // orbits in the last stand (see the guard controller in update.js).
+    G.bricks = G.bricks.filter(b2 => b2.isBoss);
+    const nG = Math.min(12, 10 + (regionsIn >= 5 ? 2 : 0));
+    const perWing = nG / 2;
+    const gw = Math.min(52, Math.max(IS_TOUCH ? 40 : 34, bw * 0.55));
+    const gh = Math.min(46, Math.max(IS_TOUCH ? 35 : 30, bh * 0.78));
+    const gHp = Math.max(1, Math.round((1.4 + regionsIn * 0.5 + cycle * 2) * p.brickHp));
+    // one species per wing — two mirrored flocks, not a species salad
+    const gPool = themedPool(gen, regionsIn >= 4 ? 2 : 1, theme);
+    const wingSpecies = [gPool[Math.floor(Math.random() * gPool.length)],
+      gPool[Math.floor(Math.random() * gPool.length)]];
+    for (let i = 0; i < nG; i++) {
+      const side = i % 2 ? 1 : -1, idx = Math.floor(i / 2);
+      const [gid, gt] = wingSpecies[i % 2];
+      const sx0 = W / 2 + side * (W / 2 + 70 + idx * 44);
+      G.bricks.push({
+        bx: sx0, by: 70 + idx * 26, hx: sx0, hy: 70 + idx * 26, row: 0, col: i,
+        w: gw, h: gh, hp: gHp, maxHp: gHp, bare: true,
+        guard: { side, sideF: side, targetSide: side, idx, n: perWing },
+        poke: { id: gid, t: gt }, flash: 0, wobble: Math.random() * Math.PI * 2,
+      });
+      getSprite(gid);
+    }
+    G.encounter = { family: 'bossWings', act: actIdx(lvl) + 1, actBeat: 'climax', t: 0, squads: [], attackSq: -1 };
+    G.guardSwapCD = 8;
   }
   if (junkie && !hasBoss) {
-    // ONE clean flock early, then more flocks as the journey hardens — early
-    // waves read as a single obvious shape, later waves layer patterns. Flocks
-    // are bigger too (more enemies), up to the readability cap.
-    const nS = Math.min(4, 1 + Math.floor(regionsIn / 2));
-    let per = Math.min(11, 8 + Math.floor(regionsIn / 2));
-    while (nS * per > 26) per--; // the readability cap still rules
     const usable = W - margin * 2;
     // Space Junkie airspace: the flocks live HIGH. The floor starts around
     // 42% of the screen and only creeps down as the journey hardens — the
@@ -574,47 +687,60 @@ function buildLevel(lvl) {
     // phones read better with chunkier mons — raise the floor on touch
     const mw = Math.min(56, Math.max(IS_TOUCH ? 42 : 36, bw * 0.58));
     const mh = Math.min(50, Math.max(IS_TOUCH ? 37 : 32, bh * 0.82));
-    for (let s = 0; s < nS; s++) {
-      let kind = kinds[Math.floor(Math.random() * kinds.length)];
-      if (kind === 'square') kind = 'ring'; // no wall to loop around
-      const g = flightGeom(kind, geo, s, nS);
-      // tighten the knot: patterns at ~half size, squad centers spread apart
-      // so each flock reads as its own dense knot of motion
-      const wrapK = kind === 'snake' || kind === 'helix' || kind === 'swoop';
-      if (!wrapK) {
-        // a tight but not CRAMPED knot — leave room so converging patterns
-        // (cross, carousel, star, vortex) never pinch riders into each other
-        g.rx *= 0.66; g.ry *= 0.68;
-        if (nS > 1) g.cx = W / 2 + (s - (nS - 1) / 2) * usable * 0.3;
-      } else g.ry *= 0.65;
-      g.spd *= 1.25;
+    // ---- AUTHORED CHOREOGRAPHY: this wave is ONE encounter. The region ×
+    // stage entry defines every squad's pattern/anchor/phase on one shared
+    // clock — squads never roll their own pattern (JUNKIE_CHOREO above).
+    const C = JUNKIE_CHOREO[rIdx][stage === 0 ? 'arrival' : 'challenge'];
+    const band = geo.floorY - geo.openTop;
+    const total = Math.min(26, 9 + regionsIn * 2 + (stage >= 1 ? 1 : 0));
+    const sumShare = C.squads.reduce((a2, q) => a2 + (q.share || 1), 0);
+    const mirror = Math.random() < 0.5 ? -1 : 1; // authored grammar, mirrored variety
+    const resolved = [];
+    for (let s = 0; s < C.squads.length; s++) {
+      const q = C.squads[s];
+      const g = {
+        kind: q.kind, kind2: q.kind2 || null,
+        cx: W / 2 + (q.cx || 0) * usable * mirror,
+        cy: geo.openTop + (q.cy ?? 0.5) * band,
+        rx: usable * 0.3 * (q.rx || 1),
+        ry: band * 0.42 * (q.ry || 1),
+        dir: (q.dir || 1) * mirror, spd: q.spd || 1, ph: q.ph || 0, role: q.role || 'core',
+      };
       clampOpen(g, geo.openTop, geo.floorY);
-      // evolution tiers unlock with the journey: one mid-evolved squad from
-      // region 3, a fully-evolved elite squad headlining challenges from 4
-      const tier = s === 0 && stage >= 1 && regionsIn >= 3 ? 3
-        : s === nS - 1 && regionsIn >= 2 ? 2 : 1;
+      resolved.push({ ...g, cx0: g.cx, cy0: g.cy, rx0: g.rx, ry0: g.ry });
+      // tiers ride the ROLE: elites are the evolved, larger, tankier flocks
+      const tier = g.role === 'elite' && regionsIn >= 3 ? 3
+        : (g.role === 'elite' || (s === C.squads.length - 1 && regionsIn >= 2)) ? 2 : 1;
       const sizeMul = tier === 3 ? 1.5 : tier === 2 ? 1.25 : 1;
-      const perS = tier === 3 ? Math.max(3, per - 3) : tier === 2 ? Math.max(4, per - 2) : per;
-      const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier —
-      // a Magikarp squad flies under a Gyarados elite of its own line
-      const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad — a flock
-      // evolved mons are far tankier than their unevolved counterparts
+      const perS = Math.max(3, Math.round(total * (q.share || 1) / sumShare) - (tier === 3 ? 2 : 0));
+      const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
+      const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad
       const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.6 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
+      const side = Math.sign(g.cx - W / 2) || (s % 2 ? 1 : -1);
       for (let j = 0; j < perS; j++) {
-        const sx = s % 2 ? W + 60 + j * 34 : -60 - j * 34;
-        const sy = geo.openTop + s * 30 + (j % 3) * 18;
+        // shared entrance train: the squad pours in nose-to-tail from ITS side
+        const sx = side > 0 ? W + 60 + j * 46 : -60 - j * 46;
+        const sy = geo.openTop + s * 30 + (j % 4) * 22;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: s, col: j,
           w: mw * sizeMul, h: mh * sizeMul, hp, maxHp: hp,
           poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
           flight: {
-            kind, state: 1, t: -(0.3 + j * 0.14 + s * 0.5), sx, sy, sq: s,
+            kind: g.kind, state: 1, t: -(0.3 + j * 0.18 + s * 0.55), sx, sy, sq: s,
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
-            phase: j / perS, n: perS, dir: s % 2 ? -1 : 1, strand: j % 2,
+            phase: j / perS + (g.ph || 0), n: perS, dir: g.dir, strand: j % 2,
           },
         });
       }
     }
+    G.encounter = {
+      family: C.family, act: actIdx(lvl) + 1,
+      actBeat: stage === 0 ? 'establish' : 'escalate',
+      morph: C.morph || null, rotateAttack: C.rotateAttack || 0, t: 0,
+      squads: resolved, mirror,
+      attackSq: resolved.findIndex(q => q.role === 'attacker'),
+      openTop: geo.openTop, floorY: geo.floorY,
+    };
   }
   // late rounds shouldn't melt: reinforcement flights extend each wave,
   // arriving as pure flyers once the first formation falls
@@ -624,6 +750,7 @@ function buildLevel(lvl) {
   // boxed bricks are a STATIC wall on every non-boss wave — only the Pokémon
   // move (bosses keep their guard-ring choreography)
   G.blocksStatic = !hasBoss;
+  if (!junkie) G.encounter = null; // the choreography layer is junkie-only
   G.gridCols = cols;
   // Galaga peel-off dives: hinted on early challenge stages, constant later.
   // SPACE JUNKIE keeps region 1 calm — the flocks just fly their patterns;
@@ -641,8 +768,10 @@ function buildLevel(lvl) {
     G.bossIntro = 1.6;
     SFX.roar();
   } else if (stage === 0) {
+    // a region that OPENS an act carries the act name on its banner
+    const actTag = regionsIn % 3 === 0 ? 'ACT ' + ACTS[actIdx(lvl)].n + ': ' + ACTS[actIdx(lvl)].name : null;
     setAnnounce(null, gen.accent, gen.name, 'STAGE 1/3 — ARRIVAL', 2.6,
-      [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
+      [actTag, form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
   } else if (G.modifier) {
     const m = G.modifier;
     setAnnounce(m.icon, m.color, m.name, m.desc, 3.2,
@@ -680,11 +809,16 @@ function spawnReinforcement() {
   const gen = genFor(lvl);
   const p = preset();
   const junkie = G.mode === 'junkie';
-  const theme = pickWaveTheme(regionIdx(lvl)); // reinforcements arrive as their own ecology
+  // SPACE JUNKIE reinforcements are the SECOND BEAT of the same encounter:
+  // same ecology, same motion family, a harder variation — never a new
+  // random mini-wave that resets the wave's visual language mid-fight
+  const theme = (junkie && G.waveThemeObj) ? G.waveThemeObj : pickWaveTheme(regionIdx(lvl));
   const n = Math.min(16, 8 + regionsIn);
   const usable = W * 0.76;
   const kinds = ['ring', 'lane', 'chevron', 'arc', 'cross', 'carousel', 'swoop', 'diamond', 'helix', 'spiral', 'inf', 'liss', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain', 'clover', 'butterfly'];
-  const kind = kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn + (junkie ? 2 : 0))))];
+  const kind = (junkie && G.encounter && G.encounter.squads.length)
+    ? G.encounter.squads[0].kind
+    : kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn)))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
   // keep reinforcement patterns in the same breathing-room airspace —
@@ -743,7 +877,8 @@ function resetRun(startLevel = 1, trial = false) {
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
   G.starterLvl = starterStage(startLevel);
-  G.torrentCount = 0; G.justEvolved = false;
+  G.torrentCount = 0; G.justEvolved = false; G.ceremony = null;
+  G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
   // starting deep? bank the skill-tree advances you'd have earned on the way
