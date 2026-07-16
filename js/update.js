@@ -64,7 +64,56 @@ function modePower(p) {
   return swap[p.key] ? POWERS[swap[p.key]] : p;
 }
 
-function damageBrick(br, dmg, sx, sy, element) {
+function shieldGeneratorFor(br) {
+  if (!br || br.behavior === 'shield') return null;
+  return G.bricks.find(g => !g.dead && g.behavior === 'shield' &&
+    Math.abs(g.row - br.row) <= 1 && Math.abs(g.col - br.col) <= 1);
+}
+function behaviorDrop(br) {
+  const ks = Object.keys(POWERS).filter(k => k !== 'pokeball');
+  const p = modePower(POWERS[ks[Math.floor(gameRand() * ks.length)]] || POWERS.star);
+  G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 105, p, srcType: br.poke.t, rot: 0, hint: true });
+}
+function triggerBrickBehavior(br) {
+  if (br.behavior === 'treasure') behaviorDrop(br);
+  if (br.behavior === 'split') {
+    for (const side of [-1, 1]) {
+      G.bricks.push({
+        bx: br.bx + side * br.w * 0.23, by: br.by, hx: br.hx + side * br.w * 0.23, hy: br.hy,
+        row: br.row, col: br.col + side * 0.2, w: br.w * 0.45, h: br.h * 0.72,
+        hp: 1, maxHp: 1, miniBrick: true, armored: false,
+        poke: { ...br.poke }, flash: 0, wobble: br.wobble + side,
+      });
+    }
+    setAnnounce('multi', '#90caf9', 'BRICK SPLIT!', 'TWO SMALL TARGETS ENTERED THE WALL', 1.5);
+  }
+  if (['bomb', 'volatile', 'reactor'].includes(br.behavior)) {
+    const radius = br.behavior === 'reactor' ? 150 : 105;
+    const bx = br.bx + G.fx, by = br.by + G.fy;
+    burst(bx, by, br.behavior === 'reactor' ? '#ffd740' : '#ff7043', 32, 360, 0.75);
+    ringFx(bx, by, '#fff3e0', 8, radius, 4, 0.45);
+    if (br.behavior === 'reactor') behaviorDrop(br);
+    for (const other of G.bricks.slice()) {
+      if (other.dead || other === br || other.isBoss) continue;
+      const ox = other.bx + G.fx, oy = other.by + G.fy;
+      if (Math.hypot(ox - bx, oy - by) <= radius) damageBrick(other, 1, ox, oy, 'fire', { behavior: true, ignoreShield: true });
+    }
+  }
+}
+
+function damageBrick(br, dmg, sx, sy, element, meta = {}) {
+  if (!br || br.dead) return;
+  const generator = !meta.ignoreShield && shieldGeneratorFor(br);
+  if (generator) {
+    br.flash = 0.65; generator.flash = 0.8;
+    if (!br.shieldHintT || G.time > br.shieldHintT) {
+      br.shieldHintT = G.time + 1.2;
+      addFloater(sx, sy - 18, 'SHIELDED', '#66bb6a', 11);
+      ringFx(sx, sy, '#66bb6a', 4, 32, 2, 0.25);
+    }
+    haptic('hit');
+    return;
+  }
   // ditto was disguised all along — first hit reveals it instead of damaging
   if (br.isDitto && !br.revealed) {
     br.revealed = true;
@@ -108,6 +157,15 @@ function damageBrick(br, dmg, sx, sy, element) {
   }
   br.hp -= dmg;
   br.flash = 1;
+  haptic('hit');
+  if (br.behavior === 'link' && !meta.linked) {
+    const mate = G.bricks.find(b => !b.dead && b !== br && b.behavior === 'link' && b.linkGroup === br.linkGroup);
+    if (mate) {
+      ringFx(mate.bx + G.fx, mate.by + G.fy, '#ce93d8', 4, 30, 2, 0.3);
+      damageBrick(mate, Math.max(0.5, dmg * 0.35), mate.bx + G.fx, mate.by + G.fy, null,
+        { linked: true, ignoreShield: true });
+    }
+  }
   const col = TYPE_COLORS[br.poke.t];
   if (br.isBoss && br.hp > 0) {
     SFX.bossHit();
@@ -136,13 +194,13 @@ function damageBrick(br, dmg, sx, sy, element) {
         const gen2 = genFor(G.level);
         const pool4 = gen2.tiers[1];
         const nAdd = 5;
-        const [idA, tA] = pool4[Math.floor(Math.random() * pool4.length)];
+        const [idA, tA] = pool4[Math.floor(gameRand() * pool4.length)];
         for (let i = 0; i < nAdd; i++) {
           const add = {
             bx: bx3 - G.fx, by: by3 - G.fy, hx: bx3 - G.fx, hy: by3 - G.fy, row: 0, col: i,
             w: Math.min(48, Math.max(34, G.brickW * 0.5)), h: Math.min(42, Math.max(30, G.brickH * 0.7)),
             hp: 2, maxHp: 2, poke: { id: idA, t: tA },
-            flash: 0, wobble: Math.random() * Math.PI * 2,
+            flash: 0, wobble: gameRand() * Math.PI * 2,
           };
           if (G.mode === 'junkie') {
             // last-stand adds are the INNER counter-rotating ring — anchored
@@ -165,10 +223,16 @@ function damageBrick(br, dmg, sx, sy, element) {
       setAnnounce('alert', newPhase === 3 ? '#ff1744' : '#ff5252',
         br.poke.n.toUpperCase() + (newPhase === 3 ? ' — LAST STAND!' : ' IS ENRAGED!'),
         newPhase === 3 ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4);
+      haptic('boss');
     }
   }
   if (br.hp <= 0) {
     br.dead = true;
+    if (G.runStats) {
+      G.runStats.bricksBroken++;
+      if (br.isBoss) G.runStats.bossesDefeated++;
+    }
+    haptic(br.isBoss ? 'boss' : 'break');
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     // tuned so Mega comes online roughly once per region (3 waves)
@@ -187,7 +251,7 @@ function damageBrick(br, dmg, sx, sy, element) {
       G.score += 999;
       const ks = Object.keys(POWERS);
       for (let i = 0; i < 3; i++) {
-        const p = modePower(POWERS[ks[Math.floor(Math.random() * ks.length)]]);
+        const p = modePower(POWERS[ks[Math.floor(gameRand() * ks.length)]]);
         G.powerups.push({ x: br.bx + G.fx + (i - 1) * 44, y: br.by + G.fy, vy: 130, p, rot: 0 });
       }
       noiseBurst(0.3, 0.1);
@@ -223,6 +287,7 @@ function damageBrick(br, dmg, sx, sy, element) {
     G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
     if (br.isBoss) { SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30); }
     else SFX.brick();
+    triggerBrickBehavior(br);
     // every region's arrival wave seeds a Sky Warp on the first kill —
     // an early invitation up to the high ground
     if (!G.waveFirstKill) {
@@ -246,16 +311,16 @@ function damageBrick(br, dmg, sx, sy, element) {
       if (missingHp > 0) G.healthDropPity = (G.healthDropPity || 0) + 1;
       else G.healthDropPity = 0;
       const healChance = Math.min(0.24,
-        (0.055 + missingHp * 0.025) * SETTINGS.drops * (br.maxHp >= 3 ? 1.35 : 1));
-      if (missingHp > 0 && (G.healthDropPity >= 10 || Math.random() < healChance)) {
+        (0.055 + missingHp * 0.025) * (G.daily ? 1 : SETTINGS.drops) * (br.maxHp >= 3 ? 1.35 : 1));
+      if (missingHp > 0 && (G.healthDropPity >= 10 || gameRand() < healChance)) {
         G.healthDropPity = 0;
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 112, p: POWERS.heal, rot: 0, hint: true });
-      } else if (Math.random() < d.dropChance) {
+      } else if (gameRand() < d.dropChance) {
         const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
         const pu = { x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 };
         if (G.level === 1 && G.dropHint < 2) { pu.hint = true; G.dropHint++; } // first drops get a CATCH! tag
         G.powerups.push(pu);
-      } else if (Math.random() < d.catchChance && !DEX.has(br.poke.id)) {
+      } else if (gameRand() < d.catchChance && (G.daily || !DEX.has(br.poke.id))) {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
       }
     }
@@ -492,6 +557,8 @@ function awardRally(b, x, y) {
 
 // apply a falling pickup's payload — shared by paddle catches and blaster snags
 function collectPickup(pu) {
+  if (G.runStats) G.runStats.itemsCaught++;
+  haptic('item');
   if (pu.p.key === 'element') {
     // pure element swap — no other effect, just fixes your matchup.
     // SPACE JUNKIE type changes are shorter-lived: they revert to the
@@ -506,7 +573,7 @@ function collectPickup(pu) {
       strong ? '2× vs ' + strong : 'ELEMENT CHANGED', 1.8);
   } else if (pu.p.key === 'pokeball') {
     // trial runs are a sandbox — catches don't touch the real Pokédex
-    const isNew = !G.trial && addToDex(pu.dexId, pu.shiny);
+    const isNew = !G.trial && !G.daily && addToDex(pu.dexId, pu.shiny);
     G.caughtRun++;
     SFX.gotcha();
     burst(pu.x, pu.y, pu.shiny ? '#ffd700' : '#ef5350', 18, 220);
@@ -524,7 +591,7 @@ function collectPickup(pu) {
     } else {
       setAnnounce(null, pu.shiny ? '#ffd700' : isNew ? '#66bb6a' : '#ef5350',
         (pu.shiny ? 'SHINY ' : '') + nm + ' CAUGHT!',
-        G.trial ? 'TRIAL — CATCH NOT REGISTERED · +250 PTS'
+        (G.trial || G.daily) ? (G.daily ? 'DAILY — CATCH NOT REGISTERED · +250 PTS' : 'TRIAL — CATCH NOT REGISTERED · +250 PTS')
           : isNew ? 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS' : 'ALREADY IN YOUR POKÉDEX · +250 PTS',
         2.2, null, pu.dexId, pu.shiny);
     }
@@ -546,7 +613,7 @@ function bossAbility(boss) {
       // psychic flash) THEN the jump, so the wings vanish and reform WITH it
       burst(bx, by, '#ec407a', 20, 260, 0.5);
       const lim = boss.w / 2 + 20;
-      boss.tpX = lim + Math.random() * (W - lim * 2) - G.fx;
+      boss.tpX = lim + gameRand() * (W - lim * 2) - G.fx;
       boss.teleportAt = 0.5;
       boss.reformT = 1.0; // compress now, reform after the jump
       tone(880, 0.18, 'sine', 0.06, -400);
@@ -557,7 +624,7 @@ function bossAbility(boss) {
       tone(180, 0.6, 'sawtooth', 0.06, 220);
       break;
     case 384: // Rayquaza: crosses the playfield
-      boss.sweep = { dir: Math.random() < 0.5 ? -1 : 1, t: 2.6 };
+      boss.sweep = { dir: gameRand() < 0.5 ? -1 : 1, t: 2.6 };
       SFX.roar();
       break;
     case 483: // Dialga: Roar of Time slows every ball
@@ -588,13 +655,13 @@ function bossAbility(boss) {
       if (boss.mythic) { // MYTHIC BLINK: vanish, reappear, radial burst
         burst(bx, by, '#ff80ab', 26, 300, 0.6);
         const lim2 = boss.w / 2 + 24;
-        boss.hx = lim2 + Math.random() * (W - lim2 * 2) - G.fx;
+        boss.hx = lim2 + gameRand() * (W - lim2 * 2) - G.fx;
         boss.bx = boss.hx;
         boss.flash = 1;
         burst(boss.bx + G.fx, by, '#ff80ab', 26, 300, 0.6);
         const nR = 6, spR2 = (200 + diff().lv * 10) * diff().shotSpeed;
         for (let i2 = 0; i2 < nR; i2++) {
-          const a2 = (i2 / nR) * Math.PI * 2 + Math.random() * 0.4;
+          const a2 = (i2 / nR) * Math.PI * 2 + gameRand() * 0.4;
           G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a2) * spR2, vy: Math.sin(a2) * spR2, boss: true, type: boss.poke.t });
         }
         tone(920, 0.16, 'sine', 0.06, -420);
@@ -610,10 +677,13 @@ function bossAbility(boss) {
 // the last third of a long journey never has dead reward screens.
 function rollUpgradeChoices() {
   const pool = PATH_KEYS.filter(k => pathLvl(k) < 4);
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+  const needDefense = G.lives < Math.max(2, Math.ceil((G.livesMax || preset().lives) * 0.6));
+  const scored = pool.map(k => ({ k, score:
+    pathLvl(k) * 4 + gameRand() * 2 +
+    (needDefense && ['defense', 'utility'].includes(PATHS[k].family) ? 5 : 0) +
+    (G.mode === 'classic' && PATHS[k].family === 'offense' && pathLvl(k) === 2 ? 4 : 0) }));
+  scored.sort((a, b) => b.score - a.score);
+  pool.splice(0, pool.length, ...scored.map(x => x.k));
   const picked = [];
   const take = familyTest => {
     const idx = pool.findIndex(k => familyTest(PATHS[k].family));
@@ -621,16 +691,22 @@ function rollUpgradeChoices() {
   };
   take(f => f === 'offense');
   take(f => f !== 'offense');
+  // Continue a build the player has already invested in before surfacing a
+  // disconnected option. The offense/non-offense guard above keeps variety.
   while (picked.length < 3 && pool.length) picked.push(pool.shift());
   for (let i = picked.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(gameRand() * (i + 1));
     [picked[i], picked[j]] = [picked[j], picked[i]];
   }
-  const choices = picked.map(k => ({ pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[pathLvl(k)], tierIdx: pathLvl(k) }));
+  const choices = picked.map(k => {
+    const tierIdx = pathLvl(k);
+    return { pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[tierIdx], tierIdx,
+      tags: tierTags(k, tierIdx), synergy: tierSynergy(k, tierIdx), comparison: tierComparison(k, tierIdx) };
+  });
   if (choices.length < 3) {
     const si = STACK_ITEMS.slice();
     for (let i = si.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(gameRand() * (i + 1));
       [si[i], si[j]] = [si[j], si[i]];
     }
     while (choices.length < 3 && si.length) choices.push({ stack: si.pop() });
@@ -656,7 +732,32 @@ function absorbHit(x, y) {
   return true;
 }
 
-function loseLife() {
+function favoriteRunPath() {
+  const ranked = PATH_KEYS.map(k => ({ k, n: pathLvl(k) })).sort((a, b) => b.n - a.n);
+  return ranked[0] && ranked[0].n ? PATHS[ranked[0].k].name + ' · TIER ' + ranked[0].n : 'NO PATH YET';
+}
+function finalizeRun() {
+  const oldBest = G.daily ? dailyBest() : G.best;
+  let newRecord = false;
+  if (G.daily && !G.cheated) newRecord = recordDailyScore(G.score);
+  else if (!G.trial && !G.cheated && G.score > G.best) {
+    G.best = G.score; saveStore('pkbrk-best', G.best); newRecord = true;
+  }
+  const rs = G.runStats || {};
+  G.runSummary = {
+    region: genFor(G.level).name, stage: stageIdx(G.level) + 1, level: G.level,
+    score: G.score, newRecord, priorBest: oldBest,
+    bestRally: G.bestRally, maxCombo: G.maxCombo, catches: G.caughtRun,
+    bricks: rs.bricksBroken || 0, bosses: rs.bossesDefeated || 0,
+    items: rs.itemsCaught || 0, hits: rs.damageTaken || 0,
+    path: favoriteRunPath(), cause: G.lastDamageCause || 'RUN ENDED', mode: G.mode,
+  };
+}
+
+function loseLife(cause = 'MISSED BALL') {
+  G.lastDamageCause = cause;
+  if (G.runStats) G.runStats.damageTaken++;
+  haptic('damage');
   ringFx(G.paddle.x, shipY(), '#ff5252', 8, 90, 4, 0.5);
   G.lives--;
   G.combo = 0;
@@ -675,7 +776,7 @@ function loseLife() {
       const lost = [];
       for (let i = 0; i < 2 && totalPathLevels() > 0; i++) {
         const owned = PATH_KEYS.filter(k => pathLvl(k) > 0);
-        const t = regressPath(owned[Math.floor(Math.random() * owned.length)]);
+        const t = regressPath(owned[Math.floor(gameRand() * owned.length)]);
         if (t) lost.push(t.name);
       }
       G.lives = preset().lives;
@@ -689,9 +790,7 @@ function loseLife() {
     }
     G.state = 'gameover'; G.stateT = 0;
     SFX.gameOver();
-    // progress is never wiped: the region checkpoint SURVIVES a game over,
-    // so CONTINUE on the title screen always picks the journey back up
-    if (!G.trial && !G.cheated && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
+    finalizeRun();
   } else {
     G.hurtHud = 2.4; // show the remaining health around the player on respawn
     serve();
@@ -742,7 +841,7 @@ function subAbility(br2) {
       break;
     case 'psychic': case 'fairy': { // warp pulse: blink + a 4-shot ring
       burst(bx2, by2 - br2.h / 2, '#ec407a', 20, 260, 0.5);
-      br2.bx = 90 + Math.random() * (W - 180) - G.fx;
+      br2.bx = 90 + gameRand() * (W - 180) - G.fx;
       br2.flash = 1;
       for (let k2 = 0; k2 < 4; k2++) push((k2 / 4) * Math.PI * 2 + 0.4, 0.8);
       break;
@@ -793,8 +892,8 @@ function updateSentinels(dt, ts) {
     if (gj2.subAbilityCD <= 0) {
       const living = G.bricks.filter(b => !b.dead && b.subBoss);
       if (living.length) {
-        gj2.subAbilityCD = 4.8 + Math.random() * 2.6;
-        subAbility(living[Math.floor(Math.random() * living.length)]);
+        gj2.subAbilityCD = 4.8 + gameRand() * 2.6;
+        subAbility(living[Math.floor(gameRand() * living.length)]);
       }
     }
   }
@@ -833,7 +932,7 @@ function gauntletSummonMythic() {
     w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
     hp: mHp, maxHp: mHp, phase: 1, mythic: true,
     poke: { id: mid, t: mt2, n: NAMES[mid] },
-    isBoss: true, flash: 0, wobble: Math.random() * Math.PI * 2,
+    isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
     abilityCD: 3.5,
   });
   getSprite(mid);
@@ -896,19 +995,23 @@ function update(dt) {
   G.dramaticT = Math.max(0, G.dramaticT - dt);
   G.bossIntro = Math.max(0, G.bossIntro - dt);
   G.paddle.squash = Math.max(0, G.paddle.squash - dt * 5);
-  if (G.announce) { G.announce.t -= dt; if (G.announce.t <= 0) G.announce = null; }
+  if (G.announce) {
+    G.announce.t -= dt;
+    if (G.announce.t <= 0) G.announce = G.announceQueue.length ? G.announceQueue.shift() : null;
+  }
   musicTick();
 
   const target = Math.max(paddleW() / 2 + 8, Math.min(W - paddleW() / 2 - 8, mouseX));
   G.paddle.speed = (target - G.paddle.x) / Math.max(dt, 0.001);
-  G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18);
+  const follow = IS_TOUCH ? SETTINGS.touchFollow : 1;
+  G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18 * follow);
   // SPACE JUNKIE: the ship also flies vertically — mouse/finger Y steers it
   // within a band above the old paddle line. On touch the ship rides ~85px
   // ABOVE the finger, so your own thumb never hides your Pokémon.
   if (G.mode === 'junkie') {
     const bot = PADDLE_Y() + 8, top = PADDLE_Y() - SHIP_BAND;
     const ty = Math.max(top, Math.min(bot, lastMouseY - (IS_TOUCH ? 85 : 0)));
-    G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14);
+    G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14 * follow);
   } else G.shipYv = PADDLE_Y();
   G.invuln = Math.max(0, G.invuln - dt);
   G.blasterCD = Math.max(0, G.blasterCD - dt);
@@ -916,6 +1019,8 @@ function update(dt) {
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
   G.hurtHud = Math.max(0, (G.hurtHud || 0) - dt); // on-hit health readout at the player
   G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
+  if (G.uiTouchPulse) { G.uiTouchPulse.t -= dt; if (G.uiTouchPulse.t <= 0) G.uiTouchPulse = null; }
+  G.shareToast = Math.max(0, (G.shareToast || 0) - dt);
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 
   for (const p of G.particles) {
@@ -945,6 +1050,14 @@ function update(dt) {
     if (br.flash > 0) br.flash = Math.max(0, br.flash - dt * 4.8);
     // after an entry lands, its idle bob eases in instead of popping on
     if (br.settleT != null && br.settleT < 1) br.settleT = Math.min(1, br.settleT + dt * 1.4);
+    if (!paused && (G.state === 'play' || G.state === 'serve') && !br.dead && br.behavior === 'regen' && br.hp < br.maxHp) {
+      br.regenT = (br.regenT || 4) - dt;
+      if (br.regenT <= 0) {
+        br.hp = Math.min(br.maxHp, br.hp + 1); br.regenT = 4.5;
+        ringFx(br.bx + G.fx, br.by + G.fy, '#81c784', 4, 28, 2, 0.3);
+        addFloater(br.bx + G.fx, br.by + G.fy - 20, '+1 REPAIR', '#81c784', 10);
+      }
+    }
   }
   // HUD juice: the score COUNTS up instead of teleporting; combo pops on kills
   G.scoreShown += (G.score - G.scoreShown) * Math.min(1, dt * 9);
@@ -959,14 +1072,14 @@ function update(dt) {
     return;
   }
   if (G.state === 'ceremony') {
-    // act-boundary evolution ceremony: a scripted beat sheet. The white-out
+    // act-boundary evolution ceremony: a scripted beat sheet. The radiant flash
     // burst and the reveal shower fire exactly once each; render only reads.
     const c = G.ceremony;
     if (!c) { G.state = 'upgrade'; G.stateT = 0; return; }
     c.t += dt;
     const cx = W / 2, cy = H * 0.36;
     if (c.evo) {
-      if (!c.burst1 && c.t >= 1.9) { // white-out: the change begins
+      if (!c.burst1 && c.t >= 1.9) { // radiant flash: the change begins
         c.burst1 = true;
         G.flashT = 0.25;
         ringFx(cx, cy, '#ffffff', 8, Math.min(W, H) * 0.34, 4, 0.6);
@@ -1040,7 +1153,7 @@ function update(dt) {
   // magikarp keeps it real
   G.splashCD -= dt;
   if (G.splashCD <= 0) {
-    G.splashCD = 9 + Math.random() * 8;
+    G.splashCD = 9 + gameRand() * 8;
     const karp = G.bricks.find(b => !b.dead && b.poke.id === 129);
     if (karp && G.state === 'play') {
       karp.flash = 0.5;
@@ -1067,16 +1180,16 @@ function update(dt) {
       const struggling = curEl && resisted >= alive.length * (jkOrbs ? 0.35 : 0.5);
       // orbs are a rescue mechanic, not a scheduled shower: quick when you're
       // genuinely walled off, otherwise scarce
-      G.elementOrbCD = (struggling ? (jkOrbs ? 4 : 8) : jkOrbs ? 10 + Math.random() * 8 : 34 + Math.random() * 20)
+      G.elementOrbCD = (struggling ? (jkOrbs ? 4 : 8) : jkOrbs ? 10 + gameRand() * 8 : 34 + gameRand() * 20)
         * (upgN('transfuse') ? 0.6 : 1); // PRISM: orbs flow faster
-      if (struggling || Math.random() < (jkOrbs ? 0.7 : 0.22)) {
+      if (struggling || gameRand() < (jkOrbs ? 0.7 : 0.22)) {
         // offer an element that's super effective against the dominant type
         const counts = {};
         for (const b of alive) counts[b.poke.t] = (counts[b.poke.t] || 0) + 1;
         const domType = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
         const cands = Object.keys(EFFECTIVE).filter(el => EFFECTIVE[el].includes(domType) && el !== curEl);
-        const el = cands.length ? cands[Math.floor(Math.random() * cands.length)] : 'normal';
-        G.powerups.push({ x: 50 + Math.random() * (W - 100), y: -20, vy: 62, p: { key: 'element', t: el }, rot: Math.random() * 6, orb: true });
+        const el = cands.length ? cands[Math.floor(gameRand() * cands.length)] : 'normal';
+        G.powerups.push({ x: 50 + gameRand() * (W - 100), y: -20, vy: 62, p: { key: 'element', t: el }, rot: gameRand() * 6, orb: true });
       }
     } else {
       G.elementOrbCD = 8;
@@ -1102,14 +1215,14 @@ function update(dt) {
     } else if (regionsIn3 >= 1 && (!G.encounter || G.encounter.t > 3)) {
       G.maneuverCD -= dt * ts;
       if (G.maneuverCD <= 0) {
-        G.maneuverCD = 7 + Math.random() * 6;
+        G.maneuverCD = 7 + gameRand() * 6;
         const sqs = [...new Set(G.bricks.filter(b => !b.dead && b.flight && b.flight.state === 2 && b.flight.sq != null)
           .map(b => b.flight.sq))];
         if (sqs.length) {
-          const sq = sqs[Math.floor(Math.random() * sqs.length)];
+          const sq = sqs[Math.floor(gameRand() * sqs.length)];
           const opts = (G.encounter && G.encounter.rotary) ? ['surge'] : ['scatter'];
           if (regionsIn3 >= 2) opts.push('raid');
-          const mv = { sq, kind: opts[Math.floor(Math.random() * opts.length)], t: 0 };
+          const mv = { sq, kind: opts[Math.floor(gameRand() * opts.length)], t: 0 };
           if (mv.kind === 'raid') {
             // dip the whole flock toward the ship band — capped so it never
             // crowds the ship's airspace
@@ -1582,8 +1695,11 @@ function update(dt) {
       if (flying(br)) continue; // flyers are positioned by their pattern
       let ox = 0, oy = 0;
       if (G.blocksStatic) {
-        // anchored wall: no sway at all (just the tiny render bob for life)
-        br.bx = br.hx; br.by = br.hy;
+        // Slider behaviors are the exception to the anchored wall: they move
+        // only along a short rail and never turn into free-flying enemies.
+        const sliding = br.behavior === 'shift' || br.behavior === 'volatile';
+        br.bx = br.hx + (sliding ? Math.sin(G.time * 1.45 + (br.behaviorPhase || 0)) * Math.min(30, br.w * 0.32) : 0);
+        br.by = br.hy;
         continue;
       }
       if (boss && mt >= 1) { // rings radiating from the boss (regions 3-9)
@@ -1612,7 +1728,7 @@ function update(dt) {
         const jk2 = G.mode === 'junkie';
         const maxDivers = jk2 ? (regionsIn2 >= 7 ? 2 : 1) : 1 + Math.floor(regionsIn2 / 3);
         const diving = G.bricks.filter(b => !b.dead && b.dive).length;
-        G.diveCD = Math.max(2.2, 7 - regionsIn2 * 0.5) * (0.7 + Math.random() * 0.5);
+        G.diveCD = Math.max(2.2, 7 - regionsIn2 * 0.5) * (0.7 + gameRand() * 0.5);
         if (diving < maxDivers &&
             // no peel-offs while a junkie encounter is still floating in
             !(jk2 && G.encounter && G.encounter.t < 4)) {
@@ -1622,7 +1738,7 @@ function update(dt) {
             if (att.length) pool2 = att;
           }
           if (pool2.length) {
-            const dvb = pool2[Math.floor(Math.random() * pool2.length)];
+            const dvb = pool2[Math.floor(gameRand() * pool2.length)];
             if (!flying(dvb) && !dvb.bare) {
               // the peel-off SHATTERS its box — nothing dives as a full brick
               dvb.bare = true;
@@ -1630,8 +1746,8 @@ function update(dt) {
               burst(dvb.bx + G.fx, dvb.by + G.fy, TYPE_COLORS[dvb.poke.t], 12, 190, 0.5);
             }
             dvb.dive = {
-              t: 0, dur: 2.9, dir: Math.random() < 0.5 ? -1 : 1,
-              tx: Math.max(60, Math.min(W - 60, G.paddle.x - G.fx + (Math.random() - 0.5) * 160)),
+              t: 0, dur: 2.9, dir: gameRand() < 0.5 ? -1 : 1,
+              tx: Math.max(60, Math.min(W - 60, G.paddle.x - G.fx + (gameRand() - 0.5) * 160)),
             };
             tone(320, 0.2, 'sawtooth', 0.045, 220); // peel-off screech
           }
@@ -1649,7 +1765,7 @@ function update(dt) {
         SFX.enrage();
       } else {
         addFloater(W / 2, H / 2, 'THEY GOT TOO CLOSE!', '#ff5252', 26);
-        loseLife();
+        loseLife('BRICKS REACHED THE DANGER LINE');
         return;
       }
     }
@@ -1686,7 +1802,7 @@ function update(dt) {
         b.phasing = false;
         b.y = stopY;
         const sp = ballSp();
-        const a = -Math.PI / 2 + (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.3);
+        const a = -Math.PI / 2 + (gameRand() < 0.5 ? -1 : 1) * (0.55 + gameRand() * 0.3);
         b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp;
         burst(b.x, b.y, '#80d8ff', 18, 240, 0.55);
         tone(1100, 0.12, 'triangle', 0.06);
@@ -1769,7 +1885,7 @@ function update(dt) {
           // preserve speed, pop mostly upward (≤~30° tilt) — no sideways flings
           const sp2 = Math.hypot(b.vx, b.vy);
           let tilt = Math.atan2(b.vx, Math.abs(b.vy));
-          tilt = Math.max(-0.52, Math.min(0.52, tilt + (Math.random() - 0.5) * 0.4));
+          tilt = Math.max(-0.52, Math.min(0.52, tilt + (gameRand() - 0.5) * 0.4));
           b.vx = Math.sin(tilt) * sp2;
           b.vy = -Math.cos(tilt) * sp2;
           b.y = rallyFloor - 2;
@@ -1823,6 +1939,7 @@ function update(dt) {
           }
         }
       }
+      haptic('tap');
       G.combo = 0;
       // returning to the paddle banks the rally — celebrate a good one
       if (b.rally >= 5) addFloater(G.paddle.x, PADDLE_Y() - 32, 'NICE RALLY ×' + b.rally + '!', '#80d8ff', 15);
@@ -1889,7 +2006,7 @@ function update(dt) {
   G.balls = G.balls.filter(b => !b.dead);
   // classic mode loses a life when the last ball drops; the shooter modes have
   // no ball — you only lose to enemy fire, so losing "all balls" never applies
-  if (G.mode === 'classic' && G.state === 'play' && G.balls.length === 0) { loseLife(); return; }
+  if (G.mode === 'classic' && G.state === 'play' && G.balls.length === 0) { loseLife('MISSED BALL'); return; }
 
   // ---- lasers ----
   const laserActive = G.fx_laser || G.megaT > 0;
@@ -2082,7 +2199,7 @@ function update(dt) {
     if (G.level >= 2 || blaster) {
       G.enemyShotCD -= dt * ts;
       if (G.enemyShotCD <= 0) {
-        G.enemyShotCD = d.enemyShotInt * (0.7 + Math.random() * 0.6) * (blaster ? 0.5 : 1);
+        G.enemyShotCD = d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
@@ -2091,7 +2208,7 @@ function update(dt) {
         // cap concurrent warnings so the board never fills with warning lines
         const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
         if (alive.length && activeTel < (blaster ? 5 : 3)) {
-          const shooter = alive[Math.floor(Math.random() * alive.length)];
+          const shooter = alive[Math.floor(gameRand() * alive.length)];
           G.telegraphs.push({ br: shooter, boss: false, t: 0.5, max: 0.5 });
         }
       }
@@ -2165,7 +2282,7 @@ function update(dt) {
         G.invuln = 2;
         addFloater(G.paddle.x, shipY() - 50, 'HIT!', '#ff5252', 22);
         burst(G.paddle.x, shipY(), '#ffd54f', 30, 320);
-        loseLife();
+        loseLife('BOSS BEAM');
         return;
       }
     }
@@ -2214,7 +2331,7 @@ function update(dt) {
       if (weak && s.heavy && G.lives > 1) { G.lives--; G.hurtHud = 2.4; }
       addFloater(G.paddle.x, py - 50, weak ? (s.heavy ? 'WEAK! −2' : 'WEAK!') : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
       burst(G.paddle.x, py, weak ? '#ffab40' : '#ff5252', weak ? 40 : 30, weak ? 380 : 320);
-      loseLife();
+      loseLife((s.type || 'ENEMY').toUpperCase() + (s.heavy ? ' HEAVY ATTACK' : ' ATTACK'));
       return;
     }
     if (s.y > H + 20) s.dead = true;

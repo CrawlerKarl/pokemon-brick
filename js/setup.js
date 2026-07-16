@@ -31,6 +31,15 @@ if (document.fonts && document.fonts.load) {
 }
 const IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
   || new URLSearchParams(location.search).has('touch'); // ?touch forces mobile controls (testing)
+let lastHapticAt = 0;
+function haptic(kind = 'tap') {
+  if (!IS_TOUCH || typeof SETTINGS === 'undefined' || !SETTINGS.haptics || !navigator.vibrate) return;
+  const now = performance.now();
+  if (now - lastHapticAt < (kind === 'hit' ? 45 : 80)) return;
+  lastHapticAt = now;
+  const patterns = { tap: 8, hit: 5, break: 12, item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35] };
+  navigator.vibrate(patterns[kind] || patterns.tap);
+}
 
 function resize() {
   // BOOTSTRAP GUARD: resize events can fire while later modules are still

@@ -820,6 +820,34 @@ function drawBricks() {
         }
       }
     }
+    // Region brick behavior tell: a colored corner badge plus a shape cue.
+    // The brick stays visually dominant; the badge teaches the extra rule.
+    if (br.behavior && BRICK_BEHAVIORS[br.behavior]) {
+      const bhv = BRICK_BEHAVIORS[br.behavior];
+      if (br.behavior === 'shift' || br.behavior === 'volatile') {
+        ctx.strokeStyle = bhv.color + '88'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(br.hx - br.w * 0.38, y + hh + 5); ctx.lineTo(br.hx + br.w * 0.38, y + hh + 5); ctx.stroke();
+      }
+      if (br.behavior === 'link') {
+        const mate = G.bricks.find(b => !b.dead && b !== br && b.behavior === 'link' && b.linkGroup === br.linkGroup);
+        if (mate) {
+          ctx.setLineDash([4, 4]); ctx.strokeStyle = bhv.color + '77'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(mate.bx + G.fx, mate.by + G.fy); ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+      ctx.beginPath(); ctx.arc(x + hw - 10, y - hh + 10, smallCard ? 7 : 9, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(5,8,22,0.88)'; ctx.fill();
+      ctx.strokeStyle = bhv.color; ctx.lineWidth = 1.5; ctx.stroke();
+      drawGlyph(ctx, bhv.icon, x + hw - 10, y - hh + 10, smallCard ? 3.4 : 4.3, bhv.color);
+    }
+    const shieldSrc = typeof shieldGeneratorFor === 'function' ? shieldGeneratorFor(br) : null;
+    if (shieldSrc) {
+      ctx.save();
+      ctx.shadowColor = '#66bb6a'; ctx.shadowBlur = 10;
+      roundRect(x - hw - 2, y - hh - 2, br.w + 4, br.h + 4, rad + 2);
+      ctx.strokeStyle = 'rgba(102,187,106,0.9)'; ctx.lineWidth = 2.2; ctx.stroke();
+      ctx.restore();
+    }
     // HP dial: ring + number, mirroring the type badge — corner-anchored so
     // it never covers the Pokémon. Small cards only show it once damaged;
     // horde-sized cards never do (the damage dimming carries the info).
@@ -2470,6 +2498,7 @@ function drawHurtHealth() {
 function drawTouchControls() {
   const B = touchButtons();
   ctx.save();
+  ctx.globalAlpha = SETTINGS.buttonOpacity == null ? 0.85 : SETTINGS.buttonOpacity;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   // FIRE — absent in CLASSIC until the blaster is earned (touchButtons). In the
   // shooter modes this one pad also CHARGES: holding winds up a big
@@ -2478,7 +2507,6 @@ function drawTouchControls() {
   const f = B.fire;
   if (f) {
     const charging = G.charge > 0.02, full = G.charge >= 1;
-    ctx.globalAlpha = 0.85;
     ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
     ctx.fillStyle = hot ? 'rgba(80,30,30,0.72)' : charging ? 'rgba(16,60,72,0.78)' : 'rgba(10,16,38,0.72)';
     ctx.fill();
@@ -2543,6 +2571,16 @@ function drawTouchControls() {
     if (!on) { // slash across a muted speaker
       ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(b.x - 8, b.y + 8); ctx.lineTo(b.x + 8, b.y - 8); ctx.stroke();
+    }
+  }
+  if (G.uiTouchPulse) {
+    const p = G.uiTouchPulse, q = 1 - p.t / p.max;
+    ctx.globalAlpha = Math.max(0, p.t / p.max);
+    ctx.beginPath(); ctx.arc(p.x, p.y, 18 + q * 28, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.stroke();
+    if (p.label) {
+      ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = '#ffffff';
+      ctx.fillText('✓ ' + p.label, p.x, p.y - 28 - q * 12);
     }
   }
   ctx.restore();
@@ -2610,6 +2648,21 @@ function drawMenu() {
       ctx.font = bodyFont(9.5, 700);
       ctx.fillStyle = '#4a3506';
       ctx.fillText('RECOMMENDED · BREAKER · EASY · CHARMANDER', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
+    }
+    ctx.restore();
+  }
+  {
+    const d = L.daily, hovD = inRect(mouseX, lastMouseY, d);
+    ctx.save();
+    ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hovD ? 20 : 8;
+    roundRect(d.x, d.y, d.w, d.h, 12);
+    ctx.fillStyle = hovD ? 'rgba(128,216,255,0.3)' : 'rgba(128,216,255,0.14)'; ctx.fill();
+    ctx.shadowBlur = 0; ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = '#e0f7ff';
+    ctx.fillText('★ DAILY', d.x + d.w / 2, d.y + d.h * (L.short ? 0.5 : 0.36));
+    if (!L.short) {
+      ctx.font = bodyFont(8.5, 700); ctx.fillStyle = '#80d8ff';
+      ctx.fillText('SEEDED · BEST ' + dailyBest(), d.x + d.w / 2, d.y + d.h * 0.72, d.w - 12);
     }
     ctx.restore();
   }
@@ -3141,16 +3194,16 @@ function drawCeremony() {
     const showNew = t >= 2.45;
     const id = showNew ? c.evo.toId : c.evo.fromId;
     const img = getSprite(id);
-    // accelerating white pulses build the tension, then the white-out
+    // accelerating white pulses build the tension, then the radiant flash
     const pulse = t < 1.9 ? Math.max(0, Math.sin(t * t * 5.5)) : 1;
-    const whiteout = t >= 1.9 && t < 2.45;
-    const grow = t < 1.9 ? 1 + t * 0.04 : whiteout ? 1.1 + (t - 1.9) * 0.55 : 1.12;
+    const radiantFlash = t >= 1.9 && t < 2.45;
+    const grow = t < 1.9 ? 1 + t * 0.04 : radiantFlash ? 1.1 + (t - 1.9) * 0.55 : 1.12;
     const sz = ms * grow;
     const bob = Math.sin(G.time * 2) * 5;
     if (img.complete && img.naturalWidth) {
       ctx.save();
       ctx.translate(cx, cy + bob);
-      if (whiteout) {
+      if (radiantFlash) {
         const sil = getSilhouette(c.evo.fromId, '#ffffff');
         if (sil) ctx.drawImage(sil, -sz / 2, -sz / 2, sz, sz);
       } else {
@@ -3352,7 +3405,7 @@ function drawAdvanced() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 18px Orbitron, sans-serif';
   ctx.fillStyle = '#e3f2fd';
-  ctx.fillText('ADVANCED SETTINGS', A.px + A.pw / 2, A.py + 30);
+  ctx.fillText('SETTINGS', A.px + A.pw / 2, A.py + 30);
   // close ✕
   const cb = A.close;
   ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 2.5;
@@ -3360,9 +3413,17 @@ function drawAdvanced() {
   ctx.moveTo(cb.x + 10, cb.y + 10); ctx.lineTo(cb.x + cb.w - 10, cb.y + cb.h - 10);
   ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
   ctx.stroke();
+  for (let i = 0; i < 2; i++) {
+    const r = A.tab(i), active = settingsPage === i;
+    roundRect(r.x, r.y, r.w, r.h, 10);
+    ctx.fillStyle = active ? 'rgba(66,165,245,0.26)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+    ctx.strokeStyle = active ? '#80d8ff' : 'rgba(255,255,255,0.15)'; ctx.lineWidth = active ? 2 : 1; ctx.stroke();
+    ctx.font = `800 ${A.compact ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = active ? '#e3f2fd' : '#78909c';
+    ctx.fillText(i === 0 ? 'GAME' : 'TOUCH', r.x + r.w / 2, r.y + r.h / 2);
+  }
   // sliders
-  for (let i = 0; i < SLIDERS.length; i++) {
-    const s = SLIDERS[i], gm = A.slider(i);
+  for (let i = 0; i < A.sliders.length; i++) {
+    const s = A.sliders[i], gm = A.slider(i);
     const frac = (SETTINGS[s.key] - s.min) / (s.max - s.min);
     ctx.font = '700 12px Orbitron, sans-serif';
     ctx.textAlign = 'left'; ctx.fillStyle = '#90a4ae';
@@ -3381,8 +3442,8 @@ function drawAdvanced() {
     ctx.lineWidth = 1;
   }
   // accessibility toggles
-  for (let i = 0; i < TOGGLES.length; i++) {
-    const t = TOGGLES[i], r = A.toggle(i);
+  for (let i = 0; i < A.toggles.length; i++) {
+    const t = A.toggles[i], r = A.toggle(i);
     const on = !!SETTINGS[t.key];
     ctx.textAlign = 'left';
     ctx.font = '700 12px Orbitron, sans-serif';
@@ -3665,6 +3726,66 @@ function drawJourneyMap(y, compact = false) {
   ctx.restore();
 }
 
+function drawGameOverSummary() {
+  dim(0.72);
+  const L = gameOverLayout(), s = G.runSummary || {
+    region: genFor(G.level).name, stage: stageIdx(G.level) + 1, level: G.level, score: G.score,
+    bestRally: G.bestRally, maxCombo: G.maxCombo, catches: G.caughtRun, path: 'NO PATH YET', cause: 'RUN ENDED',
+  };
+  ctx.save();
+  roundRect(L.px, L.py, L.pw, L.ph, 22);
+  ctx.fillStyle = 'rgba(7,11,28,0.97)'; ctx.fill();
+  ctx.strokeStyle = s.newRecord ? '#ffd54f' : '#ff5252'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `900 ${L.narrow ? 28 : 36}px Orbitron, sans-serif`;
+  ctx.fillStyle = s.newRecord ? '#ffd54f' : '#ff6e6e';
+  ctx.fillText(s.newRecord ? '★ NEW RECORD ★' : (G.daily ? 'DAILY COMPLETE' : 'RUN COMPLETE'), W / 2, L.py + 38, L.pw - 28);
+  ctx.font = `900 ${L.narrow ? 26 : 32}px Orbitron, sans-serif`; ctx.fillStyle = '#ffffff';
+  ctx.fillText((s.score || 0).toLocaleString() + ' PTS', W / 2, L.py + 82);
+  ctx.font = '800 11px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
+  ctx.fillText(s.region + ' · STAGE ' + s.stage + '/3 · WAVE ' + s.level, W / 2, L.py + 112, L.pw - 34);
+  roundRect(L.px + 20, L.py + 130, L.pw - 40, 38, 10);
+  ctx.fillStyle = 'rgba(255,82,82,0.12)'; ctx.fill();
+  ctx.font = '800 10px Orbitron, sans-serif'; ctx.fillStyle = '#ffab91';
+  ctx.fillText('FINAL CAUSE · ' + s.cause, W / 2, L.py + 149, L.pw - 54);
+  const metrics = [
+    ['BEST RALLY', '×' + (s.bestRally || 0)], ['MAX COMBO', '×' + (s.maxCombo || 0)],
+    ['BRICKS', s.bricks || 0], ['ITEMS', s.items || 0],
+    ['CATCHES', s.catches || 0], ['HITS TAKEN', s.hits || 0],
+  ];
+  const cols = L.narrow ? 2 : 3, cellW = (L.pw - 40) / cols;
+  metrics.forEach((m, i) => {
+    const row = Math.floor(i / cols), col = i % cols;
+    const cx = L.px + 20 + cellW * (col + 0.5), cy = L.py + 192 + row * 48;
+    ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c'; ctx.fillText(m[0], cx, cy);
+    ctx.font = '900 15px Orbitron, sans-serif'; ctx.fillStyle = '#e8eef6'; ctx.fillText(String(m[1]), cx, cy + 19);
+  });
+  const pathY = L.py + (L.narrow ? 342 : 298);
+  ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c'; ctx.fillText('MOST-USED PATH', W / 2, pathY);
+  ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#ffd54f'; ctx.fillText(s.path, W / 2, pathY + 20, L.pw - 44);
+  if (G.trial) {
+    ctx.font = '700 9px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
+    ctx.fillText('TRIAL RUN · SCORE AND CATCHES WERE NOT SAVED', W / 2, pathY + 43, L.pw - 30);
+  } else if (G.daily) {
+    const sh = L.share, hovS = inRect(mouseX, lastMouseY, sh);
+    roundRect(sh.x, sh.y, sh.w, sh.h, 12);
+    ctx.fillStyle = hovS ? 'rgba(128,216,255,0.28)' : 'rgba(128,216,255,0.13)'; ctx.fill();
+    ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = '800 10px Orbitron, sans-serif'; ctx.fillStyle = '#e0f7ff';
+    ctx.fillText(G.shareToast > 0 ? '✓ RESULT READY' : 'SHARE DAILY RESULT', sh.x + sh.w / 2, sh.y + sh.h / 2);
+  }
+  const labels = ['↻ RETRY', RUN_CKPT && !G.daily && !G.trial ? '▶ CONTINUE' : '＋ NEW RUN', '⚙ TRIAL', '⌂ TITLE'];
+  labels.forEach((label, i) => {
+    const b = L.button(i), hov = inRect(mouseX, lastMouseY, b);
+    roundRect(b.x, b.y, b.w, b.h, 12);
+    ctx.fillStyle = hov ? 'rgba(255,213,79,0.25)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+    ctx.strokeStyle = i === 0 ? '#ffd54f' : hov ? '#e3f2fd' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = i === 0 ? 2 : 1.2; ctx.stroke();
+    ctx.font = `800 ${L.narrow ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = i === 0 ? '#ffd54f' : '#cfd8dc';
+    ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2, b.w - 8);
+  });
+  ctx.restore();
+}
+
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
@@ -3726,7 +3847,7 @@ function drawOverlays() {
         const x0 = W / 2 - chainW / 2, ny = headerY - nh / 2;
         ctx.font = '800 8.5px Orbitron, sans-serif';
         ctx.fillStyle = P.color;
-        ctx.fillText(P.name + ' PATH · ' + pathRole(pk), W / 2, ny - 8, chainW);
+        ctx.fillText(P.name + ' PATH · ' + pathRole(selC.pathKey), W / 2, ny - 8, chainW);
         for (let ti = 0; ti < 4; ti++) {
           const nx = x0 + ti * (nw + 14);
           const ownedT = ti < lvlSel, isPick = ti === selC.tierIdx;
@@ -3843,17 +3964,19 @@ function drawOverlays() {
           ctx.textAlign = 'left';
           ctx.font = '900 9.5px Orbitron, sans-serif';
           ctx.fillStyle = col;
-          ctx.fillText(c.path.name + ' · TIER ' + (c.tierIdx + 1) + '/4' + (isCap ? ' · CAPSTONE' : ''), r.x + 66, r.y + 16, r.w - 74);
+          ctx.fillText(c.path.name + ' · ' + c.tags.join(' + ') + ' · TIER ' + (c.tierIdx + 1) + '/4', r.x + 66, r.y + 16, r.w - 74);
           ctx.font = '900 15px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + 66, r.y + 35, r.w - 74);
           ctx.font = bodyFont(11, 600);
           ctx.fillStyle = '#e0e7f0';
           wrapText(tierDesc(c.pathKey, c.tierIdx), r.w - 82).slice(0, 3).forEach((l, li) => ctx.fillText(l, r.x + 66, r.y + 54 + li * 13, r.w - 78));
+          ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = col;
+          ctx.fillText(c.comparison, r.x + 66, r.y + r.h - 10, r.w - 76);
         } else if (L.short) { // short landscape: compact vertical card
           ctx.textAlign = 'center';
           ctx.font = '900 8.5px Orbitron, sans-serif'; ctx.fillStyle = col;
-          ctx.fillText(c.path.name + (isCap ? ' · CAP' : ''), r.x + r.w / 2, r.y + 12, r.w - 8);
+          ctx.fillText(c.path.name + ' · ' + c.tags.join('+') + (isCap ? ' · CAP' : ''), r.x + r.w / 2, r.y + 12, r.w - 8);
           pips(r.x + r.w / 2, r.y + 25);
           drawDraftBadge(tier.icon, r.x + r.w / 2, r.y + 48, 15, col, hov || isCap, i);
           ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = isCap ? col : '#fff';
@@ -3866,21 +3989,24 @@ function drawOverlays() {
           ctx.textAlign = 'center';
           ctx.font = '900 10px Orbitron, sans-serif';
           ctx.fillStyle = col;
-          ctx.fillText(c.path.name + (isCap ? ' · CAPSTONE' : ' · TIER ' + (c.tierIdx + 1) + '/4'), r.x + r.w / 2, r.y + 22, r.w - 20);
-          pips(r.x + r.w / 2, r.y + 40);
-          drawDraftBadge(tier.icon, r.x + r.w / 2, r.y + 74, 24, col, hov || isCap, i);
+          ctx.fillText(c.path.name + (isCap ? ' · CAPSTONE' : ' · TIER ' + (c.tierIdx + 1) + '/4'), r.x + r.w / 2, r.y + 17, r.w - 20);
+          ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = '#b3e5fc';
+          ctx.fillText(c.tags.join('  +  '), r.x + r.w / 2, r.y + 34, r.w - 18);
+          pips(r.x + r.w / 2, r.y + 48);
+          drawDraftBadge(tier.icon, r.x + r.w / 2, r.y + 78, 22, col, hov || isCap, i);
           // the upgrade NAME — the headline
           ctx.font = '900 18px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';
-          ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 112, r.w - 18);
+          ctx.fillText((isCap ? '★ ' : '') + junkieTierName(c.pathKey, c.tierIdx) + (isCap ? ' ★' : ''), r.x + r.w / 2, r.y + 113, r.w - 18);
           // what it DOES — big, high-contrast, the thing you actually read
           ctx.font = bodyFont(13, 600);
           ctx.fillStyle = '#e8eef6';
           wrapText(tierDesc(c.pathKey, c.tierIdx), r.w - 30).slice(0, 4).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 140 + li * 18, r.w - 24));
-          // subtle footer: what it leads to, then the pick prompt
-          ctx.font = '600 9px Orbitron, sans-serif';
-          ctx.fillStyle = isCap ? col : '#78909c';
-          ctx.fillText(isCap ? 'PATH COMPLETE' : '↑ NEXT: ' + junkieTierName(c.pathKey, c.tierIdx + 1), r.x + r.w / 2, r.y + r.h - 34, r.w - 16);
+          ctx.font = '700 8px Orbitron, sans-serif';
+          ctx.fillStyle = col;
+          ctx.fillText(c.comparison, r.x + r.w / 2, r.y + r.h - 48, r.w - 16);
+          ctx.fillStyle = '#90a4ae';
+          ctx.fillText(c.synergy, r.x + r.w / 2, r.y + r.h - 34, r.w - 16);
           ctx.fillStyle = sel ? '#a5d6a7' : hov ? '#e3f2fd' : '#607d8b';
           ctx.font = '800 11px Orbitron, sans-serif';
           ctx.fillText(sel ? (IS_TOUCH ? '✓ SELECTED — TAP CONFIRM' : '✓ SELECTED — ENTER CONFIRMS')
@@ -3931,28 +4057,7 @@ function drawOverlays() {
   } else if (G.state === 'ceremony') {
     drawCeremony();
   } else if (G.state === 'gameover') {
-    dim(0.65);
-    title('GAME OVER', H * 0.34, 52, '#ff5252');
-    ctx.font = '700 24px Orbitron, sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('SCORE  ' + G.score, W / 2, H * 0.46);
-    ctx.font = '500 15px Orbitron, sans-serif';
-    ctx.fillStyle = '#b0bec5';
-    ctx.fillText('JOURNEY ENDED IN ' + genFor(G.level).name + '  ·  STAGE ' + (stageIdx(G.level) + 1) + '/3  ·  WAVE ' + G.level, W / 2, H * 0.52, W * 0.94);
-    ctx.fillText('MAX COMBO x' + G.maxCombo + '  ·  BEST RALLY ×' + G.bestRally + '  ·  ' + G.caughtRun + ' CAUGHT  ·  POKÉDEX ' + DEX.size, W / 2, H * 0.565, W * 0.94);
-    if (G.trial) {
-      ctx.fillStyle = '#80d8ff';
-      ctx.fillText('TRIAL RUN — SCORE & CATCHES NOT SAVED', W / 2, H * 0.62, W * 0.9);
-    } else {
-      ctx.fillStyle = G.score >= G.best && G.score > 0 ? '#ffd54f' : '#90a4ae';
-      ctx.fillText(G.score >= G.best && G.score > 0 ? '★ NEW BEST ★' : 'BEST  ' + G.best, W / 2, H * 0.62);
-    }
-    if (!G.trial && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
-      ctx.font = '700 13px Orbitron, sans-serif';
-      ctx.fillStyle = '#80d8ff';
-      ctx.fillText('YOUR JOURNEY IS SAFE — CONTINUE FROM ' + genFor(RUN_CKPT.lvl).name + ' ON THE TITLE SCREEN', W / 2, H * 0.6, W * 0.92);
-    }
-    pulse(IS_TOUCH ? 'TAP FOR TITLE SCREEN' : 'CLICK FOR TITLE SCREEN', H * 0.7);
+    drawGameOverSummary();
   }
   if (paused) {
     dim(0.5);

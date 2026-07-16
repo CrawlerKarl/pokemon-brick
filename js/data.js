@@ -542,6 +542,21 @@ const MODIFIERS = [
   { key: 'bounty', icon: 'coin',   name: 'BOUNTY',      desc: 'DOUBLE POINTS, BOLDER FOES',  color: '#ffd54f' },
 ];
 
+// Classic BREAKER regions introduce one readable brick rule at a time. These
+// are still ordinary ball-breakable bricks: the icon and short intro explain
+// the twist, while the region mapping makes learning predictable.
+const BRICK_BEHAVIORS = {
+  treasure: { icon: 'coin', color: '#ffd54f', name: 'TREASURE BRICKS', desc: 'BREAK THEM FOR A GUARANTEED ITEM' },
+  bomb:     { icon: 'fire', color: '#ff7043', name: 'BOMB BRICKS', desc: 'BREAK THEM TO DAMAGE NEARBY BRICKS' },
+  shift:    { icon: 'swift', color: '#80d8ff', name: 'SLIDER BRICKS', desc: 'THE MARKED ROWS GLIDE SIDE TO SIDE' },
+  link:     { icon: 'laser', color: '#ce93d8', name: 'LINKED BRICKS', desc: 'DAMAGE ONE LINK TO DAMAGE ITS PARTNER' },
+  split:    { icon: 'multi', color: '#90caf9', name: 'SPLITTER BRICKS', desc: 'THEY BREAK INTO TWO SMALLER TARGETS' },
+  shield:   { icon: 'shield', color: '#66bb6a', name: 'SHIELD GENERATORS', desc: 'BREAK THE GENERATOR TO EXPOSE ITS NEIGHBORS' },
+  regen:    { icon: 'heart', color: '#81c784', name: 'REGEN BRICKS', desc: 'DAMAGED BRICKS SLOWLY REPAIR THEMSELVES' },
+  volatile: { icon: 'fire', color: '#ff5252', name: 'VOLATILE SLIDERS', desc: 'MOVING BOMBS CAN CLEAR A WHOLE CLUSTER' },
+  reactor:  { icon: 'mega', color: '#ffd740', name: 'REACTOR BRICKS', desc: 'HARD TARGETS DROP ITEMS AND DETONATE' },
+};
+
 // ============================================================
 //  SKILL TREE — five paths, four tiers each. The two offense paths deliberately
 //  solve different problems: VOLLEY covers space while IMPACT rewards a lined-
@@ -635,6 +650,31 @@ function tierDesc(pathKey, tierIdx) {
 function pathRole(pathKey) {
   const path = PATHS[pathKey];
   return G.mode === 'classic' && path.crole ? path.crole : path.role;
+}
+function tierTags(pathKey, tierIdx) {
+  const family = PATHS[pathKey].family;
+  if (family === 'offense') {
+    if (G.mode !== 'classic') return tierIdx === 0 ? ['BLASTER', 'CHARGE'] : ['BLASTER'];
+    return tierIdx >= 2 ? ['BALL', 'BLASTER'] : ['BALL'];
+  }
+  if (family === 'defense') return ['DEFENSE'];
+  if (family === 'element') return ['TYPE'];
+  if (family === 'tempo') return ['MEGA'];
+  return ['ITEM', 'SCORE'];
+}
+function tierSynergy(pathKey, tierIdx) {
+  const family = PATHS[pathKey].family;
+  if (family === 'offense' && G.mode === 'classic' && tierIdx === 2) return 'SYNERGY: YOUR BALL UNLOCKS SUPPORT FIRE';
+  if (family === 'offense' && pathLvl('surge')) return 'SYNERGY: MORE HITS CHARGE MEGA FASTER';
+  if (family === 'defense' && pathLvl('bond')) return 'SYNERGY: SAFER ITEM COLLECTION';
+  if (family === 'element' && G.starter) return 'SYNERGY: AMPLIFIES YOUR PARTNER TYPE';
+  if (family === 'tempo' && PATH_KEYS.some(k => PATHS[k].family === 'offense' && pathLvl(k))) return 'SYNERGY: ATTACKS FILL THE MEGA RING';
+  if (family === 'utility' && pathLvl('aegis')) return 'SYNERGY: SHIELDS PROTECT ITEM RUNS';
+  return 'BUILDS TOWARD ' + PATHS[pathKey].tiers[Math.min(3, tierIdx + 1)].name;
+}
+function tierComparison(pathKey, tierIdx) {
+  if (tierIdx <= 0) return 'NEW PATH · TIER I';
+  return 'UPGRADES ' + junkieTierName(pathKey, tierIdx - 1) + ' · TIER ' + (tierIdx + 1);
 }
 // As authored paths cap, every mode fills empty offers with these small mastery
 // stacks. In SPACE JUNKIE they are literal held items orbiting the pilot.
@@ -853,11 +893,11 @@ const TYPE_CLUSTERS = [
 // pick a wave THEME — squads in one wave draw from the same ecology
 function pickWaveTheme(genIdx) {
   const packs = HABITAT_PACKS[genIdx] || [];
-  if (packs.length && Math.random() < 0.6) {
-    const p = packs[Math.floor(Math.random() * packs.length)];
+  if (packs.length && gameRand() < 0.6) {
+    const p = packs[Math.floor(gameRand() * packs.length)];
     return { name: p.n, ids: new Set(p.ids), types: null };
   }
-  const cl = TYPE_CLUSTERS[Math.floor(Math.random() * TYPE_CLUSTERS.length)];
+  const cl = TYPE_CLUSTERS[Math.floor(gameRand() * TYPE_CLUSTERS.length)];
   return { name: cl.map(t => t.toUpperCase()).join('/') + ' HABITAT', ids: null, types: new Set(cl) };
 }
 // one tier's pool filtered to the theme; falls back to the full tier so a

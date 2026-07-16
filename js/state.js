@@ -54,6 +54,7 @@ function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 // a true game-over (empty skill tree) clears it. Trial runs never save.
 let RUN_CKPT = (v => (v && typeof v === 'object' && v.v === 1 && v.lvl >= 4) ? v : null)(loadStore('pkbrk-run', 'null'));
 function saveCheckpoint() {
+  if (G.daily) return;
   RUN_CKPT = {
     v: 1, lvl: G.level, score: G.score, lives: G.lives, mode: G.mode,
     starter: G.starter, starterLvl: G.starterLvl,
@@ -64,6 +65,21 @@ function saveCheckpoint() {
   saveStore('pkbrk-run', RUN_CKPT);
 }
 function clearCheckpoint() { RUN_CKPT = null; saveStore('pkbrk-run', null); }
+let DAILY_RECORDS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-daily', '{}'));
+function dailyBest() { return Math.max(0, +(DAILY_RECORDS[dailyDateKey()] || 0)); }
+function recordDailyScore(score) {
+  const key = dailyDateKey(), prior = Math.max(0, +(DAILY_RECORDS[key] || 0));
+  if (score > prior) DAILY_RECORDS[key] = score;
+  const keys = Object.keys(DAILY_RECORDS).sort().reverse();
+  for (const old of keys.slice(30)) delete DAILY_RECORDS[old];
+  saveStore('pkbrk-daily', DAILY_RECORDS);
+  return score > prior;
+}
+function dailyShareText() {
+  const s = G.runSummary || {};
+  return 'WAVEBREAKER DAILY ' + dailyDateKey() + ' · ' + (s.score || G.score) + ' PTS · WAVE ' +
+    (s.level || G.level) + ' · ' + (s.bricks || 0) + ' BRICKS · BEST RALLY ' + (s.bestRally || 0);
+}
 function resumeRun() {
   const c = RUN_CKPT;
   if (!c) return;
@@ -91,7 +107,7 @@ const G = {
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
   particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
   scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
-  announce: null, modifier: null,
+  announce: null, announceQueue: [], modifier: null,
   fx: 0, fy: 0, swayT: 0,
   brickW: 0, brickH: 0,
   shake: 0, flashT: 0, stateT: 0,
@@ -105,7 +121,9 @@ const G = {
   maxCombo: 0, caughtRun: 0, dropHint: 0, healthDropPity: 0, megaCalloutDone: false,
   rallyHintDone: false, bestRally: 0, barrierHintDone: false,
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
-  trial: false,
+  trial: false, daily: false, runSeed: null,
+  runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
+  uiTouchPulse: null, shareToast: 0,
   // starter partner: which one, its ability tier, Torrent's return counter
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
   ceremony: null, // act-boundary evolution ceremony (end of Hoenn / Kalos)
@@ -156,7 +174,11 @@ function blasterArmed() {
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
 function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false) {
-  G.announce = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny };
+  const next = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny };
+  if (!G.announce) { G.announce = next; return; }
+  if (G.announce.name === name || G.announceQueue.some(a => a.name === name)) return;
+  G.announceQueue.push(next);
+  if (G.announceQueue.length > 4) G.announceQueue.shift();
 }
 
 function applyPower(p, srcType) {
@@ -248,7 +270,7 @@ function applyPower(p, srcType) {
 // ============================================================
 function makeBall(x, y, angle, overrideAngle) {
   const sp = ballSp();
-  const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (Math.random() - 0.5) * 0.6);
+  const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (gameRand() - 0.5) * 0.6);
   const radius = G.mode === 'classic' && upgN('heavy') ? 10.6 : 9;
   return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: radius, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: barrierCharges(), ember: 0 };
 }
@@ -403,6 +425,43 @@ function clampOpen(g, top, floorY) {
   if (g.ry * 2 > band) g.ry = band / 2;
   g.cy = Math.max(top + g.ry, Math.min(floorY - g.ry, g.cy));
 }
+function assignClassicBrickBehaviors(regionsIn, stage) {
+  if (G.mode !== 'classic' || stage === 2) return;
+  const keys = ['treasure', 'bomb', 'shift', 'link', 'split', 'shield', 'regen', 'volatile', 'reactor'];
+  const primary = keys[Math.min(keys.length - 1, regionsIn)];
+  const candidates = G.bricks.filter(b => !b.isBoss && !b.subBoss && !b.armored && !b.flight && !b.behavior);
+  if (candidates.length < 2) return;
+  const shuffled = candidates.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(gameRand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const amount = Math.min(shuffled.length, 2 + (stage === 1 ? 2 : 0) + Math.floor(regionsIn / 4));
+  if (primary === 'shift' || primary === 'volatile') {
+    const row = shuffled[0].row;
+    const rank = candidates.filter(b => b.row === row).slice(0, Math.max(3, amount));
+    rank.forEach((b, i) => { b.behavior = primary; b.behaviorPhase = i * 0.65; });
+  } else if (primary === 'link') {
+    const linked = shuffled.slice(0, Math.max(2, amount - amount % 2));
+    linked.forEach((b, i) => { b.behavior = 'link'; b.linkGroup = Math.floor(i / 2); });
+  } else {
+    shuffled.slice(0, amount).forEach((b, i) => {
+      b.behavior = primary;
+      b.behaviorPhase = i * 0.8;
+      if (primary === 'regen') b.regenT = 3 + gameRand() * 2;
+      if (primary === 'reactor') { b.hp += 2; b.maxHp += 2; }
+    });
+  }
+  // Challenge waves combine the region's new rule with one familiar rule.
+  if (stage === 1 && regionsIn > 1) {
+    const secondary = keys[Math.max(0, regionsIn - 2)];
+    const extra = shuffled.find(b => !b.behavior);
+    if (extra) { extra.behavior = secondary; extra.behaviorPhase = 1.2; }
+  }
+  const info = BRICK_BEHAVIORS[primary];
+  setAnnounce(info.icon, info.color, info.name, info.desc, 2.8,
+    primary === 'shield' ? 'FOLLOW THE GREEN LINKS TO THE GENERATOR' : 'EVERY MARKED TARGET IS STILL BALL-BREAKABLE');
+}
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
@@ -462,7 +521,7 @@ function buildLevel(lvl) {
       hx: W / 2, hy: bossY, row: -1, col: -1,
       hp: bossHp, maxHp: bossHp, phase: 1,
       poke: { id: gen.boss.id, n: gen.boss.n, t: gen.boss.t },
-      isBoss: true, flash: 0, wobble: Math.random() * Math.PI * 2,
+      isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
       abilityCD: (BOSS_ABILITIES[gen.boss.id]?.cd || 8) * 0.7,
     });
     gridTop = bossY + bossH / 2 + 26;
@@ -508,8 +567,8 @@ function buildLevel(lvl) {
   // ---- grid ----
   // challenge waves always pull a random formation; arrivals often do too
   // (a mild one), so no two journeys through a region play quite the same
-  const form = stage === 1 ? FORMATIONS[Math.floor(Math.random() * FORMATIONS.length)]
-    : stage === 0 && Math.random() < 0.45 ? MILD_FORMS[Math.floor(Math.random() * MILD_FORMS.length)]
+  const form = stage === 1 ? FORMATIONS[Math.floor(gameRand() * FORMATIONS.length)]
+    : stage === 0 && gameRand() < 0.45 ? MILD_FORMS[Math.floor(gameRand() * MILD_FORMS.length)]
     : null;
   const maxRows = Math.max(2, Math.floor((H * 0.58 - gridTop) / pitchY));
   // ---- DENSITY BUDGET: keep the board readable so the ball is never lost.
@@ -544,7 +603,7 @@ function buildLevel(lvl) {
     // multi-hit bricks the ball can rally against (see awardRally)
     const armored = !hasBoss && r === 0 && rows >= 2;
     // space-invaders style: every rank marches as ONE species
-    const [id, t] = pool[Math.floor(Math.random() * pool.length)];
+    const [id, t] = pool[Math.floor(gameRand() * pool.length)];
     for (let c = 0; c < cols; c++) {
       if (form && form.skip(r, c, rows, cols)) continue;
       // blocks are tougher now that the blaster fires freely — the extra HP
@@ -571,12 +630,12 @@ function buildLevel(lvl) {
         w: bw - gapX, h: bh,
         hp, maxHp: hp, armored, elite: !armored && tier >= 2 ? tier : 0,
         poke: { id, t },
-        flash: 0, wobble: Math.random() * Math.PI * 2,
+        flash: 0, wobble: gameRand() * Math.PI * 2,
       };
       // easter eggs: glitch block > shiny (the Pokédex Shiny Charm doubles
       // its appearance rate) > ditto disguise
-      const roll = Math.random();
-      const shinyChance = dexRewardActive('shinyCharm') ? 1 / 32 : 1 / 64;
+      const roll = gameRand();
+      const shinyChance = !G.daily && dexRewardActive('shinyCharm') ? 1 / 32 : 1 / 64;
       if (roll < 1 / 220) { brick.poke = { id: -1, t: 'normal' }; brick.hp = brick.maxHp = 1; }
       else if (roll < 1 / 220 + shinyChance) { brick.shiny = true; getSprite(id, true); }
       else if (roll < 1 / 220 + shinyChance + 1 / 45) { brick.isDitto = true; }
@@ -600,7 +659,7 @@ function buildLevel(lvl) {
   // G.motionStyle only affects a region-1/2 boss's guard sway (the sole place
   // update.js reaches the style branch — non-boss walls are static, and mt>=1
   // bosses use the guard-ring instead). 'serpent' gives those guards a shimmer.
-  G.motionStyle = regionsIn >= 1 && Math.random() < 0.5 ? 'serpent' : 'march';
+  G.motionStyle = regionsIn >= 1 && gameRand() < 0.5 ? 'serpent' : 'march';
   G.pathSpeed = 0.035 + regionsIn * 0.005; // cycle speed: flowing, never frantic
   // unlocked flight patterns grow region by region. 'square' loops around
   // the bricks; the rest weave/circle in the open space below them.
@@ -624,7 +683,7 @@ function buildLevel(lvl) {
     // never a runaway fraction — the boxed wall keeps a real presence
     const pool2 = G.bricks.filter(b => !b.armored && !b.isBoss);
     for (let i = pool2.length - 1; i > 0; i--) { // shuffle
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(gameRand() * (i + 1));
       [pool2[i], pool2[j]] = [pool2[j], pool2[i]];
     }
     const flyers = pool2.slice(0, Math.min(pool2.length, gridFlyerBudget));
@@ -646,7 +705,7 @@ function buildLevel(lvl) {
     // pattern that legitimately loops AROUND the wall
     G.gridRect = { top: geo.gridTop, bottom: geo.gridBottom, cx: geo.gridCx, hw: geo.gridHW };
     const pickKind = () => {
-      let k = kinds[Math.floor(Math.random() * kinds.length)];
+      let k = kinds[Math.floor(gameRand() * kinds.length)];
       if (k === 'square' && !geo.hasCore) k = 'oval'; // nothing to loop around
       return k;
     };
@@ -689,16 +748,16 @@ function buildLevel(lvl) {
       const g = flightGeom(kind, geo, si, nTotal);
       const count = streamPer;
       const tierPool = themedPool(gen, 2, theme);
-      const [id, t] = tierPool[Math.floor(Math.random() * tierPool.length)]; // one species — reads as a flock
+      const [id, t] = tierPool[Math.floor(gameRand() * tierPool.length)]; // one species — reads as a flock
       const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp));
-      const edge = Math.random() < 0.5 ? 'left' : 'right';
+      const edge = gameRand() < 0.5 ? 'left' : 'right';
       for (let j = 0; j < count; j++) {
         const sx = edge === 'left' ? -60 - j * 44 : W + 60 + j * 44;
         const sy = geo.openTop + si * 30 + (j % 3) * 22;
         G.bricks.push({
           bx: sx, by: sy, hx: sx, hy: sy, row: 0, col: j,
           w: bw - gapX, h: bh, hp, maxHp: hp,
-          poke: { id, t }, flash: 0, wobble: Math.random() * Math.PI * 2,
+          poke: { id, t }, flash: 0, wobble: gameRand() * Math.PI * 2,
           flight: {
             kind, state: 1, t: -(0.4 + j * 0.16), sx, sy, // negative t = holds off-screen, then glides on
             cx: g.cx, cy: g.cy, rx: g.rx, ry: g.ry, spd: g.spd,
@@ -726,8 +785,8 @@ function buildLevel(lvl) {
     const gHp = Math.max(1, Math.round((1.4 + regionsIn * 0.5 + cycle * 2) * p.brickHp));
     // one species per wing — two mirrored flocks, not a species salad
     const gPool = themedPool(gen, regionsIn >= 4 ? 2 : 1, theme);
-    const wingSpecies = [gPool[Math.floor(Math.random() * gPool.length)],
-      gPool[Math.floor(Math.random() * gPool.length)]];
+    const wingSpecies = [gPool[Math.floor(gameRand() * gPool.length)],
+      gPool[Math.floor(gameRand() * gPool.length)]];
     for (let i = 0; i < nG; i++) {
       const side = i % 2 ? 1 : -1, idx = Math.floor(i / 2);
       const [gid, gt] = wingSpecies[i % 2];
@@ -737,7 +796,7 @@ function buildLevel(lvl) {
         w: gw, h: gh, hp: gHp, maxHp: gHp, bare: true,
         guard: { side, sideF: side, targetSide: side, idx, n: perWing },
         dormant: G.gauntlet ? true : undefined, // wings wake WITH the legendary
-        poke: { id: gid, t: gt }, flash: 0, wobble: Math.random() * Math.PI * 2,
+        poke: { id: gid, t: gt }, flash: 0, wobble: gameRand() * Math.PI * 2,
       });
       getSprite(gid);
     }
@@ -771,7 +830,7 @@ function buildLevel(lvl) {
     const band = geo.floorY - geo.openTop;
     const total = Math.min(26, 9 + regionsIn * 2 + (stage >= 1 ? 1 : 0));
     const sumShare = C.squads.reduce((a2, q) => a2 + (q.share || 1), 0);
-    const mirror = Math.random() < 0.5 ? -1 : 1; // authored grammar, mirrored variety
+    const mirror = gameRand() < 0.5 ? -1 : 1; // authored grammar, mirrored variety
     const resolved = [];
     for (let s = 0; s < C.squads.length; s++) {
       const q = C.squads[s];
@@ -820,7 +879,7 @@ function buildLevel(lvl) {
         : g.rx * 2 * 1.6) * shrink; // open spans: width plus travel slack
       perS = Math.max(3, Math.min(perS, Math.floor(span / minGap)));
       const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
-      const [id, t] = pool3[Math.floor(Math.random() * pool3.length)]; // one species per squad
+      const [id, t] = pool3[Math.floor(gameRand() * pool3.length)]; // one species per squad
       const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.9 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
       const R = resolved[resolved.length - 1];
       // SHELL ARMOR: normal bolts plink off — ONE charged shot cracks it.
@@ -872,7 +931,7 @@ function buildLevel(lvl) {
           row: 90, col: i, w: 46, h: 42,
           hp: 3 + Math.floor(regionsIn / 2), maxHp: 3 + Math.floor(regionsIn / 2),
           bare: true, barrier: { vx: (i % 2 ? 1 : -1) * (22 + regionsIn * 2) },
-          poke: { id: rockId, t: 'rock' }, flash: 0, wobble: Math.random() * Math.PI * 2,
+          poke: { id: rockId, t: 'rock' }, flash: 0, wobble: gameRand() * Math.PI * 2,
         });
       }
       getSprite(rockId);
@@ -882,7 +941,7 @@ function buildLevel(lvl) {
   // arriving as pure flyers once the first formation falls
   G.reinforce = hasBoss ? 0 : (junkie ? (regionsIn >= 3 ? 2 : 1)
     : classic ? 0 : regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0);
-  G.marchDir = Math.random() < 0.5 ? -1 : 1;
+  G.marchDir = gameRand() < 0.5 ? -1 : 1;
   // boxed bricks are a STATIC wall on every non-boss wave — only the Pokémon
   // move (bosses keep their guard-ring choreography)
   G.blocksStatic = !hasBoss;
@@ -896,9 +955,9 @@ function buildLevel(lvl) {
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
   G.modifier = stage === 1 && lvl >= 2
-    ? MODIFIERS[Math.floor(Math.random() * MODIFIERS.length)]
-    : (stage === 0 && lvl > STAGES && Math.random() < 0.25
-      ? MODIFIERS[Math.floor(Math.random() * MODIFIERS.length)] : null);
+    ? MODIFIERS[Math.floor(gameRand() * MODIFIERS.length)]
+    : (stage === 0 && lvl > STAGES && gameRand() < 0.25
+      ? MODIFIERS[Math.floor(gameRand() * MODIFIERS.length)] : null);
   // ---- stage presentation ----
   if (hasBoss) {
     // gauntlet finales announce ROUND 1 instead — the legendary's own intro
@@ -923,11 +982,12 @@ function buildLevel(lvl) {
   if (!hasBoss && G.mode !== 'junkie') {
     const filler = G.bricks.filter(b => !b.isBoss && !b.armored && !b.flight && !b.veil);
     while (G.bricks.filter(b => !b.isBoss).length > 40 && filler.length) {
-      const i = Math.floor(Math.random() * filler.length);
+      const i = Math.floor(gameRand() * filler.length);
       G.bricks.splice(G.bricks.indexOf(filler[i]), 1);
       filler.splice(i, 1);
     }
   }
+  assignClassicBrickBehaviors(regionsIn, stage);
   if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = 0.9; // they fire as they float in
   // SPACE JUNKIE's Kanto challenge doubles as the CHARGE-SHOT tutorial
   if (G.mode === 'junkie' && lvl === 2) {
@@ -974,7 +1034,7 @@ function spawnReinforcement() {
   const kinds = ['ring', 'lane', 'chevron', 'arc', 'cross', 'carousel', 'swoop', 'diamond', 'helix', 'spiral', 'inf', 'liss', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain', 'clover', 'butterfly'];
   const kind = (junkie && G.encounter && G.encounter.squads.length)
     ? G.encounter.squads[0].kind
-    : kinds[Math.floor(Math.random() * Math.max(2, Math.min(kinds.length, 1 + regionsIn)))];
+    : kinds[Math.floor(gameRand() * Math.max(2, Math.min(kinds.length, 1 + regionsIn)))];
   const wrap = kind === 'swoop' || kind === 'helix' || kind === 'snake';
   const bw = G.brickW || 80, bh = G.brickH || 56;
   // keep reinforcement patterns in the same breathing-room airspace —
@@ -989,7 +1049,7 @@ function spawnReinforcement() {
   for (let i = 0; i < n; i++) {
     const rTier = i % 3 === 0 ? 3 : 2;
     const pool = themedPool(gen, rTier, theme);
-    const [id, t] = pool[Math.floor(Math.random() * pool.length)];
+    const [id, t] = pool[Math.floor(gameRand() * pool.length)];
     // reinforcements are all EVOLVED — bigger and tankier in junkie mode
     const rMul = junkie ? (rTier === 3 ? 1.5 : 1.25) : 1;
     const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp * (junkie ? (rTier === 3 ? 1.7 : 1.25) : 1)));
@@ -999,7 +1059,7 @@ function spawnReinforcement() {
       w: rw * rMul, h: rh * rMul,
       hp, maxHp: hp,
       poke: { id, t },
-      flash: 0, wobble: Math.random() * Math.PI * 2,
+      flash: 0, wobble: gameRand() * Math.PI * 2,
       entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
       flight: {
         kind, state: 2, launch: 0, sq: 99,
@@ -1014,7 +1074,8 @@ function spawnReinforcement() {
   setAnnounce('swift', gen.accent, 'REINFORCEMENTS!', 'A FRESH FLIGHT SWOOPS IN — FINISH THEM', 2.6);
 }
 
-function resetRun(startLevel = 1, trial = false) {
+function resetRun(startLevel = 1, trial = false, opts = {}) {
+  setRunSeed(opts.seed == null ? null : opts.seed);
   const p = preset();
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
@@ -1022,7 +1083,7 @@ function resetRun(startLevel = 1, trial = false) {
   G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
-  G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null;
+  G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = [];
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
   G.charge = 0; G.chargeCD = 0;
@@ -1037,11 +1098,14 @@ function resetRun(startLevel = 1, trial = false) {
   G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
+  G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
+  G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0 };
+  G.runSummary = null; G.lastDamageCause = 'MISSED BALL'; G.shareToast = 0; G.uiTouchPulse = null;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;
   // Pokédex research bonuses apply once at the start of a true new journey.
   // Region resumes and trial jumps cannot repeatedly farm the start package.
-  if (!trial && startLevel === 1) {
+  if (!trial && !G.daily && startLevel === 1) {
     if (dexRewardActive('fieldKit')) G.shieldCharges = 1;
     if (dexRewardActive('megaSpark')) G.mega = 0.25;
     if (dexRewardActive('veteran')) { G.lives++; G.livesMax++; }
@@ -1052,15 +1116,27 @@ function resetRun(startLevel = 1, trial = false) {
     for (let i = 1; i < startLevel; i++) {
       const eligible = PATH_KEYS.filter(k => pathLvl(k) < 4);
       if (!eligible.length) break;
-      advancePath(eligible[Math.floor(Math.random() * eligible.length)]);
+      advancePath(eligible[Math.floor(gameRand() * eligible.length)]);
       granted++;
     }
   }
   buildLevel(startLevel);
   serve();
-  if (trial) setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
-    genFor(startLevel).name + ' · ' + STAGE_NAMES[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
-    granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
+  if (trial || G.daily) {
+    const encounterCards = [G.announce, ...G.announceQueue].filter(Boolean);
+    G.announce = null; G.announceQueue = [];
+    if (G.daily) setAnnounce('star', '#ffd54f', 'DAILY CHALLENGE · ' + dailyDateKey(),
+      'SAME WALLS · DROPS · STARTER · UPGRADES FOR EVERY PLAYER', 3.4,
+      'LOCAL BEST ' + dailyBest() + ' · ONE SEEDED JOURNEY');
+    else setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
+      genFor(startLevel).name + ' · ' + STAGE_NAMES[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
+      granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
+    encounterCards.forEach(a => setAnnounce(a.icon, a.color, a.name, a.desc, a.max, a.sub, a.spriteId, a.spriteShiny));
+  }
+}
+function startDailyRun() {
+  SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+  resetRun(1, false, { daily: true, seed: dailySeed() });
 }
 function serve() {
   // starter partner: its type rides the ball (or the blaster) from the start.

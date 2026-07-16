@@ -11,17 +11,19 @@ function touchButtons() {
   // keep the thumb pads well clear of the very bottom edge — mobile browsers
   // park a toolbar / home indicator there and were clipping the FIRE ring off
   // the bottom of the screen. Anchor the pads a comfortable margin above FLOOR.
-  const base = FLOOR() - 34;
+  const base = FLOOR() - 34, scale = SETTINGS.buttonScale || 1;
+  const left = !!SETTINGS.leftHanded;
+  const edge = n => left ? n : W - n;
   const b = {
-    mega:  { x: W - 138, y: base - 40, r: 30 }, // beside FIRE — paddle rides above both
-    pause: { x: W - 28, y: 84, r: 20 },
-    sound: { x: W - 72, y: 82, r: 18 },
+    mega:  { x: edge(138), y: base - 40, r: 30 * scale }, // beside FIRE — paddle rides above both
+    pause: { x: edge(28), y: 84, r: 20 * scale },
+    sound: { x: edge(72), y: 82, r: 18 * scale },
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
   // and the ball is launched by tapping the playfield, not this pad. In the
   // shooter modes this ONE pad also charges when held, so there is no separate
   // CHARGE pad and the other thumb is free to fly/steer.
-  if (blasterArmed()) b.fire = { x: W - 58, y: base - 42, r: 42 };
+  if (blasterArmed()) b.fire = { x: edge(58), y: base - 42, r: 42 * scale };
   return b;
 }
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
@@ -52,8 +54,12 @@ const uiTouchIds = new Set(); // touches claimed by on-screen buttons
 // Pin the steering target to the player's current position whenever a UI pad
 // claims a touch. This also neutralizes any pointer replay that arrived just
 // before touchstart; a FIRE tap can never become a movement command.
-function claimUiTouch(id) {
+function claimUiTouch(id, x = null, y = null, label = '') {
   uiTouchIds.add(id);
+  if (x != null && y != null) {
+    G.uiTouchPulse = { x, y, label, t: 0.38, max: 0.38 };
+    haptic('tap');
+  }
   if (paddleTouchId !== null || !G.paddle) return;
   mouseX = G.paddle.x;
   if (G.mode === 'junkie') lastMouseY = G.shipYv + (IS_TOUCH ? 85 : 0);
@@ -98,7 +104,7 @@ window.addEventListener('touchstart', e => {
       // adopted as paddle control, even if the finger wiggles (that was
       // yanking the paddle to the FIRE button's side of the screen)
       if (B.fire && inCircle(x, y, B.fire, 22)) {
-        claimUiTouch(t.identifier);
+        claimUiTouch(t.identifier, B.fire.x, B.fire.y, 'FIRE');
         if (G.mode !== 'classic' && G.state === 'play') {
           // Delay only shooter-mode touch fire long enough to distinguish a
           // tap from a hold. A second finger cannot steal an active FIRE touch.
@@ -113,9 +119,9 @@ window.addEventListener('touchstart', e => {
         }
         continue;
       }
-      if (inCircle(x, y, B.mega, 12)) { tryMega(); claimUiTouch(t.identifier); continue; }
-      if (inCircle(x, y, B.pause, 10)) { togglePause(); claimUiTouch(t.identifier); continue; }
-      if (inCircle(x, y, B.sound, 10)) { toggleMusic(); claimUiTouch(t.identifier); continue; }
+      if (inCircle(x, y, B.mega, 12)) { tryMega(); claimUiTouch(t.identifier, B.mega.x, B.mega.y, 'MEGA'); continue; }
+      if (inCircle(x, y, B.pause, 10)) { togglePause(); claimUiTouch(t.identifier, B.pause.x, B.pause.y, 'PAUSE'); continue; }
+      if (inCircle(x, y, B.sound, 10)) { toggleMusic(); claimUiTouch(t.identifier, B.sound.x, B.sound.y, 'SOUND'); continue; }
       // near-miss dead zone: a fumbled tap AROUND a button is swallowed
       // outright — under no circumstances does it become paddle control
       if ((B.fire && inCircle(x, y, B.fire, 64)) || inCircle(x, y, B.mega, 42) ||
@@ -264,7 +270,7 @@ function quitToMenu() {
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') paused = true; });
 
 function setSliderFromX(i, x) {
-  const s = SLIDERS[i], gm = sliderGeom(i);
+  const s = activeSliders()[i], gm = sliderGeom(i);
   const v = Math.max(0, Math.min(1, (x - gm.x) / gm.w));
   SETTINGS[s.key] = Math.round((s.min + v * (s.max - s.min)) * 100) / 100;
 }
@@ -374,7 +380,7 @@ function applyCheat(i) {
   else if (it.k === '_life') { G.lives++; SFX.power(); }
   else if (it.k === '_element') {
     const ts2 = Object.keys(TYPE_COLORS);
-    G.ballElement = ts2[Math.floor(Math.random() * ts2.length)];
+    G.ballElement = ts2[Math.floor(gameRand() * ts2.length)];
     G.ballElementT = 30; G.resistStreak = 0;
     SFX.power();
   } else applyPower(modePower(POWERS[it.k]));
@@ -398,6 +404,22 @@ function advanceCeremony() {
   else if (c.evo && c.t < 1.85) c.t = 1.85;
   else if (!c.evo) c.t = doneAt;
 }
+function retryFromSummary() {
+  if (G.daily) startDailyRun();
+  else resetRun(G.runStartLevel || 1, !!G.trial);
+}
+function trialFromSummary() {
+  trialSel.region = regionIdx(G.level); trialSel.stage = stageIdx(G.level); trialSel.round = 0;
+  G.state = 'menu'; menuPage = 'setup'; trialOpen = true;
+}
+async function shareDailyResult() {
+  const text = dailyShareText();
+  try {
+    if (navigator.share) await navigator.share({ title: 'Wavebreaker Daily', text });
+    else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+    G.shareToast = 2.2;
+  } catch (e) { /* cancelled share sheet: keep the summary open */ }
+}
 function onPress(x, y) {
   audio();
   if (G.state === 'dex') {
@@ -406,6 +428,19 @@ function onPress(x, y) {
     return;
   }
   if (G.state === 'ceremony') { advanceCeremony(); return; }
+  if (G.state === 'gameover') {
+    const L = gameOverLayout();
+    if (G.daily && inRect(x, y, L.share)) { shareDailyResult(); return; }
+    if (inRect(x, y, L.button(0))) { retryFromSummary(); return; }
+    if (inRect(x, y, L.button(1))) {
+      if (RUN_CKPT && !G.daily && !G.trial) resumeRun();
+      else { G.state = 'menu'; menuPage = 'modes'; }
+      return;
+    }
+    if (inRect(x, y, L.button(2))) { trialFromSummary(); return; }
+    if (inRect(x, y, L.button(3))) { G.state = 'menu'; menuPage = 'modes'; return; }
+    return;
+  }
   if (G.state === 'upgrade') {
     if (G.upgradeChoices && G.stateT > 0.8) {
       const L = upgradeLayout();
@@ -473,16 +508,19 @@ function onPress(x, y) {
       if (inRect(x, y, A.close) || !inRect(x, y, { x: A.px, y: A.py, w: A.pw, h: A.ph })) {
         advOpen = false; saveSettings(); return;
       }
+      for (let i = 0; i < 2; i++) {
+        if (inRect(x, y, A.tab(i))) { settingsPage = i; dragSlider = -1; SFX.wall(); return; }
+      }
       const grab = IS_TOUCH ? 26 : 18;
-      for (let i = 0; i < SLIDERS.length; i++) {
+      for (let i = 0; i < A.sliders.length; i++) {
         const gm = A.slider(i);
         if (Math.abs(y - gm.y) < grab && x > gm.x - 14 && x < gm.x + gm.w + 14) {
           dragSlider = i; setSliderFromX(i, x); return;
         }
       }
-      for (let i = 0; i < TOGGLES.length; i++) {
+      for (let i = 0; i < A.toggles.length; i++) {
         if (inRect(x, y, A.toggle(i))) {
-          SETTINGS[TOGGLES[i].key] = !SETTINGS[TOGGLES[i].key];
+          SETTINGS[A.toggles[i].key] = !SETTINGS[A.toggles[i].key];
           saveSettings(); SFX.wall(); return;
         }
       }
@@ -517,6 +555,7 @@ function onPress(x, y) {
       resetRun();
       return;
     }
+    if (inRect(x, y, L.daily)) { startDailyRun(); return; }
     for (let i = 0; i < MODES.length; i++) {
       if (inRect(x, y, L.card(i))) {
         SETTINGS.mode = MODES[i].key; saveSettings();
@@ -659,7 +698,7 @@ function primaryAction() {
     }
     return;
   }
-  if (G.state === 'gameover') { G.state = 'menu'; menuPage = 'modes'; return; }
+  if (G.state === 'gameover') { retryFromSummary(); return; }
   if (G.state === 'ceremony') { advanceCeremony(); return; }
   if (G.state === 'upgrade') return;
   fireAction();
@@ -668,6 +707,7 @@ function tryMega() {
   if (G.state !== 'play' || G.megaT > 0 || G.mega < 1) return;
   G.megaT = megaDur(); G.mega = 0;
   G.shake = 14;
+  haptic('boss');
   SFX.mega();
   setAnnounce('mega', '#ffd54f', 'MEGA EVOLUTION!', 'PIERCING BALLS · AUTO-LASERS', 2.5);
 }

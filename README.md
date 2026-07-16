@@ -9,11 +9,13 @@ storage keys. UI mode labels are equally presentation-only: **BREAKER** /
 `classic` / `blaster` / `junkie` (docs and code comments below still say
 "Space Junkie" for the junkie systems — that's the mode's internal codename).
 
-A Breakout × Space Invaders/Galaga hybrid that transforms as you play: it
-starts as relaxed brick-breaker in Kanto and, region by region, becomes a
-Space-Junkie-style shooter where Pokémon break out of their bricks and
-fly intricate patterns. Journey through 9 regions (3 stages each — Arrival,
-Challenge, and a Legendary boss), draft a permanent skill tree, pick a
+A shared arcade campaign with three deliberately distinct games. **BREAKER**
+stays a pure brick breaker from Kanto through Paldea: every regular target is
+a brick, region-specific bomb/link/split/shield/treasure/slider rules add
+variety, and Legendary Pokémon appear only inside dedicated boss bricks.
+**BLASTER** attacks walls directly, while **STARFIGHTER** owns the full
+Space-Invaders/Galaga flight-pattern fantasy. Journey through 9 regions
+(3 stages each — Arrival, Challenge, and a Legendary boss), draft a permanent skill tree, pick a
 starter partner whose paddle ability evolves, and catch Pokémon for a
 persistent Pokédex. Three modes — **BREAKER** (`classic`, ball +
 earned blaster), **BLASTER** (ball-less pure firepower on the same walls),
@@ -28,6 +30,11 @@ legendary → the mythical).
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
+
+The title screen also offers a seeded daily Breaker run with fixed walls,
+drops, starter, and drafts; results and daily bests stay local and can be
+shared without an account. Mobile players can tune follow speed, button size
+and opacity, mirror controls for left-handed play, and enable haptics.
 
 Pure vanilla JS + Canvas 2D. No build step, no dependencies, no framework.
 
@@ -161,8 +168,10 @@ picking a mode leads to page 2, setup (starter + difficulty + START,
 
 ## The core systems (where to look, what they do)
 
-### Motion — the brick-breaker → Space Junkie arc
-This is the heart and the most-iterated system. Assigned per-wave in
+### Motion — mode-specific walls and flight
+This is the heart and the most-iterated system. BREAKER keeps every target in
+a frame; BLASTER mixes walls and flight; STARFIGHTER commits entirely to
+flight. Motion is assigned per-wave in
 `buildLevel` (state.js ~200) via `flightGeom`/`flyerRoom` (state.js ~155–210);
 executed in `update.js` — `flightPos` pattern math (~175) and the per-frame
 motion/march block (~495–650).

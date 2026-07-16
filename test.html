@@ -163,7 +163,7 @@ window.requestAnimationFrame = function () { return 0; };
   function resetBetween() {
     try {
       fireHeld = false; chargeHeld = false; trialOpen = false; advOpen = false; upgradeTreeOpen = false;
-      dragSlider = -1;
+      dragSlider = -1; settingsPage = 0;
       SETTINGS.mode = 'classic'; SETTINGS.autoFire = false;
       resetRun(1, true);
       G.state = 'menu';
@@ -591,7 +591,7 @@ window.requestAnimationFrame = function () { return 0; };
       for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
         const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
-        const rects = { quick: L.quick, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+        const rects = { quick: L.quick, daily: L.daily, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
@@ -660,6 +660,89 @@ window.requestAnimationFrame = function () { return 0; };
         if (saved[k] === null) localStorage.removeItem(k);
         else localStorage.setItem(k, saved[k]);
       }
+    }
+  });
+
+  test('classic region bricks: framed behaviors, boss-only finales', async () => {
+    const seen = [];
+    SETTINGS.mode = 'classic'; SETTINGS.preset = 'easy';
+    for (let region = 0; region < GENS.length; region++) {
+      resetRun(region * STAGES + 1, true, { seed: 'behavior-' + region });
+      const expected = Object.keys(BRICK_BEHAVIORS)[region];
+      const special = G.bricks.filter(b => b.behavior);
+      assert(special.some(b => b.behavior === expected), 'region ' + region + ' missing ' + expected + ' bricks');
+      assert(G.bricks.every(b => !bareMon(b)), 'classic region ' + region + ' spawned a bare enemy');
+      assert(G.bricks.every(b => b.poke.id !== GENS[region].boss.id), 'boss species appeared before finale in ' + GENS[region].name);
+      seen.push(expected);
+    }
+    resetRun(3, true, { seed: 'boss-stage' });
+    assert(G.bricks.some(b => b.isBoss || b.subBoss), 'finale did not contain boss bricks');
+    assert(!G.bricks.some(b => b.behavior), 'boss finale received regular-region brick behaviors');
+    return '9 framed behavior families: ' + seen.join(', ') + '; bosses isolated to finales';
+  });
+
+  test('brick behavior collision rules', async () => {
+    SETTINGS.mode = 'classic'; resetRun(1, true, { seed: 'behavior-collision' });
+    const mk = (x, col, behavior) => ({ bx: x, by: 180, hx: x, hy: 180, row: 0, col,
+      w: 70, h: 50, hp: 2, maxHp: 2, behavior, poke: { id: 74, t: 'rock' }, flash: 0, wobble: 0 });
+    const target = mk(360, 1, null), gen = mk(300, 0, 'shield');
+    G.bricks = [gen, target];
+    damageBrick(target, 1, target.bx, target.by, null);
+    assert(target.hp === 2, 'shielded neighbor took damage');
+    damageBrick(gen, 99, gen.bx, gen.by, null);
+    damageBrick(target, 1, target.bx, target.by, null);
+    assert(target.hp === 1, 'target stayed shielded after generator broke');
+    const split = mk(450, 4, 'split'); G.bricks = [split];
+    damageBrick(split, 99, split.bx, split.by, null);
+    assert(G.bricks.filter(b => b.miniBrick && !b.dead).length === 2, 'splitter did not create two mini bricks');
+    return 'shield generator blocks damage until broken; splitter creates 2 ball-breakable minis';
+  });
+
+  test('daily seed repeats formations, upgrades, and starter', async () => {
+    const snap = () => JSON.stringify({
+      mode: G.mode, starter: G.starter,
+      bricks: G.bricks.map(b => [b.poke.id, b.row, b.col, b.hp, b.behavior || '', Math.round(b.hx)]),
+      choices: (G.upgradeChoices || []).map(c => c.pathKey || c.stack.key),
+    });
+    startDailyRun(); rollUpgradeChoices(); const a = snap();
+    startDailyRun(); rollUpgradeChoices(); const b = snap();
+    assert(a === b, 'same-day daily setup changed between resets');
+    assert(G.daily && G.mode === 'classic' && G.starter === 'fire' && SETTINGS.preset === 'normal', 'daily ruleset is not fixed');
+    return dailyDateKey() + ' repeats walls + draft exactly; classic / normal / Charmander fixed';
+  });
+
+  test('queued intros + detailed run summary', async () => {
+    G.state = 'menu'; G.announce = null; G.announceQueue = [];
+    setAnnounce('star', '#fff', 'FIRST', 'ONE', 0.02);
+    setAnnounce('shield', '#fff', 'SECOND', 'TWO', 0.5);
+    assert(G.announce.name === 'FIRST' && G.announceQueue.length === 1, 'second intro overwrote the first');
+    update(0.03);
+    assert(G.announce && G.announce.name === 'SECOND', 'queued intro did not advance in sequence');
+    SETTINGS.mode = 'classic'; resetRun(1, true, { seed: 'summary' });
+    G.score = 4321; G.lives = 1; G.bestRally = 8; G.maxCombo = 11; G.caughtRun = 2;
+    G.runStats = { bricksBroken: 19, bossesDefeated: 0, itemsCaught: 4, damageTaken: 0 };
+    loseLife('TEST FINAL CAUSE');
+    assert(G.state === 'gameover' && G.runSummary, 'game over did not create summary');
+    assert(G.runSummary.cause === 'TEST FINAL CAUSE' && G.runSummary.bricks === 19 && G.runSummary.items === 4,
+      'summary omitted cause or run statistics');
+    return 'intro cards advance without overlap; summary records score, cause, rally, combo, bricks, items, catches';
+  });
+
+  test('touch control customization mirrors and scales pads', async () => {
+    const old = { left: SETTINGS.leftHanded, scale: SETTINGS.buttonScale, opacity: SETTINGS.buttonOpacity, follow: SETTINGS.touchFollow };
+    try {
+      SETTINGS.mode = 'blaster'; G.mode = 'blaster'; SETTINGS.leftHanded = false; SETTINGS.buttonScale = 1;
+      const right = touchButtons();
+      SETTINGS.leftHanded = true; SETTINGS.buttonScale = 1.25;
+      const left = touchButtons();
+      assert(right.fire.x > W / 2 && left.fire.x < W / 2, 'left-handed mode did not mirror FIRE');
+      assert(Math.abs(left.fire.r / right.fire.r - 1.25) < 0.001, 'button scale did not resize FIRE');
+      settingsPage = 1; const A = advLayout();
+      assert(A.sliders.length === 3 && A.toggles.length === 2, 'touch settings tab is incomplete');
+      return 'left-handed mirror + size, opacity, follow speed, haptics settings available';
+    } finally {
+      SETTINGS.leftHanded = old.left; SETTINGS.buttonScale = old.scale;
+      SETTINGS.buttonOpacity = old.opacity; SETTINGS.touchFollow = old.follow; settingsPage = 0;
     }
   });
 

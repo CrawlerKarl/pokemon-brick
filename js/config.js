@@ -10,9 +10,32 @@ const PRESETS = {
 };
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
-    reduceShake: false, reduceFlash: false, hcBall: false, autoFire: false, mode: 'classic' },
+    reduceShake: false, reduceFlash: false, hcBall: false, autoFire: false, mode: 'classic',
+    buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
+    leftHanded: false, haptics: true },
   (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}')));
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
+// Gameplay randomness can be locked for the daily challenge without making
+// decorative particles and scenery repeat. Only game-state code calls this.
+let RUN_RNG_STATE = null;
+function hashSeed(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0 || 1;
+}
+function setRunSeed(seed) { RUN_RNG_STATE = seed == null ? null : hashSeed(String(seed)); }
+function gameRand() {
+  if (RUN_RNG_STATE == null) return Math.random();
+  RUN_RNG_STATE ^= RUN_RNG_STATE << 13;
+  RUN_RNG_STATE ^= RUN_RNG_STATE >>> 17;
+  RUN_RNG_STATE ^= RUN_RNG_STATE << 5;
+  return (RUN_RNG_STATE >>> 0) / 4294967296;
+}
+function dailyDateKey(date = new Date()) {
+  const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0');
+  return y + '-' + m + '-' + String(date.getDate()).padStart(2, '0');
+}
+function dailySeed() { return 'WAVEBREAKER-DAILY-' + dailyDateKey(); }
 // ---- BRAND vs SKIN. WAVEBREAKER is the engine's name — every mode is
 // another way to break the wave, so new modes just add cards below. The
 // SKIN carries the current theme (today: Pokémon); a future re-theme swaps
@@ -62,10 +85,10 @@ function diff() {
     ballSpeed: 520 * p.ballSpeed * speedScale(),
     shotSpeed: p.shotSpeed * speedScale() * (0.9 + 0.24 * sm),
     // drops are rare on purpose — each one should feel like an event
-    dropChance: 0.06 * SETTINGS.drops * (mod?.key === 'swift' ? 1.4 : 1)
+    dropChance: 0.06 * (G.daily ? 1 : SETTINGS.drops) * (mod?.key === 'swift' ? 1.4 : 1)
       * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
       * (1 + 0.5 * upgN('fortune')), // Bond path tier 3
-    catchChance: 0.07 * (dexRewardActive('lucky') ? 1.25 : 1),
+    catchChance: 0.07 * (!G.daily && dexRewardActive('lucky') ? 1.25 : 1),
   };
 }
 const SLIDERS = [
@@ -84,6 +107,18 @@ const TOGGLES = [
   { key: 'hcBall', label: 'HIGH-CONTRAST BALL' },
   { key: 'autoFire', label: 'AUTO-FIRE (SHOOTER MODES)' },
 ];
+const TOUCH_SLIDERS = [
+  { key: 'buttonScale', label: 'BUTTON SIZE', min: 0.75, max: 1.35,
+    fmt: v => Math.round(v * 100) + '%' },
+  { key: 'buttonOpacity', label: 'BUTTON OPACITY', min: 0.35, max: 1,
+    fmt: v => Math.round(v * 100) + '%' },
+  { key: 'touchFollow', label: 'FOLLOW SPEED', min: 0.55, max: 1.55,
+    fmt: v => v < 0.75 ? 'GENTLE' : v < 1.15 ? 'NORMAL' : v < 1.4 ? 'FAST' : 'SNAP' },
+];
+const TOUCH_TOGGLES = [
+  { key: 'leftHanded', label: 'LEFT-HANDED BUTTONS' },
+  { key: 'haptics', label: 'HAPTIC FEEDBACK' },
+];
 const STARTERS = [
   { key: 'none', label: 'NONE' },
   { key: 'fire', label: 'CHARMANDER' },
@@ -91,6 +126,9 @@ const STARTERS = [
   { key: 'grass', label: 'BULBASAUR' },
 ];
 let advOpen = false; // advanced settings panel
+let settingsPage = 0; // 0 = game/accessibility, 1 = touch controls
+function activeSliders() { return settingsPage === 1 ? TOUCH_SLIDERS : SLIDERS; }
+function activeToggles() { return settingsPage === 1 ? TOUCH_TOGGLES : TOGGLES; }
 // the menu is TWO pages now: 'modes' (title + pick your game) then 'setup'
 // (difficulty + starter for the chosen mode, then START). Anything that
 // returns to the menu resets this to 'modes'.
@@ -117,7 +155,9 @@ function menuLayout() {
   const padB = short ? 6 : 14;
   const cardsY = tagY + (short ? 10 : 16);
   const quickH = short ? 28 : 40;
-  const quickW = Math.min(360, W * 0.88);
+  const quickRowW = Math.min(440, W * 0.92), quickGap = short ? 7 : 10;
+  const quickW = (quickRowW - quickGap) * 0.58;
+  const dailyW = quickRowW - quickGap - quickW;
   const quickY = cardsY;
   const heroY = quickY + quickH + (short ? 7 : 10);
   const bottom = H - padB;
@@ -132,7 +172,8 @@ function menuLayout() {
   const fW = Math.min(230, (W - 44) / 2);
   return {
     s, short, stacked, titleY, titleSize, tagY,
-    quick: { x: W / 2 - quickW / 2, y: quickY, w: quickW, h: quickH },
+    quick: { x: W / 2 - quickRowW / 2, y: quickY, w: quickW, h: quickH },
+    daily: { x: W / 2 - quickRowW / 2 + quickW + quickGap, y: quickY, w: dailyW, h: quickH },
     card: i => stacked
       ? { x: W / 2 - cardW / 2, y: heroY + i * (cardH + gap), w: cardW, h: cardH }
       : { x: left + i * (cardW + gap), y: heroY, w: cardW, h: cardH },
@@ -199,16 +240,18 @@ function setupLayout() {
 }
 // advanced settings overlay (sliders + accessibility toggles)
 function advLayout() {
+  const sliders = activeSliders(), toggles = activeToggles();
   const pw = Math.min(440, W * 0.92);
   const compact = H < 560;
-  const rowH = compact ? 38 : 52, togH = compact ? 30 : 40;
-  const top = compact ? 60 : 74, bottom = compact ? 26 : 54;
-  const ph = top + SLIDERS.length * rowH + TOGGLES.length * togH + bottom;
+  const rowH = compact ? 34 : 52, togH = compact ? 26 : 40;
+  const top = compact ? 102 : 112, bottom = compact ? 12 : 36;
+  const ph = top + sliders.length * rowH + toggles.length * togH + bottom;
   const px = W / 2 - pw / 2, py = Math.max(compact ? 8 : 20, H / 2 - ph / 2);
   return {
-    px, py, pw, ph, compact,
-    slider: i => ({ x: px + 36, y: py + (compact ? 72 : 88) + i * rowH, w: pw - 72 }),
-    toggle: i => ({ x: px + 30, y: py + top + SLIDERS.length * rowH + i * togH, w: pw - 60, h: togH - (compact ? 4 : 8) }),
+    px, py, pw, ph, compact, sliders, toggles,
+    tab: i => ({ x: px + 28 + i * (pw - 56) / 2, y: py + (compact ? 48 : 58), w: (pw - 56) / 2, h: compact ? 30 : 36 }),
+    slider: i => ({ x: px + 36, y: py + top + i * rowH, w: pw - 72 }),
+    toggle: i => ({ x: px + 30, y: py + top + sliders.length * rowH + i * togH, w: pw - 60, h: togH - (compact ? 4 : 8) }),
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };
 }
@@ -243,6 +286,19 @@ function dexBtnGeom() { return menuLayout().dex; }
 function pauseQuitGeom() {
   const w = Math.min(260, W * 0.72), h = 46;
   return { x: W / 2 - w / 2, y: H * 0.72, w, h };
+}
+function gameOverLayout() {
+  const narrow = W < 620, pw = Math.min(620, W * 0.94);
+  const ph = Math.min(H * 0.86, narrow ? 560 : 500);
+  const px = W / 2 - pw / 2, py = Math.max(22, H / 2 - ph / 2);
+  const gap = 10, by = py + ph - (narrow ? 116 : 62);
+  const bw = narrow ? (pw - 42) / 2 : (pw - 70) / 4;
+  return {
+    px, py, pw, ph, narrow,
+    button: i => ({ x: px + 16 + (i % (narrow ? 2 : 4)) * (bw + gap),
+      y: by + Math.floor(i / (narrow ? 2 : 4)) * 50, w: bw, h: 42 }),
+    share: { x: px + 16, y: py + ph - 164, w: pw - 32, h: 38 },
+  };
 }
 // ---- CHEAT CODES: a small ornate chip on the PAUSE screen (visible when
 // you go looking, never on screen during play — no temptation mid-run)
