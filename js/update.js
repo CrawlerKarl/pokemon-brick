@@ -51,21 +51,6 @@ function tickEffects(dt) {
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
   G.veilHintCD = Math.max(0, (G.veilHintCD || 0) - dt);
   G.chargeHintCD = Math.max(0, (G.chargeHintCD || 0) - dt);
-  // never strand a wave behind ENERGY VEILS: if only veiled bricks remain and
-  // the blaster is unarmed, command drops an emergency laser from on high
-  if (G.state === 'play' && G.mode === 'classic') {
-    G.rescueCD = Math.max(0, (G.rescueCD || 0) - dt);
-    if (G.rescueCD <= 0) {
-      const alive = G.bricks.filter(b => !b.dead);
-      if (alive.length && alive.every(b => b.veil) && !blasterArmed() &&
-          !G.powerups.some(p2 => p2.p && p2.p.key === 'laser')) {
-        G.rescueCD = 10;
-        G.powerups.push({ x: G.paddle.x, y: 60, vy: 100, p: POWERS.laser, rot: 0, hint: true });
-        addFloater(G.paddle.x, 95, 'EMERGENCY ARMAMENT!', '#4dd0e1', 14);
-        SFX.power();
-      } else G.rescueCD = 1.5;
-    }
-  }
 }
 
 // ball-only power-ups make no sense in the no-ball shooter modes — swap them
@@ -165,6 +150,9 @@ function damageBrick(br, dmg, sx, sy, element) {
             add.bare = true;
             add.guard = { side: 1, sideF: 1, targetSide: 1, idx: i, n: nAdd, ring: 1 };
           } else {
+            // Brick Breaker keeps even the boss's moving last-stand guards in
+            // their frames. They orbit as dangerous bricks, never bare mons.
+            if (G.mode === 'classic') add.brickOnly = true;
             add.flight = {
               kind: 'ring', state: 2, launch: 0, sq: null,
               cx: bx3, cy: Math.min(by3 + 60, H * 0.42), rx: Math.min(150, W * 0.16), ry: 90,
@@ -221,8 +209,10 @@ function damageBrick(br, dmg, sx, sy, element) {
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
     // a twinkle of glints tops off every kill — more (and gold) for elites/bosses
     sparkle(sx, sy, br.isBoss ? 16 : br.maxHp >= 3 ? 6 : 3, br.isBoss || br.maxHp >= 3);
-    // bosses are BARE legendaries now — they faint grandly, never card-shatter
-    shatterBrick(br, br.bx + G.fx, br.by + G.fy, bareMon(br) || br.isBoss);
+    // Shooter bosses faint as bare legendaries; Brick Breaker boss bricks
+    // fracture like the oversized blocks they are.
+    shatterBrick(br, br.bx + G.fx, br.by + G.fy,
+      bareMon(br) || (br.isBoss && G.mode !== 'classic'));
     // shockwave pop on every kill — bigger for elites, arena-wide for a boss
     ringFx(br.bx + G.fx, br.by + G.fy, col, 6,
       br.isBoss ? Math.min(W * 0.3, 240) : br.maxHp >= 3 ? 64 : 36,
@@ -241,25 +231,33 @@ function damageBrick(br, dmg, sx, sy, element) {
       if (stageIdx(G.level) === 0 && !br.isBoss && G.mode === 'classic') {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 95, p: POWERS.warp, rot: 0, hint: G.level === 1 });
       }
-      // Kanto's challenge wave TEACHES the blaster: the first kill always
-      // drops a LASER so the energy veils are breakable from the start
-      if (G.level === 2 && G.mode === 'classic') {
-        G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 30, vy: 105, p: POWERS.laser, rot: 0, hint: true });
-      }
     }
-    // drops: power-up tied to type, or a catchable pokéball
+    // Drops: when the player is hurt, recovery gets first priority. A small
+    // pity counter guarantees a potion after a run of eligible kills, so the
+    // healing loop is dependable without flooding a healthy board with items.
+    // Otherwise drop the usual type-keyed power-up or a catchable Poké Ball.
     const d = diff();
     if (br.isBoss) {
       const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 40, vy: 110, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
-    } else if (br.poke.id > 0 && !br.barrier && Math.random() < d.dropChance) {
-      const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
-      const pu = { x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 };
-      if (G.level === 1 && G.dropHint < 2) { pu.hint = true; G.dropHint++; } // first drops get a CATCH! tag
-      G.powerups.push(pu);
-    } else if (br.poke.id > 0 && !br.barrier && Math.random() < d.catchChance && !DEX.has(br.poke.id)) {
-      G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
+    } else if (br.poke.id > 0 && !br.barrier) {
+      const missingHp = Math.max(0, (G.livesMax || preset().lives) - G.lives);
+      if (missingHp > 0) G.healthDropPity = (G.healthDropPity || 0) + 1;
+      else G.healthDropPity = 0;
+      const healChance = Math.min(0.24,
+        (0.055 + missingHp * 0.025) * SETTINGS.drops * (br.maxHp >= 3 ? 1.35 : 1));
+      if (missingHp > 0 && (G.healthDropPity >= 10 || Math.random() < healChance)) {
+        G.healthDropPity = 0;
+        G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 112, p: POWERS.heal, rot: 0, hint: true });
+      } else if (Math.random() < d.dropChance) {
+        const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
+        const pu = { x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 };
+        if (G.level === 1 && G.dropHint < 2) { pu.hint = true; G.dropHint++; } // first drops get a CATCH! tag
+        G.powerups.push(pu);
+      } else if (Math.random() < d.catchChance && !DEX.has(br.poke.id)) {
+        G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
+      }
     }
     // last brick → dramatic slow-mo
     if (!G.bricks.some(b => !b.dead && !b.barrier)) G.dramaticT = 0.9;
@@ -303,7 +301,10 @@ function chargeSplash(x, y, element, dmg) {
 function flying(br) { return !!(br.flight && br.flight.state >= 1); }
 // is this a BARE Pokémon (no box around it) — flyer, diver, or once-dived?
 // bare mons faint when killed instead of shattering a card.
-function bareMon(br) { return !br.isBoss && !!(br.bare || br.dive || (br.flight && br.flight.state >= 1)); }
+function bareMon(br) {
+  if (G.mode === 'classic' || br.brickOnly) return false;
+  return !br.isBoss && !!(br.bare || br.dive || (br.flight && br.flight.state >= 1));
+}
 
 // ---- the flight pattern library: ~30 curves & formations the free-flying
 // Pokémon ride, nose to tail (Space Junkie / Galaga / Galaxian canon). Two
@@ -667,7 +668,7 @@ function loseLife() {
   G.shake = 16; G.flashT = 0.35;
   G.fx_fire = G.fx_laser = G.fx_draco = null;
   if (G.lives <= 0) {
-    // WHITE OUT: the skill tree absorbs the defeat. Burn two tree levels,
+    // KNOCKOUT: the skill tree absorbs the defeat. Burn two tree levels,
     // refill lives, and retry this wave — the run only truly ends once
     // there's no tree left to burn.
     if (totalPathLevels() > 0) {
@@ -682,7 +683,7 @@ function loseLife() {
       SFX.gameOver();
       buildLevel(G.level);
       serve();
-      setAnnounce('alert', '#ff8a65', 'WHITED OUT!',
+      setAnnounce('alert', '#ff8a65', 'KNOCKED OUT!',
         'THE TREE ABSORBED IT — LOST: ' + lost.join(' · '), 3.6, 'RETRYING THE WAVE WITH FULL LIVES');
       return;
     }
@@ -1874,6 +1875,9 @@ function update(dt) {
             dmg += G.starterLvl >= 3 ? 2 : 1;
             burst(b.x, b.y, '#ffab66', 8, 160, 0.4);
           }
+          if (G.mode === 'classic') {
+            dmg *= 1 + 0.15 * upgN('heavy') + 0.25 * upgN('demo');
+          }
           damageBrick(br, dmg, b.x, b.y, G.ballElement);
           if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
           awardRally(b, b.x, b.y);
@@ -2206,7 +2210,7 @@ function update(dt) {
       G.invuln = 2;
       const weak = eff === 1;
       // super-effective HEAVY blasts really hurt — they take an extra life
-      // (guarded so they never turn a last life into a double white-out)
+      // (guarded so they never turn a last life into a double knockout)
       if (weak && s.heavy && G.lives > 1) { G.lives--; G.hurtHud = 2.4; }
       addFloater(G.paddle.x, py - 50, weak ? (s.heavy ? 'WEAK! −2' : 'WEAK!') : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
       burst(G.paddle.x, py, weak ? '#ffab40' : '#ff5252', weak ? 40 : 30, weak ? 380 : 320);

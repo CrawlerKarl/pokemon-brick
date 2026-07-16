@@ -27,6 +27,10 @@ function touchButtons() {
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
 
 window.addEventListener('mousemove', e => {
+  // A touch tap can be followed by a synthetic mousemove at the same spot.
+  // Ignore that replay too (not just the later mousedown), otherwise tapping
+  // FIRE can move the Space Junkie pilot to the button before it shoots.
+  if (performance.now() - lastTouchT < 900) return;
   mouseX = e.clientX; lastMouseY = e.clientY;
   if (dragSlider >= 0) setSliderFromX(dragSlider, e.clientX);
 });
@@ -45,6 +49,15 @@ let chargeHeld = false, chargeTouchId = null; // charge a big shot (right-click 
 let touchFirePendingId = null, touchFirePendingT = 0;
 const TOUCH_CHARGE_HOLD_MS = 220;
 const uiTouchIds = new Set(); // touches claimed by on-screen buttons
+// Pin the steering target to the player's current position whenever a UI pad
+// claims a touch. This also neutralizes any pointer replay that arrived just
+// before touchstart; a FIRE tap can never become a movement command.
+function claimUiTouch(id) {
+  uiTouchIds.add(id);
+  if (paddleTouchId !== null || !G.paddle) return;
+  mouseX = G.paddle.x;
+  if (G.mode === 'junkie') lastMouseY = G.shipYv + (IS_TOUCH ? 85 : 0);
+}
 window.addEventListener('mousedown', e => {
   if (performance.now() - lastTouchT < 900) return;
   if (e.button === 2) { // right button = CHARGE (blaster mode)
@@ -77,7 +90,7 @@ window.addEventListener('touchstart', e => {
     if (G.state === 'play' || G.state === 'serve') {
       if (paused) { // pause screen is modal — route taps through onPress
         onPress(x, y);
-        uiTouchIds.add(t.identifier);
+        claimUiTouch(t.identifier);
         continue;
       }
       const B = touchButtons();
@@ -85,7 +98,7 @@ window.addEventListener('touchstart', e => {
       // adopted as paddle control, even if the finger wiggles (that was
       // yanking the paddle to the FIRE button's side of the screen)
       if (B.fire && inCircle(x, y, B.fire, 22)) {
-        uiTouchIds.add(t.identifier);
+        claimUiTouch(t.identifier);
         if (G.mode !== 'classic' && G.state === 'play') {
           // Delay only shooter-mode touch fire long enough to distinguish a
           // tap from a hold. A second finger cannot steal an active FIRE touch.
@@ -100,14 +113,14 @@ window.addEventListener('touchstart', e => {
         }
         continue;
       }
-      if (inCircle(x, y, B.mega, 12)) { tryMega(); uiTouchIds.add(t.identifier); continue; }
-      if (inCircle(x, y, B.pause, 10)) { togglePause(); uiTouchIds.add(t.identifier); continue; }
-      if (inCircle(x, y, B.sound, 10)) { toggleMusic(); uiTouchIds.add(t.identifier); continue; }
+      if (inCircle(x, y, B.mega, 12)) { tryMega(); claimUiTouch(t.identifier); continue; }
+      if (inCircle(x, y, B.pause, 10)) { togglePause(); claimUiTouch(t.identifier); continue; }
+      if (inCircle(x, y, B.sound, 10)) { toggleMusic(); claimUiTouch(t.identifier); continue; }
       // near-miss dead zone: a fumbled tap AROUND a button is swallowed
       // outright — under no circumstances does it become paddle control
       if ((B.fire && inCircle(x, y, B.fire, 64)) || inCircle(x, y, B.mega, 42) ||
           inCircle(x, y, B.pause, 30) || inCircle(x, y, B.sound, 30)) {
-        uiTouchIds.add(t.identifier);
+        claimUiTouch(t.identifier);
         continue;
       }
       // everything else is paddle control — and launches during serve
@@ -126,7 +139,7 @@ window.addEventListener('touchstart', e => {
 let onPressDexTapPending = null;
 window.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
-    if (uiTouchIds.has(t.identifier)) continue; // button touches never steer
+    if (uiTouchIds.has(t.identifier)) { claimUiTouch(t.identifier); continue; } // button touches never steer
     if (G.state === 'dex' && dexDragY != null) {
       dexScroll = Math.max(0, dexScroll - (t.clientY - dexDragY));
       dexDragY = t.clientY;
@@ -142,6 +155,7 @@ window.addEventListener('touchmove', e => {
 window.addEventListener('touchend', e => {
   lastTouchT = performance.now();
   for (const t of e.changedTouches) {
+    if (uiTouchIds.has(t.identifier)) claimUiTouch(t.identifier);
     uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
@@ -161,6 +175,7 @@ window.addEventListener('touchend', e => {
 window.addEventListener('touchcancel', e => {
   lastTouchT = performance.now();
   for (const t of e.changedTouches) {
+    if (uiTouchIds.has(t.identifier)) claimUiTouch(t.identifier);
     uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
@@ -336,7 +351,7 @@ function pickUpgrade(i) {
   // confirm AFTER buildLevel so the stage banner doesn't swallow it —
   // unless the partner just evolved, which is the bigger moment
   if (G.justEvolved) { G.justEvolved = false; return; }
-  const shownName = G.mode === 'junkie' ? junkieName : tier.name;
+  const shownName = junkieName;
   setAnnounce(tier.icon, c.path.color,
     (capped ? '★ ' : '') + shownName + (capped ? ' ★' : ''),
     tierDesc(c.pathKey, c.tierIdx), capped ? 3 : 2.2,
@@ -489,7 +504,7 @@ function onPress(x, y) {
       if (inRect(x, y, L.trial)) { trialOpen = true; SFX.wall(); return; }
       return;
     }
-    // PAGE 1 — pick your game: two headliner cards + the experimental chip
+    // PAGE 1 — pick your game: three animated mode cards
     const L = menuLayout();
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
     if (inRect(x, y, L.quick)) {
@@ -503,7 +518,7 @@ function onPress(x, y) {
       return;
     }
     for (let i = 0; i < MODES.length; i++) {
-      if (inRect(x, y, i < 2 ? L.card(i) : L.exp)) {
+      if (inRect(x, y, L.card(i))) {
         SETTINGS.mode = MODES[i].key; saveSettings();
         menuPage = 'setup'; SFX.power(); return;
       }
@@ -557,8 +572,8 @@ function fireAction(auto = false) {
     });
     return;
   }
-  // CLASSIC has no free blaster — the ball is the weapon until you EARN a
-  // blaster (offense draft / LASER power-up / Mega). Pressing fire just no-ops.
+  // CLASSIC has no free blaster — the ball is the weapon until tier 3 of an
+  // offense path, a short LASER pickup, or Mega. Pressing fire otherwise no-ops.
   if (!blasterArmed()) return;
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;

@@ -96,6 +96,89 @@ function blitBadge(glyph, x, y, r, color, tone) {
   ctx.drawImage(b, x - b.width / 2, y - b.height / 2);
 }
 
+// Upgrade-draft presentation helpers. Motion is deterministic and restrained,
+// with reduced-motion settings respected, so the screen feels alive without
+// making card text harder to scan.
+function drawDraftBackdrop(accent) {
+  ctx.save();
+  const motion = SETTINGS.reduceFlash ? 0.25 : 1;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.1;
+  const glow = glowSprite();
+  ctx.drawImage(glow, W / 2 - Math.min(W * 0.42, 340), H * 0.03,
+    Math.min(W * 0.84, 680), Math.min(W * 0.84, 680));
+  // A slow constellation of upgrade motes connects the title to the cards.
+  for (let i = 0; i < 12; i++) {
+    const x = ((i * 137.5 + W * 0.08) % Math.max(1, W - 40)) + 20;
+    const lane = (i % 4) / 3;
+    const y = H * (0.16 + lane * 0.68) + Math.sin(G.time * (0.35 + i % 3 * 0.08) * motion + i * 2.1) * 15;
+    const tw = 0.35 + 0.65 * Math.abs(Math.sin(G.time * 1.8 * motion + i));
+    ctx.globalAlpha = 0.05 + tw * 0.12;
+    ctx.fillStyle = i % 3 ? '#80d8ff' : accent;
+    ctx.beginPath(); ctx.arc(x, y, 1.2 + tw * 1.6, 0, Math.PI * 2); ctx.fill();
+    if (i < 11) {
+      const nx = (((i + 1) * 137.5 + W * 0.08) % Math.max(1, W - 40)) + 20;
+      ctx.strokeStyle = accent; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(nx, y + (lane < 0.5 ? 24 : -24)); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function drawDraftCardEnergy(r, color, active, selected, phase = 0) {
+  ctx.save();
+  roundRect(r.x, r.y, r.w, r.h, 14); ctx.clip();
+  // Saturated top rail and corner circuitry give every path a distinct frame.
+  const rail = ctx.createLinearGradient(r.x, 0, r.x + r.w, 0);
+  rail.addColorStop(0, color + '22'); rail.addColorStop(0.5, color); rail.addColorStop(1, color + '22');
+  ctx.globalAlpha = active ? 0.9 : 0.48;
+  ctx.fillStyle = rail; ctx.fillRect(r.x + 8, r.y + 2, r.w - 16, active ? 3 : 2);
+  ctx.strokeStyle = color + '55'; ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(r.x + 10 + i * 7, r.y + 11);
+    ctx.lineTo(r.x + 16 + i * 7, r.y + 17);
+    ctx.lineTo(r.x + 10 + i * 7, r.y + 23);
+    ctx.stroke();
+  }
+  if ((active || selected) && !SETTINGS.reduceFlash) {
+    const sweep = ((G.time * 58 + phase * 83) % (r.w + 100)) - 50;
+    const sg = ctx.createLinearGradient(r.x + sweep - 34, 0, r.x + sweep + 34, 0);
+    sg.addColorStop(0, 'rgba(255,255,255,0)');
+    sg.addColorStop(0.5, selected ? 'rgba(255,255,255,0.16)' : color + '18');
+    sg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg; ctx.fillRect(r.x, r.y, r.w, r.h);
+  }
+  ctx.restore();
+  if (selected) {
+    ctx.save(); ctx.fillStyle = '#fff';
+    for (let i = 0; i < 3; i++) {
+      const a = G.time * 0.9 + phase + i * Math.PI * 2 / 3;
+      const px = r.x + r.w / 2 + Math.cos(a) * (r.w / 2 + 4);
+      const py = r.y + r.h / 2 + Math.sin(a) * Math.min(r.h * 0.38, 42);
+      ctx.globalAlpha = 0.35 + 0.35 * Math.abs(Math.sin(a * 2));
+      ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function drawDraftBadge(glyph, x, y, r, color, active = false, phase = 0) {
+  const bob = SETTINGS.reduceFlash ? 0 : Math.sin(G.time * 2.4 + phase) * (active ? 2.5 : 1.2);
+  const yy = y + bob;
+  ctx.save();
+  ctx.strokeStyle = color + (active ? 'cc' : '66');
+  ctx.lineWidth = active ? 1.7 : 1;
+  ctx.setLineDash([4, 5]); ctx.lineDashOffset = -G.time * (active ? 12 : 5);
+  ctx.beginPath(); ctx.arc(x, yy, r + 7, G.time * 0.35 + phase, G.time * 0.35 + phase + Math.PI * 1.55); ctx.stroke();
+  ctx.setLineDash([]);
+  if (active) {
+    ctx.globalAlpha = 0.3 + 0.2 * Math.sin(G.time * 5 + phase);
+    ctx.drawImage(glowSprite(), x - r * 1.65, yy - r * 1.65, r * 3.3, r * 3.3);
+    ctx.globalAlpha = 1;
+  }
+  blitBadge(glyph, x, yy, r, color);
+  ctx.restore();
+}
+
 // a soft additive glow disc (white → transparent) for cheap emissive light
 function glowSprite() {
   if (fxCache.glow) return fxCache.glow;
@@ -340,6 +423,107 @@ function drawBossMon(br, x, y) {
   ctx.restore();
 }
 
+// Brick Breaker's finales stay true to the mode: the legendary is sealed in
+// one oversized, animated boss brick. The brick patrols with its authored boss
+// movement, changes armor at each phase, fires attacks, and calls orbiting
+// brick guards in its last stand.
+function drawBossBrick(br, x, y) {
+  const col = TYPE_COLORS[br.poke.t];
+  const ph = br.phase || 1;
+  const phCol = ph === 3 ? '#ff1744' : ph === 2 ? '#ff8a65' : col;
+  const hw = br.w / 2, hh = br.h / 2, depth = 12;
+  const t = G.time, frac = Math.max(0, br.hp / br.maxHp);
+  const phased = br.phaseT > 0 ? 0.38 + 0.12 * Math.sin(t * 7) : 1;
+  ctx.save();
+  ctx.globalAlpha = phased;
+
+  // Breathing arena glow and four moving corner sentries make each phase feel
+  // active while preserving an unmistakably rectangular brick silhouette.
+  const ar = Math.max(br.w, br.h) * (0.72 + 0.04 * Math.sin(t * 2.5));
+  ctx.globalAlpha = phased * (ph === 3 ? 0.82 : 0.55);
+  ctx.drawImage(auraSprite(phCol), x - ar, y - ar, ar * 2, ar * 2);
+  ctx.globalAlpha = phased;
+  for (let i = 0; i < 4; i++) {
+    const a = t * (0.7 + ph * 0.28) + i * Math.PI / 2;
+    const px = x + Math.cos(a) * (hw + 10);
+    const py = y + Math.sin(a) * (hh + 8) * 0.65;
+    ctx.beginPath(); ctx.arc(px, py, ph === 3 ? 4.5 : 3.4, 0, Math.PI * 2);
+    ctx.fillStyle = i < ph + 1 ? phCol : 'rgba(255,255,255,0.22)'; ctx.fill();
+  }
+
+  // Contact shadow, deep sidewall, and beveled top face.
+  ctx.fillStyle = 'rgba(0,0,8,0.42)';
+  roundRect(x - hw + 5, y - hh + depth + 7, br.w, br.h, 18); ctx.fill();
+  roundRect(x - hw, y - hh + depth, br.w, br.h, 18);
+  ctx.fillStyle = ph === 3 ? '#5b101f' : '#10162a'; ctx.fill();
+  const shell = ctx.createLinearGradient(x, y - hh, x, y + hh);
+  shell.addColorStop(0, ph === 3 ? '#ff6b75' : mixHex(col, '#ffffff', 0.3));
+  shell.addColorStop(0.18, col);
+  shell.addColorStop(1, mixHex(col, '#070b19', 0.72));
+  roundRect(x - hw, y - hh, br.w, br.h, 18); ctx.fillStyle = shell; ctx.fill();
+  ctx.lineWidth = ph === 3 ? 4 : 3;
+  ctx.strokeStyle = br.flash > 0 ? '#ffffff' : phCol;
+  roundRect(x - hw, y - hh, br.w, br.h, 18); ctx.stroke();
+
+  // Reinforced inner window: the Pokémon is artwork inside the brick, never a
+  // free-floating enemy. Phase rails close inward as the armor breaks down.
+  const inset = 8;
+  roundRect(x - hw + inset, y - hh + inset, br.w - inset * 2, br.h - inset * 2, 12);
+  ctx.fillStyle = 'rgba(5,9,24,0.68)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.34)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.save();
+  roundRect(x - hw + inset + 2, y - hh + inset + 2, br.w - inset * 2 - 4, br.h - inset * 2 - 4, 10);
+  ctx.clip();
+  const img = getSprite(br.poke.id);
+  if (img.complete && img.naturalWidth) {
+    const s = Math.min(br.w * 0.54, br.h * 0.92) * (1 + br.flash * 0.06);
+    ctx.drawImage(img, x - s / 2, y - s / 2 - 3, s, s);
+  } else drawGlyph(ctx, 'pokeball', x, y, hh * 0.38, '#ffffff55');
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.12 + br.flash * 0.34;
+  ctx.drawImage(glowSprite(), x - hw, y - hh, br.w, br.h * 0.75);
+  ctx.restore();
+
+  // Segmented phase rails and deterministic crack lines tell the player how
+  // dangerous the brick has become without obscuring the sprite.
+  for (let i = 0; i < 3; i++) {
+    const rw = (br.w - 28) / 3 - 4;
+    roundRect(x - hw + 14 + i * (rw + 4), y + hh - 12, rw, 4, 2);
+    ctx.fillStyle = i < ph ? phCol : 'rgba(255,255,255,0.16)'; ctx.fill();
+  }
+  if (ph >= 2) {
+    ctx.strokeStyle = ph === 3 ? 'rgba(255,235,238,0.8)' : 'rgba(5,8,18,0.62)';
+    ctx.lineWidth = ph === 3 ? 2 : 1.4;
+    for (let i = 0; i < ph + 1; i++) {
+      const sx = x + (i - ph / 2) * br.w * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(sx, y - hh + 4);
+      ctx.lineTo(sx + (i % 2 ? 9 : -8), y - 9);
+      ctx.lineTo(sx + (i % 2 ? 2 : -1), y + hh - 5);
+      ctx.stroke();
+    }
+  }
+
+  // Nameplate and segmented boss health remain locked to the brick hitbox.
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 13px Orbitron, sans-serif';
+  ctx.fillStyle = ph === 3 ? '#ff8a80' : '#ffffff';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+  ctx.fillText('BOSS BRICK · ' + br.poke.n.toUpperCase(), x, y - hh - 29);
+  ctx.shadowBlur = 0;
+  const barW = Math.max(br.w * 0.9, 150), barY = y - hh - 18;
+  roundRect(x - barW / 2, barY, barW, 9, 4.5);
+  ctx.fillStyle = 'rgba(0,0,0,0.68)'; ctx.fill();
+  if (frac > 0) {
+    const hg = ctx.createLinearGradient(x - barW / 2, 0, x + barW / 2, 0);
+    hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
+    roundRect(x - barW / 2, barY, barW * frac, 9, 4.5); ctx.fillStyle = hg; ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(6,9,24,0.92)';
+  for (const f of [1 / 3, 2 / 3]) ctx.fillRect(x - barW / 2 + barW * f - 1, barY, 2, 9);
+  ctx.restore();
+}
+
 function drawBricks() {
   const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant) || G.bricks.find(b => b.isBoss);
   const introOff = G.bossIntro > 0 ? -Math.pow(G.bossIntro / 1.6, 2) * (H * 0.4) : 0;
@@ -431,9 +615,25 @@ function drawBricks() {
         ctx.globalAlpha = 1;
       }
       if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, yb - s2 * 0.4, 5, '#ffd700');
-      // durability ring on tough flyers — evolved elites take several hits,
-      // and without this their remaining HP is guesswork
-      if (br.maxHp >= 3 && br.hp < br.maxHp && br.hp > 0) {
+      // Sentinel bosses always carry a named bar; ordinary tough flyers use a
+      // compact ring once damaged. This creates a clear health hierarchy:
+      // player rail → sentinel bar → legendary phase bar → elite rings.
+      if (br.subBoss && br.hp > 0) {
+        const frac = Math.max(0, br.hp / br.maxHp);
+        const sbw = Math.max(78, s2 * 1.45), sby = yb - s2 * 0.67;
+        ctx.font = '800 8px Orbitron, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#e8eef6';
+        ctx.fillText((br.poke.n || NAMES[br.poke.id] || 'SENTINEL').toUpperCase(), x, sby - 8, sbw);
+        roundRect(x - sbw / 2, sby, sbw, 6, 3);
+        ctx.fillStyle = 'rgba(5,8,20,0.72)'; ctx.fill();
+        if (frac > 0) {
+          roundRect(x - sbw / 2, sby, sbw * frac, 6, 3);
+          const sg = ctx.createLinearGradient(x - sbw / 2, 0, x + sbw / 2, 0);
+          sg.addColorStop(0, col); sg.addColorStop(1, '#f5f7ff');
+          ctx.fillStyle = sg; ctx.fill();
+        }
+      } else if (br.maxHp >= 3 && br.hp < br.maxHp && br.hp > 0) {
         const frac = Math.max(0, br.hp / br.maxHp);
         ctx.lineWidth = 3; ctx.lineCap = 'round';
         ctx.strokeStyle = 'rgba(8,12,28,0.55)';
@@ -465,8 +665,13 @@ function drawBricks() {
       ctx.restore();
       continue;
     }
-    // the legendary gets its own full presentation — never a framed card
-    if (br.isBoss) { drawBossMon(br, x, y); continue; }
+    // Brick Breaker bosses are oversized multi-phase bricks; shooter bosses
+    // remain the free legendary arena centerpieces used by those modes.
+    if (br.isBoss) {
+      if (G.mode === 'classic') drawBossBrick(br, x, y);
+      else drawBossMon(br, x, y);
+      continue;
+    }
     ctx.save();
     const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(G.time * 6) : 1; // Lunala fades out
     ctx.globalAlpha = phased;
@@ -1635,10 +1840,41 @@ function drawPowerups() {
       ctx.strokeStyle = '#263238'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(14, 0); ctx.stroke();
+    } else if (pu.p.key === 'heal') {
+      // Recovery item: a medical capsule with a heart core, rotating cross
+      // reticle, and a stronger pulse than ordinary drops so it reads as HP.
+      const col = pu.p.color, pulse = 0.5 + 0.5 * Math.sin(G.time * 7 + pu.rot);
+      ctx.shadowColor = col; ctx.shadowBlur = 16 + pulse * 10;
+      ctx.beginPath(); ctx.arc(0, 0, 21 + pulse * 2, 0, Math.PI * 2);
+      ctx.fillStyle = col + '18'; ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.save();
+      ctx.rotate(G.time * 0.8 + pu.rot * 0.15);
+      ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = col + 'bb';
+      ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      for (let i = 0; i < 4; i++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.fillStyle = '#ffd6e0'; ctx.fillRect(-2, -25, 4, 8);
+      }
+      ctx.restore();
+      roundRect(-16, -16, 32, 32, 10);
+      const hg = ctx.createLinearGradient(-12, -16, 12, 16);
+      hg.addColorStop(0, '#ffd7e2'); hg.addColorStop(0.36, col); hg.addColorStop(1, '#5b1730');
+      ctx.fillStyle = hg; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#fff0f4'; ctx.stroke();
+      drawGlyph(ctx, 'heart', 0, 1, 9, '#fff');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(8, -12, 7, 2.5); ctx.fillRect(10.25, -14.25, 2.5, 7);
     } else {
-      // power-up capsule: gradient body, glass highlight, white glyph
+      // Power-up capsule: layered halo, gradient body, glass highlight, white
+      // glyph, and orbiting sparks. The icon now feels like an active device
+      // instead of a flat colored square.
       const col = pu.p.color;
-      ctx.shadowColor = col; ctx.shadowBlur = 13 + 4 * Math.sin(G.time * 4 + pu.rot);
+      const pulse = 0.5 + 0.5 * Math.sin(G.time * 4 + pu.rot);
+      ctx.shadowColor = col; ctx.shadowBlur = 13 + 7 * pulse;
+      ctx.beginPath(); ctx.arc(0, 0, 21 + pulse * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = col + '14'; ctx.fill();
       roundRect(-17, -17, 34, 34, 10);
       const cg = ctx.createLinearGradient(0, -17, 0, 17);
       cg.addColorStop(0, col + 'd9');
@@ -1654,6 +1890,12 @@ function drawPowerups() {
       ctx.fillStyle = '#fff'; ctx.fill();
       ctx.globalAlpha = 1;
       drawGlyph(ctx, pu.p.icon, 0, 2.5, 10, '#fff');
+      // three tiny satellites rotate in the opposite direction to the bob
+      for (let i = 0; i < 3; i++) {
+        const a2 = -G.time * 1.4 + pu.rot * 0.25 + i * Math.PI * 2 / 3;
+        ctx.fillStyle = i === 0 ? '#fff' : col;
+        ctx.beginPath(); ctx.arc(Math.cos(a2) * 22, Math.sin(a2) * 22, i === 0 ? 1.8 : 1.2, 0, Math.PI * 2); ctx.fill();
+      }
     }
     ctx.restore();
     if (pu.hint) { // first-ever drops: tell the player to catch them
@@ -1664,7 +1906,7 @@ function drawPowerups() {
       ctx.font = '900 13px Orbitron, sans-serif';
       ctx.fillStyle = '#ffd54f';
       ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-      ctx.fillText('CATCH!', pu.x, pu.y - 34);
+      ctx.fillText(pu.p.key === 'heal' ? 'RECOVER!' : 'CATCH!', pu.x, pu.y - 34);
       ctx.beginPath();
       ctx.moveTo(pu.x - 5, pu.y - 27); ctx.lineTo(pu.x + 5, pu.y - 27); ctx.lineTo(pu.x, pu.y - 20);
       ctx.closePath(); ctx.fill();
@@ -1987,6 +2229,49 @@ function drawLifeRing() {
   ctx.fillText(String(G.lives), cx, cy + 6);
   ctx.restore();
 }
+// Persistent segmented HP rail. The ring remains the compact count, while
+// this second readout makes both maximum health and missing segments obvious
+// without waiting for the temporary on-hit bar near the player.
+function drawPlayerHealthBar() {
+  const denom = Math.max(1, G.livesMax || G.lives);
+  const lives = Math.max(0, G.lives);
+  const danger = lives <= 1;
+  const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : '#5fe0a6';
+  const pulse = danger ? 0.62 + 0.38 * Math.abs(Math.sin(G.time * 5)) : 1;
+  const barW = W < 560 ? 82 : 126;
+  const x = W - 58 - barW, y = 16, h = 25;
+  const labelW = W < 560 ? 22 : 28;
+  const gap = 3, segN = Math.min(6, denom);
+  const segW = (barW - labelW - 12 - gap * (segN - 1)) / segN;
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  roundRect(x, y, barW, h, 9);
+  ctx.fillStyle = 'rgba(6,10,26,0.8)'; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = col + '77'; ctx.stroke();
+  ctx.font = `900 ${W < 560 ? 8 : 9}px Orbitron, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = col;
+  ctx.fillText('HP', x + labelW / 2 + 3, y + h / 2 + 0.5);
+  let sx = x + labelW + 5;
+  if (denom <= 6) {
+    for (let i = 0; i < denom; i++) {
+      roundRect(sx, y + 7, segW, h - 14, 3);
+      ctx.fillStyle = i < lives ? col : 'rgba(255,255,255,0.12)'; ctx.fill();
+      if (i < lives) {
+        ctx.fillStyle = 'rgba(255,255,255,0.28)';
+        roundRect(sx + 1, y + 8, Math.max(1, segW - 2), 2, 1); ctx.fill();
+      }
+      sx += segW + gap;
+    }
+  } else {
+    const railW = barW - labelW - 12;
+    roundRect(sx, y + 7, railW, h - 14, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+    const frac = Math.max(0, Math.min(1, lives / denom));
+    if (frac > 0) { roundRect(sx, y + 7, railW * frac, h - 14, 3); ctx.fillStyle = col; ctx.fill(); }
+  }
+  ctx.restore();
+}
 function drawHUD() {
   const g = ctx.createLinearGradient(0, 0, 0, 56);
   g.addColorStop(0, 'rgba(5,8,25,0.92)'); g.addColorStop(1, 'rgba(5,8,25,0.4)');
@@ -2071,6 +2356,7 @@ function drawHUD() {
     drawGlyph(ctx, G.modifier.icon, W / 2 - ctx.measureText(G.modifier.name).width / 2 - 12, 42, 6, G.modifier.color);
     ctx.fillText(G.modifier.name, W / 2 + 4, 42);
   }
+  drawPlayerHealthBar();
   drawLifeRing();
   // ---- active power-up chips: capped slots so phones stay readable ----
   const active = [];
@@ -2284,11 +2570,25 @@ function drawMenu() {
   dim(0.55);
   const L = menuLayout();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title('POKÉMON', L.titleY, L.titleSize, '#ffd54f');
-  title('INVADERS BREAKOUT', L.titleY + L.titleSize, L.titleSize * 0.5, '#e3f2fd');
+  title(GAME_TITLE, L.titleY, L.titleSize, '#ffd54f');
+  // the SKIN is an edition stamp under the brand — swap SKIN_EDITION
+  // (config.js) to re-theme without touching the game's name
+  {
+    // short viewports have no room for pill + tagline — the pill takes the
+    // tagline's slot and the tagline is skipped below
+    const py = L.short ? L.tagY : L.titleY + L.titleSize * 1.05;
+    ctx.font = `700 ${Math.max(9, L.titleSize * 0.24)}px Orbitron, sans-serif`;
+    const tw = ctx.measureText('◓ ' + SKIN_EDITION).width + 26;
+    const th = Math.max(16, L.titleSize * 0.44);
+    roundRect(W / 2 - tw / 2, py - th / 2, tw, th, th / 2);
+    ctx.fillStyle = 'rgba(255,213,79,0.09)'; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,213,79,0.45)'; ctx.stroke();
+    ctx.fillStyle = '#ffe082';
+    ctx.fillText('◓ ' + SKIN_EDITION, W / 2, py + 0.5);
+  }
   const maxW = W * 0.92;
   // one tagline only — the real tutorial happens in your first wave
-  fitText(W < 560 ? 'CATCH POKÉMON ACROSS 9 REGIONS'
+  if (!L.short) fitText(W < 560 ? 'CATCH POKÉMON ACROSS 9 REGIONS'
     : 'CATCH POKÉMON ACROSS 9 REGIONS · A LEGENDARY GUARDS EVERY THIRD WAVE',
     L.tagY, 12 * Math.max(0.85, L.s), '600', '#cfd8dc', maxW, "Verdana, system-ui, sans-serif");
   // First-run escape hatch from mode/starter/difficulty choice overload.
@@ -2309,39 +2609,13 @@ function drawMenu() {
     if (!L.short) {
       ctx.font = bodyFont(9.5, 700);
       ctx.fillStyle = '#4a3506';
-      ctx.fillText('RECOMMENDED · BRICK BREAKER · EASY · CHARMANDER', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
+      ctx.fillText('RECOMMENDED · BREAKER · EASY · CHARMANDER', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
     }
     ctx.restore();
   }
-  // the two headliner games as full-bleed pseudo-3D dioramas — Geodude
-  // holds the brick-breaker world, Rayquaza rules the space one
-  drawHeroPanel(MODES[0], L.card(0), 74, L);
-  drawHeroPanel(MODES[1], L.card(1), 384, L);
-  // the experimental third — a deliberately smaller chip
-  {
-    const m = MODES[2], eg = L.exp;
-    const hov = inRect(mouseX, lastMouseY, eg);
-    ctx.save();
-    if (hov) { ctx.shadowColor = m.accent; ctx.shadowBlur = 16; }
-    roundRect(eg.x, eg.y, eg.w, eg.h, 10);
-    ctx.fillStyle = hov ? m.accent + '28' : 'rgba(255,255,255,0.05)';
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 4]); // dashed border = "experimental"
-    ctx.strokeStyle = hov ? m.accent : m.accent + '77';
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.shadowBlur = 0;
-    ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`;
-    ctx.fillStyle = hov ? m.accent : '#8fb8c0';
-    ctx.fillText('⚗ ' + m.label + ' — EXPERIMENTAL MIX', eg.x + eg.w / 2, eg.y + eg.h * (L.short ? 0.5 : 0.36), eg.w - 16);
-    if (!L.short) {
-      ctx.font = bodyFont(9.5, 600);
-      ctx.fillStyle = hov ? '#cfd8dc' : '#78909c';
-      ctx.fillText(m.lines[0], eg.x + eg.w / 2, eg.y + eg.h * 0.72, eg.w - 16);
-    }
-    ctx.restore();
-  }
+  // the three ways to play, as equal full-bleed dioramas — each card runs a
+  // LIVE DEMO of its mechanic so the buttons explain themselves
+  for (let i = 0; i < MODES.length; i++) drawModeCard(MODES[i], L.card(i), L);
   // CONTINUE — a saved journey resumes right where its region began
   if (L.resume && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
     const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
@@ -2380,14 +2654,18 @@ function drawMenu() {
   if (advOpen) drawAdvanced();
   if (trialOpen) drawTrial();
 }
-// a headline game as a pseudo-3D diorama: extruded slab, its own sky,
-// a perspective floor grid, and a BIG breathing Pokémon grounded by a
-// floor shadow — Geodude for the brick world, Rayquaza for space
-function drawHeroPanel(m, cg, monId, L) {
+// a mode card as a pseudo-3D diorama: extruded slab, its own sky, a
+// perspective floor grid, a BIG breathing mascot — and a LIVE DEMO of the
+// mechanic playing on loop, so each button shows you what you'll be doing.
+// Mascots are skin-side: Geodude holds the wall, Blastoise brings the
+// cannons, Rayquaza flies the starfighter. Menu-only, so the per-frame
+// gradients here are fine (never copy this into a hot loop).
+const MODE_MASCOTS = { classic: 74, blaster: 9, junkie: 384 };
+function drawModeCard(m, cg, L) {
   const hov = inRect(mouseX, lastMouseY, cg);
-  const junk = m.key !== 'classic';
+  const junk = m.key === 'junkie';
   const lift = hov ? 4 : 0;
-  const x = cg.x, y = cg.y - lift, w = cg.w, h = cg.h;
+  const x = cg.x, y = cg.y - lift, w = cg.w, h = cg.h, t = G.time;
   ctx.save();
   // extrusion: a dark slab under the face makes the panel sit UP off the page
   roundRect(x + 5, y + 8 + lift, w, h, 18);
@@ -2399,12 +2677,14 @@ function drawHeroPanel(m, cg, monId, L) {
   // sky — each game is its own world
   const g = ctx.createLinearGradient(0, y, 0, y + h);
   if (junk) { g.addColorStop(0, '#0b0620'); g.addColorStop(0.55, '#241143'); g.addColorStop(1, '#3a1d5e'); }
+  else if (m.key === 'blaster') { g.addColorStop(0, '#041018'); g.addColorStop(0.55, '#0a2c3c'); g.addColorStop(1, '#0e4652'); }
   else { g.addColorStop(0, '#0a1a30'); g.addColorStop(0.55, '#173a52'); g.addColorStop(1, '#1d5a46'); }
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
   // perspective floor grid — the cheap 3D read
   const horizon = y + h * 0.68, vpx = x + w / 2;
-  ctx.strokeStyle = junk ? 'rgba(171,71,188,0.35)' : 'rgba(102,187,106,0.32)';
+  ctx.strokeStyle = junk ? 'rgba(171,71,188,0.35)'
+    : m.key === 'blaster' ? 'rgba(77,208,225,0.3)' : 'rgba(102,187,106,0.32)';
   ctx.lineWidth = 1;
   for (let i = -5; i <= 5; i++) {
     ctx.beginPath();
@@ -2413,65 +2693,213 @@ function drawHeroPanel(m, cg, monId, L) {
     ctx.stroke();
   }
   for (let i = 0; i < 5; i++) {
-    const t = i / 4.2, gy = horizon + (y + h - horizon) * t * t;
-    ctx.globalAlpha = 0.55 - t * 0.35;
+    const tt = i / 4.2, gy = horizon + (y + h - horizon) * tt * tt;
+    ctx.globalAlpha = 0.55 - tt * 0.35;
     ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
   }
   ctx.globalAlpha = 1;
   // glowing horizon line
-  ctx.strokeStyle = junk ? 'rgba(213,134,255,0.55)' : 'rgba(126,224,138,0.5)';
+  ctx.strokeStyle = junk ? 'rgba(213,134,255,0.55)'
+    : m.key === 'blaster' ? 'rgba(128,222,234,0.5)' : 'rgba(126,224,138,0.5)';
   ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.moveTo(x, horizon); ctx.lineTo(x + w, horizon); ctx.stroke();
+  const bandH = L.short || h < 165 ? Math.max(40, h * 0.24) : Math.max(52, h * 0.27);
   if (junk) {
     // twinkling starfield + a distant ringed planet
     for (let i = 0; i < 26; i++) {
       const sx2 = x + ((i * 73.7 + 11) % w), sy2 = y + ((i * 41.3 + 7) % (horizon - y - 8));
-      const tw = 0.5 + 0.5 * Math.sin(G.time * 2 + i * 1.7);
+      const tw = 0.5 + 0.5 * Math.sin(t * 2 + i * 1.7);
       ctx.fillStyle = `rgba(255,255,255,${0.12 + tw * 0.3})`;
       ctx.fillRect(sx2, sy2, 2, 2);
     }
-    const px2 = x + w * 0.82, py2 = y + h * 0.2, pr = Math.min(w, h) * 0.07;
+    const px2 = x + w * 0.84, py2 = y + h * 0.14, pr = Math.min(w, h) * 0.06;
     ctx.fillStyle = 'rgba(120,80,200,0.8)';
     ctx.beginPath(); ctx.arc(px2, py2, pr, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(213,134,255,0.6)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.ellipse(px2, py2, pr * 1.7, pr * 0.5, -0.3, 0, Math.PI * 2); ctx.stroke();
-  } else {
-    // a glossy brick arch over the mon + the ball mid-flight
-    const bw2 = Math.min(60, w * 0.16), bh2 = bw2 * 0.42;
-    const arc = [[-1.6, -0.1], [-0.55, -0.32], [0.55, -0.32], [1.6, -0.1]];
+  }
+  // walled modes share the brick arch the demos play against
+  const bw2 = Math.min(52, w * 0.15), bh2 = bw2 * 0.42;
+  const arc = [[-1.6, -0.1], [-0.55, -0.32], [0.55, -0.32], [1.6, -0.1]];
+  const brickX = i => x + w / 2 + arc[i][0] * bw2 * 1.25;
+  const brickY = i => y + h * 0.22 + arc[i][1] * h * 0.26;
+  const padY = y + h - bandH - Math.max(10, h * 0.045);
+  const brickFlash = new Array(4).fill(0); // set by each demo, drawn below
+  let ballDemo = null, boltDemos = [];
+  if (m.key === 'classic') {
+    // LIVE DEMO — a rally: the ball ping-pongs paddle ↔ wall, cycling
+    // through the bricks; the struck brick flashes, the paddle meets it
+    const T = 1.05; // seconds per leg (up or down)
+    const leg = t / T;
+    const pp = 1 - Math.abs((leg % 2) - 1); // 0 at the paddle … 1 at the wall
+    const idx = Math.floor(leg / 2) % 4;    // target brick, fixed per rally
+    const padX = x + w / 2 + Math.sin(t * 0.6) * w * 0.16;
+    const bx = padX + (brickX(idx) - padX) * pp;
+    const by = padY - 8 + (brickY(idx) + bh2 + 4 - (padY - 8)) * pp;
+    brickFlash[idx] = Math.max(0, 1 - (1 - pp) * 5);
+    ballDemo = { bx, by, padX, catchF: Math.max(0, 1 - pp * 5) };
+  } else if (m.key === 'blaster') {
+    // LIVE DEMO — the charge loop: the turret winds up (ring fills), looses
+    // a fat piercing bolt, and sprays quick volleys in between
+    const padX = x + w / 2;
+    const c = (t % 4.2) / 4.2;
+    const charge = Math.min(1, c / 0.55);
+    for (let k = 0; k < 3; k++) { // rapid volley fan, three staggered bolts
+      const u = (t * 1.5 + k / 3) % 1;
+      const spread = (k - 1) * w * 0.11;
+      const bx = padX + spread * u, by = padY - 10 + (brickY(1) + bh2 + 6 - (padY - 10)) * u;
+      boltDemos.push({ bx, by, big: false, u });
+      if (u > 0.86) { // flash the brick nearest where this bolt lands
+        let best = 0, bd = 1e9;
+        for (let i = 0; i < 4; i++) { const d = Math.abs(brickX(i) - bx); if (d < bd) { bd = d; best = i; } }
+        brickFlash[best] = Math.max(brickFlash[best], (u - 0.86) / 0.14);
+      }
+    }
+    if (c >= 0.55 && c < 0.72) { // the charged shot — big, glowing, center lane
+      const u = (c - 0.55) / 0.17;
+      boltDemos.push({ bx: padX, by: padY - 10 + (brickY(1) + bh2 + 6 - (padY - 10)) * u, big: true, u });
+    }
+    const impact = Math.max(0, 1 - Math.abs(c - 0.72) * 14); // wall-wide slam
+    for (let i = 0; i < 4; i++) brickFlash[i] = Math.max(brickFlash[i], impact);
+    ballDemo = { padX, charge: c < 0.55 ? charge : 0 };
+  }
+  if (m.key !== 'junkie') {
+    // the wall, with per-brick hit flashes
     for (let i = 0; i < arc.length; i++) {
-      const bx2 = x + w / 2 + arc[i][0] * bw2 * 1.25 - bw2 / 2;
-      const by2 = y + h * 0.24 + arc[i][1] * h * 0.3;
+      const bx2 = brickX(i) - bw2 / 2, by2 = brickY(i);
+      const f = brickFlash[i];
+      if (f > 0.02) { ctx.shadowColor = '#fff'; ctx.shadowBlur = 14 * f; }
       roundRect(bx2, by2, bw2, bh2, 4);
-      ctx.fillStyle = ['#ef9a9a', '#90caf9', '#ffe082', '#a5d6a7'][i] + 'cc';
+      ctx.fillStyle = ['#ef9a9a', '#90caf9', '#ffe082', '#a5d6a7'][i] + (f > 0.3 ? 'ff' : 'cc');
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = `rgba(255,255,255,${0.3 + f * 0.55})`;
       ctx.fillRect(bx2 + 2, by2 + 2, bw2 - 4, bh2 * 0.3);
     }
-    const ballA = G.time * 1.3;
-    const bx3 = x + w / 2 + Math.sin(ballA) * w * 0.3, by3 = y + h * 0.14 + Math.abs(Math.cos(ballA)) * h * 0.07;
-    ctx.fillStyle = '#e3f2fd';
-    ctx.shadowColor = '#90caf9'; ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(bx3, by3, Math.min(7, w * 0.02), 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
   }
-  // THE POKÉMON — big, breathing, grounded by a floor shadow
-  const ms = Math.min(w, h) * (junk ? 0.66 : 0.52);
-  const bob = Math.sin(G.time * (junk ? 1.3 : 2.1) + (junk ? 1 : 0)) * h * 0.016;
-  const mx = x + w / 2, my = y + h * (junk ? 0.4 : 0.45) + bob;
-  ctx.fillStyle = 'rgba(0,0,0,0.42)';
-  ctx.beginPath();
-  ctx.ellipse(mx, horizon + h * 0.05, Math.max(10, ms * 0.32 - bob * 2.5), ms * 0.075, 0, 0, Math.PI * 2);
-  ctx.fill();
-  const img = getSprite(monId);
+  // THE MASCOT — big, breathing, grounded by a floor shadow (in STARFIGHTER
+  // it IS the ship: banking with its strafe, riding an exhaust plume)
+  const ms = Math.min(w, h) * (junk ? 0.6 : 0.5);
+  const bob = Math.sin(t * (junk ? 1.3 : 2.1) + (junk ? 1 : 0)) * h * 0.016;
+  const mx = x + w / 2 + (junk ? Math.sin(t * 0.7) * w * 0.09 : 0);
+  const my = y + h * (junk ? 0.46 : 0.44) + bob;
+  if (!junk) {
+    ctx.fillStyle = 'rgba(0,0,0,0.42)';
+    ctx.beginPath();
+    ctx.ellipse(mx, horizon + h * 0.05, Math.max(10, ms * 0.32 - bob * 2.5), ms * 0.075, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const img = getSprite(MODE_MASCOTS[m.key]);
   if (img.complete && img.naturalWidth) {
-    const sil = getSilhouette(monId, '#04060e');
+    ctx.save();
+    if (junk) { ctx.translate(mx, my); ctx.rotate(Math.cos(t * 0.7) * 0.09); ctx.translate(-mx, -my); }
+    const sil = getSilhouette(MODE_MASCOTS[m.key], '#04060e');
     if (sil) { ctx.globalAlpha = 0.5; ctx.drawImage(sil, mx - ms / 2 + ms * 0.05, my - ms / 2 + ms * 0.07, ms, ms); ctx.globalAlpha = 1; }
     if (hov) {
-      const rim = getSilhouette(monId, m.accent);
+      const rim = getSilhouette(MODE_MASCOTS[m.key], m.accent);
       if (rim) { ctx.globalAlpha = 0.5; ctx.drawImage(rim, mx - ms / 2 - 2, my - ms / 2 - 2, ms + 4, ms + 4); ctx.globalAlpha = 1; }
     }
     ctx.drawImage(img, mx - ms / 2, my - ms / 2, ms, ms);
+    ctx.restore();
+  }
+  if (junk) {
+    // LIVE DEMO — the flock orbits high while the ship strafes and fires;
+    // a rider flares whenever a bolt reaches the ring
+    const ringCy = y + h * 0.17, rx = w * 0.3, ry = h * 0.075;
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(Math.cos(t * 0.7) * 0.09);
+    const fl = 0.7 + 0.3 * Math.sin(t * 13); // exhaust flicker — slim jet, not a cone
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#ce93d8';
+    ctx.beginPath();
+    ctx.moveTo(-ms * 0.045, ms * 0.44);
+    ctx.lineTo(0, ms * (0.56 + 0.1 * fl));
+    ctx.lineTo(ms * 0.045, ms * 0.44);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#f3e5f5';
+    ctx.beginPath();
+    ctx.moveTo(-ms * 0.02, ms * 0.44);
+    ctx.lineTo(0, ms * (0.5 + 0.07 * fl));
+    ctx.lineTo(ms * 0.02, ms * 0.44);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    for (let k = 0; k < 2; k++) { // typed bolts rising into the flock
+      const u = (t * 1.2 + k * 0.5) % 1;
+      const bx = mx + (vpx - mx) * u, by = my - ms * 0.32 + (ringCy - (my - ms * 0.32)) * u;
+      ctx.fillStyle = '#e1bee7';
+      ctx.shadowColor = m.accent; ctx.shadowBlur = 8;
+      roundRect(bx - 2, by - 7, 4, 14, 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      if (u > 0.88) { // the hit — a rider flares
+        const fi = Math.floor(t * 1.2 + k * 0.5) % 7;
+        const a = t * 0.85 + fi * Math.PI * 2 / 7;
+        const fx = vpx + Math.cos(a) * rx, fy = ringCy + Math.sin(a) * ry;
+        const s2 = 5 + 7 * (u - 0.88) / 0.12;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.globalAlpha = 1 - (u - 0.88) / 0.12 * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(fx - s2, fy); ctx.lineTo(fx + s2, fy);
+        ctx.moveTo(fx, fy - s2); ctx.lineTo(fx, fy + s2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    for (let i = 0; i < 7; i++) { // the flock — tight riders on one shared ring
+      const a = t * 0.85 + i * Math.PI * 2 / 7;
+      const fx = vpx + Math.cos(a) * rx, fy = ringCy + Math.sin(a) * ry + Math.sin(t * 2 + i) * 2;
+      const s2 = (3.2 + 0.9 * Math.sin(a)) * Math.min(1, w / 340);
+      ctx.fillStyle = i % 2 ? '#ce93d8' : '#b39ddb';
+      ctx.beginPath();
+      ctx.moveTo(fx, fy - s2 * 1.4); ctx.lineTo(fx + s2, fy); ctx.lineTo(fx, fy + s2 * 1.4); ctx.lineTo(fx - s2, fy);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (ballDemo) {
+    // the paddle/turret at the bottom of the diorama
+    const padW = Math.max(34, w * 0.16), padX2 = ballDemo.padX;
+    ctx.shadowColor = m.accent; ctx.shadowBlur = ballDemo.catchF ? 6 + ballDemo.catchF * 12 : 6;
+    roundRect(padX2 - padW / 2, padY, padW, Math.max(6, h * 0.03), 5);
+    ctx.fillStyle = m.accent; ctx.fill();
+    ctx.shadowBlur = 0;
+    if (m.key === 'classic') {
+      // the ball, with two motion ghosts so the rally reads at a glance
+      for (let gi = 2; gi >= 0; gi--) {
+        const lag = gi * 0.055;
+        // clamp: a negative leg on the very first frames would floor to
+        // brick index -1 (arc[-1][0] crashes the first render after load)
+        const leg2 = Math.max(0, t / 1.05 - lag);
+        const pp2 = 1 - Math.abs((leg2 % 2) - 1);
+        const idx2 = Math.floor(leg2 / 2) % 4;
+        const px3 = x + w / 2 + Math.sin((t - lag * 1.05) * 0.6) * w * 0.16;
+        const bx3 = px3 + (brickX(idx2) - px3) * pp2;
+        const by3 = padY - 8 + (brickY(idx2) + bh2 + 4 - (padY - 8)) * pp2;
+        ctx.globalAlpha = gi ? 0.18 * (3 - gi) : 1;
+        ctx.fillStyle = '#e3f2fd';
+        ctx.shadowColor = '#90caf9'; ctx.shadowBlur = gi ? 0 : 10;
+        ctx.beginPath(); ctx.arc(bx3, by3, Math.max(3.5, w * 0.014), 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      // charge ring winding up on the muzzle — the HOLD TO CHARGE demo
+      if (ballDemo.charge > 0.03) {
+        ctx.beginPath();
+        ctx.arc(padX2, padY - 9, 9, -Math.PI / 2, -Math.PI / 2 + ballDemo.charge * Math.PI * 2);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = ballDemo.charge >= 1 ? '#e0ffff' : '#4dd0e1';
+        ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = ballDemo.charge >= 1 ? 12 : 5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      for (const b of boltDemos) {
+        ctx.fillStyle = b.big ? '#e0ffff' : '#80deea';
+        ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = b.big ? 16 : 6;
+        roundRect(b.bx - (b.big ? 4 : 2), b.by - (b.big ? 12 : 7), b.big ? 8 : 4, b.big ? 24 : 14, b.big ? 4 : 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
   }
   // glass gloss sweep
   const gl = ctx.createLinearGradient(x, y, x + w * 0.55, y + h * 0.55);
@@ -2480,8 +2908,18 @@ function drawHeroPanel(m, cg, monId, L) {
   gl.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = gl;
   ctx.fillRect(x, y, w, h);
+  // corner chip — what KIND of game this is, at a glance
+  {
+    ctx.font = '800 9px Orbitron, sans-serif';
+    const dw = ctx.measureText(m.desc).width + 16;
+    roundRect(x + 10, y + 10, dw, 18, 9);
+    ctx.fillStyle = m.accent + '26'; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = m.accent + '88'; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = m.accent;
+    ctx.fillText(m.desc, x + 10 + dw / 2, y + 19.5);
+  }
   // label band along the bottom
-  const bandH = Math.max(42, h * 0.24);
   const bg2 = ctx.createLinearGradient(0, y + h - bandH, 0, y + h);
   bg2.addColorStop(0, 'rgba(4,7,16,0)');
   bg2.addColorStop(0.45, 'rgba(4,7,16,0.8)');
@@ -2489,12 +2927,19 @@ function drawHeroPanel(m, cg, monId, L) {
   ctx.fillStyle = bg2;
   ctx.fillRect(x, y + h - bandH, w, bandH);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 ${Math.min(26, w / 11)}px Orbitron, sans-serif`;
+  const twoRows = bandH >= 52; // roomy cards explain on two lines
+  ctx.font = `900 ${Math.min(24, w / 11)}px Orbitron, sans-serif`;
   ctx.fillStyle = hov ? '#fff' : m.accent;
-  ctx.fillText(m.label, x + w / 2, y + h - bandH * 0.58, w - 20);
-  ctx.font = bodyFont(Math.min(11, w / 30), 600);
+  ctx.fillText(m.label, x + w / 2, y + h - bandH * (twoRows ? 0.68 : 0.58), w - 20);
   ctx.fillStyle = hov ? '#e3f2fd' : '#90a4ae';
-  ctx.fillText(m.lines.join(' · '), x + w / 2, y + h - bandH * 0.22, w - 24);
+  if (twoRows) {
+    ctx.font = bodyFont(Math.min(10.5, w / 32), 600);
+    ctx.fillText(m.lines[0], x + w / 2, y + h - bandH * 0.36, w - 24);
+    ctx.fillText(m.lines[1], x + w / 2, y + h - bandH * 0.15, w - 24);
+  } else {
+    ctx.font = bodyFont(Math.min(10, w / 34), 600);
+    ctx.fillText(m.lines.join(' · '), x + w / 2, y + h - bandH * 0.22, w - 24);
+  }
   ctx.restore(); // unclip
   ctx.shadowColor = m.accent; ctx.shadowBlur = hov ? 30 : 14;
   roundRect(x, y, w, h, 18);
@@ -2502,38 +2947,6 @@ function drawHeroPanel(m, cg, monId, L) {
   ctx.strokeStyle = hov ? m.accent : m.accent + 'aa';
   ctx.stroke();
   ctx.shadowBlur = 0;
-  ctx.restore();
-}
-// small vector icons that give each mode card an identity at a glance —
-// pure strokes/fills, cheap enough to draw live (menu only, few per frame)
-function drawModeIcon(key, x, y, r, col) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.strokeStyle = col; ctx.fillStyle = col;
-  ctx.lineWidth = Math.max(1.5, r * 0.13);
-  if (key === 'classic') { // brick row + ball + paddle
-    const bw = r * 0.85, bh = r * 0.42, g = r * 0.14;
-    for (let i = -1; i <= 1; i++) {
-      roundRect(i * (bw + g) - bw / 2, -r, bw, bh, 2);
-      ctx.globalAlpha = 0.85; ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    ctx.beginPath(); ctx.arc(0, r * 0.15, r * 0.26, 0, Math.PI * 2); ctx.fill();
-    roundRect(-r * 0.7, r * 0.75, r * 1.4, r * 0.3, r * 0.15); ctx.fill();
-  } else { // junkie: a little ship with wing swept lines
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.lineTo(r * 0.75, r * 0.65);
-    ctx.lineTo(0, r * 0.25);
-    ctx.lineTo(-r * 0.75, r * 0.65);
-    ctx.closePath();
-    ctx.globalAlpha = 0.9; ctx.fill();
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath(); // exhaust flame, tucked into the tail notch
-    ctx.moveTo(-r * 0.16, r * 0.42); ctx.lineTo(0, r * 0.95); ctx.lineTo(r * 0.16, r * 0.42);
-    ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
   ctx.restore();
 }
 // PAGE 2 — setup for the chosen mode: starter, difficulty, then START
@@ -3122,7 +3535,7 @@ function drawFullUpgradeTree() {
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = `900 ${small ? 9 : 12}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
     wrapText(P.name, lb.w).slice(0, 2).forEach((ln, li) => ctx.fillText(ln, lb.x, lb.y + lb.h / 2 - (small ? 8 : 10) + li * (small ? 10 : 13), lb.w));
-    if (!small) { ctx.font = '600 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#90a4ae'; ctx.fillText(P.role, lb.x, lb.y + lb.h / 2 + 16, lb.w); }
+    if (!small) { ctx.font = '600 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#90a4ae'; ctx.fillText(pathRole(pk), lb.x, lb.y + lb.h / 2 + 16, lb.w); }
     // connector rail behind the row — brightens up to the owned tier
     for (let ti = 0; ti < 3; ti++) {
       const a = T.node(pi, ti), b = T.node(pi, ti + 1);
@@ -3154,7 +3567,7 @@ function drawFullUpgradeTree() {
       ctx.globalAlpha = 1;
       // name — brighter + bolder when selected
       const nameCol = sel ? '#fff' : owned ? P.color : next ? '#e8eef6' : '#8595a0';
-      const nm = (ti === 3 ? '★ ' : '') + (G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name);
+      const nm = (ti === 3 ? '★ ' : '') + junkieTierName(pk, ti);
       if (small) {
         ctx.textAlign = 'center';
         ctx.font = `${sel ? 900 : 800} ${sel ? 7.5 : 7}px Orbitron, sans-serif`; ctx.fillStyle = nameCol;
@@ -3210,7 +3623,7 @@ function drawTreeDetail(T) {
   ctx.font = '800 9.5px Orbitron, sans-serif'; ctx.fillStyle = P.color;
   ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + 42, d.y + 12, d.w - 130);
   ctx.font = `900 ${Math.min(19, d.w / 22)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
-  ctx.fillText((G.mode === 'junkie' ? JUNKIE_ITEMS[pk][ti] : tier.name), d.x + pad + 42, d.y + 26, d.w - 130);
+  ctx.fillText(junkieTierName(pk, ti), d.x + pad + 42, d.y + 26, d.w - 130);
   // the full description — the whole point: readable, wrapped
   ctx.font = bodyFont(Math.min(13, d.w / 34), 600); ctx.fillStyle = '#cfd8ea';
   const descTop = d.y + 52;
@@ -3274,6 +3687,7 @@ function drawOverlays() {
     const wasBossStage = G.clearedStage === 2;
     const clearedGen = GENS[regionIdx(Math.max(1, G.level - 1))];
     const clearY = draftShort ? 36 : H * 0.16;
+    drawDraftBackdrop(wasBossStage ? clearedGen.accent : '#66bb6a');
     title(wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!', clearY, Math.min(draftShort ? 30 : 40, W / 12), wasBossStage ? clearedGen.accent : '#66bb6a');
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
@@ -3312,7 +3726,7 @@ function drawOverlays() {
         const x0 = W / 2 - chainW / 2, ny = headerY - nh / 2;
         ctx.font = '800 8.5px Orbitron, sans-serif';
         ctx.fillStyle = P.color;
-        ctx.fillText(P.name + ' PATH · ' + P.role, W / 2, ny - 8, chainW);
+        ctx.fillText(P.name + ' PATH · ' + pathRole(pk), W / 2, ny - 8, chainW);
         for (let ti = 0; ti < 4; ti++) {
           const nx = x0 + ti * (nw + 14);
           const ownedT = ti < lvlSel, isPick = ti === selC.tierIdx;
@@ -3352,8 +3766,9 @@ function drawOverlays() {
           ctx.strokeStyle = sel ? '#ffffff' : hov2 ? scol : scol + '77';
           ctx.stroke();
           ctx.shadowBlur = 0;
+          drawDraftCardEnergy(r, scol, hov2, sel, i);
           if (L.stacked) {
-            blitBadge(c.stack.icon, r.x + 34, r.y + r.h / 2, 17, scol);
+            drawDraftBadge(c.stack.icon, r.x + 34, r.y + r.h / 2, 17, scol, hov2, i);
             ctx.textAlign = 'left';
             ctx.font = '900 9px Orbitron, sans-serif';
             ctx.fillStyle = scol;
@@ -3368,7 +3783,7 @@ function drawOverlays() {
             ctx.textAlign = 'center';
             ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = scol;
             ctx.fillText(G.mode === 'junkie' ? 'HELD ITEM' : 'MASTERY ITEM', r.x + r.w / 2, r.y + 12, r.w - 8);
-            blitBadge(c.stack.icon, r.x + r.w / 2, r.y + 39, 14, scol);
+            drawDraftBadge(c.stack.icon, r.x + r.w / 2, r.y + 39, 14, scol, hov2, i);
             ctx.font = '900 11px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 64, r.w - 10);
             ctx.font = bodyFont(8, 600); ctx.fillStyle = '#b0bec5';
@@ -3383,7 +3798,7 @@ function drawOverlays() {
             ctx.font = '700 10px Orbitron, sans-serif';
             ctx.fillStyle = owned ? '#fff' : '#78909c';
             ctx.fillText(owned ? 'OWNED ×' + owned : 'NEW', r.x + r.w / 2, r.y + 38);
-            blitBadge(c.stack.icon, r.x + r.w / 2, r.y + 72, 22, scol);
+            drawDraftBadge(c.stack.icon, r.x + r.w / 2, r.y + 72, 22, scol, hov2, i);
             ctx.font = '900 15px Orbitron, sans-serif';
             ctx.fillStyle = '#fff';
             ctx.fillText(c.stack.name, r.x + r.w / 2, r.y + 112, r.w - 20);
@@ -3415,6 +3830,7 @@ function drawOverlays() {
         ctx.strokeStyle = sel ? '#ffffff' : hov || isCap ? col : col + '77';
         ctx.stroke();
         ctx.shadowBlur = 0;
+        drawDraftCardEnergy(r, col, hov || isCap, sel, i);
         const pips = (px2, py2) => {
           for (let d = 0; d < 4; d++) {
             ctx.beginPath(); ctx.arc(px2 - 21 + d * 14, py2, 4, 0, Math.PI * 2);
@@ -3423,7 +3839,7 @@ function drawOverlays() {
           }
         };
         if (L.stacked) { // phone: icon left, text right
-          blitBadge(tier.icon, r.x + 34, r.y + r.h / 2, 18, col);
+          drawDraftBadge(tier.icon, r.x + 34, r.y + r.h / 2, 18, col, hov || isCap, i);
           ctx.textAlign = 'left';
           ctx.font = '900 9.5px Orbitron, sans-serif';
           ctx.fillStyle = col;
@@ -3439,7 +3855,7 @@ function drawOverlays() {
           ctx.font = '900 8.5px Orbitron, sans-serif'; ctx.fillStyle = col;
           ctx.fillText(c.path.name + (isCap ? ' · CAP' : ''), r.x + r.w / 2, r.y + 12, r.w - 8);
           pips(r.x + r.w / 2, r.y + 25);
-          blitBadge(tier.icon, r.x + r.w / 2, r.y + 48, 15, col);
+          drawDraftBadge(tier.icon, r.x + r.w / 2, r.y + 48, 15, col, hov || isCap, i);
           ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = isCap ? col : '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + r.w / 2, r.y + 73, r.w - 10);
           ctx.font = bodyFont(9.5, 600); ctx.fillStyle = '#e0e7f0';
@@ -3452,7 +3868,7 @@ function drawOverlays() {
           ctx.fillStyle = col;
           ctx.fillText(c.path.name + (isCap ? ' · CAPSTONE' : ' · TIER ' + (c.tierIdx + 1) + '/4'), r.x + r.w / 2, r.y + 22, r.w - 20);
           pips(r.x + r.w / 2, r.y + 40);
-          blitBadge(tier.icon, r.x + r.w / 2, r.y + 74, 24, col);
+          drawDraftBadge(tier.icon, r.x + r.w / 2, r.y + 74, 24, col, hov || isCap, i);
           // the upgrade NAME — the headline
           ctx.font = '900 18px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';

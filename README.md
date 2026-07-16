@@ -1,4 +1,13 @@
-# Pokémon Invaders Breakout
+# Wavebreaker (Pokémon Edition)
+
+**WAVEBREAKER** is the game's brand — skin-agnostic on purpose. Every mode is
+another way to break the wave, so new modes just add title-screen cards, and
+the current theme is an "edition" (today: `SKIN_EDITION = 'POKÉMON EDITION'`,
+config.js) that a future re-skin swaps out without touching mechanics or
+storage keys. UI mode labels are equally presentation-only: **BREAKER** /
+**BLASTER** / **STARFIGHTER** map to the storage-stable internal keys
+`classic` / `blaster` / `junkie` (docs and code comments below still say
+"Space Junkie" for the junkie systems — that's the mode's internal codename).
 
 A Breakout × Space Invaders/Galaga hybrid that transforms as you play: it
 starts as relaxed brick-breaker in Kanto and, region by region, becomes a
@@ -6,9 +15,10 @@ Space-Junkie-style shooter where Pokémon break out of their bricks and
 fly intricate patterns. Journey through 9 regions (3 stages each — Arrival,
 Challenge, and a Legendary boss), draft a permanent skill tree, pick a
 starter partner whose paddle ability evolves, and catch Pokémon for a
-persistent Pokédex. Two headline modes — **BRICK BREAKER** (`classic`, ball +
-blaster) and **SPACE JUNKIE** (pilot your Pokémon through all-flying waves) —
-plus **BLASTER**, the experimental ball-less hybrid. Runs auto-save at each
+persistent Pokédex. Three modes — **BREAKER** (`classic`, ball +
+earned blaster), **BLASTER** (ball-less pure firepower on the same walls),
+and **STARFIGHTER** (`junkie` — pilot your Pokémon through all-flying
+waves). Runs auto-save at each
 region — pick up with CONTINUE. The journey is a three-act play (gens 1–3 /
 4–6 / 7–9): each act boundary lands on a partner evolution and plays a full
 evolution ceremony, and Space Junkie's wave choreography develops one
@@ -55,7 +65,7 @@ sometimes doesn't fire — trigger manually with
 | `scenery.js` | Per-region prerendered backgrounds (`drawScene[...]` — iconic towns), starfield, ambient weather |
 | `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
 | `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
-| `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ 3-phase boss), `bossAbility`, `loseLife` (white-out), rally/barrier, level-clear |
+| `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ 3-phase boss), `bossAbility`, `loseLife` (knockout), rally/barrier, level-clear |
 | `render.js` | All drawing: bricks + free-flyers (gait animation), bosses (`drawBossMon`), paddle / junkie pilot rig, HUD, menus, Pokédex, draft screen; **FX sprite caches + `drawBloom`/`drawAtmosphere`** (see Graphics & performance) |
 | `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop; a bootstrap guard retries until the viewport + vignette exist) |
 
@@ -67,16 +77,26 @@ the repo: `test.html` (headless invariant suite), `package.json`
 ---
 
 ## Game modes (`SETTINGS.mode`, picked on the title screen)
-The menu is TWO pages (`menuPage`, config.js): page 1 is the title + mode
-select — two big cards for BRICK BREAKER and SPACE JUNKIE plus a smaller
-dashed "experimental" chip for BLASTER. A prominent **QUICK START** launches
-the recommended first run (Brick Breaker · Easy · Charmander) immediately;
+The menu is TWO pages (`menuPage`, config.js): page 1 is the WAVEBREAKER
+title (+ POKÉMON EDITION skin badge) and mode select — THREE equal diorama
+cards (`drawModeCard`, render.js), each running a looping LIVE DEMO of its
+mechanic: BREAKER rallies a ball paddle↔wall with per-brick hit flashes,
+BLASTER winds up a charge ring then looses a fat bolt between volley fans,
+and STARFIGHTER banks its mascot-ship under an orbiting flock, flaring a
+rider on every hit. Mascots per card: Geodude / Blastoise / Rayquaza
+(`MODE_MASCOTS`). A prominent **QUICK START** launches
+the recommended first run (Breaker · Easy · Charmander) immediately;
 picking a mode leads to page 2, setup (starter + difficulty + START,
 `setupLayout`). Quitting/game over always lands back on page 1.
-- **BRICK BREAKER** (`classic`) — the ball-first brick-breaker described
-  below. The ball is THE weapon; there is **no free blaster**. Manual fire is
-  gated by `blasterArmed()` (state.js) and unlocks only with a LASER power-up,
-  an active Mega, or an offense-path draft (VOLLEY/IMPACT). Until then
+- **BREAKER** (`classic`) — the ball-first brick-breaker described
+  below. Every target stays a framed brick: no free flyers, dives, or attack
+  reinforcements. Legendary encounters use moving, multi-phase **boss bricks**
+  with authored patrols, attacks, armor changes, and orbiting brick guards.
+  The ball is THE weapon; there is **no free blaster**. Manual fire is gated by
+  `blasterArmed()` (state.js) and unlocks only with a 9-second LASER power-up,
+  an active Mega, or tier 3 of an offense path (VOLLEY/IMPACT). The first two
+  offense tiers improve the ball; tier 3 is the permanent late-game sidearm.
+  Until then
   `fireAction` no-ops, the touch FIRE pad is hidden, and the shoot hint is
   suppressed — you serve/launch the ball by tapping the playfield.
 - **BLASTER** — a ball-less pure shooter (Space-Junkies flavour). `serve()`
@@ -92,7 +112,8 @@ picking a mode leads to page 2, setup (starter + difficulty + START,
   Wiring: `G.mode`, `G.charge` (state.js); hold-intent promotion (update.js,
   `touchFirePendingId`/`TOUCH_CHARGE_HOLD_MS`); charge/fire input (input.js);
   the FIRE pad's charge ring + bolt visuals (render.js).
-- **SPACE JUNKIE** — the full pure-shooter homage to the game's namesake:
+- **STARFIGHTER** (`junkie`, internally "Space Junkie") — the full
+  pure-shooter homage:
   **no wall at all**. Non-boss waves arrive as 100% free-flyers (squads pour
   in from the edges straight onto patterns, built in `buildLevel`'s junkie
   block); boss waves keep their choreography but guards ride **bare**.
@@ -255,11 +276,7 @@ toward the player's LIVE position; a squad falls silent ~1.5s when its
 elite dies. Kill-release is smooth: eased sep offsets (fast build, ~0.4s
 drain) mean a death leaves an honest Galaga gap, never a snap.
 
-### Charge-gated content (the charge shot always matters)
-- **ENERGY VEILS** (classic challenge waves): cyan casings the BALL cannot
-  crack — only blaster-family fire breaks them. Kanto 2/3 is the blaster
-  tutorial (guaranteed LASER drop, BLASTER ARMED callout, emergency rescue
-  drop so a wave can never soft-lock).
+### Charge-gated shooter content (the charge shot always matters)
 - **SHELL ARMOR** (junkie, region 2+ elites; 3 tutors on Kanto 2/3): normal
   bolts plink off; ONE charged shot cracks the shell. A bright persistent
   banner teaches the charge until the player's first charged shot
@@ -368,16 +385,15 @@ forever-stacking mastery items instead of dead reward screens. Caps read via
 `shieldCap`/`megaDur`/`barrierCharges` (state.js). `upgN(key)` = does the player
 own that tier.
 
-### White-out (not game-over) — `loseLife()` update.js ~351
+### Knockout (not game-over) — `loseLife()` update.js
 Losing all lives **burns 2 random tree levels** (`regressPath`), refills
 lives, and **retries the wave**. Real game-over only when the tree is empty.
-Lives show top-right as a **health ring** (`drawLifeRing`, render.js) — a
-glowing arc over a faint track, notched per life, greens→amber→red as it
-drains, last life pulses. Denominator is `G.livesMax` (peak lives held, so a
-POKÉ REVIVE grows the ring); kept at the peak in `tickEffects`. On a hit, a
-matching **health bar flashes above the character** for ~2s (`drawHurtHealth`,
-gated by `G.hurtHud` which `loseLife`/`absorbHit` set and `update` decays) —
-feedback where your eyes already are, not just the corner ring.
+Lives show top-right as both a persistent segmented **HP rail** and a
+**health ring** (`drawPlayerHealthBar` / `drawLifeRing`, render.js), with a
+matching bar above the character after a hit. Easy starts with 5 HP, Normal
+with 4. When hurt, defeated enemies can drop a pulsing **MAX POTION**; it
+restores 1 HP and a pity counter guarantees one after 10 eligible kills.
+`G.livesMax` remains the maximum and POKÉ REVIVE can grow it further.
 
 ### Starter partners (`STARTER_MON` data.js ~314)
 Charmander/Squirtle/Bulbasaur (or none). Rides the paddle, tints its glow,
@@ -408,7 +424,7 @@ save best score or Pokédex catches (`G.trial` flag).
   boss cadence, and shot speed. Finale stages ease minion fire ×1.35 (the
   boss is the show).
 - **Progress never wipes**: the region checkpoint saves from region 1 and
-  SURVIVES a true game over — CONTINUE always works. White-out still burns
+  SURVIVES a true game over — CONTINUE always works. A knockout still burns
   2 tree levels and retries the wave.
 - **✦ CHEAT CODES** (`CHEAT_ITEMS` data.js, panel via pause screen only):
   an ornate dashed-gold chip under QUIT TO MENU grants any power-up combo
@@ -509,8 +525,10 @@ it green when adding menu items.
   `lastTouchT` mutes the mouse path for 900ms after any touch (input.js), or
   taps would instantly un-pause / double-fire.
 - **Button touches never steer the paddle:** touches starting on a UI button
-  go into `uiTouchIds` and a surrounding dead-zone swallows near-misses
-  (input.js touchstart). Without this, tapping FIRE dragged the paddle right.
+  go into `uiTouchIds`, snap the steering target back to the actual player,
+  and a surrounding dead-zone swallows near-misses (input.js touchstart).
+  The same lock restores both X and Y for Space Junkie. Without this, tapping
+  FIRE dragged the paddle/ship right and down to the button.
 - **`br.hx/hy` = home slot, `br.bx/by` = live drawn position.** Motion writes
   live pos; boss sweeps/teleports move the HOME so guard rings track it.
 - **`flying(br)` must gate every formation query** (march bounds, danger line,

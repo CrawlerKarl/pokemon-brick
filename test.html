@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Pokémon Invaders Breakout — invariant tests</title>
+<title>Wavebreaker — invariant tests</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #05060f; color: #cfd8ea; font: 13px/1.5 Menlo, Consolas, monospace; }
@@ -32,7 +32,7 @@
 <canvas id="game"></canvas>
 <div id="safe-probe"></div>
 <div id="report">
-  <h1>Pokémon Invaders Breakout — in-browser invariant suite</h1>
+  <h1>Wavebreaker — in-browser invariant suite</h1>
   <div id="summary">loading game scripts…</div>
   <table>
     <thead><tr><th>test</th><th>status</th><th>ms</th><th>detail</th></tr></thead>
@@ -164,7 +164,7 @@ window.requestAnimationFrame = function () { return 0; };
     try {
       fireHeld = false; chargeHeld = false; trialOpen = false; advOpen = false; upgradeTreeOpen = false;
       dragSlider = -1;
-      SETTINGS.mode = 'classic';
+      SETTINGS.mode = 'classic'; SETTINGS.autoFire = false;
       resetRun(1, true);
       G.state = 'menu';
       paused = false; G.freeze = 0;
@@ -333,22 +333,45 @@ window.requestAnimationFrame = function () { return 0; };
     return 'authored families; 3-round gauntlet: birds → Mewtwo (wings anchored) → Mew';
   });
 
-  // 2a-iii) ENERGY VEILS: classic challenge waves gate bricks behind the
-  // blaster — the ball and explosions can't scratch them, and the wave can
-  // never soft-lock (a laser drop is seeded/rescued).
-  test('energy veils: blaster-only bricks on classic challenge waves', async () => {
+  // 2a-iii) Mode identity: Brick Breaker is bricks all the way through, while
+  // its permanent blaster arrives only at offense tier 3. LASER remains a
+  // short pickup. Space Junkie keeps its own charge-shot armor lessons.
+  test('brick-only classic + late permanent blaster + junkie armor', async () => {
     SETTINGS.mode = 'classic';
-    resetRun(2, true); // Kanto challenge — the blaster tutorial wave
-    const veils = G.bricks.filter(b => b.veil);
-    assert(veils.length >= 2, 'Kanto challenge should have ≥2 veiled bricks, got ' + veils.length);
-    const v = veils[0], hp0 = v.hp;
-    fireballExplosion(v.bx + G.fx, v.by + G.fy, 2); // explosions bounce off too
-    assert(v.hp === hp0, 'an explosion damaged a veiled brick (' + hp0 + ' → ' + v.hp + ')');
-    damageBrick(v, 1, v.bx, v.by, null); // blaster-family damage still works
-    assert(v.hp === hp0 - 1, 'direct blaster damage should still hurt a veiled brick');
+    const brickLeaks = [];
+    for (let lvl = 1; lvl <= 27; lvl++) {
+      resetRun(lvl, true);
+      if (G.reinforce !== 0) brickLeaks.push('L' + lvl + ' reinforcement=' + G.reinforce);
+      if (G.divers) brickLeaks.push('L' + lvl + ' divers enabled');
+      if (G.bricks.some(b => b.flight && !b.isBoss)) brickLeaks.push('L' + lvl + ' spawned a flight brick');
+      if (G.bricks.some(b => bareMon(b))) brickLeaks.push('L' + lvl + ' spawned a bare Pokémon');
+      if (G.bricks.some(b => b.veil)) brickLeaks.push('L' + lvl + ' spawned a blaster-gated veil');
+    }
+    assert(brickLeaks.length === 0, brickLeaks.join(' ; '));
+
+    resetRun(1, true);
+    G.path = { arsenal: 2 };
+    G.fx_laser = null; G.megaT = 0;
+    assert(!blasterArmed(), 'offense tier 2 permanently armed the classic blaster');
+    G.path.arsenal = 3;
+    assert(blasterArmed(), 'offense tier 3 did not unlock the permanent blaster');
+    G.path = {};
+    applyPower(POWERS.laser);
+    assert(blasterArmed() && G.fx_laser && G.fx_laser.t <= 9,
+      'LASER should grant a short-duration classic blaster');
+
+    resetRun(3, true);
+    const bossBrick = G.bricks.find(b => b.isBoss);
+    bossBrick.dormant = false;
+    bossBrick.bx = bossBrick.hx = W / 2;
+    damageBrick(bossBrick, bossBrick.maxHp * 0.68, bossBrick.bx, bossBrick.by, null);
+    const orbitBricks = G.bricks.filter(b => b.brickOnly);
+    assert(bossBrick.phase === 3, 'classic boss brick did not enter its last-stand phase');
+    assert(orbitBricks.length === 5 && orbitBricks.every(b => !bareMon(b)),
+      'classic boss last-stand guards were not moving framed bricks');
+
     SETTINGS.mode = 'junkie';
     resetRun(2, true);
-    assert(!G.bricks.some(b => b.veil), 'veils are a classic-mode mechanic only');
     // SPACE JUNKIE: Kanto's challenge carries the CHARGE tutorial — armored
     // rookies that only a charged shot cracks
     assert(G.bricks.filter(b => b.shellArmor).length >= 2,
@@ -363,7 +386,7 @@ window.requestAnimationFrame = function () { return 0; };
     for (const b of G.bricks) if (!b.barrier) b.dead = true;
     await runFrames(300, () => G.state === 'upgrade' ? false : undefined);
     assert(G.state === 'upgrade', 'wave did not clear with only barriers left (state ' + G.state + ')');
-    return 'veils classic-only; junkie: shell-armor tutors + barriers that never block a clear';
+    return '27 classic waves brick-only · permanent fire at tier 3 · LASER temporary · boss guard bricks · junkie armor intact';
   });
 
   // 2b) classic lose-a-life: park the paddle away and let the ball drain
@@ -423,8 +446,8 @@ window.requestAnimationFrame = function () { return 0; };
       });
       assert(ERR.length === e0, 'errors during sim: ' + ERR.slice(e0).join(' | '));
       assert(overlaps === 0, overlaps + ' flyer↔wall overlaps, e.g. ' + samples.join(' ; '));
-      return framesSampled + ' frames sampled, peak steady flyers ' + maxFlyers +
-        (maxFlyers === 0 ? ' (WARNING: no steady flyers ever observed — vacuous)' : '') + ', overlaps 0';
+      assert(maxFlyers === 0, 'classic produced ' + maxFlyers + ' free flyers');
+      return framesSampled + ' frames sampled, brick-only throughout, free flyers 0';
     };
   }
   for (const lvl of [5, 8, 14, 20, 26]) test('non-overlap: level ' + lvl, overlapTest(lvl));
@@ -476,11 +499,62 @@ window.requestAnimationFrame = function () { return 0; };
       if (nonBoss > maxBricks) { maxBricks = nonBoss; atB = lvl; }
       if (flyers > maxFlyers) { maxFlyers = flyers; atF = lvl; }
       if (nonBoss > 40) fails.push('L' + lvl + ': ' + nonBoss + ' non-boss bricks > 40');
-      if (flyers > 30) fails.push('L' + lvl + ': ' + flyers + ' flyers > 30');
+      if (flyers > 0) fails.push('L' + lvl + ': ' + flyers + ' flight entities in classic');
       if (lvl % 9 === 0) await tick();
     }
     assert(fails.length === 0, fails.join(' ; '));
     return 'peak non-boss bricks ' + maxBricks + ' (L' + atB + '), peak flyers ' + maxFlyers + ' (L' + atF + ')';
+  });
+
+  test('boss-only isolation + recovery items + touch-fire steering lock', async () => {
+    const leaks = [];
+    for (const mode of ['classic', 'junkie']) {
+      SETTINGS.mode = mode;
+      for (let lvl = 1; lvl <= 27; lvl++) {
+        resetRun(lvl, true);
+        const ordinaryWave = stageIdx(lvl) !== 2;
+        for (const br of G.bricks) {
+          if (!isBossOnlyPokemon(br.poke.id)) continue;
+          if (ordinaryWave || (!br.isBoss && !br.subBoss)) {
+            leaks.push(mode + ' L' + lvl + ' #' + br.poke.id + ' spawned as ordinary');
+          }
+        }
+      }
+    }
+    assert(leaks.length === 0, leaks.join(' ; '));
+
+    SETTINGS.mode = 'classic';
+    resetRun(1, true);
+    G.lives = 1; G.livesMax = 4; G.healthDropPity = 9; G.powerups = [];
+    const target = G.bricks.find(b => !b.isBoss && !b.barrier && !b.isDitto && b.poke.id > 0);
+    target.hp = 1;
+    damageBrick(target, 99, target.bx, target.by, null);
+    assert(G.powerups.some(p => p.p && p.p.key === 'heal'), 'pity kill did not drop a recovery item');
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
+    assert(G.lives === 2, 'recovery item should restore exactly 1 HP, got ' + G.lives);
+
+    const oldX = mouseX, oldY = lastMouseY;
+    mouseX = 123; lastMouseY = 321; lastTouchT = performance.now();
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: W - 58, clientY: FLOOR() - 76 }));
+    assert(mouseX === 123 && lastMouseY === 321, 'synthetic post-touch mousemove changed steering');
+    // Directly exercise UI-touch ownership in both control models. Even if a
+    // browser moved the pointer to FIRE before delivering touchstart, claiming
+    // the pad must snap the steering target back to the actual player.
+    paddleTouchId = null;
+    G.paddle.x = 246; mouseX = W - 58;
+    claimUiTouch(9001);
+    assert(mouseX === 246, 'classic FIRE touch did not restore paddle steering');
+    uiTouchIds.delete(9001);
+    G.mode = 'junkie'; G.paddle.x = 318; G.shipYv = PADDLE_Y() - 74;
+    mouseX = W - 58; lastMouseY = FLOOR() - 76;
+    claimUiTouch(9002);
+    assert(mouseX === 318, 'junkie FIRE touch did not restore horizontal steering');
+    assert(lastMouseY === G.shipYv + (IS_TOUCH ? 85 : 0),
+      'junkie FIRE touch did not restore vertical steering');
+    uiTouchIds.delete(9002);
+    G.mode = 'classic';
+    mouseX = oldX; lastMouseY = oldY; lastTouchT = -9999;
+    return BOSS_ONLY_IDS.size + ' boss-only species isolated · potion restores 1 HP · FIRE cannot steer either mode';
   });
 
   // 5) roster names + sprite files present (base ids only; shiny/remote excepted)
@@ -517,10 +591,10 @@ window.requestAnimationFrame = function () { return 0; };
       for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
         const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
-        const rects = { quick: L.quick, exp: L.exp, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+        const rects = { quick: L.quick, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
-        for (let i = 0; i < 2; i++) rects['card(' + i + ')'] = L.card(i);
+        for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = S.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = S.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
@@ -600,7 +674,11 @@ window.requestAnimationFrame = function () { return 0; };
         detail = (await t.fn()) || '';
       } catch (e) {
         if (e instanceof Skip) { status = 'SKIP'; detail = e.message; }
-        else { status = 'FAIL'; detail = e.message || String(e); }
+        else { // keep the top of the stack — "undefined is not a function" alone is undebuggable
+          status = 'FAIL';
+          detail = (e.message || String(e)) +
+            (e.stack ? ' @ ' + String(e.stack).split('\n').slice(1, 3).join(' <- ').replace(/https?:\/\/[^\s/]+/g, '') : '');
+        }
       }
       const ms = performance.now() - t0;
       finishRow(tr, status, ms, detail);
@@ -627,7 +705,7 @@ window.requestAnimationFrame = function () { return 0; };
     try {
       SETTINGS.drops = 1; SETTINGS.speed = 1; SETTINGS.preset = 'easy';
       SETTINGS.sfx = 0; SETTINGS.music = 0; SETTINGS.starter = 'none';
-      SETTINGS.mode = 'classic';
+      SETTINGS.mode = 'classic'; SETTINGS.autoFire = false;
       if (typeof MUSIC !== 'undefined') MUSIC.on = false;
       ensureViewport();
     } catch (e) { ERR.push('settings normalization failed: ' + e.message); }

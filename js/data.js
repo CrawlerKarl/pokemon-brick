@@ -306,6 +306,7 @@ const POWERS = {
   star:   { key: 'star',   icon: 'star',   name: 'SCORE x2',       desc: 'POINTS ARE DOUBLED',         color: '#ffee58' },
   draco:  { key: 'draco',  icon: 'draco',  name: 'DRACO MISSILES', desc: 'HOMING MISSILES LAUNCH',     color: '#5c6bc0' },
   warp:   { key: 'warp',   icon: 'warp',   name: 'SKY WARP',       desc: 'BALLS PHASE UP TO THE HIGH GROUND', color: '#80d8ff' },
+  heal:   { key: 'heal',   icon: 'heart',  name: 'MAX POTION',     desc: 'RESTORES 1 HP',              color: '#ff6f91' },
 };
 // ---- starter Pokémon: a partner that rides your paddle for the whole run.
 // Each bakes in a paddle ability that grows as you clear regions, and the
@@ -546,22 +547,30 @@ const MODIFIERS = [
 //  solve different problems: VOLLEY covers space while IMPACT rewards a lined-
 //  up shot. The remaining paths own survival, Mega tempo, and pickups/score.
 //  Every tier has an in-play tell on the pilot rig; levels are permanent...
-//  unless you white out, which burns tree levels instead of ending the run.
+//  unless you are knocked out, which burns tree levels instead of ending the run.
 // ============================================================
 const PATHS = {
-  arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', family: 'offense', color: '#80d8ff',
+  arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', crole: 'BALL CONTROL → BLASTER', family: 'offense', color: '#80d8ff',
     summary: 'RATE OF FIRE · COVER MORE LANES', tell: 'CYAN MULTI-BARREL RIG', tiers: [
-    { key: 'coolant',   icon: 'slow',   name: 'COOLANT',     desc: 'BLASTER HEAT PER SHOT −25%' },
-    { key: 'intercept', icon: 'target', name: 'INTERCEPTOR', desc: 'BOLTS DESTROY +1 ENEMY SHOT BEFORE FADING' },
-    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON', desc: 'FIRE TWO BOLTS · EACH DEALS 60% DAMAGE' },
+    { key: 'coolant',   icon: 'slow',   name: 'COOLANT', cname: 'CONTROL CORE',
+      desc: 'BALL SPEED CAP −8% · EASIER RETURNS', sdesc: 'BLASTER HEAT PER SHOT −25%' },
+    { key: 'intercept', icon: 'target', name: 'INTERCEPTOR', cname: 'RALLY GUARD',
+      desc: 'RALLY BARRIER +1 CHARGE', sdesc: 'BOLTS DESTROY +1 ENEMY SHOT BEFORE FADING' },
+    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON',
+      desc: 'PERMANENT BLASTER UNLOCK · FIRE TWO BOLTS · 60% DAMAGE',
+      sdesc: 'FIRE TWO BOLTS · EACH DEALS 60% DAMAGE' },
     { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'FIRES 20% FASTER · HEAT PER SHOT −15%' },
   ]},
-  impact: { name: 'IMPACT', role: 'HEAVY & CHARGE', family: 'offense', color: '#ff8a65',
+  impact: { name: 'IMPACT', role: 'HEAVY & CHARGE', crole: 'BALL POWER → BLASTER', family: 'offense', color: '#ff8a65',
     summary: 'FEWER, HEAVIER SHOTS · CHARGED HITS DETONATE', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
-    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT',    desc: 'BOLTS ARE 30% WIDER · DAMAGE +15%',
+    { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT', cname: 'HEAVY CORE',
+      desc: 'BALL 18% LARGER · BRICK DAMAGE +15%',
       sdesc: 'BOLTS 30% WIDER · DAMAGE +15% · CHARGE BUILDS 35% FASTER' },
-    { key: 'demo',    icon: 'fire',   name: 'SPLASH CHARGE', desc: 'CHARGED SHOTS DETONATE — SPLASH DAMAGE AROUND THE HIT' },
-    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND',   desc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS' },
+    { key: 'demo',    icon: 'fire',   name: 'SPLASH CHARGE', cname: 'IMPACT CHARGE',
+      desc: 'BALL BRICK DAMAGE +25%', sdesc: 'CHARGED SHOTS DETONATE — SPLASH DAMAGE AROUND THE HIT' },
+    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND',
+      desc: 'PERMANENT BLASTER UNLOCK · EVERY 5TH VOLLEY PIERCES 2 TARGETS',
+      sdesc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS' },
     { key: 'impactX', icon: 'star',   name: 'NOVA ROUND',    desc: 'PULSE EVERY 4TH VOLLEY · 2× DMG · BIGGER CHARGE BLAST' },
   ]},
   prism: { name: 'PRISM', role: 'TYPE MASTERY', family: 'element', color: '#26c6da',
@@ -611,15 +620,21 @@ const JUNKIE_ITEMS = {
   bond:    ['MAGNET', 'SOOTHE BELL', 'AMULET COIN', 'MAX REVIVE'],
 };
 function junkieTierName(pathKey, tierIdx) {
-  return (G.mode === 'junkie' && JUNKIE_ITEMS[pathKey] && JUNKIE_ITEMS[pathKey][tierIdx])
-    ? JUNKIE_ITEMS[pathKey][tierIdx]
-    : PATHS[pathKey].tiers[tierIdx].name;
+  const tier = PATHS[pathKey].tiers[tierIdx];
+  if (G.mode === 'junkie' && JUNKIE_ITEMS[pathKey] && JUNKIE_ITEMS[pathKey][tierIdx]) {
+    return JUNKIE_ITEMS[pathKey][tierIdx];
+  }
+  return G.mode === 'classic' && tier.cname ? tier.cname : tier.name;
 }
 // Cards, the tree atlas, and pick confirmations all describe what a tier does
 // IN THE CURRENT MODE — a shooter-mode player never reads about paddles/balls.
 function tierDesc(pathKey, tierIdx) {
   const tier = PATHS[pathKey].tiers[tierIdx];
   return (G.mode !== 'classic' && tier.sdesc) ? tier.sdesc : tier.desc;
+}
+function pathRole(pathKey) {
+  const path = PATHS[pathKey];
+  return G.mode === 'classic' && path.crole ? path.crole : path.role;
 }
 // As authored paths cap, every mode fills empty offers with these small mastery
 // stacks. In SPACE JUNKIE they are literal held items orbiting the pilot.
@@ -736,6 +751,15 @@ const GENS = [
       3: [[908,'grass'],[911,'fire'],[914,'water'],[923,'electric'],[934,'rock'],[959,'fairy'],[998,'dragon'],[979,'ghost'],[983,'dark'],[1000,'steel'],[970,'rock'],[980,'poison']],
     } },
 ];
+// Legendary, mythical, and sentinel species are encounter headliners. Keep
+// them out of ordinary ranks, reinforcements, and guard pools so seeing one
+// always means a boss round has begun.
+const BOSS_ONLY_IDS = new Set(GENS.flatMap(g => [
+  g.boss.id,
+  ...(g.gauntlet ? g.gauntlet.subs.map(([id]) => id) : []),
+  ...(g.gauntlet ? [g.gauntlet.myth[0]] : []),
+]));
+function isBossOnlyPokemon(id) { return BOSS_ONLY_IDS.has(id); }
 // ============================================================
 //  ECOLOGY — Pokémon that BELONG together appear together.
 //  Each region has curated HABITAT PACKS (the groupings you'd see in the
@@ -839,7 +863,10 @@ function pickWaveTheme(genIdx) {
 // one tier's pool filtered to the theme; falls back to the full tier so a
 // narrow pack can never produce an empty (crashing) pool
 function themedPool(gen, tier, theme) {
-  const pool = gen.tiers[tier];
+  const full = gen.tiers[tier];
+  const ordinary = full.filter(([id]) => !isBossOnlyPokemon(id));
+  const pool = ordinary.length ? ordinary
+    : Object.values(gen.tiers).flat().filter(([id]) => !isBossOnlyPokemon(id));
   if (!theme) return pool;
   const f = theme.ids ? pool.filter(([id]) => theme.ids.has(id))
     : pool.filter(([, t]) => theme.types.has(t));

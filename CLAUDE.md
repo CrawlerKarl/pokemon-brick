@@ -5,24 +5,31 @@ system tour, tuning knobs, and gotchas. This file is the workflow + the
 invariants you must not regress.
 
 ## What it is
-Breakout × Space Invaders/Galaga hybrid, journeying through 9 Pokémon regions
-(3 stages each: ARRIVAL → CHALLENGE → LEGENDARY). 10 JS modules in `js/`, loaded
-in order (later reference earlier) via `<script>` tags in `index.html`. No build
-step / deps / framework. `G` (state.js) is the god-object holding all runtime
-state.
+**WAVEBREAKER** — a Breakout × Space Invaders/Galaga hybrid, journeying through
+9 Pokémon regions (3 stages each: ARRIVAL → CHALLENGE → LEGENDARY). The brand
+is skin-agnostic: `GAME_TITLE` + `SKIN_EDITION` (config.js) split the engine
+name from the current theme ("POKÉMON EDITION"), so future modes add cards and
+future skins swap strings/art without touching mechanics. 10 JS modules in
+`js/`, loaded in order (later reference earlier) via `<script>` tags in
+`index.html`. No build step / deps / framework. `G` (state.js) is the
+god-object holding all runtime state.
 
-**Three game modes** (`SETTINGS.mode` / `G.mode`, chosen on the title screen):
-- **classic** — ball-first brick-breaker (the original). The ball is THE
+**Three game modes** (`SETTINGS.mode` / `G.mode`, chosen on the title screen).
+UI labels are presentation-only (BREAKER / BLASTER / STARFIGHTER); the internal
+keys below are storage-stable — saves, checkpoints and tests reference them, so
+NEVER rename a key:
+- **classic** (UI: BREAKER) — ball-first brick-breaker (the original). The ball is THE
   weapon; there is NO free blaster. The blaster is EARNED and gated by
   `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or an
   offense-path draft (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
   touch FIRE pad is hidden, and the shoot hint is suppressed.
-- **blaster** — same waves, NO ball; you clear everything by shooting. Charge
+- **blaster** (UI: BLASTER) — same waves, NO ball; you clear everything by shooting. Charge
   a fat piercing shot with right-click / Shift, or on touch **hold the FIRE
   pad** (a quick tap fires one normal shot; no separate CHARGE pad). Wiring:
   `touchFirePendingId`/`TOUCH_CHARGE_HOLD_MS` (input.js), promoted to
   `chargeHeld` in update.js. Optional AUTO-FIRE pauses during charge intent.
-- **junkie** (SPACE JUNKIE) — the pure-shooter homage: no wall at all, every
+- **junkie** (UI: STARFIGHTER; internal codename "Space Junkie" throughout
+  code + docs) — the pure-shooter homage: no wall at all, every
   wave is tight high flocks of small flyers, and **your starter IS the ship**
   (Pikachu if none), flying vertically and firing its own typed attack.
 

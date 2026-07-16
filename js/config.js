@@ -3,8 +3,8 @@
 //  SETTINGS & DIFFICULTY (all knobs in one place)
 // ============================================================
 const PRESETS = {
-  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.5,  shotSpeed: 0.65, bossHp: 0.68, brickHp: 0.9,  ballSpeed: 0.85, lives: 4 },
-  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 1.0,  shotSpeed: 0.9,  bossHp: 1.12, brickHp: 1.15, ballSpeed: 0.95, lives: 3 },
+  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.5,  shotSpeed: 0.65, bossHp: 0.68, brickHp: 0.9,  ballSpeed: 0.85, lives: 5 },
+  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 1.0,  shotSpeed: 0.9,  bossHp: 1.12, brickHp: 1.15, ballSpeed: 0.95, lives: 4 },
   hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3 },
   nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1 },
 };
@@ -13,18 +13,26 @@ const SETTINGS = Object.assign(
     reduceShake: false, reduceFlash: false, hcBall: false, autoFire: false, mode: 'classic' },
   (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}')));
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
-// game MODE — the FIRST choice, on the title screen. Two headliners (the
-// classic brick-breaker and full SPACE JUNKIE — no wall, every wave airborne,
-// your starter IS the ship) plus BLASTER, the experimental hybrid: the same
-// walls but no ball, cleared entirely by shooting. Difficulty + starter are
-// picked on the setup page AFTER the mode.
+// ---- BRAND vs SKIN. WAVEBREAKER is the engine's name — every mode is
+// another way to break the wave, so new modes just add cards below. The
+// SKIN carries the current theme (today: Pokémon); a future re-theme swaps
+// these strings + the art without touching mechanics or storage keys.
+const GAME_TITLE = 'WAVEBREAKER';
+const SKIN_EDITION = 'POKÉMON EDITION';
+// game MODE — the FIRST choice, on the title screen. Three ways to play the
+// same journey (one wave engine underneath — buildLevel branches on the key):
+// BREAKER is the classic ball-first brick-breaker, BLASTER trades the ball
+// for pure firepower against the same walls, STARFIGHTER drops the wall and
+// puts you in the cockpit. Labels are presentation only — the internal keys
+// (classic / blaster / junkie) are storage-stable: saved settings, run
+// checkpoints and tests reference them, so never rename a key.
 const MODES = [
-  { key: 'classic', label: 'BRICK BREAKER', desc: 'BALL-FIRST', accent: '#ffd54f',
-    lines: ['THE CLASSIC — SMASH THE WALL', 'WITH YOUR BALL · EARN A BLASTER'] },
-  { key: 'junkie',  label: 'SPACE JUNKIE', desc: 'PURE SHOOTER', accent: '#ab47bc',
-    lines: ['NO WALL · PURE SHOOTER', 'YOUR POKÉMON IS THE SHIP'] },
-  { key: 'blaster', label: 'BLASTER', desc: 'EXPERIMENTAL MIX', accent: '#4dd0e1',
-    lines: ['BRICK WALLS, NO BALL · HOLD TO CHARGE'] },
+  { key: 'classic', label: 'BREAKER', desc: 'THE CLASSIC', accent: '#ffd54f',
+    lines: ['BOUNCE THE BALL · SMASH THE WALL', 'EARN A BLASTER AS YOU GO'] },
+  { key: 'blaster', label: 'BLASTER', desc: 'PURE FIREPOWER', accent: '#4dd0e1',
+    lines: ['SAME WALLS · NO BALL', 'TAP TO SHOOT · HOLD TO CHARGE'] },
+  { key: 'junkie',  label: 'STARFIGHTER', desc: 'FULL FLIGHT', accent: '#ab47bc',
+    lines: ['NO WALL · EVERY WAVE FLIES', 'YOUR PARTNER IS THE SHIP'] },
 ];
 if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'classic';
 function saveSettings() { saveStore('pkbrk-settings', SETTINGS); }
@@ -91,20 +99,19 @@ let menuPage = 'modes';
 // hit-testing so nothing drifts off-screen. Concerns:
 //  • SHORT viewports (landscape phones) compress every gap and collapse the
 //    footer links into a single row — the whole page must fit H<400.
-//  • NARROW phones stack the two headliner cards vertically.
+//  • NARROW phones stack the three mode cards vertically.
 //  • a saved run adds a CONTINUE button below the cards (RUN_CKPT, state.js).
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
   const short = H < 560;
-  const stacked = W < 560; // hero panels side-by-side, or stacked on phones
+  const stacked = W < 620; // three cards in a row, or a column on phones
   const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
   const titleSize = short ? Math.min(24, W / 18) : Math.min(44, W / 13) * Math.max(0.8, s);
   const titleY = short ? 18 : Math.max(36, H * 0.055);
   const tagY = titleY + titleSize * (short ? 1.05 : 1.42) + (short ? 4 : 8);
-  // the two hero panels FILL everything between the title band and the
-  // bottom stack (blaster chip → continue → footer row) — no dead space
+  // the three mode cards FILL everything between the title band and the
+  // bottom stack (continue → footer row) — no dead space
   const gap = short ? 10 : 16;
-  const expH = short ? 26 : 34;
   const resumeH = hasCkpt ? (short ? 30 : 44) : 0;
   const footerH = short ? 22 : 28;
   const padB = short ? 6 : 14;
@@ -116,22 +123,19 @@ function menuLayout() {
   const bottom = H - padB;
   const footerY = bottom - footerH;
   const resumeY = footerY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
-  const expY = (hasCkpt ? resumeY : footerY) - expH - (short ? 6 : 10);
-  const cardsBot = expY - (short ? 6 : 12);
-  const cardW = stacked ? Math.min(W * 0.94, 540) : (Math.min(W * 0.96, 1240) - gap) / 2;
+  const cardsBot = (hasCkpt ? resumeY : footerY) - (short ? 6 : 12);
+  const cardW = stacked ? Math.min(W * 0.94, 540) : (Math.min(W * 0.96, 1240) - gap * 2) / 3;
   const cardsH = Math.max(short ? 110 : 190, cardsBot - heroY);
-  const cardH = stacked ? (cardsH - gap) / 2 : cardsH;
-  const left = stacked ? W / 2 - cardW / 2 : W / 2 - (cardW * 2 + gap) / 2;
-  const expW = Math.min(440, W * 0.86);
+  const cardH = stacked ? (cardsH - gap * 2) / 3 : cardsH;
+  const left = stacked ? W / 2 - cardW / 2 : W / 2 - (cardW * 3 + gap * 2) / 2;
   const resumeW = Math.min(380, W * 0.86);
   const fW = Math.min(230, (W - 44) / 2);
   return {
-    s, short, stacked, oneRow: true, titleY, titleSize, tagY, pickLabelY: tagY,
+    s, short, stacked, titleY, titleSize, tagY,
     quick: { x: W / 2 - quickW / 2, y: quickY, w: quickW, h: quickH },
     card: i => stacked
       ? { x: W / 2 - cardW / 2, y: heroY + i * (cardH + gap), w: cardW, h: cardH }
       : { x: left + i * (cardW + gap), y: heroY, w: cardW, h: cardH },
-    exp: { x: W / 2 - expW / 2, y: expY, w: expW, h: expH },
     resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
     dex: { x: W / 2 - fW - 10, y: footerY, w: fW, h: footerH },
     adv: { x: W / 2 + 10, y: footerY, w: fW, h: footerH },

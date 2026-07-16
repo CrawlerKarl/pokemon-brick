@@ -12,7 +12,8 @@ function barrierCharges() {
   // extended possession above the wall. The full two-charge barrier begins at
   // the first boss and remains unchanged for the rest of the journey.
   const openingClassic = G.mode === 'classic' && G.level <= 2;
-  return (openingClassic ? 1 : 2) + (upgN('rally') ? 1 : 0);
+  return (openingClassic ? 1 : 2) + (upgN('rally') ? 1 : 0)
+    + (G.mode === 'classic' && upgN('intercept') ? 1 : 0);
 }
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
 // ---- SPACE JUNKIE pilots: in junkie mode your starter IS the ship (Pikachu
@@ -101,7 +102,7 @@ const G = {
   adapt: 1, deathsThisWave: 0,
   mega: 0, megaT: 0,
   shotsFired: 0, playT: 0,
-  maxCombo: 0, caughtRun: 0, dropHint: 0, megaCalloutDone: false,
+  maxCombo: 0, caughtRun: 0, dropHint: 0, healthDropPity: 0, megaCalloutDone: false,
   rallyHintDone: false, bestRally: 0, barrierHintDone: false,
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
   trial: false,
@@ -143,14 +144,14 @@ const FLOOR = () => H - SAFE_B;
 // on touch the paddle rides well ABOVE the corner buttons — no overlap
 const PADDLE_Y = () => FLOOR() - (IS_TOUCH ? 124 : 64);
 const DANGER_Y = () => PADDLE_Y() - 86;
-const ballSp = () => diff().ballSpeed;
+const ballSp = () => diff().ballSpeed * (G.mode === 'classic' && upgN('coolant') ? 0.92 : 1);
 // CLASSIC keeps the ball as THE weapon — the blaster is earned, never default.
-// It arms only once you draft an offense path (VOLLEY / IMPACT), grab a LASER
-// power-up, or pop Mega. The shooter modes (blaster / junkie) are always armed.
+// It arms only at tier 3 of an offense path, from a short LASER pickup, or
+// during Mega. The shooter modes (blaster / junkie) are always armed.
 function blasterArmed() {
   if (G.mode !== 'classic') return true;
   if (G.fx_laser || G.megaT > 0) return true;
-  return PATH_KEYS.some(k => PATHS[k].family === 'offense' && pathLvl(k) > 0);
+  return PATH_KEYS.some(k => PATHS[k].family === 'offense' && pathLvl(k) >= 3);
 }
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
@@ -171,11 +172,13 @@ function applyPower(p, srcType) {
     case 'fire':   bump('fx_fire', 10); break;
     case 'laser':
       bump('fx_laser', 9);
-      // first laser of a classic run = the blaster tutorial moment
+      // First laser of a classic run explains that this is a brief side arm,
+      // not a permanent replacement for the ball.
       if (G.mode === 'classic' && !G.blasterTutDone) {
         G.blasterTutDone = true;
-        setAnnounce('laser', '#4dd0e1', 'BLASTER ARMED!',
-          (IS_TOUCH ? 'HOLD THE FIRE PAD' : 'HOLD CLICK') + ' — BOLTS BREAK THE ENERGY VEILS', 3.6);
+        setAnnounce('laser', '#4dd0e1', 'TEMPORARY BLASTER!',
+          '9 SECONDS OF SUPPORT FIRE · ' + (IS_TOUCH ? 'USE THE FIRE PAD' : 'HOLD CLICK'), 3.6,
+          'THE BALL REMAINS YOUR PRIMARY WEAPON');
       }
       break;
     case 'wide':   bump('fx_wide', 14); break;
@@ -188,6 +191,21 @@ function applyPower(p, srcType) {
       tier = G.shieldCharges;
       SFX.shield();
       break;
+    case 'heal': { // recovery pickup: restore one segment, never exceed max HP
+      const before = G.lives;
+      G.lives = Math.min(Math.max(1, G.livesMax || preset().lives), G.lives + 1);
+      G.healthDropPity = 0;
+      G.hurtHud = 2.8;
+      tier = 1;
+      if (G.lives === before) {
+        G.score += 250;
+        p = { ...p, name: 'POTION BONUS', desc: 'HP FULL · +250 POINTS' };
+      } else {
+        ringFx(G.paddle.x, shipY(), p.color, 8, 84, 4, 0.55);
+        addFloater(G.paddle.x, shipY() - 54, '+1 HP', p.color, 22);
+      }
+      break;
+    }
     case 'warp': // every ball phases straight up through the blocks
       for (const b of G.balls) {
         if (b.dead) continue;
@@ -231,7 +249,8 @@ function applyPower(p, srcType) {
 function makeBall(x, y, angle, overrideAngle) {
   const sp = ballSp();
   const a = overrideAngle != null ? overrideAngle : (angle != null ? angle : -Math.PI / 2 + (Math.random() - 0.5) * 0.6);
-  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: barrierCharges(), ember: 0 };
+  const radius = G.mode === 'classic' && upgN('heavy') ? 10.6 : 9;
+  return { x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: radius, stuck: false, dead: false, trail: [], rally: 0, aboveWall: false, zoneSaves: barrierCharges(), ember: 0 };
 }
 
 // formations — pinball-shaped layouts drawn from at random, so runs differ.
@@ -498,9 +517,10 @@ function buildLevel(lvl) {
   // wall SHRINKS as the journey shifts toward flyers — always a balance,
   // never a wall AND a swarm at once. Streams (below) are pure flyers that
   // spend part of the flyer budget, arriving already broken out.
-  const streamSquads = !hasBoss && regionsIn >= 4 ? (regionsIn >= 7 ? 2 : 1) : 0;
+  const classic = G.mode === 'classic';
+  const streamSquads = !hasBoss && !classic && regionsIn >= 4 ? (regionsIn >= 7 ? 2 : 1) : 0;
   const streamPer = Math.min(8, 4 + Math.floor(regionsIn / 2));
-  const flyerBudget = hasBoss ? 0 : Math.min(22, regionsIn === 0 ? 0 : Math.round(4.5 + regionsIn * 1.85));
+  const flyerBudget = hasBoss || classic ? 0 : Math.min(22, regionsIn === 0 ? 0 : Math.round(4.5 + regionsIn * 1.85));
   const gridFlyerBudget = Math.max(0, flyerBudget - streamSquads * streamPer);
   // boxed bricks: a fuller wall early, thinning region by region — but not so
   // full it squeezes the flyer band below it (flyers need room to not overlap)
@@ -599,7 +619,7 @@ function buildLevel(lvl) {
   if (unlockR >= 4) kinds.push('inf', 'falls', 'zigzag', 'olympic', 'phalanx');
   if (unlockR >= 5) kinds.push('liss', 'star', 'binary', 'spiral');
   if (unlockR >= 6) kinds.push('rose', 'pend', 'epi', 'atom', 'vortex', 'clover', 'butterfly');
-  if (!junkie && !hasBoss && regionsIn >= 1) {
+  if (G.mode === 'blaster' && !hasBoss && regionsIn >= 1) {
     // how many break out of the wall is set by the density budget (above),
     // never a runaway fraction — the boxed wall keeps a real presence
     const pool2 = G.bricks.filter(b => !b.armored && !b.isBoss);
@@ -860,8 +880,8 @@ function buildLevel(lvl) {
   }
   // late rounds shouldn't melt: reinforcement flights extend each wave,
   // arriving as pure flyers once the first formation falls
-  G.reinforce = !hasBoss && (junkie ? (regionsIn >= 3 ? 2 : 1)
-    : regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0);
+  G.reinforce = hasBoss ? 0 : (junkie ? (regionsIn >= 3 ? 2 : 1)
+    : classic ? 0 : regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0);
   G.marchDir = Math.random() < 0.5 ? -1 : 1;
   // boxed bricks are a STATIC wall on every non-boss wave — only the Pokémon
   // move (bosses keep their guard-ring choreography)
@@ -871,7 +891,7 @@ function buildLevel(lvl) {
   // Galaga peel-off dives: hinted on early challenge stages, constant later.
   // SPACE JUNKIE keeps region 1 calm — the flocks just fly their patterns;
   // dives (and squad maneuvers) only start once the journey hardens
-  G.divers = junkie ? regionsIn >= 1 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
+  G.divers = classic ? false : junkie ? regionsIn >= 1 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
   G.diveCD = 6;
   if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
@@ -908,22 +928,6 @@ function buildLevel(lvl) {
       filler.splice(i, 1);
     }
   }
-  // ---- ENERGY VEILS (classic challenge waves): cyan casings the BALL can't
-  // crack — only blaster-family fire (bolts, support lasers, missiles) breaks
-  // them. Kanto's challenge wave doubles as the blaster tutorial: it always
-  // seeds a LASER drop (damageBrick) and an emergency one if you're stranded.
-  if (G.mode === 'classic' && !hasBoss && stage === 1) {
-    const vPool = G.bricks.filter(b => !b.isBoss && !b.armored && !b.flight);
-    for (let i = vPool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [vPool[i], vPool[j]] = [vPool[j], vPool[i]];
-    }
-    const nV = Math.min(vPool.length, lvl === 2 ? 3 : Math.min(6, 2 + Math.floor(regionsIn / 2)));
-    for (let i = 0; i < nV; i++) vPool[i].veil = true;
-    if (lvl === 2) setAnnounce('laser', '#4dd0e1', 'ENERGY VEILS!',
-      'THE BALL BOUNCES OFF THE GLOWING CASINGS', 3.4,
-      'CATCH A LASER DROP — ARM YOUR BLASTER TO BREAK THEM');
-  }
   if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = 0.9; // they fire as they float in
   // SPACE JUNKIE's Kanto challenge doubles as the CHARGE-SHOT tutorial
   if (G.mode === 'junkie' && lvl === 2) {
@@ -950,7 +954,7 @@ function buildLevel(lvl) {
   }
   if (junkie) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
   // arriving at a region's doorstep checkpoints the run (post-draft state —
-  // buildLevel runs after every pick, and after white-out tree burns too)
+  // buildLevel runs after every pick, and after knockout tree burns too)
   if (!G.trial && stage === 0) saveCheckpoint();
 }
 
@@ -1014,7 +1018,7 @@ function resetRun(startLevel = 1, trial = false) {
   const p = preset();
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
-  G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.megaCalloutDone = false;
+  G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false;
   G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
