@@ -8,6 +8,12 @@ const PRESETS = {
   hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3 },
   nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1 },
 };
+const DIFFICULTY_UI = {
+  easy: { name: 'SCENIC', tone: 'FORGIVING', desc: 'MORE HEALTH · GENTLER FIRE' },
+  normal: { name: 'ADVENTURE', tone: 'BALANCED', desc: 'THE INTENDED CAMPAIGN', recommended: true },
+  hard: { name: 'ACE', tone: 'INTENSE', desc: 'FASTER · TOUGHER WAVES' },
+  nuzlocke: { name: 'ONE LIFE', tone: 'EXTREME', desc: 'ONE HIT POINT · NO SAFETY NET' },
+};
 const STORED_SETTINGS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}'));
 // Respect the device accessibility preference on a player's first visit.
 // Explicit choices saved in SETTINGS still win on every later visit.
@@ -15,7 +21,7 @@ const PREFERS_REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefe
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
     reduceShake: PREFERS_REDUCED_MOTION, reduceFlash: PREFERS_REDUCED_MOTION,
-    hcBall: false, autoFire: false, mode: 'classic',
+    hcBall: false, autoFire: false, mode: 'junkie',
     buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
     leftHanded: false, haptics: true },
   STORED_SETTINGS);
@@ -55,14 +61,14 @@ const SKIN_EDITION = 'POKÉMON EDITION';
 // (classic / blaster / junkie) are storage-stable: saved settings, run
 // checkpoints and tests reference them, so never rename a key.
 const MODES = [
-  { key: 'classic', label: 'BREAKER', desc: 'THE CLASSIC', accent: '#ffd54f',
-    lines: ['BOUNCE THE BALL · SMASH THE WALL', 'EARN A BLASTER AS YOU GO'] },
-  { key: 'blaster', label: 'BLASTER', desc: 'PURE FIREPOWER', accent: '#4dd0e1',
-    lines: ['SAME WALLS · NO BALL', 'TAP TO SHOOT · HOLD TO CHARGE'] },
-  { key: 'junkie',  label: 'STARFIGHTER', desc: 'FULL FLIGHT', accent: '#ab47bc',
-    lines: ['NO WALL · EVERY WAVE FLIES', 'YOUR PARTNER IS THE SHIP'] },
+  { key: 'junkie',  label: 'STARFIGHTER', desc: '★ FEATURED CAMPAIGN', accent: '#c06cff',
+    lines: ['FULL-FLIGHT POKÉMON COMBAT', 'FLY · DODGE · CHARGE · EVOLVE'] },
+  { key: 'classic', label: 'BREAKER', desc: 'ARCADE CLASSIC', accent: '#ffd54f',
+    lines: ['BOUNCE THE BALL · BREAK THE WALL', 'BUILD RALLIES · EARN A BLASTER'] },
+  { key: 'blaster', label: 'BLASTER', desc: 'ARCADE SHOOTER', accent: '#4dd0e1',
+    lines: ['BREAK THE WALL WITH PURE FIREPOWER', 'TAP TO SHOOT · HOLD TO CHARGE'] },
 ];
-if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'classic';
+if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'junkie';
 function saveSettings() { saveStore('pkbrk-settings', SETTINGS); }
 function preset() { return PRESETS[SETTINGS.preset]; }
 // physics scale with the playfield — phones get a proportionally slower ball
@@ -135,28 +141,21 @@ const STARTERS = [
   { key: 'dragon', label: 'AXEW' }, { key: 'dark', label: 'IMPIDIMP' },
   { key: 'steel', label: 'TINKATINK' }, { key: 'fairy', label: 'RALTS' },
 ];
-const STARTERS_PER_PAGE = 6;
-const STARTER_PAGE_LABELS = ['CLASSIC TYPES', 'BATTLE TYPES', 'RARE TYPES'];
 if (SETTINGS.starter !== 'none' && !STARTERS.some(s => s.key === SETTINGS.starter)) SETTINGS.starter = 'none';
-let starterPage = Math.max(0, Math.floor(Math.max(0, STARTERS.findIndex(s => s.key === SETTINGS.starter)) / STARTERS_PER_PAGE));
-function starterPageItems() {
-  const maxPage = Math.ceil(STARTERS.length / STARTERS_PER_PAGE) - 1;
-  starterPage = Math.max(0, Math.min(maxPage, starterPage));
-  return STARTERS.slice(starterPage * STARTERS_PER_PAGE, (starterPage + 1) * STARTERS_PER_PAGE);
-}
 let advOpen = false; // advanced settings panel
 let settingsPage = 0; // 0 = game/accessibility, 1 = touch controls
 function activeSliders() { return settingsPage === 1 ? TOUCH_SLIDERS : SLIDERS; }
 function activeToggles() { return settingsPage === 1 ? TOUCH_TOGGLES : TOGGLES; }
-// the menu is TWO pages now: 'modes' (title + pick your game) then 'setup'
-// (difficulty + starter for the chosen mode, then START). Anything that
-// returns to the menu resets this to 'modes'.
+// The menu has a featured title hub followed by a two-step setup wizard:
+// all partners on one screen, then challenge + launch. Anything that returns
+// to the menu resets to the featured title hub.
 let menuPage = 'modes';
+let setupStep = 'pilot'; // setup is a two-screen flow: all pilots → challenge
 // PAGE 1 — title + mode select. Responsive layout shared by rendering and
 // hit-testing so nothing drifts off-screen. Concerns:
 //  • SHORT viewports (landscape phones) compress every gap and collapse the
 //    footer links into a single row — the whole page must fit H<400.
-//  • NARROW phones stack the three mode cards vertically.
+//  • NARROW phones stack the STARFIGHTER hero above two arcade cards.
 //  • a saved run adds a CONTINUE button below the cards (RUN_CKPT, state.js).
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
@@ -185,10 +184,15 @@ function menuLayout() {
   const progressY = footerY - progressH - (short ? 5 : 8);
   const resumeY = progressY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
   const cardsBot = (hasCkpt ? resumeY : progressY) - (short ? 6 : 12);
-  const cardW = stacked ? Math.min(W * 0.94, 540) : (Math.min(W * 0.96, 1240) - gap * 2) / 3;
+  const modesW = Math.min(W * 0.96, 1240);
+  const cardW = stacked ? Math.min(W * 0.94, 540) : modesW;
   const cardsH = Math.max(short ? 110 : 190, cardsBot - heroY);
-  const cardH = stacked ? (cardsH - gap * 2) / 3 : cardsH;
-  const left = stacked ? W / 2 - cardW / 2 : W / 2 - (cardW * 3 + gap * 2) / 2;
+  const primaryH = stacked ? Math.max(cardsH * 0.58, short ? 70 : 150) : cardsH;
+  const secondaryH = stacked ? Math.max(48, cardsH - primaryH - gap) : (cardsH - gap) / 2;
+  const primaryW = stacked ? cardW : modesW * 0.66;
+  const secondaryW = stacked ? (cardW - gap) / 2 : modesW - primaryW - gap;
+  const left = W / 2 - cardW / 2;
+  const desktopLeft = W / 2 - modesW / 2;
   const resumeW = Math.min(380, W * 0.86);
   const fW = Math.min(230, (W - 44) / 2);
   return {
@@ -196,8 +200,12 @@ function menuLayout() {
     quick: { x: W / 2 - quickRowW / 2, y: quickY, w: quickW, h: quickH },
     daily: { x: W / 2 - quickRowW / 2 + quickW + quickGap, y: quickY, w: dailyW, h: quickH },
     card: i => stacked
-      ? { x: W / 2 - cardW / 2, y: heroY + i * (cardH + gap), w: cardW, h: cardH }
-      : { x: left + i * (cardW + gap), y: heroY, w: cardW, h: cardH },
+      ? i === 0
+        ? { x: left, y: heroY, w: cardW, h: primaryH }
+        : { x: left + (i - 1) * (secondaryW + gap), y: heroY + primaryH + gap, w: secondaryW, h: secondaryH }
+      : i === 0
+        ? { x: desktopLeft, y: heroY, w: primaryW, h: cardsH }
+        : { x: desktopLeft + primaryW + gap, y: heroY + (i - 1) * (secondaryH + gap), w: secondaryW, h: secondaryH },
     resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
     progress: { x: Math.max(10, W / 2 - Math.min(920, W * 0.94) / 2), y: progressY,
       w: Math.min(920, W * 0.94), h: progressH },
@@ -205,70 +213,77 @@ function menuLayout() {
     adv: { x: W / 2 + 10, y: footerY, w: fW, h: footerH },
   };
 }
-// PAGE 2 — setup for the chosen mode: starter Pokémon, difficulty, START.
-// Tall portrait phones get 3×2 grids of BIG cards; the sections are then
-// spread down the whole screen (even vGap) instead of crammed at the top.
+// PAGE 2 — a two-step setup wizard. Pilot choice gets the whole screen so all
+// 18 partners are visible together; difficulty gets a separate, calmer screen
+// with a selected-pilot recap, four clear intensity choices, Trial, and launch.
 function setupLayout() {
   const short = H < 560;
-  const narrow = W < 620 && H >= 660; // tall portrait: 2×2 grids, big cards
-  const compactPhone = narrow && H < 760; // browser chrome can trim a tall phone to ~670px
+  const narrow = W < 620;
+  const compactPhone = narrow && H < 760;
   const s = Math.max(0.72, Math.min(1.1, H / 780, W / 720));
   const cx = W / 2;
-  const marginX = Math.max(16, W * 0.05);
-  const contentW = Math.min(W - marginX * 2, 560);
-  const gap = short ? 8 : 12;
-  const headSize = short ? Math.min(22, W / 16) : Math.min(46, W / 12);
-  const headY = short ? 26 : Math.max(54, H * 0.085);
-  const headBottom = headY + headSize * 0.6 + (short ? 12 : 30);
-  // six starters per page: 3×2 on tall phones, one row otherwise
-  const stCols = narrow ? 3 : 6, stRows = STARTERS_PER_PAGE / stCols;
-  const stW = (contentW - gap * (stCols - 1)) / stCols;
-  const stH = short ? 44 : compactPhone ? 60 : narrow ? Math.min(78, Math.max(70, stW * 0.7)) : Math.min(68, stW * 0.68);
-  const dfCols = narrow ? 2 : 4, dfRows = 4 / dfCols;
-  const dfW = (contentW - gap * (dfCols - 1)) / dfCols;
-  const dfH = short ? 32 : compactPhone ? 50 : narrow ? 58 : 52;
-  const btnW = narrow ? contentW : Math.min(340, contentW);
-  const btnH = short ? 40 : compactPhone ? 56 : narrow ? 70 : 60;
-  const labelGap = short ? 20 : compactPhone ? 26 : 32; // grid top sits below its section label
-  const infoH = short ? 0 : compactPhone ? 34 : 42;     // starter ability description block
-  const navH = short ? 20 : compactPhone ? 24 : 26, navGap = short ? 4 : compactPhone ? 5 : 6, noneH = navH;
-  // three section groups distributed with an even gap that soaks up slack
-  const starterGroup = labelGap + navH + navGap + stRows * stH + (stRows - 1) * gap + navGap + noneH + infoH;
-  const diffGroup = labelGap + dfRows * dfH + (dfRows - 1) * gap;
-  const trialH = short ? 24 : compactPhone ? 28 : 30; // per-game TRIAL link under START
-  const bottomPad = short ? 10 : compactPhone ? 14 : H * 0.05;
-  const slack = (H - bottomPad) - headBottom - (starterGroup + diffGroup + btnH + trialH + (short ? 6 : 10));
-  const vGap = Math.max(short ? 10 : compactPhone ? 8 : 18,
-    Math.min(slack / 3, short ? 22 : compactPhone ? 24 : narrow ? 54 : 40));
-  let y = headBottom + vGap;
-  const startLabelY = y + (short ? 8 : 12);
-  const starterNavY = y + labelGap;
-  const starterGridY = starterNavY + navH + navGap;
-  y = starterGridY + stRows * stH + (stRows - 1) * gap;
-  const noneY = y + navGap;
-  y = noneY + noneH;
-  const starterInfoY = short ? y + 8 : y + 18;
-  y = short ? y : y + infoH;
-  y += vGap;
-  const chipsGridY = y + labelGap;
-  const chipsLabelY = chipsGridY - (short ? 12 : 16);
-  y = chipsGridY + dfRows * dfH + (dfRows - 1) * gap;
-  y += vGap;
-  const btnY = y;
+  const contentW = Math.min(W - (narrow ? 20 : 36), 1120);
+  const headSize = short ? Math.min(22, W / 18) : narrow ? Math.min(32, W / 10) : Math.min(42, W / 15);
+  const headY = short ? 22 : narrow ? 38 : 46;
+  const subY = headY + headSize * 0.78 + (short ? 4 : 9);
+  const sectionY = subY + (short ? 22 : narrow ? 34 : 38);
+  const back = { x: 12, y: 10, w: short ? 78 : 94, h: 34 };
+  const bottomPad = short ? 8 : narrow ? 12 : 18;
+
+  if (setupStep === 'pilot') {
+    const cols = narrow ? 3 : W < 900 ? 6 : 9;
+    const rows = Math.ceil(STARTERS.length / cols);
+    const gap = short ? 5 : narrow ? 7 : 10;
+    const gridY = sectionY + (short ? 14 : 24);
+    const nextH = short ? 40 : narrow ? 52 : 54;
+    const nextW = narrow ? contentW : Math.min(420, contentW * 0.46);
+    const nextY = H - bottomPad - nextH;
+    const noneH = short ? 22 : 26;
+    const noneY = nextY - noneH - (short ? 5 : 8);
+    const minInfo = short ? 0 : narrow ? 30 : 74;
+    const gridRoom = noneY - minInfo - (short ? 5 : 12) - gridY;
+    const maxCardH = short ? 54 : narrow ? 88 : 108;
+    const cardH = Math.max(short ? 36 : 48,
+      Math.min(maxCardH, (gridRoom - gap * (rows - 1)) / rows));
+    const cardW = (contentW - gap * (cols - 1)) / cols;
+    const gridH = rows * cardH + (rows - 1) * gap;
+    const infoY = gridY + gridH + (short ? 4 : 10);
+    const infoH = Math.max(0, Math.min(narrow ? 54 : 96, noneY - infoY - (short ? 4 : 8)));
+    return {
+      step: 'pilot', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
+      starter: i => { const c = i % cols, r = Math.floor(i / cols);
+        return { x: cx - contentW / 2 + c * (cardW + gap), y: gridY + r * (cardH + gap), w: cardW, h: cardH }; },
+      none: { x: cx - Math.min(290, contentW * 0.72) / 2, y: noneY, w: Math.min(290, contentW * 0.72), h: noneH },
+      info: { x: cx - Math.min(contentW, 760) / 2, y: infoY, w: Math.min(contentW, 760), h: infoH },
+      next: { x: cx - nextW / 2, y: nextY, w: nextW, h: nextH },
+    };
+  }
+
+  const trialH = short ? 22 : 28;
+  const trialY = H - bottomPad - trialH;
+  const startH = short ? 42 : narrow ? 58 : 58;
+  const startW = narrow ? contentW : Math.min(430, contentW * 0.48);
+  const startY = trialY - startH - (short ? 5 : 9);
+  const summaryY = sectionY + (short ? 10 : 20);
+  const summaryH = short ? 54 : narrow ? 84 : 96;
+  const summaryW = Math.min(contentW, narrow ? contentW : 760);
+  const editW = short ? 64 : narrow ? 78 : 118;
+  const diffLabelY = summaryY + summaryH + (short ? 14 : 25);
+  const chipY = diffLabelY + (short ? 10 : 20);
+  const cols = narrow ? 2 : 4, rows = Math.ceil(Object.keys(PRESETS).length / cols);
+  const gap = short ? 7 : 12;
+  const chipW = (contentW - gap * (cols - 1)) / cols;
+  const chipRoom = startY - (short ? 8 : 18) - chipY;
+  const chipH = Math.max(short ? 34 : 58, Math.min(narrow ? 92 : 108, (chipRoom - gap * (rows - 1)) / rows));
   return {
-    s, short, narrow, compactPhone, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
-    back: { x: 14, y: 14, w: 96, h: 36 },
-    starterPrev: { x: cx - contentW / 2, y: starterNavY, w: Math.min(90, contentW * 0.22), h: navH },
-    starterNext: { x: cx + contentW / 2 - Math.min(90, contentW * 0.22), y: starterNavY, w: Math.min(90, contentW * 0.22), h: navH },
-    starterPageLabel: { x: cx - contentW * 0.25, y: starterNavY, w: contentW * 0.5, h: navH },
-    none: { x: cx - Math.min(210, contentW * 0.62) / 2, y: noneY, w: Math.min(210, contentW * 0.62), h: noneH },
-    starter: i => { const c = i % stCols, r = Math.floor(i / stCols);
-      return { x: cx - contentW / 2 + c * (stW + gap), y: starterGridY + r * (stH + gap), w: stW, h: stH }; },
-    chip: i => { const c = i % dfCols, r = Math.floor(i / dfCols);
-      return { x: cx - contentW / 2 + c * (dfW + gap), y: chipsGridY + r * (dfH + gap), w: dfW, h: dfH }; },
-    start: { x: cx - btnW / 2, y: btnY, w: btnW, h: btnH },
-    // TRIAL lives with the game it belongs to — jump to any stage OF THIS MODE
-    trial: { x: cx - btnW / 2, y: btnY + btnH + (short ? 6 : 10), w: btnW, h: trialH },
+    step: 'difficulty', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
+    summary: { x: cx - summaryW / 2, y: summaryY, w: summaryW, h: summaryH },
+    editPilot: { x: cx + summaryW / 2 - editW - 10, y: summaryY + summaryH / 2 - (short ? 13 : 17), w: editW, h: short ? 26 : 34 },
+    chipsLabelY: diffLabelY,
+    chip: i => { const c = i % cols, r = Math.floor(i / cols);
+      return { x: cx - contentW / 2 + c * (chipW + gap), y: chipY + r * (chipH + gap), w: chipW, h: chipH }; },
+    start: { x: cx - startW / 2, y: startY, w: startW, h: startH },
+    trial: { x: cx - startW / 2, y: trialY, w: startW, h: trialH },
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)

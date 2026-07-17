@@ -13,8 +13,8 @@ A shared arcade campaign with three deliberately distinct games. **BREAKER**
 stays a pure brick breaker from Kanto through Paldea: every regular target is
 a brick, region-specific bomb/link/split/shield/treasure/slider rules add
 variety, and Legendary Pokémon appear only inside dedicated boss bricks.
-**BLASTER** attacks walls directly, while **STARFIGHTER** owns the full
-Space-Invaders/Galaga flight-pattern fantasy. Journey through 9 regions
+**BLASTER** attacks walls directly, while **STARFIGHTER** is the primary game
+and owns the full Space-Invaders/Galaga flight-pattern fantasy. Journey through 9 regions
 (3 stages each — Arrival, Challenge, and a Legendary boss), draft a permanent skill tree, pick a
 one of 18 typed starter partners whose ability evolves, and catch Pokémon for a
 persistent Pokédex. Three modes — **BREAKER** (`classic`, ball +
@@ -98,21 +98,21 @@ the repo: `test.html` (headless invariant suite), `package.json`
 ---
 
 ## Game modes (`SETTINGS.mode`, picked on the title screen)
-The menu is TWO pages (`menuPage`, config.js): page 1 is the WAVEBREAKER
-title (+ POKÉMON EDITION skin badge) and mode select — THREE equal diorama
-cards (`drawModeCard`, render.js), each with a looping LIVE DEMO of its
-mechanic: BREAKER rallies a ball paddle↔wall with per-brick hit flashes,
-BLASTER winds up a charge ring then looses a fat bolt between volley fans,
-and STARFIGHTER banks its mascot-ship under an orbiting flock, flaring a
-rider on every hit. Mascots per card: Geodude / Blastoise / Rayquaza
-(`MODE_MASCOTS`). Only the hovered card animates on desktop; when nothing is
-hovered (and on touch) focus rotates one card at a time. `reduceFlash` freezes
-all three previews. Beneath them, the dashboard strip shows the saved journey,
-Pokédex/research progress, and dated Daily status. A prominent **QUICK START**
-launches
-the recommended first run (Breaker · Easy · Charmander) immediately;
-picking a mode leads to page 2, setup (starter + difficulty + START,
-`setupLayout`). Quitting/game over always lands back on page 1.
+The opening is STARFIGHTER-first. Page 1 gives STARFIGHTER the large featured
+campaign card and the primary **START STARFIGHTER** action; BREAKER and BLASTER
+remain available in a compact arcade rail. All three `drawModeCard` dioramas
+still run a looping mechanic demo: STARFIGHTER banks Rayquaza beneath an
+orbiting flock, BREAKER rallies a ball through a wall, and BLASTER winds a
+charge shot between volleys. With no hover, STARFIGHTER remains animated; a
+hovered arcade card takes focus. `reduceFlash` freezes previews. The dashboard
+strip below still shows the saved journey, research progress, and Daily status.
+
+Selecting a game opens a two-step setup wizard (`setupStep`, `setupLayout`):
+**1 · PARTNER** shows all 18 partners on one screen, then **2 · CHALLENGE**
+recaps the choice and presents four reworded intensity options before launch.
+Back/Escape moves one decision backward. Trial Mode lives on the Challenge
+screen. Quitting or game over returns to the featured title screen. New players
+default to STARFIGHTER; existing saved mode preferences remain respected.
 - **BREAKER** (`classic`) — the ball-first brick-breaker described
   below. Every target stays a framed brick: no free flyers, dives, or attack
   reinforcements. Legendary encounters use moving, multi-phase **boss bricks**
@@ -451,8 +451,9 @@ restores 1 HP and a pity counter guarantees one after 10 eligible kills.
 `G.livesMax` remains the maximum and POKÉ REVIVE can grow it further.
 
 ### Starter partners (`STARTER_MON` data.js ~314)
-Setup uses a three-page, six-card picker with **one three-tier partner line for
-each of the 18 battle types**, plus a separate **NO PARTNER** option. A partner
+Setup uses a dedicated all-roster screen with **one three-tier partner line for
+each of the 18 battle types**, plus a separate **FLY SOLO / NO PARTNER** option.
+The second setup screen recaps the selected partner before difficulty. A partner
 rides the paddle (or pilots STARFIGHTER), tints its rig, seeds the permanent
 serve element, and improves at regions 4 & 7 (`starterStage`). Each line has
 three local sprites, form names, tier copy, and distinct modifiers:
@@ -594,11 +595,12 @@ preloaded + kicked via `document.fonts.load` in setup.js — canvas alone
 doesn't trigger @font-face). Orbitron is for titles/numbers; body copy uses
 `bodyFont()` (render.js) — Verdana/system stack for readability.
 
-**Title screen fits short landscape** (`menuLayout`/`setupLayout` short/
-oneRow/stacked variants, config.js): under H=560 every gap compresses and
-the footer links collapse to one row; under W=620 all three mode cards stack.
-Both menu pages are covered by the `menu fit across viewports` test — keep
-it green when adding menu items.
+**Title and setup fit short landscape** (`menuLayout`/`setupLayout` short/
+narrow variants, config.js): under H=560 gaps and typography compress; under
+W=620 the featured STARFIGHTER card sits above two side-by-side arcade cards,
+the partner roster becomes 3×6, and challenge cards become 2×2. Both setup
+steps and six representative viewports are covered by the `menu fit across
+viewports` test — keep it green when adding menu items.
 
 ---
 

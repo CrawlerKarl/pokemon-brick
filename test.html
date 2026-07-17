@@ -641,20 +641,24 @@ window.requestAnimationFrame = function () { return 0; };
   // 6) menu + upgrade layout fit common viewports (fake W/H, pure geometry)
   // — both menu pages, three draft cards, and both draft actions
   test('menu fit across viewports', async () => {
-    const w0 = W, h0 = H;
+    const w0 = W, h0 = H, step0 = setupStep;
     const bad = [];
     let count = 0;
     try {
       for (const [w, h] of [[310, 670], [375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
-        const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
-        const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
-          starterPrev: S.starterPrev, starterNext: S.starterNext, starterNone: S.none,
+        setupStep = 'pilot'; const P = setupLayout();
+        setupStep = 'difficulty'; const D = setupLayout();
+        const L = menuLayout(), U = upgradeLayout(), A = advLayout();
+        const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, adv: L.adv,
+          pilotBack: P.back, pilotNone: P.none, pilotNext: P.next,
+          difficultyBack: D.back, pilotSummary: D.summary, editPilot: D.editPilot,
+          trial: D.trial, start: D.start,
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
-        for (let i = 0; i < STARTERS_PER_PAGE; i++) rects['starter(' + i + ')'] = S.starter(i);
-        for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = S.chip(i);
+        for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = P.starter(i);
+        for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
         count = Object.keys(rects).length;
@@ -665,11 +669,41 @@ window.requestAnimationFrame = function () { return 0; };
         }
       }
     } finally {
-      W = w0; H = h0;
+      W = w0; H = h0; setupStep = step0;
       resize(); // belt and braces: recompute from the real viewport
     }
     assert(bad.length === 0, 'geometry off-screen: ' + bad.join(' ; '));
     return '6 viewports × ' + count + ' rects (both menu pages) all on-screen';
+  });
+
+  test('STARFIGHTER is primary and setup walks partner → challenge', async () => {
+    const old = { mode: SETTINGS.mode, starter: SETTINGS.starter, preset: SETTINGS.preset,
+      state: G.state, menuPage, setupStep };
+    try {
+      assert(MODES[0].key === 'junkie' && /FEATURED/.test(MODES[0].desc),
+        'STARFIGHTER is not the featured first mode');
+      const L = menuLayout(), hero = L.card(0), side = L.card(1);
+      assert(hero.w * hero.h > side.w * side.h * 1.45,
+        'STARFIGHTER card is not materially larger than an arcade alternative');
+      G.state = 'menu'; menuPage = 'modes'; setupStep = 'pilot'; SETTINGS.mode = 'classic';
+      onPress(L.quick.x + L.quick.w / 2, L.quick.y + L.quick.h / 2);
+      assert(SETTINGS.mode === 'junkie' && menuPage === 'setup' && setupStep === 'pilot',
+        'primary CTA did not open STARFIGHTER partner selection');
+      const P = setupLayout();
+      assert(STARTERS.every((_, i) => P.starter(i)), 'the partner screen does not expose all 18 choices');
+      const fairy = STARTERS.findIndex(s => s.key === 'fairy'), fr = P.starter(fairy);
+      onPress(fr.x + fr.w / 2, fr.y + fr.h / 2);
+      assert(SETTINGS.starter === 'fairy', 'partner selection did not accept a choice from the full roster');
+      onPress(P.next.x + P.next.w / 2, P.next.y + P.next.h / 2);
+      assert(setupStep === 'difficulty', 'continue did not advance to challenge selection');
+      const D = setupLayout(), hardIdx = Object.keys(PRESETS).indexOf('hard'), hr = D.chip(hardIdx);
+      onPress(hr.x + hr.w / 2, hr.y + hr.h / 2);
+      assert(SETTINGS.preset === 'hard', 'challenge selection did not update the preset');
+      return 'featured hero + primary CTA; all 18 partners visible; separate challenge step works';
+    } finally {
+      SETTINGS.mode = old.mode; SETTINGS.starter = old.starter; SETTINGS.preset = old.preset;
+      G.state = old.state; menuPage = old.menuPage; setupStep = old.setupStep;
+    }
   });
 
   test('guided onboarding + Pokédex research progression', async () => {

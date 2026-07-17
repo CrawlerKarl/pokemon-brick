@@ -119,7 +119,7 @@ function dailyShareText() {
 function resumeRun() {
   const c = RUN_CKPT;
   if (!c) return;
-  SETTINGS.mode = MODES.some(m => m.key === c.mode) ? c.mode : 'classic';
+  SETTINGS.mode = MODES.some(m => m.key === c.mode) ? c.mode : 'junkie';
   SETTINGS.starter = STARTER_MON[c.starter] ? c.starter : 'none';
   if (PRESETS[c.preset]) SETTINGS.preset = c.preset;
   saveSettings();

@@ -214,7 +214,10 @@ window.addEventListener('keydown', e => {
     else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
     else if (cheatOpen) cheatOpen = false;
-    else if (G.state === 'menu' && menuPage === 'setup') menuPage = 'modes'; // back out of setup
+    else if (G.state === 'menu' && menuPage === 'setup') {
+      if (setupStep === 'difficulty') setupStep = 'pilot';
+      else menuPage = 'modes';
+    }
     else if (paused) quitToMenu(); // paused + Esc = leave the run
     else togglePause();
   }
@@ -476,7 +479,7 @@ function retryFromSummary() {
 }
 function trialFromSummary() {
   trialSel.region = regionIdx(G.level); trialSel.stage = stageIdx(G.level); trialSel.round = 0;
-  G.state = 'menu'; menuPage = 'setup'; trialOpen = true;
+  G.state = 'menu'; menuPage = 'setup'; setupStep = 'difficulty'; trialOpen = true;
 }
 function startTrialSelection() {
   trialOpen = false;
@@ -583,45 +586,45 @@ function onPress(x, y) {
       }
       return;
     }
-    // PAGE 2 — setup: starter + difficulty for the chosen mode, then START
+    // PAGE 2 — two clear decisions: all partners first, then challenge.
     if (menuPage === 'setup') {
       const L = setupLayout();
-      if (inRect(x, y, L.back)) { menuPage = 'modes'; SFX.wall(); return; }
-      const maxStarterPage = Math.ceil(STARTERS.length / STARTERS_PER_PAGE) - 1;
-      if (inRect(x, y, L.starterPrev)) { starterPage = (starterPage + maxStarterPage) % (maxStarterPage + 1); SFX.wall(); return; }
-      if (inRect(x, y, L.starterNext)) { starterPage = (starterPage + 1) % (maxStarterPage + 1); SFX.wall(); return; }
-      const visibleStarters = starterPageItems();
-      for (let i = 0; i < visibleStarters.length; i++) {
-        if (inRect(x, y, L.starter(i))) { SETTINGS.starter = visibleStarters[i].key; saveSettings(); SFX.wall(); return; }
+      if (inRect(x, y, L.back)) {
+        if (setupStep === 'difficulty') setupStep = 'pilot';
+        else menuPage = 'modes';
+        SFX.wall(); return;
       }
-      if (inRect(x, y, L.none)) { SETTINGS.starter = 'none'; saveSettings(); SFX.wall(); return; }
-      const keys = Object.keys(PRESETS);
-      for (let i = 0; i < keys.length; i++) {
-        if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
+      if (setupStep === 'pilot') {
+        for (let i = 0; i < STARTERS.length; i++) {
+          if (inRect(x, y, L.starter(i))) { SETTINGS.starter = STARTERS[i].key; saveSettings(); SFX.wall(); return; }
+        }
+        if (inRect(x, y, L.none)) { SETTINGS.starter = 'none'; saveSettings(); SFX.wall(); return; }
+        if (inRect(x, y, L.next)) { setupStep = 'difficulty'; SFX.power(); return; }
+      } else {
+        if (inRect(x, y, L.editPilot)) { setupStep = 'pilot'; SFX.wall(); return; }
+        const keys = Object.keys(PRESETS);
+        for (let i = 0; i < keys.length; i++) {
+          if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
+        }
+        if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
+        if (inRect(x, y, L.trial)) { trialOpen = true; SFX.wall(); return; }
       }
-      if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
-      // TRIAL is per-game now — opened from the mode you're setting up
-      if (inRect(x, y, L.trial)) { trialOpen = true; SFX.wall(); return; }
       return;
     }
     // PAGE 1 — pick your game: three animated mode cards
     const L = menuLayout();
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
     if (inRect(x, y, L.quick)) {
-      // One confident first-run path: the most legible mode, forgiving
-      // difficulty, and a partner whose ability is immediately visible.
-      SETTINGS.mode = 'classic';
-      SETTINGS.preset = 'easy';
-      SETTINGS.starter = 'fire';
+      SETTINGS.mode = 'junkie';
       saveSettings();
-      resetRun();
+      setupStep = 'pilot'; menuPage = 'setup'; SFX.power();
       return;
     }
     if (inRect(x, y, L.daily)) { startDailyRun(); return; }
     for (let i = 0; i < MODES.length; i++) {
       if (inRect(x, y, L.card(i))) {
         SETTINGS.mode = MODES[i].key; saveSettings();
-        menuPage = 'setup'; SFX.power(); return;
+        setupStep = 'pilot'; menuPage = 'setup'; SFX.power(); return;
       }
     }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }
@@ -763,8 +766,13 @@ function primaryAction() {
   // keyboard walks the two menu pages: mode select → setup → start
   if (G.state === 'menu') {
     if (!advOpen && !trialOpen) {
-      if (menuPage === 'setup') resetRun();
-      else menuPage = 'setup'; // fire on page 1 = take the current mode to setup
+      if (menuPage === 'setup') {
+        if (setupStep === 'pilot') setupStep = 'difficulty';
+        else resetRun();
+      } else {
+        SETTINGS.mode = 'junkie'; saveSettings();
+        setupStep = 'pilot'; menuPage = 'setup';
+      }
     }
     return;
   }
