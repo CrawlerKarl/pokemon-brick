@@ -238,6 +238,8 @@ window.requestAnimationFrame = function () { return 0; };
     assert(PATH_KEYS.filter(k => PATHS[k].family === 'offense').length === 2,
       'expected exactly 2 offense paths');
     assert(PATH_KEYS.every(k => PATHS[k].tiers.length === 4), 'every path must have exactly 4 tiers');
+    assert(PATH_KEYS.every(k => PATHS[k].tiers.every(t => t.visual)),
+      'every upgrade tier must declare its persistent visual tell');
     SETTINGS.mode = 'blaster';
     resetRun(1, true);
     rollUpgradeChoices();
@@ -252,7 +254,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.lasers.every(l => l.pulse && l.nova), 'fourth capped Impact volley was not a Nova pulse');
     assert(G.lasers.every(l => !l.hyper), 'old always-on Hyper pierce flag returned');
     assert(Math.abs(G.blasterCD - 0.24) < 0.0001, 'Hyper Cycle cadence is not 20% faster');
-    return '6×4 tree; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−20% cooldown';
+    return '6×4 tree; every tier has a visual tell; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−20% cooldown';
   });
 
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at

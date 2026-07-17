@@ -388,9 +388,23 @@ function upgradeTreeLayout() {
   const detail = sideDetail
     ? { x: panel.x + panel.w - detailSize - pad, y: panel.y + headH, w: detailSize, h: panel.h - headH - pad }
     : { x: panel.x + pad, y: panel.y + panel.h - detailSize - pad, w: panel.w - pad * 2, h: detailSize };
+  const radius = Math.max(74, Math.min(map.w * 0.39, map.h * 0.43) - (compact ? 2 : 10));
+  // when the map is WIDTH-limited (tall portrait), the box is far taller than
+  // the constellation — reclaim the dead band: the detail panel grows a
+  // little and the map re-centers on what it actually uses
+  if (!sideDetail) {
+    const need = radius * 2 + (compact ? 108 : 156);
+    const spare = Math.max(0, map.h - need);
+    if (spare > 0) {
+      const extraDetail = Math.min(spare, 84);
+      map.h = need + (spare - extraDetail);
+      detail.y -= extraDetail; detail.h += extraDetail;
+    }
+  }
   const cx = map.x + map.w / 2, cy = map.y + map.h / 2 + (sideDetail ? 4 : 0);
-  const radius = Math.max(74, Math.min(map.w * 0.39, map.h * 0.41) - (compact ? 4 : 10));
-  const inner = Math.max(30, radius * 0.28);
+  // the inner ring must clear the pilot preview (sprite + aura + hardpoint
+  // rack) — ring-one nodes were landing ON the pilot at landscape sizes
+  const inner = Math.max(46, radius * 0.32);
   const step = (radius - inner) / 3;
   const drawR = Math.max(8, Math.min(compact ? 12 : 17, step * 0.34));
   const hitR = Math.max(drawR + 5, Math.min(22, step * 0.53));
@@ -405,7 +419,8 @@ function upgradeTreeLayout() {
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
     label: pi => {
       const a = -Math.PI / 2 + pi * Math.PI / 3;
-      const lr = radius + (compact ? 22 : 42);
+      // tighter on compact maps so the top/bottom labels stay inside the box
+      const lr = radius + (compact ? 15 : 42);
       return { x: cx + Math.cos(a) * lr, y: cy + Math.sin(a) * lr, a };
     },
     node: (pi, ti) => {

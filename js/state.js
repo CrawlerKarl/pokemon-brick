@@ -208,7 +208,7 @@ const G = {
   fx_fire: null, fx_laser: null, fx_wide: null, fx_slow: null,
   fx_magnet: null, fx_score: null, fx_draco: null,
   shieldCharges: 0,
-  shieldFlash: 0,           // shield bubble flare when a charge absorbs a hit
+  shieldFlash: 0, surgeFlash: 0,           // shield bubble flare when a charge absorbs a hit
   hurtHud: 0,               // shows the health bar AROUND the player briefly after a hit
   // blaster heat: firing builds it, paddle returns vent it, 100% = overheat
   heat: 0, overheat: 0,
@@ -1186,7 +1186,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false; G.coachStep = 0; G.jCoach = null;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
-  G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
+  G.shieldCharges = 0; G.shieldFlash = 0; G.surgeFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.secret = freshSecretState();
   G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;

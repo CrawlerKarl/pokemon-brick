@@ -1090,10 +1090,14 @@ function drawPilotUpgradeHardware(x, y, s, preview = false) {
 
   // SURGE · core slot: ring → kill sparks → power veins → apex crown.
   if (surge) {
+    // the ring is a LIVE meter: it brightens as Momentum banks Mega charge,
+    // and flares for a beat when a Rally kill deposits a chunk (surgeFlash)
+    const flare = Math.min(1, G.surgeFlash || 0);
+    const banked = G.megaT > 0 ? 1 : Math.min(1, G.mega) * 0.6;
     const col = PATHS.surge.color, rx = s * 0.5, ry = s * 0.29;
-    ctx.globalAlpha = 0.46 + surge * 0.08;
-    ctx.strokeStyle = col; ctx.lineWidth = 1.3 + surge * 0.28;
-    ctx.setLineDash([5 + surge, 5]); ctx.lineDashOffset = -G.time * 12 * motion;
+    ctx.globalAlpha = Math.min(1, 0.34 + surge * 0.08 + banked * 0.3 + flare * 0.3);
+    ctx.strokeStyle = flare > 0.4 ? '#fff9c4' : col; ctx.lineWidth = 1.3 + surge * 0.28 + flare * 1.2;
+    ctx.setLineDash([5 + surge, 5]); ctx.lineDashOffset = -G.time * (12 + banked * 14) * motion;
     ctx.beginPath(); ctx.ellipse(x, y + 4, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
     if (surge >= 2) {
@@ -4618,9 +4622,11 @@ function drawFullUpgradeTree() {
   ctx.restore();
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 ${Math.min(T.compact ? 18 : 24, p.w / 24)}px Orbitron, sans-serif`;
+  ctx.font = `900 ${Math.min(T.compact ? 15 : 24, p.w / 26)}px Orbitron, sans-serif`;
   ctx.fillStyle = '#e3f2fd';
-  ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION', p.x + p.w / 2, p.y + (T.compact ? 18 : 22));
+  // maxWidth keeps the title clear of the close button on phones
+  ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION',
+    p.x + p.w / 2, p.y + (T.compact ? 18 : 22), p.w - 116);
   const ownedN = totalPathLevels();
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
   ctx.font = `700 ${T.compact ? 7.5 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
@@ -4648,9 +4654,12 @@ function drawFullUpgradeTree() {
     ctx.beginPath(); ctx.arc(C.x, C.y, rr, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
     if (!T.compact || ti === 3) {
+      // ring names live on the EMPTY diagonal between the VOLLEY and IMPACT
+      // spokes — straight up they printed across the top spoke's nodes
+      const la = -Math.PI / 3;
       ctx.font = `700 ${T.compact ? 6.5 : 8}px Orbitron, sans-serif`;
-      ctx.fillStyle = ti === 3 ? 'rgba(255,213,79,0.58)' : 'rgba(128,216,255,0.4)';
-      ctx.fillText(ringNames[ti], C.x, C.y - rr + (ti === 0 ? -8 : -6));
+      ctx.fillStyle = ti === 3 ? 'rgba(255,213,79,0.62)' : 'rgba(128,216,255,0.45)';
+      ctx.fillText(ringNames[ti], C.x + Math.cos(la) * (rr + 6), C.y + Math.sin(la) * (rr + 6));
     }
   }
 
@@ -4743,8 +4752,12 @@ function drawFullUpgradeTree() {
       ctx.drawImage(img, C.x - ss / 2, C.y - ss / 2, ss, ss);
     }
   }
-  ctx.font = `900 ${T.compact ? 6.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#e3f2fd';
-  ctx.fillText('PILOT CORE · ' + ownedN, C.x, C.y + T.inner * 0.83);
+  // compact maps skip the core caption — the header already carries the
+  // build count, and down here it collided with the bottom spoke's offer chip
+  if (!T.compact) {
+    ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = '#e3f2fd';
+    ctx.fillText('PILOT CORE · ' + ownedN, C.x, C.y + T.inner * 0.83);
+  }
   ctx.restore();
   ctx.restore();
 

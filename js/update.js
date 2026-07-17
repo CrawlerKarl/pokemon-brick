@@ -183,11 +183,20 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       dmg *= 2 * (upgN('amplify') ? 1.3 : 1);
       if (element === G.ballElement) G.resistStreak = 0;
       if (G.seCD <= 0) {
-        setCombatNotice('SUPER EFFECTIVE · 2× DAMAGE', '#ffd54f');
+        // PRISM AMPLIFY proc: the notice itself reports the boosted multiplier
+        setCombatNotice(upgN('amplify') ? 'SUPER EFFECTIVE · AMPLIFIED 2.6×' : 'SUPER EFFECTIVE · 2× DAMAGE',
+          upgN('amplify') ? '#80e8ff' : '#ffd54f');
         SFX.superFx();
         G.seCD = 0.45;
       }
-    } else if ((RESIST[element] || []).includes(br.poke.t) && !upgN('prismX') && !G.secretUpg.lens) {
+    } else if ((RESIST[element] || []).includes(br.poke.t) && (upgN('prismX') || G.secretUpg.lens)) {
+      // OMNI LENS proc: this hit WOULD have been resisted — say the capstone
+      // just pierced it, so the upgrade never feels like a silent no-op
+      if (G.seCD <= 0) {
+        setCombatNotice('OMNI LENS · RESIST PIERCED', '#b39ddb', 1.1);
+        G.seCD = 0.45;
+      }
+    } else if ((RESIST[element] || []).includes(br.poke.t)) {
       // resisted hits barely scratch — gentler on Easy, brutal beyond
       dmg *= SETTINGS.preset === 'easy' ? 0.5 : 0.25;
       if (G.seCD <= 0) {
@@ -338,6 +347,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     // they charge much harder (×2.5 total) — mega lands roughly every 2 waves
     const rallyKill = upgN('rally') ? (br.isBoss ? 0.04 : (G.mode !== 'classic' ? 0.012 : 0.004)) : 0;
     if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + rallyKill);
+    // RALLY proc: the surge ring on the rig flashes as the kill banks Mega
+    if (rallyKill && G.megaT <= 0) G.surgeFlash = Math.max(G.surgeFlash || 0, 0.5);
     if (br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
     if (br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
       setAnnounce('▒', '#b0bec5', 'MISSINGNO.', 'ITEM DUPLICATION! ×3 POWER-UPS', 2.2);
@@ -1392,6 +1403,7 @@ function update(dt) {
   G.blasterCD = Math.max(0, G.blasterCD - dt);
   G.muzzle = Math.max(0, G.muzzle - dt);
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
+  G.surgeFlash = Math.max(0, (G.surgeFlash || 0) - dt * 2.4); // surge-ring flare after a Rally bank
   G.hurtHud = Math.max(0, (G.hurtHud || 0) - dt); // on-hit health readout at the player
   G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
   if (G.upgradeFx) { G.upgradeFx.t -= dt; if (G.upgradeFx.t <= 0) G.upgradeFx = null; }
@@ -1520,6 +1532,10 @@ function update(dt) {
         G.shieldRegenT = 10;
         G.shieldCharges++;
         SFX.shield();
+        // capstone proc reads on the SHIP, not just as text: the bubble
+        // flares green and a ring blooms outward as the charge regrows
+        G.shieldFlash = Math.max(G.shieldFlash || 0, 0.8);
+        ringFx(G.paddle.x, shipY(), '#66bb6a', 6, 52, 3, 0.4);
         addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
       }
     } else G.shieldRegenT = 10;
@@ -2525,8 +2541,12 @@ function update(dt) {
         s.dead = true;
         L.hits = (L.hits || 0) + 1;
         if (L.hits > (L.charged ? 2 + upgN('intercept') : upgN('intercept'))) L.dead = true;
-        burst(s.x, s.y, '#ffab91', 12, 200, 0.5);
-        addFloater(s.x, s.y - 14, 'INTERCEPTED!', '#80d8ff', 11);
+        // a CANCELLATION mark, distinct from damage: ✕ + a crisp ring, so a
+        // shot-down bolt never reads as an enemy hit landing
+        burst(s.x, s.y, '#ffab91', 8, 170, 0.4);
+        ringFx(s.x, s.y, '#e0f7ff', 3, 20, 2, 0.22);
+        addFloater(s.x, s.y - 14, L.hits > 1 && upgN('intercept') ? '✕ INTERCEPTOR ×' + L.hits : '✕ INTERCEPTED',
+          L.hits > 1 ? '#b3e5fc' : '#80d8ff', 11);
         tone(740, 0.08, 'square', 0.05, -300);
         G.score += 25;
       }
