@@ -33,8 +33,14 @@ from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
 
 The title screen also offers a seeded daily Breaker run with fixed walls,
 drops, starter, and drafts; results and daily bests stay local and can be
-shared without an account. Mobile players can tune follow speed, button size
-and opacity, mirror controls for left-handed play, and enable haptics.
+shared without an account. Its return-player dashboard keeps the current
+journey, Pokédex/research target, dated daily status, best, and streak visible
+before mode selection. Setup cards spell out starting HP and pressure, while
+the in-game HUD uses one health readout, identifies permanent partner elements
+versus timed items, shows Mega charge as a percentage, and keeps region rules
+and type-matchup feedback in dedicated rails away from the bricks. Mobile
+players can tune follow speed, button size and opacity, mirror controls for
+left-handed play, and enable haptics.
 
 Pure vanilla JS + Canvas 2D. No build step, no dependencies, no framework.
 
@@ -576,8 +582,6 @@ here is started; the game is stable and shippable as-is.
 
 **Gameplay depth**
 - Build synergy tags on draft cards ("Ball / Blaster / Defense / Catch").
-- Seeded daily run (date-seeded, local-only leaderboard) — needs the RNG
-  service below.
 - Local balance telemetry (time/wave, deaths, damage source, picks, abandon
   point) — even a dev-only summary would make tuning far easier.
 
@@ -588,7 +592,6 @@ here is started; the game is stable and shippable as-is.
   start); richer boss-phase VFX.
 
 **Architecture** (deferred on purpose — the no-build vanilla setup is a feature)
-- Introduce a seeded RNG service → reproducible waves + deterministic tests.
 - If files grow further, migrate incrementally to native ES modules (no
   bundler) and split `G` into `run`/`world`/`actors`/`ui`; route screen changes
   through a small scene state machine. Do this between phases, not mid-feature.

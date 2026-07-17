@@ -598,6 +598,7 @@ function fireAction(auto = false) {
   if (G.state === 'serve') {
     G.balls.forEach(b => { if (b.stuck) { b.stuck = false; const a = serveAngle(); const sp = ballSp(); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; } });
     G.state = 'play';
+    if (G.level === 1 && G.mode === 'classic') G.coachStep = 1;
     return;
   }
   if (G.state !== 'play') return;

@@ -871,9 +871,9 @@ function drawBricks() {
         ctx.stroke();
       }
       ctx.restore();
-      drawGlyph(ctx, 'laser', x + hw - 8, y - hh + 8, 4.5, '#4dd0e1');
+      drawGlyph(ctx, 'laser', x - hw + 9, y + hh - 9, 4.5, '#4dd0e1');
     }
-    if (!br.isBoss && br.maxHp > 1 && !tinyCard && !(smallCard && br.hp >= br.maxHp)) {
+    if (!br.isBoss && br.maxHp > 1 && br.hp < br.maxHp && !tinyCard) {
       const cRad = smallCard ? 6.5 : Math.min(10, br.h * 0.22);
       const cX = x - hw + cRad + (smallCard ? 3 : 5);
       const cY = smallCard ? y + hh - cRad - 3 : y - hh + cRad + 5;
@@ -904,7 +904,7 @@ function drawBricks() {
       if (smallCard && !br.isBoss && !strong && !weak) { ctx.restore(); continue; }
       const bR = br.isBoss ? 12 : tinyCard ? 4.5 : smallCard ? 6.5 : Math.min(10, br.h * 0.22);
       const bx2 = x + hw - bR - (smallCard ? 3 : 5);
-      const by2 = smallCard && !br.isBoss ? y + hh - bR - 3 : y - hh + bR + 5;
+      const by2 = br.isBoss ? y - hh + bR + 5 : y + hh - bR - (smallCard ? 3 : 5);
       ctx.beginPath(); ctx.arc(bx2, by2, bR, 0, Math.PI * 2);
       ctx.fillStyle = smallCard ? 'rgba(6,9,24,0.6)' : 'rgba(6,9,24,0.78)'; ctx.fill();
       ctx.lineWidth = strong ? 2 : 1.4;
@@ -2266,9 +2266,9 @@ function drawPlayerHealthBar() {
   const danger = lives <= 1;
   const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : '#5fe0a6';
   const pulse = danger ? 0.62 + 0.38 * Math.abs(Math.sin(G.time * 5)) : 1;
-  const barW = W < 560 ? 82 : 126;
-  const x = W - 58 - barW, y = 16, h = 25;
-  const labelW = W < 560 ? 22 : 28;
+  const barW = W < 560 ? 112 : 154;
+  const x = W - 18 - barW, y = 16, h = 25;
+  const labelW = W < 560 ? 45 : 55;
   const gap = 3, segN = Math.min(6, denom);
   const segW = (barW - labelW - 12 - gap * (segN - 1)) / segN;
   ctx.save();
@@ -2279,7 +2279,7 @@ function drawPlayerHealthBar() {
   ctx.font = `900 ${W < 560 ? 8 : 9}px Orbitron, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = col;
-  ctx.fillText('HP', x + labelW / 2 + 3, y + h / 2 + 0.5);
+  ctx.fillText('HP ' + lives + '/' + denom, x + labelW / 2 + 3, y + h / 2 + 0.5, labelW - 4);
   let sx = x + labelW + 5;
   if (denom <= 6) {
     for (let i = 0; i < denom; i++) {
@@ -2334,11 +2334,14 @@ function drawHUD() {
     const el = hudElem ? attackElement() : G.ballElement;
     ctx.fillStyle = TYPE_COLORS[el];
     ctx.font = '700 11px Orbitron, sans-serif';
+    const basePartner = G.ballElementT > 1000 && G.starter && el === G.starter;
     const tag = hudElem
       ? (G.ballElement
-        ? el.toUpperCase() + ' TYPE · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
-        : el.toUpperCase() + ' TYPE · BASE')
-      : el.toUpperCase() + ' BALL';
+        ? el.toUpperCase() + ' TYPE · ITEM · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
+        : el.toUpperCase() + ' TYPE · PILOT')
+      : el.toUpperCase() + (G.mode === 'classic' ? ' BALL' : ' WEAPON') + (basePartner
+        ? ' · PARTNER'
+        : ' · POWER-UP · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's');
     ctx.fillText('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72);
   }
   // skill tree at a glance — Phoenix-style: your build is always visible
@@ -2385,7 +2388,8 @@ function drawHUD() {
     ctx.fillText(G.modifier.name, W / 2 + 4, 42);
   }
   drawPlayerHealthBar();
-  drawLifeRing();
+  drawBrickBehaviorLegend();
+  drawCombatNotice();
   // ---- active power-up chips: capped slots so phones stay readable ----
   const active = [];
   for (const [slot, icon, color] of [
@@ -2435,9 +2439,15 @@ function drawHUD() {
       ctx.font = '900 11px Orbitron, sans-serif';
       const ready = G.mega >= 1 && G.megaT <= 0;
       ctx.fillStyle = ready ? `hsl(${(G.time * 200) % 360},90%,65%)` : '#90a4ae';
-      ctx.fillText(G.megaT > 0 ? 'MEGA!' : ready ? 'MEGA READY — E' : 'MEGA', mx, my - 12);
+      const megaPct = Math.round(Math.min(1, G.mega) * 100) + '%';
+      ctx.fillText(G.megaT > 0 ? 'MEGA ACTIVE' : ready ? 'MEGA READY — E' : 'MEGA · HITS CHARGE', mx, my - 12);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = ready ? '#ffd54f' : '#c5b3e6';
+      ctx.fillText(G.megaT > 0 ? Math.ceil(G.megaT) + 's' : megaPct, mx + mw, my - 12);
+      ctx.textAlign = 'left';
       roundRect(mx, my - 4, mw, mh, 6);
-      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+      ctx.fillStyle = 'rgba(171,71,188,0.2)'; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(206,147,216,0.48)'; ctx.stroke();
       const frac = G.megaT > 0 ? G.megaT / megaDur() : G.mega;
       if (frac > 0) {
         roundRect(mx, my - 4, mw * Math.min(1, frac), mh, 6);
@@ -2456,6 +2466,44 @@ function drawHUD() {
     }
   }
   drawHurtHealth();
+}
+function drawBrickBehaviorLegend() {
+  if (G.mode !== 'classic' || stageIdx(G.level) === 2 || (G.state !== 'play' && G.state !== 'serve')) return;
+  const key = BRICK_BEHAVIOR_ORDER[Math.min(BRICK_BEHAVIOR_ORDER.length - 1, regionIdx(G.level))];
+  const info = BRICK_BEHAVIORS[key];
+  if (!info) return;
+  const label = 'REGION RULE · ' + info.name.replace(' BRICKS', '').replace(' GENERATORS', '');
+  ctx.save();
+  ctx.font = `800 ${W < 560 ? 8.5 : 9.5}px Orbitron, sans-serif`;
+  const w = Math.min(W * 0.58, Math.max(172, ctx.measureText(label).width + 38));
+  const elemRows = G.ballElement || G.mode === 'junkie';
+  const y = elemRows ? (G.combo > 1 ? 128 : 94) : (G.combo > 1 ? 110 : 72);
+  const x = W / 2 - w / 2, h = 24;
+  roundRect(x, y, w, h, 12);
+  ctx.fillStyle = 'rgba(6,10,26,0.78)'; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = info.color + 'aa'; ctx.stroke();
+  drawGlyph(ctx, info.icon, x + 15, y + h / 2, 5.5, info.color);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = info.color;
+  ctx.fillText(label, x + w / 2 + 7, y + h / 2 + 0.5, w - 38);
+  ctx.restore();
+}
+function drawCombatNotice() {
+  const n = G.combatNotice;
+  if (!n || (G.state !== 'play' && G.state !== 'serve')) return;
+  const hasRule = G.mode === 'classic' && stageIdx(G.level) !== 2;
+  const elemRows = G.ballElement || G.mode === 'junkie';
+  const y = hasRule ? (elemRows ? (G.combo > 1 ? 160 : 126) : (G.combo > 1 ? 142 : 104)) : 70;
+  const alpha = Math.min(1, n.t / Math.min(0.25, n.max));
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `900 ${W < 560 ? 10 : 11}px Orbitron, sans-serif`;
+  const w = Math.min(W * 0.82, ctx.measureText(n.text).width + 34);
+  roundRect(W / 2 - w / 2, y, w, 28, 14);
+  ctx.fillStyle = 'rgba(5,8,22,0.9)'; ctx.fill();
+  ctx.lineWidth = 1.4; ctx.strokeStyle = n.color; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = n.color;
+  ctx.fillText(n.text, W / 2, y + 14.5, w - 20);
+  ctx.restore();
 }
 // when the player is hit, their remaining health flashes as a small bar right
 // above the character (plus the ring pulse from loseLife/absorbHit) — feedback
@@ -2557,10 +2605,13 @@ function drawTouchControls() {
     ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.shadowBlur = 0;
   }
-  drawGlyph(ctx, 'mega', m.x, m.y - 4, 11, ready ? '#ffd54f' : '#b0bec5');
+  drawGlyph(ctx, 'mega', m.x, m.y - 8, 10, ready ? '#ffd54f' : '#c5b3e6');
   ctx.font = '900 8px Orbitron, sans-serif';
-  ctx.fillStyle = ready ? '#ffd54f' : '#90a4ae';
-  ctx.fillText('MEGA', m.x, m.y + 13);
+  ctx.fillStyle = ready ? '#ffd54f' : '#c5b3e6';
+  ctx.fillText(G.megaT > 0 ? Math.ceil(G.megaT) + 's' : ready ? 'READY' : Math.round(Math.min(1, G.mega) * 100) + '%', m.x, m.y + 8);
+  ctx.font = '800 6.5px Orbitron, sans-serif';
+  ctx.fillStyle = ready ? '#ffe082' : '#90a4ae';
+  ctx.fillText(G.megaT > 0 ? 'MEGA' : ready ? 'TAP MEGA' : 'HITS CHARGE', m.x, m.y + 19, m.r * 1.55);
   // (charge now lives on the FIRE pad — hold; no separate pad)
   // pause + sound, top-right under the lives
   for (const [b, icon, on] of [[B.pause, 'pause', true], [B.sound, 'sound', MUSIC.on]]) {
@@ -2601,7 +2652,7 @@ function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, san
     ctx.font = `${weight} ${size}px ${family}`;
   }
   ctx.fillStyle = color;
-  ctx.fillText(text, W / 2, y);
+  ctx.fillText(text, W / 2, y, maxW);
 }
 function drawMenu() {
   if (menuPage === 'setup') { drawSetup(); return; }
@@ -2653,22 +2704,27 @@ function drawMenu() {
   }
   {
     const d = L.daily, hovD = inRect(mouseX, lastMouseY, d);
+    const best = dailyBest(), streak = dailyStreak();
     ctx.save();
     ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hovD ? 20 : 8;
     roundRect(d.x, d.y, d.w, d.h, 12);
     ctx.fillStyle = hovD ? 'rgba(128,216,255,0.3)' : 'rgba(128,216,255,0.14)'; ctx.fill();
     ctx.shadowBlur = 0; ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = '#e0f7ff';
-    ctx.fillText('★ DAILY', d.x + d.w / 2, d.y + d.h * (L.short ? 0.5 : 0.36));
+    ctx.fillText('★ DAILY · ' + dailyShortDate(), d.x + d.w / 2, d.y + d.h * (L.short ? 0.5 : 0.36), d.w - 10);
     if (!L.short) {
-      ctx.font = bodyFont(8.5, 700); ctx.fillStyle = '#80d8ff';
-      ctx.fillText('SEEDED · BEST ' + dailyBest(), d.x + d.w / 2, d.y + d.h * 0.72, d.w - 12);
+      ctx.font = bodyFont(9.5, 700); ctx.fillStyle = '#80d8ff';
+      ctx.fillText(best ? '✓ DONE · BEST ' + best + (streak ? ' · STREAK ' + streak : '')
+        : 'NEW TODAY' + (streak ? ' · STREAK ' + streak : '') + ' · RESETS TOMORROW',
+        d.x + d.w / 2, d.y + d.h * 0.72, d.w - 12);
     }
     ctx.restore();
   }
   // the three ways to play, as equal full-bleed dioramas — each card runs a
   // LIVE DEMO of its mechanic so the buttons explain themselves
-  for (let i = 0; i < MODES.length; i++) drawModeCard(MODES[i], L.card(i), L);
+  const hoverMode = MODES.findIndex((m, i) => inRect(mouseX, lastMouseY, L.card(i)));
+  const focusMode = SETTINGS.reduceFlash ? -1 : hoverMode >= 0 ? hoverMode : Math.floor(G.time / 4.5) % MODES.length;
+  for (let i = 0; i < MODES.length; i++) drawModeCard(MODES[i], L.card(i), L, focusMode === i);
   // CONTINUE — a saved journey resumes right where its region began
   if (L.resume && typeof RUN_CKPT !== 'undefined' && RUN_CKPT) {
     const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
@@ -2692,12 +2748,47 @@ function drawMenu() {
     }
     ctx.restore();
   }
+  // Persistent dashboard strip: the next meaningful goal is visible before
+  // the player commits to a mode. It turns the title screen into a return hub.
+  {
+    const p = L.progress, next = nextDexReward(), best = dailyBest(), streak = dailyStreak();
+    const journeyLevel = RUN_CKPT ? RUN_CKPT.lvl : 1;
+    const journey = (RUN_CKPT ? 'CONTINUE ' : '') + genFor(journeyLevel).name + ' · WAVE ' + journeyLevel + '/27';
+    const research = next ? next.name + ' · ' + Math.max(0, next.at - DEX.size) + ' TO GO' : 'ALL REWARDS UNLOCKED';
+    const daily = best ? 'DONE · BEST ' + best + (streak ? ' · ×' + streak : '') : 'READY' + (streak ? ' · ×' + streak : '');
+    const cells = [
+      { icon: 'swift', label: 'JOURNEY', value: journey, color: '#80d8ff' },
+      { icon: next ? next.icon : 'star', label: 'RESEARCH · ' + DEX.size + '/' + dexTotal(), value: research, color: next ? next.color : '#ffd54f' },
+      { icon: 'star', label: 'DAILY · ' + dailyShortDate(), value: daily, color: '#b39ddb' },
+    ];
+    roundRect(p.x, p.y, p.w, p.h, 12);
+    ctx.fillStyle = 'rgba(8,13,31,0.78)'; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.stroke();
+    const cw = p.w / cells.length;
+    cells.forEach((cell, i) => {
+      const cx = p.x + cw * (i + 0.5);
+      if (i) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.11)';
+        ctx.beginPath(); ctx.moveTo(p.x + cw * i, p.y + 6); ctx.lineTo(p.x + cw * i, p.y + p.h - 6); ctx.stroke();
+      }
+      if (L.short) {
+        ctx.font = '800 7.5px Orbitron, sans-serif'; ctx.fillStyle = cell.color;
+        ctx.fillText(cell.label + ' · ' + cell.value, cx, p.y + p.h / 2 + 0.5, cw - 10);
+      } else {
+        drawGlyph(ctx, cell.icon, cx - Math.min(46, cw * 0.31), p.y + 13, 5, cell.color);
+        ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = cell.color;
+        ctx.fillText(cell.label, cx + 4, p.y + 13, cw - 22);
+        ctx.font = bodyFont(10, 700); ctx.fillStyle = '#dce6f1';
+        ctx.fillText(cell.value, cx, p.y + 30, cw - 12);
+      }
+    });
+  }
   // footer: pokédex + settings — trial now lives with each game's setup page
   const db = dexBtnGeom();
   ctx.textAlign = 'center';
   const rowFont = `700 ${L.short ? 11 : 12}px Orbitron, sans-serif`;
   for (const [g, label, colBase] of [
-    [db, '◓ POKÉDEX ' + DEX.size, '#90a4ae'],
+    [db, '◓ POKÉDEX ' + DEX.size + '/' + dexTotal(), '#90a4ae'],
     [L.adv, '⚙ SETTINGS', '#78909c'],
   ]) {
     ctx.font = rowFont;
@@ -2714,11 +2805,12 @@ function drawMenu() {
 // cannons, Rayquaza flies the starfighter. Menu-only, so the per-frame
 // gradients here are fine (never copy this into a hot loop).
 const MODE_MASCOTS = { classic: 74, blaster: 9, junkie: 384 };
-function drawModeCard(m, cg, L) {
+function drawModeCard(m, cg, L, active = false) {
   const hov = inRect(mouseX, lastMouseY, cg);
   const junk = m.key === 'junkie';
-  const lift = hov ? 4 : 0;
-  const x = cg.x, y = cg.y - lift, w = cg.w, h = cg.h, t = G.time;
+  const lift = hov ? 4 : active ? 1.5 : 0;
+  const stillT = m.key === 'classic' ? 0.45 : m.key === 'blaster' ? 1.35 : 2.2;
+  const x = cg.x, y = cg.y - lift, w = cg.w, h = cg.h, t = active ? G.time : stillT;
   ctx.save();
   // extrusion: a dark slab under the face makes the panel sit UP off the page
   roundRect(x + 5, y + 8 + lift, w, h, 18);
@@ -2986,18 +3078,20 @@ function drawModeCard(m, cg, L) {
   ctx.fillText(m.label, x + w / 2, y + h - bandH * (twoRows ? 0.68 : 0.58), w - 20);
   ctx.fillStyle = hov ? '#e3f2fd' : '#90a4ae';
   if (twoRows) {
-    ctx.font = bodyFont(Math.min(10.5, w / 32), 600);
+    ctx.font = bodyFont(Math.max(11, Math.min(12, w / 28)), 650);
     ctx.fillText(m.lines[0], x + w / 2, y + h - bandH * 0.36, w - 24);
     ctx.fillText(m.lines[1], x + w / 2, y + h - bandH * 0.15, w - 24);
   } else {
-    ctx.font = bodyFont(Math.min(10, w / 34), 600);
-    ctx.fillText(m.lines.join(' · '), x + w / 2, y + h - bandH * 0.22, w - 24);
+    const compactCopy = m.key === 'classic' ? 'BALL FIRST · BLASTER LATER'
+      : m.key === 'blaster' ? 'SHOOT · HOLD TO CHARGE' : 'FLY · DODGE · FIRE';
+    ctx.font = bodyFont(Math.max(11.5, Math.min(12.5, w / 27)), 700);
+    ctx.fillText(compactCopy, x + w / 2, y + h - bandH * 0.22, w - 24);
   }
   ctx.restore(); // unclip
-  ctx.shadowColor = m.accent; ctx.shadowBlur = hov ? 30 : 14;
+  ctx.shadowColor = m.accent; ctx.shadowBlur = hov ? 30 : active ? 20 : 8;
   roundRect(x, y, w, h, 18);
-  ctx.lineWidth = hov ? 3 : 2;
-  ctx.strokeStyle = hov ? m.accent : m.accent + 'aa';
+  ctx.lineWidth = hov ? 3 : active ? 2.5 : 1.5;
+  ctx.strokeStyle = hov || active ? m.accent : m.accent + '88';
   ctx.stroke();
   ctx.shadowBlur = 0;
   ctx.restore();
@@ -3033,7 +3127,7 @@ function drawSetup() {
   for (let i = 0; i < STARTERS.length; i++) {
     const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
     const hov = inRect(mouseX, lastMouseY, pg);
-    const col = st.key === 'none' ? TYPE_COLORS.electric : TYPE_COLORS[st.key];
+    const col = st.key === 'none' ? '#90a4ae' : TYPE_COLORS[st.key];
     const mon = STARTER_MON[st.key];
     const monCopy = mon ? starterModeCopy(st.key, SETTINGS.mode, 1) : null;
     const dy = Math.min(11, pg.h * 0.13); // name / ability vertical split, scales with card
@@ -3062,22 +3156,25 @@ function drawSetup() {
       ctx.fillStyle = col;
       ctx.fillText(monCopy.ability, txC, pg.y + pg.h / 2 + dy, tw);
     } else {
-      // "no partner" IS Pikachu — it takes the controls in SPACE JUNKIE and
-      // stands in for the free-agent pick everywhere, so show the mon itself
-      const img = getSprite(25);
+      // Keep the opt-out visually neutral. In STARFIGHTER the detail line
+      // below explains that Pikachu becomes the automatic pilot; the choice
+      // itself must never masquerade as a selected Pokémon partner.
       const sp = Math.min(60, pg.h * 0.66);
       const spx = pg.x + Math.max(6, pg.w * 0.05);
-      if (img.complete && img.naturalWidth) ctx.drawImage(img, spx, pg.y + pg.h / 2 - sp / 2, sp, sp);
-      else drawGlyph(ctx, 'electric', spx + sp / 2, pg.y + pg.h / 2, sp * 0.28, col);
+      const icx = spx + sp / 2, icy = pg.y + pg.h / 2;
+      roundRect(icx - sp * 0.31, icy - 4, sp * 0.62, 8, 4);
+      ctx.fillStyle = '#90a4ae'; ctx.fill();
+      ctx.beginPath(); ctx.arc(icx, icy - 13, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#cfd8dc'; ctx.fill();
       const txL = spx + sp + 6;
       const txC = txL + (pg.x + pg.w - 8 - txL) / 2;
       const tw = pg.x + pg.w - 8 - txL;
       ctx.font = `900 ${Math.min(17, pg.w / 8.5)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText('PIKACHU', txC, pg.y + pg.h / 2 - dy, tw);
+      ctx.fillText('NO PARTNER', txC, pg.y + pg.h / 2 - dy, tw);
       ctx.font = `900 ${Math.min(12, pg.w / 12)}px Orbitron, sans-serif`;
-      ctx.fillStyle = SETTINGS.mode === 'junkie' ? col : '#78909c';
-      ctx.fillText(SETTINGS.mode === 'junkie' ? 'STATIC' : 'NO ABILITY', txC, pg.y + pg.h / 2 + dy, tw);
+      ctx.fillStyle = SETTINGS.mode === 'junkie' ? '#f9cc3d' : '#78909c';
+      ctx.fillText(SETTINGS.mode === 'junkie' ? 'PIKACHU AUTO-PILOT' : 'PLAIN PADDLE', txC, pg.y + pg.h / 2 + dy, tw);
     }
     ctx.restore();
   }
@@ -3090,7 +3187,8 @@ function drawSetup() {
     const junkie = SETTINGS.mode === 'junkie';
     const BODY = "Verdana, system-ui, sans-serif";
     if (selMon) {
-      fitText(selCopy.ability + ' — ' + selCopy.tier, L.starterInfoY, 12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
+      fitText(selCopy.ability + ' — ' + (narrowM ? selCopy.blurb : selCopy.tier), L.starterInfoY,
+        12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
       if (!L.short) fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
         : (junkie ? 'YOUR STARTER FLIES THE SHIP' : 'YOUR PARTNER RIDES THE PADDLE') + ' · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
         L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
@@ -3116,8 +3214,10 @@ function drawSetup() {
   ctx.fillStyle = '#90a4ae';
   ctx.fillText('DIFFICULTY', W / 2, L.chipsLabelY);
   const keys = Object.keys(PRESETS);
+  const pressure = { easy: 'RELAXED', normal: 'STANDARD', hard: 'INTENSE', nuzlocke: 'EXTREME' };
   for (let i = 0; i < keys.length; i++) {
-    const pg = presetGeom(i), sel = SETTINGS.preset === keys[i];
+    const key = keys[i], pset = PRESETS[key];
+    const pg = presetGeom(i), sel = SETTINGS.preset === key;
     const hov = inRect(mouseX, lastMouseY, pg);
     ctx.save();
     if (sel) { ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 16; }
@@ -3128,9 +3228,16 @@ function drawSetup() {
     ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(20, pg.w / 8)}px Orbitron, sans-serif`;
+    ctx.font = `900 ${Math.min(18, pg.w / 8)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
-    ctx.fillText(PRESETS[keys[i]].label, pg.x + pg.w / 2, pg.y + pg.h / 2 + 1, pg.w - 12);
+    if (L.short) {
+      ctx.fillText(pset.label + ' · ' + pset.lives + ' HP', pg.x + pg.w / 2, pg.y + pg.h / 2 + 1, pg.w - 10);
+    } else {
+      ctx.fillText(pset.label, pg.x + pg.w / 2, pg.y + pg.h * 0.38, pg.w - 12);
+      ctx.font = bodyFont(L.narrow ? 10.5 : 9.5, 700);
+      ctx.fillStyle = sel ? '#ffe082' : '#90a4ae';
+      ctx.fillText(pset.lives + ' HP · ' + pressure[key], pg.x + pg.w / 2, pg.y + pg.h * 0.7, pg.w - 10);
+    }
     ctx.restore();
   }
   // start button — the one big obvious thing on the screen
@@ -3538,7 +3645,7 @@ function drawDex() {
   title('POKÉDEX', 44, Math.min(34, W / (W < 560 ? 16 : 12)), '#ef5350');
   ctx.font = '700 12px Orbitron, sans-serif';
   ctx.fillStyle = '#b0bec5';
-  const total = GENS.reduce((n, g) => n + regionRoster(g).length, 0);
+  const total = dexTotal();
   ctx.fillText(DEX.size + ' / ' + total + ' CAUGHT' + (DEXS.size ? '  ·  ' + DEXS.size + ' SHINY' : '') + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, 82);
   const nextResearch = nextDexReward();
   if (nextResearch) {
@@ -3797,11 +3904,13 @@ function drawOverlays() {
       pulse(IS_TOUCH ? 'TAP TO LAUNCH' : 'CLICK TO LAUNCH', H * 0.7);
       // interactive first-wave tutorial: contextual hints
       if (G.level === 1) {
-        hintPill(IS_TOUCH ? 'DRAG ANYWHERE — MOVE PADDLE · SLIDE WHILE LAUNCHING TO AIM'
-          : 'MOVE THE MOUSE — PADDLE FOLLOWS · SLIDE WHILE LAUNCHING TO AIM', H * 0.7 + 46);
-        hintPill('GET THE BALL ABOVE THE ARMORED WALL — A GOLDEN NET KEEPS IT RALLYING UP THERE', H * 0.7 + 82, '#ffd54f');
+        hintPill(IS_TOUCH ? 'DRAG TO MOVE · SLIDE WHILE LAUNCHING TO AIM'
+          : 'MOVE TO STEER · SLIDE WHILE LAUNCHING TO AIM', H * 0.7 + 48);
       }
     }
+  } else if (G.state === 'play' && !paused && G.mode === 'classic' && G.level === 1 &&
+      G.coachStep === 1 && !G.highGroundDone && G.playT < 10) {
+    hintPill('NEXT: SEND THE BALL ABOVE THE WALL TO START A RALLY', H * 0.62, '#ffd54f');
   } else if (G.state === 'upgrade') {
     dim(0.55);
     const draftShort = H < 520;
@@ -4154,10 +4263,10 @@ function pulse(text, y) {
 function hintPill(text, y, color = '#a9d4ff') {
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const size = Math.min(15, W / 30);
+  const size = Math.max(12, Math.min(15, W / 26));
   ctx.font = `700 ${size}px Orbitron, sans-serif`;
   const tw = Math.min(ctx.measureText(text).width, W * 0.88) + 32;
-  roundRect(W / 2 - tw / 2, y - 15, tw, 30, 15);
+  roundRect(W / 2 - tw / 2, y - 17, tw, 34, 17);
   ctx.fillStyle = 'rgba(6,10,26,0.68)'; ctx.fill();
   ctx.fillStyle = color;
   ctx.fillText(text, W / 2, y + 1, W * 0.84);

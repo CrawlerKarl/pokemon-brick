@@ -120,7 +120,7 @@ const TOUCH_TOGGLES = [
   { key: 'haptics', label: 'HAPTIC FEEDBACK' },
 ];
 const STARTERS = [
-  { key: 'none', label: 'NONE' },
+  { key: 'none', label: 'NO PARTNER' },
   { key: 'fire', label: 'CHARMANDER' },
   { key: 'water', label: 'SQUIRTLE' },
   { key: 'grass', label: 'BULBASAUR' },
@@ -151,7 +151,8 @@ function menuLayout() {
   // bottom stack (continue → footer row) — no dead space
   const gap = short ? 10 : 16;
   const resumeH = hasCkpt ? (short ? 30 : 44) : 0;
-  const footerH = short ? 22 : 28;
+  const footerH = short ? 28 : 34;
+  const progressH = short ? 28 : 42;
   const padB = short ? 6 : 14;
   const cardsY = tagY + (short ? 10 : 16);
   const quickH = short ? 28 : 40;
@@ -162,8 +163,9 @@ function menuLayout() {
   const heroY = quickY + quickH + (short ? 7 : 10);
   const bottom = H - padB;
   const footerY = bottom - footerH;
-  const resumeY = footerY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
-  const cardsBot = (hasCkpt ? resumeY : footerY) - (short ? 6 : 12);
+  const progressY = footerY - progressH - (short ? 5 : 8);
+  const resumeY = progressY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
+  const cardsBot = (hasCkpt ? resumeY : progressY) - (short ? 6 : 12);
   const cardW = stacked ? Math.min(W * 0.94, 540) : (Math.min(W * 0.96, 1240) - gap * 2) / 3;
   const cardsH = Math.max(short ? 110 : 190, cardsBot - heroY);
   const cardH = stacked ? (cardsH - gap * 2) / 3 : cardsH;
@@ -178,6 +180,8 @@ function menuLayout() {
       ? { x: W / 2 - cardW / 2, y: heroY + i * (cardH + gap), w: cardW, h: cardH }
       : { x: left + i * (cardW + gap), y: heroY, w: cardW, h: cardH },
     resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
+    progress: { x: Math.max(10, W / 2 - Math.min(920, W * 0.94) / 2), y: progressY,
+      w: Math.min(920, W * 0.94), h: progressH },
     dex: { x: W / 2 - fW - 10, y: footerY, w: fW, h: footerH },
     adv: { x: W / 2 + 10, y: footerY, w: fW, h: footerH },
   };

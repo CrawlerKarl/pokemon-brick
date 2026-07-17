@@ -135,7 +135,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       dmg *= 2 * (upgN('amplify') ? 1.3 : 1);
       if (element === G.ballElement) G.resistStreak = 0;
       if (G.seCD <= 0) {
-        addFloater(sx, sy - 20, 'SUPER EFFECTIVE!', '#ffd54f', 13);
+        setCombatNotice('SUPER EFFECTIVE · 2× DAMAGE', '#ffd54f');
         SFX.superFx();
         G.seCD = 0.45;
       }
@@ -143,7 +143,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // resisted hits barely scratch — gentler on Easy, brutal beyond
       dmg *= SETTINGS.preset === 'easy' ? 0.5 : 0.25;
       if (G.seCD <= 0) {
-        addFloater(sx, sy - 20, 'NOT VERY EFFECTIVE...', '#90a4ae', 11);
+        setCombatNotice('RESISTED · CHANGE BALL TYPE', '#b0bec5');
         tone(180, 0.1, 'sine', 0.04, -60);
         G.seCD = 0.45;
       }
@@ -151,7 +151,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // soft-lock. PRISM TRANSFUSE keeps your element lit no matter what.
       if (!upgN('transfuse') && element === G.ballElement && ++G.resistStreak >= 4) {
         G.ballElement = null; G.resistStreak = 0;
-        addFloater(sx, sy - 38, 'ELEMENT WORE OFF', '#cfd8dc', 12);
+        setCombatNotice('ELEMENT WORE OFF · NEUTRAL BALL RESTORED', '#cfd8dc', 1.4);
       }
     } else if (element === G.ballElement) G.resistStreak = 0;
   }
@@ -1021,6 +1021,10 @@ function update(dt) {
   G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
   if (G.uiTouchPulse) { G.uiTouchPulse.t -= dt; if (G.uiTouchPulse.t <= 0) G.uiTouchPulse = null; }
   G.shareToast = Math.max(0, (G.shareToast || 0) - dt);
+  if (G.combatNotice) {
+    G.combatNotice.t -= dt;
+    if (G.combatNotice.t <= 0) G.combatNotice = null;
+  }
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 
   for (const p of G.particles) {
@@ -1887,6 +1891,7 @@ function update(dt) {
           // first trip up top each wave is celebrated — this is the fun zone
           if (!G.highGroundDone && G.state === 'play') {
             G.highGroundDone = true;
+            G.coachStep = 2;
             const bo = Math.round(150 * scoreMult());
             G.score += bo;
             addFloater(b.x, b.y + 20, 'HIGH GROUND! +' + bo, '#ffd54f', 17);

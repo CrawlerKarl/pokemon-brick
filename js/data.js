@@ -556,6 +556,7 @@ const BRICK_BEHAVIORS = {
   volatile: { icon: 'fire', color: '#ff5252', name: 'VOLATILE SLIDERS', desc: 'MOVING BOMBS CAN CLEAR A WHOLE CLUSTER' },
   reactor:  { icon: 'mega', color: '#ffd740', name: 'REACTOR BRICKS', desc: 'HARD TARGETS DROP ITEMS AND DETONATE' },
 };
+const BRICK_BEHAVIOR_ORDER = ['treasure', 'bomb', 'shift', 'link', 'split', 'shield', 'regen', 'volatile', 'reactor'];
 
 // ============================================================
 //  SKILL TREE — five paths, four tiers each. The two offense paths deliberately
@@ -1024,6 +1025,7 @@ function regionRoster(g) {
   ids.add(g.boss.id);
   return [...ids].sort((a, b) => a - b);
 }
+function dexTotal() { return GENS.reduce((n, g) => n + regionRoster(g).length, 0); }
 
 // sprites live in the repo (assets/sprites/, fetched by tools/fetch-sprites.js);
 // if a file is missing we fall back to PokeAPI's hosted artwork. shinies are

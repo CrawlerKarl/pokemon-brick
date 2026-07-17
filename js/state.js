@@ -67,6 +67,20 @@ function saveCheckpoint() {
 function clearCheckpoint() { RUN_CKPT = null; saveStore('pkbrk-run', null); }
 let DAILY_RECORDS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-daily', '{}'));
 function dailyBest() { return Math.max(0, +(DAILY_RECORDS[dailyDateKey()] || 0)); }
+function dailyStreak() {
+  let d = new Date(), streak = 0;
+  // A streak remains alive until the current day ends, so an unfinished
+  // challenge still shows the run carried in from yesterday.
+  if (!Math.max(0, +(DAILY_RECORDS[dailyDateKey(d)] || 0))) d.setDate(d.getDate() - 1);
+  while (Math.max(0, +(DAILY_RECORDS[dailyDateKey(d)] || 0))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+function dailyShortDate(date = new Date()) {
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase();
+}
 function recordDailyScore(score) {
   const key = dailyDateKey(), prior = Math.max(0, +(DAILY_RECORDS[key] || 0));
   if (score > prior) DAILY_RECORDS[key] = score;
@@ -107,7 +121,7 @@ const G = {
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
   particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
   scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
-  announce: null, announceQueue: [], modifier: null,
+  announce: null, announceQueue: [], modifier: null, combatNotice: null,
   fx: 0, fy: 0, swayT: 0,
   brickW: 0, brickH: 0,
   shake: 0, flashT: 0, stateT: 0,
@@ -119,7 +133,7 @@ const G = {
   mega: 0, megaT: 0,
   shotsFired: 0, playT: 0,
   maxCombo: 0, caughtRun: 0, dropHint: 0, healthDropPity: 0, megaCalloutDone: false,
-  rallyHintDone: false, bestRally: 0, barrierHintDone: false,
+  rallyHintDone: false, bestRally: 0, barrierHintDone: false, coachStep: 0,
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
@@ -155,6 +169,9 @@ const G = {
   gustT: 0, timeWarpT: 0,   // Lugia / Dialga signature effects
   columnStrikes: [],        // Zekrom / Eternatus warned beams
 };
+function setCombatNotice(text, color, duration = 1.15) {
+  G.combatNotice = { text, color, t: duration, max: duration };
+}
 let dexScroll = 0, dexDragY = null, dexDragStart = 0;
 // FLOOR = bottom of the playable area, above any phone home-indicator;
 // on touch screens the paddle rides higher so fingers don't cover it
@@ -427,8 +444,7 @@ function clampOpen(g, top, floorY) {
 }
 function assignClassicBrickBehaviors(regionsIn, stage) {
   if (G.mode !== 'classic' || stage === 2) return;
-  const keys = ['treasure', 'bomb', 'shift', 'link', 'split', 'shield', 'regen', 'volatile', 'reactor'];
-  const primary = keys[Math.min(keys.length - 1, regionsIn)];
+  const primary = BRICK_BEHAVIOR_ORDER[Math.min(BRICK_BEHAVIOR_ORDER.length - 1, regionsIn)];
   const candidates = G.bricks.filter(b => !b.isBoss && !b.subBoss && !b.armored && !b.flight && !b.behavior);
   if (candidates.length < 2) return;
   const shuffled = candidates.slice();
@@ -454,7 +470,7 @@ function assignClassicBrickBehaviors(regionsIn, stage) {
   }
   // Challenge waves combine the region's new rule with one familiar rule.
   if (stage === 1 && regionsIn > 1) {
-    const secondary = keys[Math.max(0, regionsIn - 2)];
+    const secondary = BRICK_BEHAVIOR_ORDER[Math.max(0, regionsIn - 2)];
     const extra = shuffled.find(b => !b.behavior);
     if (extra) { extra.behavior = secondary; extra.behaviorPhase = 1.2; }
   }
@@ -1080,10 +1096,10 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false;
-  G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false;
+  G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false; G.coachStep = 0;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
-  G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = [];
+  G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
   G.charge = 0; G.chargeCD = 0;

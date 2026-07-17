@@ -591,7 +591,7 @@ window.requestAnimationFrame = function () { return 0; };
       for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
         const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
-        const rects = { quick: L.quick, daily: L.daily, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+        const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
@@ -623,6 +623,15 @@ window.requestAnimationFrame = function () { return 0; };
     assert(DEX_REWARDS.every((r, i) => r.at > 0 && (!i || r.at > DEX_REWARDS[i - 1].at)),
       'research thresholds must be positive and strictly increasing');
     assert(Object.prototype.hasOwnProperty.call(SETTINGS, 'autoFire'), 'auto-fire setting missing');
+    assert(STARTERS[0].key === 'none' && STARTERS[0].label === 'NO PARTNER',
+      'starter opt-out should be named NO PARTNER');
+    assert(typeof dailyStreak === 'function' && typeof dailyShortDate === 'function',
+      'daily dashboard helpers missing');
+    assert(BRICK_BEHAVIOR_ORDER.length === GENS.length,
+      'each region needs one stable brick-rule legend');
+    setCombatNotice('TEST NOTICE', '#fff', 1);
+    assert(G.combatNotice && G.combatNotice.text === 'TEST NOTICE', 'combat feedback rail state missing');
+    G.combatNotice = null;
     const lvl0 = G.level;
     G.level = 4; drawJourneyMap(H * 0.25, true); G.level = lvl0;
     return 'Quick Start; mode-safe starter copy; journey map; 5 Pokédex rewards; optional auto-fire';
