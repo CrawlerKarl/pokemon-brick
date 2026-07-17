@@ -4,7 +4,7 @@
 // ============================================================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-let W = 0, H = 0, DPR = 1, SAFE_B = 0;
+let W = 0, H = 0, DPR = 1, SAFE_B = 0, SAFE_T = 0, SAFE_L = 0, SAFE_R = 0;
 let vignette = null;
 // ---- safe persistent storage: one corrupt key must never brick the game.
 // loadStore never throws (corrupt values are discarded and fall back);
@@ -37,7 +37,7 @@ function haptic(kind = 'tap') {
   const now = performance.now();
   if (now - lastHapticAt < (kind === 'hit' ? 45 : 80)) return;
   lastHapticAt = now;
-  const patterns = { tap: 8, hit: 5, break: 12, item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35] };
+  const patterns = { tap: 8, hit: 5, break: 12, item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35], mega: [16, 30, 16, 30, 44] };
   navigator.vibrate(patterns[kind] || patterns.tap);
 }
 
@@ -64,6 +64,14 @@ function resize() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const probe = document.getElementById('safe-probe');
   SAFE_B = probe ? Math.round(probe.getBoundingClientRect().height) : 0;
+  // top/left/right insets keep corner controls and the HUD clear of notches
+  // and rounded corners (all four probes are optional — test.html omits three)
+  const pT = document.getElementById('safe-probe-t');
+  const pL = document.getElementById('safe-probe-l');
+  const pR = document.getElementById('safe-probe-r');
+  SAFE_T = pT ? Math.round(pT.getBoundingClientRect().height) : 0;
+  SAFE_L = pL ? Math.round(pL.getBoundingClientRect().width) : 0;
+  SAFE_R = pR ? Math.round(pR.getBoundingClientRect().width) : 0;
   buildStars();
   buildVignette();
   bgGen = -1;

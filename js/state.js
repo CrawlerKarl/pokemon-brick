@@ -173,8 +173,8 @@ const G = {
   adapt: 1, deathsThisWave: 0,
   mega: 0, megaT: 0,
   shotsFired: 0, playT: 0,
-  maxCombo: 0, caughtRun: 0, dropHint: 0, healthDropPity: 0, megaCalloutDone: false,
-  rallyHintDone: false, bestRally: 0, barrierHintDone: false, coachStep: 0,
+  maxCombo: 0, caughtRun: 0, dropHint: 0, healthDropPity: 0, megaCalloutDone: false, megaWasReady: false,
+  rallyHintDone: false, bestRally: 0, barrierHintDone: false, coachStep: 0, jCoach: null,
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
@@ -236,8 +236,11 @@ function blasterArmed() {
 }
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
-function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false) {
-  const next = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny };
+// hero: keep the dramatic centre-card treatment even during live combat —
+// reserved for boss-round reveals. Everything else renders as a compact strip
+// under the HUD while playing, so no banner ever covers the pilot's lane.
+function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false, hero = false) {
+  const next = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny, hero };
   if (!G.announce) { G.announce = next; return; }
   if (G.announce.name === name || G.announceQueue.some(a => a.name === name)) return;
   G.announceQueue.push(next);
@@ -620,7 +623,7 @@ function buildLevel(lvl) {
       setAnnounce('alert', gen.accent, 'THE ' + gen.name + ' GAUNTLET',
         'ROUND 1 — THE SENTINELS: ' + subs.map(x => NAMES[x[0]].toUpperCase()).join(' · '), 3.6,
         (G.mode === 'junkie' ? gauntletEntranceName(SENTINEL_ENTRANCE_STYLES[rIdx]) + ' · ' : '') +
-          'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES');
+          'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true);
     } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
     // never pays a cache-miss hitch mid-fight
@@ -1071,6 +1074,15 @@ function buildLevel(lvl) {
   }
   assignClassicBrickBehaviors(regionsIn, stage);
   if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = 0.9; // they fire as they float in
+  // ---- STARFIGHTER FIRST-FLIGHT COACH: five one-line steps taught during
+  // Kanto's opening waves (fly → tap fire → hold charge → grab an orb → mega).
+  // Each step advances on the ACTION it teaches (progression in update.js,
+  // pill in render.js), and the whole coach runs ONCE per install — a finished
+  // course sets 'pkbrk-jcoach' and never returns. Knockout retries re-arm it
+  // harmlessly (same wave, same steps).
+  if (G.mode === 'junkie' && lvl === 1 && !G.trial && !G.daily && !loadStore('pkbrk-jcoach', 0)) {
+    G.jCoach = { step: 1, doneT: 0, moved: 0, lastX: null, lastY: null };
+  }
   // SPACE JUNKIE's Kanto challenge doubles as the CHARGE-SHOT tutorial
   if (G.mode === 'junkie' && lvl === 2) {
     setAnnounce('shield', '#4dd0e1', 'SHELL ARMOR!',
@@ -1163,8 +1175,8 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   const p = preset();
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
-  G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false;
-  G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false; G.coachStep = 0;
+  G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false; G.megaWasReady = false;
+  G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false; G.coachStep = 0; G.jCoach = null;
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;

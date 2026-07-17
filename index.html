@@ -20,13 +20,20 @@
      touch controls anchored to it) can never fall behind a mobile browser
      toolbar or the home indicator */
   canvas { display: block; position: fixed; top: 0; left: 0; cursor: none; touch-action: none; }
-  /* probe for the phone's home-indicator / safe-area height */
+  /* probes for the phone's safe areas — bottom (home indicator) plus top /
+     left / right (notch, Dynamic Island, rounded landscape corners) */
   #safe-probe { position: fixed; bottom: 0; height: env(safe-area-inset-bottom, 0px); width: 1px; visibility: hidden; }
+  #safe-probe-t { position: fixed; top: 0; height: env(safe-area-inset-top, 0px); width: 1px; visibility: hidden; }
+  #safe-probe-l { position: fixed; left: 0; width: env(safe-area-inset-left, 0px); height: 1px; visibility: hidden; }
+  #safe-probe-r { position: fixed; right: 0; width: env(safe-area-inset-right, 0px); height: 1px; visibility: hidden; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="safe-probe"></div>
+<div id="safe-probe-t"></div>
+<div id="safe-probe-l"></div>
+<div id="safe-probe-r"></div>
 <script src="js/setup.js"></script>
 <script src="js/config.js"></script>
 <script src="js/audio.js"></script>

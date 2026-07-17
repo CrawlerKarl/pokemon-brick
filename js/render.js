@@ -2166,6 +2166,12 @@ function wrapText(text, maxW) {
 function drawAnnounce() {
   const a = G.announce;
   if (!a) return;
+  // LIVE COMBAT never gets a banner in the flight lane: while playing,
+  // everything but a hero announcement (boss-round reveals) renders as a
+  // compact strip tucked under the HUD, sliding in from the top. The centre
+  // card remains for serve/menu/draft states and boss drama.
+  const compact = G.state === 'play' && !a.hero;
+  if (compact) { drawAnnounceStrip(a); return; }
   const fadeOut = a.max - a.t < 0.3 ? (a.max - a.t) / 0.3 : 1;
   const alpha = Math.min(fadeOut, a.t < 0.5 ? a.t / 0.5 : 1);
   ctx.save();
@@ -2247,6 +2253,73 @@ function drawAnnounce() {
   ctx.restore();
 }
 
+// the in-combat variant of drawAnnounce: one tight strip under the HUD line,
+// name + one detail line (+ inline portrait for catches). It slides down from
+// the top so arrival messaging reads as HUD, not as a card over the pilot.
+function drawAnnounceStrip(a) {
+  const fadeOut = a.max - a.t < 0.3 ? (a.max - a.t) / 0.3 : 1;
+  const alpha = Math.min(fadeOut, a.t < 0.4 ? a.t / 0.4 : 1);
+  const enter = Math.min(1, (a.max - a.t) / 0.22);
+  // below the full left HUD column (type/rift/build rows) and the corner
+  // buttons on phones; wide screens tuck it right under the wave title.
+  // SHORT viewports (landscape phones) have no free band under the HUD —
+  // the flocks fly there — so the strip uses the mid-screen gap between
+  // the flock band and the ship's lane instead
+  const y = H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 150 : 88);
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.translate(0, -14 * (1 - enter) * (1 - enter));
+  const isGlyph = a.icon && /^[a-z]+$/.test(a.icon);
+  const gR = 8;
+  const sprR = a.spriteId ? 15 : 0;
+  let nameSize = Math.min(14.5, W / 30);
+  ctx.font = `900 ${nameSize}px Orbitron, sans-serif`;
+  const maxTextW = Math.min(W - 70, 470);
+  let nameW = ctx.measureText(a.name).width;
+  if (nameW > maxTextW) {
+    nameSize = Math.max(10, nameSize * maxTextW / nameW);
+    ctx.font = `900 ${nameSize}px Orbitron, sans-serif`;
+    nameW = ctx.measureText(a.name).width;
+  }
+  ctx.font = bodyFont(10, 700);
+  const descW = Math.min(ctx.measureText(a.desc).width, maxTextW);
+  const lead = (isGlyph ? gR * 2 + 8 : 0) + (sprR ? sprR * 2 + 8 : 0);
+  const pillW = Math.min(W - 12, Math.max(nameW + lead, descW) + 44);
+  const pillH = a.desc ? 46 : 30;
+  ctx.globalAlpha = alpha * 0.9;
+  roundRect(W / 2 - pillW / 2, y - pillH / 2, pillW, pillH, 13);
+  ctx.fillStyle = 'rgba(6,9,24,0.85)'; ctx.fill();
+  ctx.strokeStyle = a.color + '77'; ctx.lineWidth = 1.3; ctx.stroke();
+  const nameY = a.desc ? y - 9 : y;
+  ctx.font = `900 ${nameSize}px Orbitron, sans-serif`;
+  ctx.fillStyle = a.color;
+  const half = (nameW + lead) / 2;
+  let lx = W / 2 - half;
+  if (sprR) {
+    const spr = getSprite(a.spriteId, a.spriteShiny);
+    if (spr.complete && spr.naturalWidth) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(lx + sprR, y, sprR - 1, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(spr, lx, y - sprR, sprR * 2, sprR * 2);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(lx + sprR, y, sprR, 0, Math.PI * 2);
+      ctx.strokeStyle = a.color; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    lx += sprR * 2 + 8;
+  }
+  if (isGlyph) { drawGlyph(ctx, a.icon, lx + gR, nameY, gR, a.color); lx += gR * 2 + 8; }
+  ctx.textAlign = 'left';
+  ctx.fillText(a.name, lx, nameY);
+  if (a.desc) {
+    ctx.textAlign = 'center';
+    ctx.font = bodyFont(10, 700);
+    ctx.fillStyle = '#dfe8f2';
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.fillText(a.desc, W / 2 + (sprR ? sprR + 4 : 0), y + 11, maxTextW);
+  }
+  ctx.restore();
+}
+
 // transient tutorial hint: shows until you've fired a few shots.
 // on touch it points at the FIRE button instead of the paddle
 // ONE contextual hint at a time, in a control-safe zone: on touch the pill
@@ -2256,6 +2329,9 @@ function drawShootHint() {
   // Stage, trial, power-up, and evolution announcements own the centre lane.
   // Tutorials wait their turn instead of stacking a second banner over them.
   if (G.announce) return;
+  // the STARFIGHTER first-flight coach teaches these same controls one step
+  // at a time — while it runs, the generic hint stays out of the way
+  if (G.jCoach) return;
   // CHARGE TUTOR: while armored/rock targets are on screen and the player has
   // NEVER fired a charged shot, a bright pulsing banner stays up until they
   // do — the one mechanic worth nagging about
@@ -2568,11 +2644,15 @@ function drawRiftTracker() {
   ctx.restore();
 }
 function drawHUD() {
-  const g = ctx.createLinearGradient(0, 0, 0, 56);
+  // the bar absorbs the top safe-area inset (notch / Dynamic Island): the
+  // backdrop grows taller and every top-anchored element shifts down with it
+  const g = ctx.createLinearGradient(0, 0, 0, 56 + SAFE_T);
   g.addColorStop(0, 'rgba(5,8,25,0.92)'); g.addColorStop(1, 'rgba(5,8,25,0.4)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 56);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 56 + SAFE_T);
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.beginPath(); ctx.moveTo(0, 56); ctx.lineTo(W, 56); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 56 + SAFE_T); ctx.lineTo(W, 56 + SAFE_T); ctx.stroke();
+  ctx.save();
+  ctx.translate(0, SAFE_T);
 
   ctx.textBaseline = 'middle';
   ctx.font = '700 20px Orbitron, sans-serif';
@@ -2657,6 +2737,7 @@ function drawHUD() {
     ctx.fillText(G.modifier.name, W / 2 + 4, 42);
   }
   drawPlayerHealthBar();
+  ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
   drawBrickBehaviorLegend();
   drawCombatNotice();
   // ---- active power-up chips: capped slots so phones stay readable ----
@@ -2826,11 +2907,13 @@ function drawTouchControls() {
   const f = B.fire;
   if (f) {
     const charging = G.charge > 0.02, full = G.charge >= 1;
+    // near the heat limit (amber) the pad WARNS before it ever locks out
+    const heatWarn = !hot && !charging && G.heat > 0.7;
     ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
     ctx.fillStyle = hot ? 'rgba(80,30,30,0.72)' : charging ? 'rgba(16,60,72,0.78)' : 'rgba(10,16,38,0.72)';
     ctx.fill();
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = hot ? '#ff5252' : charging ? (full ? '#e0ffff' : '#4dd0e1') : '#80d8ff';
+    ctx.strokeStyle = hot ? '#ff5252' : charging ? (full ? '#e0ffff' : '#4dd0e1') : heatWarn ? '#ffb74d' : '#80d8ff';
     ctx.stroke();
     // heat arc wraps the fire button
     const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
@@ -2850,10 +2933,24 @@ function drawTouchControls() {
         ctx.shadowBlur = 0;
       }
     }
-    drawGlyph(ctx, charging ? 'warp' : 'target', f.x, f.y - 6, 13, hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#b2ebf2') : '#b3e5fc');
+    drawGlyph(ctx, charging ? 'warp' : 'target', f.x, f.y - 8, 12, hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#b2ebf2') : heatWarn ? '#ffcc80' : '#b3e5fc');
+    // ONE consistent state language: the label always names the current state
+    // or the next action — no bare FIRE/AUTO/HOT ambiguity mid-fight
+    const shooter = G.mode !== 'classic';
+    const label = hot ? 'COOLING ' + Math.ceil(G.overheat) + 's'
+      : charging ? (full ? 'RELEASE!' : Math.round(Math.min(1, G.charge) * 100) + '%')
+      : heatWarn ? 'HEAT HIGH'
+      : shooter ? (SETTINGS.autoFire ? 'AUTO ON' : 'TAP FIRE') : 'FIRE';
     ctx.font = '900 9px Orbitron, sans-serif';
-    ctx.fillStyle = hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#80deea') : '#b3e5fc';
-    ctx.fillText(hot ? 'HOT!' : charging ? 'CHARGE' : (SETTINGS.autoFire && G.mode !== 'classic' ? 'AUTO' : 'FIRE'), f.x, f.y + 16);
+    ctx.fillStyle = hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#80deea') : heatWarn ? '#ffb74d' : '#b3e5fc';
+    ctx.fillText(label, f.x, f.y + 12, f.r * 1.7);
+    // second line: what HOLDING does right now (shooter modes only)
+    const sub = !shooter ? '' : hot ? 'LOCKED' : charging ? (full ? '' : 'KEEP HOLDING') : 'HOLD = CHARGE';
+    if (sub) {
+      ctx.font = '800 6.5px Orbitron, sans-serif';
+      ctx.fillStyle = hot ? '#ff8a80' : charging ? '#b2ebf2' : heatWarn ? '#ffcc80' : '#90a4ae';
+      ctx.fillText(sub, f.x, f.y + 23, f.r * 1.6);
+    }
   }
   // MEGA — the button IS the meter (fills as a ring)
   const m = B.mega;
@@ -4141,6 +4238,15 @@ function drawGameOverSummary() {
   ctx.fillStyle = 'rgba(255,82,82,0.12)'; ctx.fill();
   ctx.font = '800 10px Orbitron, sans-serif'; ctx.fillStyle = '#ffab91';
   ctx.fillText('FINAL CAUSE · ' + s.cause, W / 2, L.py + 149, L.pw - 54);
+  // one actionable tip matched to what actually ended the run
+  const tip = /MISSED BALL/.test(s.cause) ? 'STAY UNDER THE BALL — A DRAFTED RALLY BARRIER GIVES A SECOND CHANCE'
+    : /DANGER LINE/.test(s.cause) ? 'BREAK THE LOWEST ROWS FIRST TO HOLD THE LINE BACK'
+    : /HEAVY/.test(s.cause) ? 'HEAVY BOLTS SPLASH ON IMPACT — DODGE WIDE, NOT CLOSE'
+    : /BEAM/.test(s.cause) ? 'BEAMS TELEGRAPH FIRST — MOVE THE MOMENT THE WARNING GLOWS'
+    : /ATTACK/.test(s.cause) ? 'SHOTS YOUR TYPE RESISTS BOUNCE OFF — SWAP TYPES WITH ELEMENT ORBS'
+    : 'SHIELDS ABSORB ONE LETHAL HIT — DRAFT THE GUARD PATH EARLY';
+  ctx.font = bodyFont(9, 700); ctx.fillStyle = '#9fb3c8';
+  ctx.fillText('TIP · ' + tip, W / 2, L.py + 177, L.pw - 44);
   const metrics = [
     ['BEST RALLY', '×' + (s.bestRally || 0)], ['MAX COMBO', '×' + (s.maxCombo || 0)],
     ['BRICKS', s.bricks || 0], ['ITEMS', s.items || 0],
@@ -4154,11 +4260,16 @@ function drawGameOverSummary() {
     ctx.font = '900 15px Orbitron, sans-serif'; ctx.fillStyle = '#e8eef6'; ctx.fillText(String(m[1]), cx, cy + 19);
   });
   const pathY = L.py + (L.narrow ? 342 : 298);
-  ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c'; ctx.fillText('MOST-USED PATH', W / 2, pathY);
-  ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#ffd54f'; ctx.fillText(s.path, W / 2, pathY + 20, L.pw - 44);
+  // short landscape viewports have no room between the metrics and the button
+  // row — the path summary would print straight across the buttons there
+  const roomForPath = H >= 480;
+  if (roomForPath) {
+    ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c'; ctx.fillText('MOST-USED PATH', W / 2, pathY);
+    ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#ffd54f'; ctx.fillText(s.path, W / 2, pathY + 20, L.pw - 44);
+  }
   if (G.trial) {
     ctx.font = '700 9px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
-    ctx.fillText('TRIAL RUN · SCORE AND CATCHES WERE NOT SAVED', W / 2, pathY + 43, L.pw - 30);
+    if (roomForPath) ctx.fillText('TRIAL RUN · SCORE AND CATCHES WERE NOT SAVED', W / 2, pathY + 43, L.pw - 30);
   } else if (G.daily) {
     const sh = L.share, hovS = inRect(mouseX, lastMouseY, sh);
     roundRect(sh.x, sh.y, sh.w, sh.h, 12);
@@ -4197,6 +4308,23 @@ function drawOverlays() {
   } else if (G.state === 'play' && !paused && G.mode === 'classic' && G.level === 1 &&
       G.coachStep === 1 && !G.highGroundDone && G.playT < 10) {
     hintPill('NEXT: SEND THE BALL ABOVE THE WALL TO START A RALLY', H * 0.62, '#ffd54f');
+  } else if (G.state === 'play' && !paused && G.jCoach && G.mode === 'junkie' && !G.announce) {
+    // STARFIGHTER first-flight coach: one line at a time in the same top band
+    // the compact announcements use — never over the pilot or the button row.
+    // Steps 4/5 are contextual and stay silent until their moment is on screen.
+    const jc = G.jCoach, hit = jc.doneT > 0;
+    const megaReady = G.mega >= 1 && G.megaT <= 0;
+    const orbFalling = G.powerups.some(p => p.orb);
+    const txt =
+      jc.step === 1 ? (IS_TOUCH ? 'DRAG ANYWHERE — YOUR POKÉMON FOLLOWS' : 'MOVE THE MOUSE — YOUR POKÉMON FOLLOWS') :
+      jc.step === 2 ? (IS_TOUCH ? 'TAP FIRE TO ATTACK' : 'CLICK OR SPACE — FIRE') :
+      jc.step === 3 ? (IS_TOUCH ? 'HOLD FIRE TO CHARGE A BIG SHOT' : 'HOLD SHIFT OR RIGHT-CLICK — CHARGE A BIG SHOT') :
+      jc.step === 4 ? ((orbFalling || hit) ? 'GRAB THE FALLING ORB — IT CHANGES YOUR ATTACK TYPE' : null) :
+      jc.step === 5 ? ((megaReady || hit) ? (IS_TOUCH ? 'MEGA IS FULL — TAP THE GLOWING RING' : 'MEGA IS FULL — PRESS E') : null) : null;
+    // same safe band as the compact announcements (only one shows at a time):
+    // under the HUD column on portrait, mid-screen gap on short landscape
+    const coachY = H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 156 : 124);
+    if (txt) hintPill((hit ? '✓ ' : '') + txt, coachY, hit ? '#9df2b0' : '#ffd54f');
   } else if (G.state === 'upgrade') {
     dim(0.55);
     const draftShort = H < 520;

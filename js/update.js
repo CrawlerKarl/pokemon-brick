@@ -1262,7 +1262,7 @@ function gauntletWake() {
   const legendStyle = LEGENDARY_ENTRANCE_STYLES[gen2.boss.id] || 'psybreak';
   setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
     'ROUND 2 — THE LEGENDARY' + (G.mode === 'junkie' ? ' · 2 PHASES' : ''), 3,
-    G.mode === 'junkie' ? gauntletEntranceName(legendStyle) : null);
+    G.mode === 'junkie' ? gauntletEntranceName(legendStyle) : null, null, false, true);
 }
 function gauntletSummonMythic(forceSecret = false) {
   const gj = G.gauntlet;
@@ -1293,7 +1293,7 @@ function gauntletSummonMythic(forceSecret = false) {
     G.announce = null; G.announceQueue = [];
     setAnnounce('fairy', '#d780ff', 'RIFT BREACH · MEW VMAX!',
       'SECRET ROUND · 3 PHASES — THE NORMAL MEW FIGHT HAS BEEN REPLACED', 4,
-      'MAX RIFT · DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE');
+      'MAX RIFT · DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE', null, false, true);
     return;
   }
   const [mid, mt2] = gen2.gauntlet.myth;
@@ -1317,7 +1317,7 @@ function gauntletSummonMythic(forceSecret = false) {
   SFX.roar();
   setAnnounce('fairy', '#ff80ab', NAMES[mid].toUpperCase() + ' — THE MYTHICAL!',
     'FINAL ROUND · 3 PHASES — A NEW KIND OF FIGHT', 3.2,
-    G.mode === 'junkie' ? gauntletEntranceName(mythStyle) : null);
+    G.mode === 'junkie' ? gauntletEntranceName(mythStyle) : null, null, false, true);
 }
 
 function updateSpriteKinematics(dt) {
@@ -1528,6 +1528,57 @@ function update(dt) {
   if (G.mega >= 1 && G.megaT <= 0 && !G.megaCalloutDone && G.state === 'play') {
     G.megaCalloutDone = true;
     setAnnounce('mega', '#ffd54f', 'MEGA READY!', IS_TOUCH ? 'TAP THE GLOWING MEGA BUTTON TO UNLEASH' : 'PRESS E TO UNLEASH', 2.6);
+  }
+  // EVERY time the meter fills: a distinct haptic + a ring pulse on the MEGA
+  // button itself, so readiness registers without reading the corner meter
+  {
+    const megaReadyNow = G.mega >= 1 && G.megaT <= 0;
+    if (megaReadyNow && !G.megaWasReady && G.state === 'play') {
+      haptic('mega');
+      if (IS_TOUCH) {
+        const B = touchButtons();
+        G.uiTouchPulse = { x: B.mega.x, y: B.mega.y, label: 'MEGA READY', t: 0.9, max: 0.9 };
+      }
+    }
+    G.megaWasReady = megaReadyNow;
+  }
+  // ---- STARFIGHTER first-flight coach: each step completes on the action it
+  // teaches. Steps 4 (orb) and 5 (mega) are contextual — they only surface
+  // when their moment exists, and the coach retires quietly with the region
+  // if that moment never comes. State mutates HERE; render only reads.
+  {
+    const jc = G.jCoach;
+    if (jc && G.mode === 'junkie' && G.state === 'play' && !paused) {
+      if (jc.doneT > 0) {
+        jc.doneT -= dt;
+        if (jc.doneT <= 0) { jc.step++; jc.doneT = 0; }
+      } else {
+        // horizontal only, above a per-frame dead-band: neither the ship's
+        // settle into its band nor its idle sway may complete "drag to fly" —
+        // only a real steer moves the ship more than a pixel a frame
+        if (jc.lastX != null) {
+          const dx = Math.abs(G.paddle.x - jc.lastX);
+          // deliberate steering only: above walking pace, and not the fast
+          // re-centering glide right after a hit (hurtHud = respawn window)
+          if (dx > 2.5 && G.hurtHud <= 0) jc.moved += dx;
+        }
+        jc.lastX = G.paddle.x;
+        const orbNow = !!(G.ballElement && G.ballElementT < 1000); // item override = orb collected
+        const done =
+          jc.step === 1 ? jc.moved > 150 :
+          jc.step === 2 ? G.shotsFired >= 3 :
+          jc.step === 3 ? G.chargedEver :
+          jc.step === 4 ? orbNow :
+          jc.step === 5 ? G.megaT > 0 : true;
+        if (done) { jc.doneT = 0.9; haptic('tap'); }
+      }
+    }
+    // course complete — or the player has flown far enough without the
+    // contextual moments — either way it never shows again
+    if (jc && (jc.step > 5 || G.level >= 3)) {
+      G.jCoach = null;
+      saveStore('pkbrk-jcoach', 1);
+    }
   }
   // magikarp keeps it real
   G.splashCD -= dt;

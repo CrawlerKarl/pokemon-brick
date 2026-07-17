@@ -45,7 +45,16 @@ the in-game HUD uses one health readout, identifies permanent partner elements
 versus timed items, shows Mega charge as a percentage, and keeps region rules
 and type-matchup feedback in dedicated rails away from the bricks. Mobile
 players can tune follow speed, button size and opacity, mirror controls for
-left-handed play, and enable haptics directly from the pause screen. New
+left-handed play, and enable haptics directly from the pause screen.
+During live combat no banner sits in the flight lane: non-boss announcements
+render as a compact strip under the HUD (`drawAnnounceStrip`; boss-round
+reveals pass `hero` to `setAnnounce` and keep the centre card). STARFIGHTER
+first installs get a five-step coach (`G.jCoach`: fly → tap-fire → charge →
+orb → mega, once per install via `pkbrk-jcoach`), the FIRE pad always names
+its state (`TAP FIRE / AUTO ON / % / RELEASE! / HEAT HIGH / COOLING Ns` +
+a `HOLD = CHARGE` subline), Mega readiness fires a distinct haptic + button
+pulse every fill, and all four safe-area insets (`SAFE_T/L/R/B`) keep the
+HUD and corner controls clear of notches and rounded corners. New
 players who request reduced motion at the device level automatically start
 with screen shake and flashes reduced; saved in-game choices still take
 priority afterward.

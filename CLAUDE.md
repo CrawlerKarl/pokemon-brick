@@ -185,7 +185,16 @@ phone — flag anything only verifiable there.
   remaining duration. Classic's region rule and type-matchup combat feedback
   live in dedicated backed rails, not over bricks. Brick corners are behavior
   top-right, type bottom-right, and damaged HP top-left. First-wave coaching is
-  sequential (`G.coachStep`): aim during serve, high-ground goal after launch.
+  sequential (`G.coachStep`): aim during serve, high-ground goal after launch;
+  STARFIGHTER has its own five-step first-install coach (`G.jCoach`,
+  progression in update.js, pill in render.js, once-ever via `pkbrk-jcoach`).
+  During live combat (`G.state === 'play'`) only `hero` announcements (boss
+  rounds) may use the centre card — everything else renders as the compact
+  top strip (`drawAnnounceStrip`), so no banner ever covers the pilot's lane.
+  The FIRE pad must always NAME its state (TAP FIRE / AUTO ON / charge % /
+  RELEASE! / HEAT HIGH / COOLING Ns) — never a bare unexplained label. All
+  four safe-area insets (`SAFE_T/L/R/B`, setup.js) shift the HUD bar and
+  corner controls; keep new top/edge-anchored UI behind them.
 
 ## Performance (mobile is the target — keep it smooth)
 - **Never allocate gradients or set `shadowBlur` per-entity per-frame in hot

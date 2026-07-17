@@ -13,11 +13,13 @@ function touchButtons() {
   // the bottom of the screen. Anchor the pads a comfortable margin above FLOOR.
   const base = FLOOR() - 34, scale = SETTINGS.buttonScale || 1;
   const left = !!SETTINGS.leftHanded;
-  const edge = n => left ? n : W - n;
+  // side/top safe-area insets keep every control clear of notches and
+  // rounded landscape corners, matching the existing bottom treatment
+  const edge = n => left ? n + SAFE_L : W - n - SAFE_R;
   const b = {
     mega:  { x: edge(138), y: base - 40, r: 30 * scale }, // beside FIRE — paddle rides above both
-    pause: { x: edge(28), y: 84, r: 20 * scale },
-    sound: { x: edge(72), y: 82, r: 18 * scale },
+    pause: { x: edge(28), y: 86 + SAFE_T, r: 22 * scale }, // ≥44 px visible targets
+    sound: { x: edge(74), y: 84 + SAFE_T, r: 20 * scale },
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
   // and the ball is launched by tapping the playfield, not this pad. In the
