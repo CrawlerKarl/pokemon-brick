@@ -8,12 +8,17 @@ const PRESETS = {
   hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3 },
   nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1 },
 };
+const STORED_SETTINGS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}'));
+// Respect the device accessibility preference on a player's first visit.
+// Explicit choices saved in SETTINGS still win on every later visit.
+const PREFERS_REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
-    reduceShake: false, reduceFlash: false, hcBall: false, autoFire: false, mode: 'classic',
+    reduceShake: PREFERS_REDUCED_MOTION, reduceFlash: PREFERS_REDUCED_MOTION,
+    hcBall: false, autoFire: false, mode: 'classic',
     buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
     leftHanded: false, haptics: true },
-  (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-settings', '{}')));
+  STORED_SETTINGS);
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
 // Gameplay randomness can be locked for the daily challenge without making
 // decorative particles and scenery repeat. Only game-state code calls this.
@@ -270,7 +275,9 @@ function advLayout() {
   const pw = Math.min(440, W * 0.92);
   const compact = H < 560;
   const rowH = compact ? 34 : 52, togH = compact ? 26 : 40;
-  const top = compact ? 102 : 112, bottom = compact ? 12 : 36;
+  // Leave a real text row between the tabs and the first slider. Previously
+  // POWER-UP DROPS visibly collided with the active tab on phone viewports.
+  const top = compact ? 116 : 132, bottom = compact ? 12 : 36;
   const ph = top + sliders.length * rowH + toggles.length * togH + bottom;
   const px = W / 2 - pw / 2, py = Math.max(compact ? 8 : 20, H / 2 - ph / 2);
   return {
@@ -308,11 +315,18 @@ function presetGeom(i) { return setupLayout().chip(i); }
 function sliderGeom(i) { return advLayout().slider(i); }
 function startBtnGeom() { return setupLayout().start; }
 function dexBtnGeom() { return menuLayout().dex; }
-// "QUIT TO MENU" button on the pause overlay
-function pauseQuitGeom() {
-  const w = Math.min(260, W * 0.72), h = 46;
-  return { x: W / 2 - w / 2, y: H * 0.72, w, h };
+// Pause actions share one row. SETTINGS is available mid-run so touch players
+// can fix follow speed / button placement without abandoning their journey.
+function pauseActionLayout() {
+  const gap = 12, totalW = Math.min(520, W * 0.9), h = 46;
+  const w = (totalW - gap) / 2, x = W / 2 - totalW / 2, y = H * 0.72;
+  return {
+    settings: { x, y, w, h },
+    quit: { x: x + w + gap, y, w, h },
+  };
 }
+function pauseSettingsGeom() { return pauseActionLayout().settings; }
+function pauseQuitGeom() { return pauseActionLayout().quit; }
 function gameOverLayout() {
   const narrow = W < 620, pw = Math.min(620, W * 0.94);
   const ph = Math.min(H * 0.86, narrow ? 560 : 500);

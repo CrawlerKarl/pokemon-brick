@@ -71,14 +71,17 @@ function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 // ---- REGION CHECKPOINTS: 27 stages is a long arcade run, so the run is
 // saved at every region's doorstep. CONTINUE on the title screen resumes it;
 // knockouts and true game-over retain the latest checkpoint. Trial runs never save.
-let RUN_CKPT = (v => (v && typeof v === 'object' && v.v === 1 && v.lvl >= 4) ? v : null)(loadStore('pkbrk-run', 'null'));
+let RUN_CKPT = (v => (v && typeof v === 'object' && (v.v === 1 || v.v === 2) && v.lvl >= 4) ? v : null)(loadStore('pkbrk-run', 'null'));
 function saveCheckpoint() {
   if (G.daily) return;
   RUN_CKPT = {
-    v: 1, lvl: G.level, score: G.score, lives: G.lives, mode: G.mode,
+    v: 2, lvl: G.level, score: G.score, lives: G.lives, livesMax: G.livesMax, mode: G.mode,
     starter: G.starter, starterLvl: G.starterLvl,
     path: { ...G.path }, upg: { ...G.upg }, stacks: { ...G.stacks },
     catchBonus: G.catchBonus, caughtRun: G.caughtRun, adapt: G.adapt,
+    mega: G.mega,
+    secret: { shards: G.secret.shards.slice(), offered: G.secret.offered.slice(), completed: !!G.secret.completed },
+    secretUpg: { ...G.secretUpg },
     preset: SETTINGS.preset,
   };
   saveStore('pkbrk-run', RUN_CKPT);
@@ -124,14 +127,33 @@ function resumeRun() {
   // resetRun granted a random tree for the deep start — overwrite with the
   // REAL run state from the checkpoint
   G.score = c.score; G.lives = Math.max(1, c.lives);
+  G.livesMax = Math.max(G.lives, c.livesMax || G.livesMax);
   G.path = { ...c.path }; G.upg = { ...c.upg };
   G.stacks = Object.assign({ orb: 0, ice: 0, bell: 0 }, c.stacks);
   G.catchBonus = c.catchBonus || 0; G.caughtRun = c.caughtRun || 0;
-  G.adapt = c.adapt || 1; G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
+  G.adapt = c.adapt || 1; G.mega = Math.max(G.mega, c.mega || 0);
+  G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
+  if (c.secret) {
+    G.secret.shards = Array.from({ length: 3 }, (_, i) => !!c.secret.shards?.[i]);
+    G.secret.offered = Array.from({ length: 3 }, (_, i) => !!c.secret.offered?.[i] || !!c.secret.shards?.[i]);
+    G.secret.completed = !!c.secret.completed;
+  }
+  G.secretUpg = Object.assign({ heart: false, lens: false, echo: false }, c.secretUpg);
   setAnnounce('swift', '#80d8ff', 'JOURNEY RESUMED',
     genFor(c.lvl).name + ' · WAVE ' + c.lvl + ' — WELCOME BACK', 3,
     'SAVED AT EVERY REGION · GAME OVER CLEARS THE SAVE');
 }
+function freshSecretState() {
+  return {
+    shards: [false, false, false], offered: [false, false, false], pendingShard: null,
+    vmax: false, rewardDraft: false, deferredChoices: null,
+    completed: false, lastReward: null,
+  };
+}
+function secretEligible() {
+  return !G.trial && !G.daily && regionIdx(G.level) === 0 && G.level <= 3;
+}
+function secretShardCount() { return G.secret.shards.reduce((n, held) => n + (held ? 1 : 0), 0); }
 const G = {
   state: 'menu',
   score: 0, best: Math.max(0, +loadStore('pkbrk-best', '0') || 0),
@@ -184,6 +206,8 @@ const G = {
   // blaster heat: firing builds it, paddle returns vent it, 100% = overheat
   heat: 0, overheat: 0,
   upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
+  secret: freshSecretState(),
+  secretUpg: { heart: false, lens: false, echo: false }, secretHit: 0,
   shieldRegenT: 10,
   telegraphs: [],           // pre-shot warning markers
   gustT: 0, timeWarpT: 0,   // Lugia / Dialga signature effects
@@ -502,6 +526,8 @@ function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
   G.fx = 0; G.fy = 0; G.swayT = 0;
+  G.secret.pendingShard = null; G.secret.vmax = false; G.secret.rewardDraft = false;
+  G.secret.deferredChoices = null;
   if (stageIdx(lvl) !== 2) G.gauntlet = null;
   G.gustT = 0; G.timeWarpT = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
@@ -1123,6 +1149,8 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.shieldFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
+  G.secret = freshSecretState();
+  G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
   G.charge = 0; G.chargeCD = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)

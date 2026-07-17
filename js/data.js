@@ -308,6 +308,12 @@ const POWERS = {
   warp:   { key: 'warp',   icon: 'warp',   name: 'SKY WARP',       desc: 'BALLS PHASE UP TO THE HIGH GROUND', color: '#80d8ff' },
   heal:   { key: 'heal',   icon: 'heart',  name: 'MAX POTION',     desc: 'RESTORES 1 HP',              color: '#ff6f91' },
 };
+// Kanto's three guaranteed secret pickups are intentionally outside POWERS:
+// random drop tables can never hand out (or replace) a Rift Shard.
+const RIFT_SHARD = {
+  key: 'riftShard', icon: 'fairy', name: 'RIFT SHARD',
+  desc: 'ONE OF THREE PIECES THAT REWRITES KANTO\'S FINAL ROUND', color: '#d780ff',
+};
 // ---- starter Pokémon: one three-stage partner line for every battle type.
 // Each line owns a distinct, tiered gameplay hook. Pikachu is the deliberate
 // exception to the three-form rule: it starts as Pikachu, evolves into an
@@ -669,6 +675,16 @@ const STACK_ITEMS = [
   { key: 'ice',  name: 'NEVER-MELT ICE', icon: 'slow',   color: '#80deea', desc: 'BLASTER HEAT −6% PER SHOT — STACKS FOREVER' },
   { key: 'bell', name: 'SOOTHE BELL',    icon: 'heart',  color: '#f48fb1', desc: 'ALL SCORE +6% — STACKS FOREVER' },
 ];
+// A complete Kanto Rift Key earns one bonus draft after Mew VMAX. These
+// upgrades never enter the ordinary tree or reroll pool.
+const SECRET_UPGRADES = [
+  { key: 'heart', name: 'PARADOX HEART', icon: 'heart', color: '#ff80ab',
+    desc: '+1 MAX HP · FULLY HEAL · FILL THE MEGA METER' },
+  { key: 'lens', name: 'RIFT LENS', icon: 'psychic', color: '#80d8ff',
+    desc: '+15% ALL DAMAGE · ATTACKS IGNORE TYPE RESISTANCE' },
+  { key: 'echo', name: 'ECHO RELAY', icon: 'electric', color: '#d780ff',
+    desc: 'EVERY 7TH DAMAGE HIT CHAINS TO TWO OTHER TARGETS' },
+];
 function upgN(k) { return G.upg[k] || 0; }
 function pathLvl(p) { return (G.path && G.path[p]) || 0; }
 function totalPathLevels() { return PATH_KEYS.reduce((a, k) => a + pathLvl(k), 0); }
@@ -1017,6 +1033,8 @@ function dexTotal() { return GENS.reduce((n, g) => n + regionRoster(g).length, 0
 // rare jackpot moments, so those stay remote rather than doubling the repo.
 const SPRITE_REMOTE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/';
 const spriteCache = {};
+const MEW_VMAX_IMG = new Image();
+MEW_VMAX_IMG.src = 'assets/sprites/mew-vmax.png';
 function getSprite(id, shiny) {
   const key = (shiny ? 's' : '') + id;
   if (!spriteCache[key]) {

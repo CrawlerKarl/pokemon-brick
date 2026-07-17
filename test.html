@@ -775,11 +775,68 @@ window.requestAnimationFrame = function () { return 0; };
       assert(Math.abs(left.fire.r / right.fire.r - 1.25) < 0.001, 'button scale did not resize FIRE');
       settingsPage = 1; const A = advLayout();
       assert(A.sliders.length === 3 && A.toggles.length === 2, 'touch settings tab is incomplete');
-      return 'left-handed mirror + size, opacity, follow speed, haptics settings available';
+      const tab = A.tab(0), firstSlider = A.slider(0);
+      assert(firstSlider.y - 17 > tab.y + tab.h + 8, 'settings tabs collide with the first slider label');
+      const P = pauseActionLayout();
+      assert(P.settings.x + P.settings.w < P.quit.x && P.quit.x + P.quit.w <= W,
+        'pause settings / quit actions overlap or leave the viewport');
+      return 'left-handed mirror + sizing; settings layout is readable and available from pause';
     } finally {
       SETTINGS.leftHanded = old.left; SETTINGS.buttonScale = old.scale;
       SETTINGS.buttonOpacity = old.opacity; SETTINGS.touchFollow = old.follow; settingsPage = 0;
     }
+  });
+
+  test('Kanto Rift Key replaces Mew with Mew VMAX', async () => {
+    SETTINGS.mode = 'classic'; SETTINGS.preset = 'easy';
+    resetRun(1, true, { seed: 'rift-key' });
+    G.trial = false; G.daily = false; // enable the feature without touching the real checkpoint
+    for (let i = 0; i < 3; i++) {
+      G.level = i + 1;
+      const shard = spawnRiftShard(i, W / 2, 150);
+      assert(shard && shard.secretShard && G.secret.pendingShard === i,
+        'piece ' + (i + 1) + ' did not spawn as a guaranteed secret pickup');
+      collectPickup(shard);
+      assert(G.secret.shards[i] && G.secret.pendingShard == null,
+        'piece ' + (i + 1) + ' did not join the Rift Key');
+    }
+    assert(secretShardCount() === 3, 'completed Rift Key did not report 3/3');
+    G.level = 3; G.gauntlet = { phase: 1, legendHp: 13 }; G.bricks = [];
+    gauntletSummonMythic();
+    const vmax = G.bricks.find(b => b.isBoss && !b.dead);
+    assert(vmax && vmax.secretBoss && vmax.mewVmax && vmax.poke.n === 'MEW VMAX',
+      'complete Rift Key still summoned normal Mew');
+    assert(G.secret.vmax && vmax.maxHp >= 18, 'secret encounter state or moderate boss durability missing');
+    drawBackground(); drawBricks();
+
+    G.secret = freshSecretState(); G.secret.offered[2] = true; // the third shard was allowed to close
+    G.gauntlet = { phase: 1, legendHp: 13 }; G.bricks = [];
+    gauntletSummonMythic();
+    const normal = G.bricks.find(b => b.isBoss && !b.dead);
+    assert(normal && !normal.secretBoss && normal.poke.id === 151,
+      'incomplete key no longer preserves the normal Mew finale');
+    return '3 guaranteed pieces; complete key summons 18+ HP Mew VMAX; incomplete key keeps Mew';
+  });
+
+  test('Mew VMAX grants a bonus secret-only upgrade draft', async () => {
+    SETTINGS.mode = 'classic'; resetRun(1, true, { seed: 'rift-reward' });
+    G.trial = false; G.daily = false; // test true-journey rewards in memory only
+    const ordinary = [{ stack: STACK_ITEMS[0] }];
+    G.state = 'upgrade'; G.secret.rewardDraft = true; G.secret.vmax = true;
+    G.secret.deferredChoices = ordinary;
+    G.upgradeChoices = SECRET_UPGRADES.map(secret => ({ secret }));
+    assert(G.upgradeChoices.length === 3 && new Set(G.upgradeChoices.map(c => c.secret.key)).size === 3,
+      'secret draft is not a fixed set of three unique rewards');
+    const hp0 = G.livesMax;
+    pickUpgrade(0);
+    assert(G.secretUpg.heart && G.livesMax === hp0 + 1 && G.lives === G.livesMax && G.mega === 1,
+      'Paradox Heart did not grant max HP, full healing, and full Mega');
+    assert(!G.secret.rewardDraft && !G.secret.vmax && G.upgradeChoices === ordinary,
+      'secret choice did not hand off to the normal Kanto reward');
+    applySecretUpgrade(SECRET_UPGRADES[1]); applySecretUpgrade(SECRET_UPGRADES[2]);
+    assert(G.secretUpg.lens && G.secretUpg.echo,
+      'Rift Lens or Echo Relay could not be equipped as secret-only upgrades');
+    return 'fixed 3-choice bonus draft; Heart, Lens, and Relay effects equip; ordinary draft follows';
   });
 
   // ---- runner -------------------------------------------------------------

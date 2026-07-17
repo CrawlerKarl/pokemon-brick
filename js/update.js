@@ -151,6 +151,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // Late-run mastery remains useful in every mode (ball, bolts, missiles,
   // explosions) without recreating the old giant weapon-capstone spike.
   if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
+  if (dmg < 90 && G.secretUpg.lens) dmg *= 1.15;
   const starterDirect = dmg < 90 && !meta.starterChain && !meta.behavior && !meta.linked;
   if (starterDirect && G.starter) {
     G.starterHits = (G.starterHits || 0) + 1;
@@ -186,7 +187,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         SFX.superFx();
         G.seCD = 0.45;
       }
-    } else if ((RESIST[element] || []).includes(br.poke.t) && !upgN('prismX')) {
+    } else if ((RESIST[element] || []).includes(br.poke.t) && !upgN('prismX') && !G.secretUpg.lens) {
       // resisted hits barely scratch — gentler on Easy, brutal beyond
       dmg *= SETTINGS.preset === 'easy' ? 0.5 : 0.25;
       if (G.seCD <= 0) {
@@ -203,6 +204,25 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     } else if (element === G.ballElement) G.resistStreak = 0;
   }
   br.hp -= dmg;
+  if (dmg < 90 && G.secretUpg.echo && !meta.secretEcho) {
+    G.secretHit = (G.secretHit || 0) + 1;
+    if (G.secretHit % 7 === 0) {
+      const ex = br.bx + G.fx, ey = br.by + G.fy;
+      const echoes = G.bricks.filter(b => !b.dead && b !== br && !b.barrier && !b.dormant)
+        .sort((a, b) => Math.hypot(a.bx + G.fx - ex, a.by + G.fy - ey) -
+          Math.hypot(b.bx + G.fx - ex, b.by + G.fy - ey)).slice(0, 2);
+      if (echoes.length) {
+        setCombatNotice('ECHO RELAY · CHAIN HIT', '#d780ff');
+        ringFx(ex, ey, '#d780ff', 6, 74, 3, 0.4);
+        for (const target of echoes) {
+          const tx = target.bx + G.fx, ty = target.by + G.fy;
+          ringFx(tx, ty, '#80d8ff', 4, 34, 2, 0.3);
+          damageBrick(target, Math.max(0.75, dmg * 0.4), tx, ty, null,
+            { secretEcho: true, ignoreShield: true });
+        }
+      }
+    }
+  }
   br.flash = 1;
   haptic('hit');
   if (starterDirect) {
@@ -346,7 +366,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     // Shooter bosses faint as bare legendaries; Brick Breaker boss bricks
     // fracture like the oversized blocks they are.
     shatterBrick(br, br.bx + G.fx, br.by + G.fy,
-      bareMon(br) || (br.isBoss && G.mode !== 'classic'));
+      br.secretBoss || bareMon(br) || (br.isBoss && G.mode !== 'classic'));
     // shockwave pop on every kill — bigger for elites, arena-wide for a boss
     ringFx(br.bx + G.fx, br.by + G.fy, col, 6,
       br.isBoss ? Math.min(W * 0.3, 240) : br.maxHp >= 3 ? 64 : 36,
@@ -372,11 +392,11 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     // healing loop is dependable without flooding a healthy board with items.
     // Otherwise drop the usual type-keyed power-up or a catchable Poké Ball.
     const d = diff();
-    if (br.isBoss) {
+    if (br.isBoss && !br.secretBoss) {
       const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 });
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 40, vy: 110, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
-    } else if (br.poke.id > 0 && !br.barrier) {
+    } else if (!br.isBoss && br.poke.id > 0 && !br.barrier) {
       const missingHp = Math.max(0, (G.livesMax || preset().lives) - G.lives);
       if (missingHp > 0) G.healthDropPity = (G.healthDropPity || 0) + 1;
       else G.healthDropPity = 0;
@@ -627,10 +647,53 @@ function awardRally(b, x, y) {
 }
 
 // apply a falling pickup's payload — shared by paddle catches and blaster snags
+function spawnRiftShard(index, x = W / 2, y = Math.max(105, H * 0.22)) {
+  if (!secretEligible() || index < 0 || index > 2 || G.secret.shards[index] ||
+      G.secret.offered[index] || G.secret.pendingShard != null) return null;
+  const pu = {
+    x, y, vy: 72, p: RIFT_SHARD, rot: index * 1.7,
+    secretShard: true, shardIndex: index, secretT: 9.5, hint: true,
+  };
+  G.secret.offered[index] = true;
+  G.secret.pendingShard = index;
+  G.powerups.push(pu);
+  // The collection beat is safe and deliberate: no leftover volley can steal
+  // a life while the player is reading the shard reveal.
+  G.enemyShots = []; G.telegraphs = []; G.columnStrikes = [];
+  const found = secretShardCount();
+  setAnnounce('fairy', '#d780ff', 'A RIFT SHARD APPEARED',
+    'CATCH PIECE ' + (index + 1) + '/3 TO REWRITE KANTO\'S FINAL ROUND', 3,
+    found ? 'RIFT KEY · ' + found + '/3 PIECES HELD' : 'THE FIRST ARC IS HIDING SOMETHING');
+  SFX.mega();
+  ringFx(x, y, '#d780ff', 10, 150, 4, 0.65);
+  return pu;
+}
 function collectPickup(pu) {
   if (G.runStats) G.runStats.itemsCaught++;
   haptic('item');
-  if (pu.p.key === 'element') {
+  if (pu.secretShard || pu.p.key === 'riftShard') {
+    const i = Math.max(0, Math.min(2, pu.shardIndex || 0));
+    G.secret.shards[i] = true;
+    G.secret.pendingShard = null;
+    const held = secretShardCount();
+    G.score += [400, 600, 1000][i];
+    burst(pu.x, pu.y, '#d780ff', 34, 340, 0.9);
+    ringFx(pu.x, pu.y, '#80d8ff', 12, 210, 5, 0.75);
+    sparkle(pu.x, pu.y, 12, true);
+    G.freeze = Math.max(G.freeze, 0.12);
+    G.shake = Math.max(G.shake, 9);
+    SFX.mega();
+    if (held === 3) {
+      setAnnounce('fairy', '#ffffff', 'RIFT KEY COMPLETE!',
+        'THE NORMAL MEW ROUND HAS BEEN REPLACED', 3.5,
+        'SECRET ROUND · MEW VMAX IS BREAKING THROUGH');
+    } else {
+      setAnnounce('fairy', '#d780ff', 'RIFT SHARD ' + held + '/3 SECURED',
+        i === 0 ? 'A SECOND PIECE IS HIDDEN IN KANTO\'S CHALLENGE'
+          : 'THE LAST PIECE RESTS BEYOND MEWTWO', 2.8,
+        '+' + [400, 600, 1000][i] + ' · KEEP THE SET INTACT');
+    }
+  } else if (pu.p.key === 'element') {
     // pure element swap — no other effect, just fixes your matchup.
     // SPACE JUNKIE type changes are shorter-lived: they revert to the
     // pilot's base type on a visible timer
@@ -676,10 +739,31 @@ function collectPickup(pu) {
 // signature legendary mechanics — each region's boss fights differently
 function bossAbility(boss) {
   const id = boss.poke.id;
-  const ab = BOSS_ABILITIES[id] || (boss.mythic ? { name: 'MYTHIC BLINK', cd: 5 } : null);
+  const ab = boss.secretBoss ? { name: 'MAX MIRAGE', cd: 5.4 }
+    : BOSS_ABILITIES[id] || (boss.mythic ? { name: 'MYTHIC BLINK', cd: 5 } : null);
   if (!ab) return;
   const bx = boss.bx + G.fx, by = boss.by + G.fy;
-  switch (id) {
+  if (boss.secretBoss) {
+    // A readable VMAX pattern: blink, then a seven-shot psychic halo with a
+    // conspicuous safe lane aimed at the player. It asks for movement without
+    // turning the secret reward into a bullet-hell tax.
+    burst(bx, by, '#d780ff', 34, 360, 0.75);
+    const lim = Math.min(W * 0.28, boss.w / 2 + 28);
+    boss.hx = lim + gameRand() * Math.max(1, W - lim * 2) - G.fx;
+    boss.bx = boss.hx; boss.flash = 1;
+    const nx = boss.bx + G.fx;
+    burst(nx, by, '#80d8ff', 34, 360, 0.75);
+    const aim = Math.atan2(shipY() - by, G.paddle.x - nx);
+    const sp = (185 + diff().lv * 9) * diff().shotSpeed;
+    for (let i = 0; i < 8; i++) {
+      if (i === 4) continue; // open lane through the center of the fan
+      const a = aim + (i - 4) * Math.PI * 2 / 8;
+      G.enemyShots.push({ x: nx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        boss: true, type: 'psychic', r: 12 });
+    }
+    ringFx(nx, by, '#ffffff', 10, 170, 4, 0.55);
+    tone(980, 0.2, 'sine', 0.07, -480);
+  } else switch (id) {
     case 150: { // Mewtwo: teleport — a 0.5s anticipation (guards compress,
       // psychic flash) THEN the jump, so the wings vanish and reform WITH it
       burst(bx, by, '#ec407a', 20, 260, 0.5);
@@ -1005,6 +1089,32 @@ function gauntletSummonMythic() {
   if (!gj) return;
   gj.phase = 2;
   const gen2 = genFor(G.level);
+  const riftOpen = secretEligible() && secretShardCount() === 3;
+  if (riftOpen) {
+    const vw = Math.min(300, Math.max(170, W * 0.38));
+    const vh = Math.min(230, vw * 0.82);
+    const vHp = Math.max(18, Math.round(gj.legendHp * 1.05));
+    G.secret.vmax = true;
+    G.bricks.push({
+      bx: W / 2, by: Math.max(145, H * 0.2), hx: W / 2, hy: Math.max(145, H * 0.2),
+      row: -1, col: -1, w: vw, h: vh,
+      hp: vHp, maxHp: vHp, phase: 1, mythic: true, secretBoss: true, mewVmax: true,
+      poke: { id: 151, t: 'psychic', n: 'MEW VMAX' },
+      isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
+      abilityCD: 4.4,
+    });
+    burst(W / 2, H * 0.22, '#d780ff', 70, 480, 1.1);
+    ringFx(W / 2, H * 0.22, '#80d8ff', 14, Math.min(W * 0.42, 300), 6, 0.8);
+    G.enemyShots = []; G.telegraphs = []; G.columnStrikes = [];
+    G.bossIntro = 1.8;
+    G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); G.flashT = Math.max(G.flashT, 0.2);
+    SFX.roar();
+    G.announce = null; G.announceQueue = [];
+    setAnnounce('fairy', '#d780ff', 'RIFT BREACH · MEW VMAX!',
+      'SECRET ROUND — THE NORMAL MEW FIGHT HAS BEEN REPLACED', 4,
+      'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE');
+    return;
+  }
   const [mid, mt2] = gen2.gauntlet.myth;
   const mHp = Math.max(6, Math.round(gj.legendHp * 0.6));
   G.bricks.push({
@@ -1438,7 +1548,11 @@ function update(dt) {
     if (gj.phase === 0 && !G.bricks.some(b => !b.dead && b.subBoss)) {
       gauntletWake();
     } else if (gj.phase === 1 && !G.bricks.some(b => !b.dead && b.isBoss)) {
-      gauntletSummonMythic();
+      // Kanto's last key piece belongs to Mewtwo. Round 3 waits until the
+      // guaranteed pickup is caught; a complete key then replaces Mew.
+      if (secretEligible() && !G.secret.shards[2] && !G.secret.offered[2]) {
+        spawnRiftShard(2, W / 2, Math.max(120, H * 0.25));
+      } else if (G.secret.pendingShard == null) gauntletSummonMythic();
     }
   }
   // ---- SPACE JUNKIE boss guards: two mirrored wing arcs TETHERED to the
@@ -1601,7 +1715,11 @@ function update(dt) {
         // jitter on every wave entrance. Entries are transient; the overlap
         // invariant (and its test) covers settled flyers (state 2).
         if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && !br.flight.entering
-            && !(G.mode === 'junkie' && br.flight.choreo && !G.maneuver)) fl.push(br);
+            // Authored choreography normally holds its own clean slots. On a
+            // short landscape screen, however, the airspace band is too
+            // shallow for nested rings; let the smoothed solver add just the
+            // breathing room the composition physically needs.
+            && !(G.mode === 'junkie' && br.flight.choreo && !G.maneuver && H >= 560)) fl.push(br);
       }
       const gr = G.mode !== 'junkie' ? G.gridRect : null;
       // SPACE JUNKIE separation is SMOOTHED: pushes build into a per-rider
@@ -2260,10 +2378,11 @@ function update(dt) {
     const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (boss) {
       // signature ability (teleport, winds, sweeps, time warp...)
-      if (BOSS_ABILITIES[boss.poke.id] || boss.mythic) {
+      if (BOSS_ABILITIES[boss.poke.id] || boss.mythic || boss.secretBoss) {
         boss.abilityCD -= dt * ts;
         if (boss.abilityCD <= 0) {
-          boss.abilityCD = (BOSS_ABILITIES[boss.poke.id]?.cd || 5) * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1);
+          const abilityBase = boss.secretBoss ? 5.4 : (BOSS_ABILITIES[boss.poke.id]?.cd || 5);
+          boss.abilityCD = abilityBase * (boss.phase === 3 ? 0.62 : boss.phase === 2 ? 0.78 : 1);
           bossAbility(boss);
         }
       }
@@ -2292,7 +2411,8 @@ function update(dt) {
       if (boss.phaseT > 0) boss.phaseT -= dt;
       G.bossShotCD -= dt * ts;
       if (G.bossShotCD <= 0) {
-        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1) * (boss.mythic ? 0.7 : 1);
+        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1)
+          * (boss.secretBoss ? 0.88 : boss.mythic ? 0.7 : 1);
         G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
       }
     }
@@ -2445,6 +2565,14 @@ function update(dt) {
   for (const pu of G.powerups) {
     pu.y += pu.vy * ts * dt; pu.rot += dt * 3;
     if (pu.orb) pu.x += Math.sin(pu.rot * 0.9) * 26 * dt; // orbs waft down gently
+    if (pu.secretShard) {
+      // The shard is generous but still optional: it bends toward the player
+      // for a long catch window, then the rift closes and the normal finale
+      // remains available if the player deliberately lets it pass.
+      pu.secretT -= dt;
+      pu.x += (G.paddle.x - pu.x) * Math.min(1, dt * 2.6);
+      pu.vy = pu.y > shipY() - 120 ? 48 : 72;
+    }
     if (upgN('magnetize')) { // Item Magnet: pickups drift toward the paddle
       const dx = G.paddle.x - pu.x;
       pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 75 * upgN('magnetize')) * dt;
@@ -2456,7 +2584,13 @@ function update(dt) {
       pu.dead = true;
       collectPickup(pu);
     }
-    if (pu.y > H + 30) pu.dead = true;
+    if (!pu.dead && pu.secretShard && (pu.secretT <= 0 || pu.y > H + 30)) {
+      pu.dead = true;
+      if (G.secret.pendingShard === pu.shardIndex) G.secret.pendingShard = null;
+      setAnnounce('alert', '#78909c', 'THE RIFT CLOSED',
+        'SHARD ' + (pu.shardIndex + 1) + '/3 WAS LEFT BEHIND', 2.5,
+        'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
+    } else if (!pu.dead && pu.y > H + 30) pu.dead = true;
   }
   G.powerups = G.powerups.filter(p => !p.dead);
 
@@ -2469,7 +2603,19 @@ function update(dt) {
       spawnReinforcement();
       return;
     }
+    // A gauntlet is not clear between rounds, even though every entity from
+    // the previous round is dead for one frame.
+    if (G.gauntlet && G.gauntlet.phase < 2) return;
+    // Kanto Arrival and Challenge each offer one guaranteed piece. The clear
+    // waits for the generous catch window, then continues whether caught or
+    // deliberately left behind.
+    if (secretEligible() && G.level <= 2 && !G.secret.shards[G.level - 1] && !G.secret.offered[G.level - 1]) {
+      spawnRiftShard(G.level - 1, W / 2, Math.max(110, H * 0.22));
+      return;
+    }
+    if (G.secret.pendingShard != null) return;
     const clearedStage = stageIdx(G.level);
+    const secretVictory = !!(G.secret.vmax && clearedStage === 2);
     G.level++;
     G.state = 'upgrade'; G.stateT = 0;
     G.clearedStage = clearedStage;
@@ -2482,14 +2628,21 @@ function update(dt) {
     }
     // draft: advance one of up to three paths (skip maxed ones)
     rollUpgradeChoices();
+    if (secretVictory) {
+      G.secret.completed = true;
+      G.secret.rewardDraft = true;
+      G.secret.deferredChoices = G.upgradeChoices;
+      G.upgradeChoices = SECRET_UPGRADES.map(secret => ({ secret }));
+      G.score += 3000;
+    }
     upgradeTreeOpen = false;
     draftSel = null; // nothing inspected yet on a fresh draft
-    G.rerolled = false; // one fresh reroll per draft screen
+    G.rerolled = secretVictory; // forbidden rewards are a fixed, one-time set
     // ---- ACT BOUNDARY: clearing Hoenn (→ act II) or Kalos (→ act III) is
     // the game's biggest beat — a full evolution ceremony plays before the
     // draft. The ceremony OWNS the partner evolution (bumps starterLvl now),
     // so buildLevel won't re-announce it with the plain banner later.
-    if (!G.trial && actIdx(G.level) > actIdx(G.level - 1)) {
+    if (!G.trial && !secretVictory && actIdx(G.level) > actIdx(G.level - 1)) {
       const sm = STARTER_MON[G.starter];
       const newLvl = starterStage(G.level, G.starter);
       let evo = null;

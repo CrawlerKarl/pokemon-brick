@@ -27,7 +27,11 @@ a full evolution ceremony (Pikachu's special Raichu jump comes in region 5),
 and Space Junkie's wave choreography develops one
 movement verb per act — ASSEMBLE, TRANSFORM, COMBINE. Every region's finale
 is THE GAUNTLET: a three-round title fight (sub-legendary sentinels → the
-legendary → the mythical).
+legendary → the mythical). Kanto also reveals one guaranteed **Rift Shard** in
+each of its three stages. Catch all three during their generous rift windows
+and the ordinary Mew round is
+replaced by a neon-rift **Mew VMAX** secret fight; victory adds a fixed draft
+of three Rift-exclusive permanent upgrades before the normal Kanto draft.
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -41,7 +45,10 @@ the in-game HUD uses one health readout, identifies permanent partner elements
 versus timed items, shows Mega charge as a percentage, and keeps region rules
 and type-matchup feedback in dedicated rails away from the bricks. Mobile
 players can tune follow speed, button size and opacity, mirror controls for
-left-handed play, and enable haptics.
+left-handed play, and enable haptics directly from the pause screen. New
+players who request reduced motion at the device level automatically start
+with screen shake and flashes reduced; saved in-game choices still take
+priority afterward.
 
 Pure vanilla JS + Canvas 2D. No build step, no dependencies, no framework.
 
@@ -321,6 +328,17 @@ mythical (0.6× HP, 0.7× fire interval, MYTHIC BLINK teleport-burst, erratic
 drift). Trial mode can jump straight to any round. Fire-by-rank everywhere:
 unevolved = straight bolt; evolved elites (`br.elite ≥ 2`) = AIMED heavy
 splash; sentinels = aimed 3-shot fans.
+
+**Kanto Rift override:** Arrival and Challenge each pause their stage clear
+for a generous, homing shard catch window; Mewtwo reveals the third between
+Rounds 2 and 3. Let a shard pass and the journey continues toward the normal
+Mew finale. A complete key makes `gauntletSummonMythic()` spawn Mew VMAX instead
+of Mew (minimum 18 HP, custom Rift arena and sprite, readable seven-shot MAX
+MIRAGE pattern). Defeating it awards +3000 and a no-reroll choice of
+**PARADOX HEART** (+1 max HP, full heal/Mega), **RIFT LENS** (+15% damage,
+ignore resistance), or **ECHO RELAY** (every seventh hit chains twice). The
+chosen reward and completed Rift state are carried by checkpoint v2; v1 saves
+remain accepted. Trial and daily runs preserve the normal Mew finale.
 
 ### Boss arena archetypes (`BOSS_STYLE`, data.js)
 Every legendary owns its arena differently: Mewtwo's still high anchor,

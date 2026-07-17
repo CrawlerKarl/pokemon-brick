@@ -213,12 +213,13 @@ window.addEventListener('keydown', e => {
     else if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
     else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
+    else if (cheatOpen) cheatOpen = false;
     else if (G.state === 'menu' && menuPage === 'setup') menuPage = 'modes'; // back out of setup
     else if (paused) quitToMenu(); // paused + Esc = leave the run
     else togglePause();
   }
   // 1/2/3 pick, R rerolls, T opens the complete tree between waves
-  if (e.code === 'KeyT' && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8) {
+  if (e.code === 'KeyT' && G.state === 'upgrade' && G.upgradeChoices && !G.secret.rewardDraft && G.stateT > 0.8) {
     upgradeTreeOpen = !upgradeTreeOpen;
     if (upgradeTreeOpen) treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
     SFX.wall();
@@ -235,7 +236,8 @@ window.addEventListener('keydown', e => {
       (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && draftSel != null) {
     pickUpgrade(draftSel);
   }
-  if (!upgradeTreeOpen && e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices && !G.rerolled && G.stateT > 0.8) {
+  if (!upgradeTreeOpen && e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices &&
+      !G.secret.rewardDraft && !G.rerolled && G.stateT > 0.8) {
     rerollDraft();
   }
   // ↑↑↓↓←→←→BA — some legends never die
@@ -256,7 +258,13 @@ let upgradeTreeOpen = false;
 // shown in place), then CONFIRM applies it — no more accidental picks while
 // just reading, and no flipping to another screen for path context
 let draftSel = null;
-function togglePause() { if (G.state === 'play' || G.state === 'serve') paused = !paused; }
+function togglePause() {
+  if (paused && (advOpen || cheatOpen)) {
+    advOpen = false; cheatOpen = false; saveSettings();
+    return;
+  }
+  if (G.state === 'play' || G.state === 'serve') paused = !paused;
+}
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
   if (G.state !== 'play' && G.state !== 'serve' && !paused) return;
@@ -275,6 +283,28 @@ function setSliderFromX(i, x) {
   SETTINGS[s.key] = Math.round((s.min + v * (s.max - s.min)) * 100) / 100;
 }
 function inRect(x, y, r) { return x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h; }
+function handleAdvancedPress(x, y) {
+  const A = advLayout();
+  if (inRect(x, y, A.close) || !inRect(x, y, { x: A.px, y: A.py, w: A.pw, h: A.ph })) {
+    advOpen = false; saveSettings(); return;
+  }
+  for (let i = 0; i < 2; i++) {
+    if (inRect(x, y, A.tab(i))) { settingsPage = i; dragSlider = -1; SFX.wall(); return; }
+  }
+  const grab = IS_TOUCH ? 26 : 18;
+  for (let i = 0; i < A.sliders.length; i++) {
+    const gm = A.slider(i);
+    if (Math.abs(y - gm.y) < grab && x > gm.x - 14 && x < gm.x + gm.w + 14) {
+      dragSlider = i; setSliderFromX(i, x); return;
+    }
+  }
+  for (let i = 0; i < A.toggles.length; i++) {
+    if (inRect(x, y, A.toggle(i))) {
+      SETTINGS[A.toggles[i].key] = !SETTINGS[A.toggles[i].key];
+      saveSettings(); SFX.wall(); return;
+    }
+  }
+}
 // between-wave upgrade cards: 3 across on desktop, stacked rows on phones
 function upgradeLayout() {
   const short = H < 520;
@@ -329,10 +359,44 @@ function upgradeTreeLayout() {
     node: (pi, ti) => ({ x: boxesX + ti * (nodeW + colGap), y: gridTop + pi * (rowH + rowGap), w: nodeW, h: rowH }),
   };
 }
+function applySecretUpgrade(secret) {
+  if (!secret || G.secretUpg[secret.key]) return;
+  G.secretUpg[secret.key] = true;
+  if (secret.key === 'heart') {
+    G.livesMax = Math.max(G.livesMax || G.lives, G.lives) + 1;
+    G.lives = G.livesMax;
+    G.mega = 1;
+  }
+}
+function queueSecretRewardNotice() {
+  const reward = G.secret.lastReward;
+  if (!reward) return;
+  setAnnounce(reward.icon, reward.color, reward.name + ' EQUIPPED',
+    reward.desc, 3, 'SECRET UPGRADE · ONLY FOUND BEYOND THE KANTO RIFT');
+  G.secret.lastReward = null;
+}
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
   draftSel = null;
+  if (c.secret) {
+    applySecretUpgrade(c.secret);
+    G.secret.lastReward = c.secret;
+    G.secret.rewardDraft = false;
+    G.secret.vmax = false;
+    G.upgradeChoices = G.secret.deferredChoices;
+    G.secret.deferredChoices = null;
+    upgradeTreeOpen = false;
+    G.stateT = 0;
+    G.rerolled = false;
+    SFX.mega();
+    if (!G.upgradeChoices) {
+      buildLevel(G.level);
+      serve();
+      queueSecretRewardNotice();
+    }
+    return;
+  }
   // late-run mastery STACK pick (literal held item in SPACE JUNKIE)
   if (c.stack) {
     G.stacks[c.stack.key] = (G.stacks[c.stack.key] || 0) + 1;
@@ -344,6 +408,7 @@ function pickUpgrade(i) {
     setAnnounce(c.stack.icon, c.stack.color,
       c.stack.name + ' ×' + G.stacks[c.stack.key],
       c.stack.desc, 2.4, G.mode === 'junkie' ? 'HELD ITEM STACKED — CHECK YOUR PILOT' : 'MASTERY STACKED — CHECK YOUR BUILD RAIL');
+    queueSecretRewardNotice();
     return;
   }
   const junkieName = junkieTierName(c.pathKey, c.tierIdx);
@@ -362,6 +427,7 @@ function pickUpgrade(i) {
     (capped ? '★ ' : '') + shownName + (capped ? ' ★' : ''),
     tierDesc(c.pathKey, c.tierIdx), capped ? 3 : 2.2,
     (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
+  queueSecretRewardNotice();
   if (capped) SFX.mega();
 }
 // one fresh hand per draft — reroll keeps drafts from feeling dead when
@@ -464,9 +530,15 @@ function onPress(x, y) {
         }
       }
       if (draftSel != null && inRect(x, y, L.confirm)) { pickUpgrade(draftSel); return; }
-      if (!G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
-      if (inRect(x, y, L.tree)) { upgradeTreeOpen = true; treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) }; SFX.wall(); return; }
+      if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
+      if (!G.secret.rewardDraft && inRect(x, y, L.tree)) { upgradeTreeOpen = true; treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) }; SFX.wall(); return; }
     }
+    return;
+  }
+  // Settings is the same modal whether it was opened from the title or from
+  // pause. Slider taps must never leak through into steering or firing.
+  if (advOpen && (G.state === 'menu' || paused)) {
+    handleAdvancedPress(x, y);
     return;
   }
   if (G.state === 'menu') {
@@ -500,29 +572,6 @@ function onPress(x, y) {
           }
         }
         return;
-      }
-      return;
-    }
-    if (advOpen) {
-      const A = advLayout();
-      if (inRect(x, y, A.close) || !inRect(x, y, { x: A.px, y: A.py, w: A.pw, h: A.ph })) {
-        advOpen = false; saveSettings(); return;
-      }
-      for (let i = 0; i < 2; i++) {
-        if (inRect(x, y, A.tab(i))) { settingsPage = i; dragSlider = -1; SFX.wall(); return; }
-      }
-      const grab = IS_TOUCH ? 26 : 18;
-      for (let i = 0; i < A.sliders.length; i++) {
-        const gm = A.slider(i);
-        if (Math.abs(y - gm.y) < grab && x > gm.x - 14 && x < gm.x + gm.w + 14) {
-          dragSlider = i; setSliderFromX(i, x); return;
-        }
-      }
-      for (let i = 0; i < A.toggles.length; i++) {
-        if (inRect(x, y, A.toggle(i))) {
-          SETTINGS[A.toggles[i].key] = !SETTINGS[A.toggles[i].key];
-          saveSettings(); SFX.wall(); return;
-        }
       }
       return;
     }
@@ -583,6 +632,13 @@ function onPress(x, y) {
       return;
     }
     if (inRect(x, y, cheatBtnGeom())) { cheatOpen = true; SFX.wall(); return; }
+    if (inRect(x, y, pauseSettingsGeom())) {
+      cheatOpen = false;
+      // A phone player arriving from pause most likely needs pad size,
+      // handedness, or follow speed; open directly on the useful tab.
+      settingsPage = IS_TOUCH ? 1 : settingsPage;
+      advOpen = true; SFX.wall(); return;
+    }
     if (inRect(x, y, pauseQuitGeom())) { cheatOpen = false; quitToMenu(); return; }
     paused = false;
     return;

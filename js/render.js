@@ -12,7 +12,53 @@ function roundRect(x, y, w, h, r) {
   ctx.closePath();
 }
 
+function drawRiftBackground() {
+  const cx = W / 2, cy = H * 0.27;
+  const motion = SETTINGS.reduceFlash ? 0.22 : 1;
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#050216'); bg.addColorStop(0.52, '#160631'); bg.addColorStop(1, '#031422');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // A receding cyan grid makes the rift arena feel spatially unlike every
+  // painted region backdrop without adding another large bitmap.
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = '#58e7ff'; ctx.lineWidth = 1;
+  const horizon = H * 0.42;
+  for (let i = -8; i <= 8; i++) {
+    ctx.beginPath(); ctx.moveTo(cx + i * W * 0.045, horizon); ctx.lineTo(cx + i * W * 0.14, H); ctx.stroke();
+  }
+  for (let i = 0; i < 11; i++) {
+    const p = i / 10, y = horizon + Math.pow(p, 1.7) * (H - horizon);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  // Fracture lines radiate from the boss portal and drift only slightly.
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 14; i++) {
+    const a = i * Math.PI * 2 / 14 + Math.sin(G.time * 0.18) * 0.08 * motion;
+    const r0 = 110 + (i % 3) * 14, r1 = Math.max(W, H) * 0.72;
+    ctx.strokeStyle = i % 2 ? '#d780ff' : '#58e7ff';
+    ctx.globalAlpha = 0.12 + (i % 3) * 0.04;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.62);
+    ctx.lineTo(cx + Math.cos(a + 0.07) * r1 * 0.55, cy + Math.sin(a + 0.07) * r1 * 0.38);
+    ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1 * 0.68);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.32;
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 3; i++) {
+    const rr = 105 + i * 38 + Math.sin(G.time * (0.55 + i * 0.12)) * 9 * motion;
+    ctx.strokeStyle = i % 2 ? '#58e7ff' : '#d780ff';
+    ctx.beginPath(); ctx.ellipse(cx, cy, rr, rr * 0.46, G.time * 0.05 * (i % 2 ? -1 : 1) * motion, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawBackground() {
+  if (G.secret && (G.secret.vmax || G.secret.rewardDraft)) {
+    drawRiftBackground();
+    return;
+  }
   const genIdx = G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level);
   buildBackground(genIdx);
   ctx.drawImage(bgSky, 0, 0, W, H);
@@ -423,6 +469,54 @@ function drawBossMon(br, x, y) {
   ctx.restore();
 }
 
+function drawMewVmax(br, x, y) {
+  const ph = br.phase || 1, t = G.time;
+  const phCol = ph === 3 ? '#ff4f9a' : ph === 2 ? '#d780ff' : '#58e7ff';
+  const pulse = 1 + Math.sin(t * 2.2 + br.wobble) * 0.035;
+  const s = Math.min(W * 0.5, H * 0.43, Math.max(br.w * 1.35, br.h * 1.72)) * pulse;
+  const yy = y + Math.sin(t * 1.7 + br.wobble) * 7;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.72;
+  ctx.drawImage(auraSprite(phCol), x - s * 0.72, yy - s * 0.72, s * 1.44, s * 1.44);
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = phCol; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const rr = s * (0.37 + i * 0.09);
+    ctx.beginPath();
+    ctx.ellipse(x, yy, rr, rr * 0.42, t * (i % 2 ? -0.3 : 0.24), i * 1.7, i * 1.7 + Math.PI * 1.25);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  if (MEW_VMAX_IMG.complete && MEW_VMAX_IMG.naturalWidth) {
+    ctx.drawImage(MEW_VMAX_IMG, x - s / 2, yy - s / 2, s, s);
+    if (br.flash > 0.35) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (br.flash - 0.35) * 0.65;
+      ctx.drawImage(MEW_VMAX_IMG, x - s / 2, yy - s / 2, s, s);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    }
+  } else drawGlyph(ctx, 'psychic', x, yy, s * 0.2, '#d780ff');
+  const frac = Math.max(0, br.hp / br.maxHp), barW = Math.min(W * 0.55, Math.max(190, br.w * 1.12));
+  const barY = Math.min(H * 0.55, y + br.h / 2 + 14);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 13px Orbitron, sans-serif';
+  ctx.fillStyle = '#fff'; ctx.shadowColor = phCol; ctx.shadowBlur = 12;
+  ctx.fillText('SECRET BOSS · MEW VMAX', x, barY - 14, barW + 30);
+  ctx.shadowBlur = 0;
+  roundRect(x - barW / 2, barY, barW, 10, 5);
+  ctx.fillStyle = 'rgba(2,4,16,0.82)'; ctx.fill();
+  if (frac > 0) {
+    const hg = ctx.createLinearGradient(x - barW / 2, 0, x + barW / 2, 0);
+    hg.addColorStop(0, '#58e7ff'); hg.addColorStop(0.55, '#d780ff'); hg.addColorStop(1, '#ff4f9a');
+    roundRect(x - barW / 2, barY, barW * frac, 10, 5); ctx.fillStyle = hg; ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(2,4,16,0.9)';
+  for (const f of [1 / 3, 2 / 3]) ctx.fillRect(x - barW / 2 + barW * f - 1, barY, 2, 10);
+  ctx.restore();
+}
+
 // Brick Breaker's finales stay true to the mode: the legendary is sealed in
 // one oversized, animated boss brick. The brick patrols with its authored boss
 // movement, changes armor at each phase, fires attacks, and calls orbiting
@@ -667,6 +761,10 @@ function drawBricks() {
     }
     // Brick Breaker bosses are oversized multi-phase bricks; shooter bosses
     // remain the free legendary arena centerpieces used by those modes.
+    if (br.secretBoss) {
+      drawMewVmax(br, x, y);
+      continue;
+    }
     if (br.isBoss) {
       if (G.mode === 'classic') drawBossBrick(br, x, y);
       else drawBossMon(br, x, y);
@@ -1874,7 +1972,22 @@ function drawPowerups() {
     // gentle bob + slight tilt — calmer than the old spin
     ctx.translate(pu.x, pu.y + Math.sin(pu.rot * 1.6) * 2);
     ctx.rotate(Math.sin(pu.rot) * 0.1);
-    if (pu.p.key === 'element') {
+    if (pu.p.key === 'riftShard') {
+      const pulse = 0.5 + 0.5 * Math.sin(G.time * 5 + pu.shardIndex * 1.8);
+      ctx.shadowColor = '#d780ff'; ctx.shadowBlur = 20 + pulse * 12;
+      ctx.beginPath();
+      ctx.moveTo(0, -24); ctx.lineTo(16, -4); ctx.lineTo(7, 22); ctx.lineTo(-13, 12); ctx.lineTo(-17, -8); ctx.closePath();
+      const sg = ctx.createLinearGradient(-14, -20, 14, 22);
+      sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.3, '#80e8ff'); sg.addColorStop(0.68, '#d780ff'); sg.addColorStop(1, '#6a1b9a');
+      ctx.fillStyle = sg; ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+      ctx.globalAlpha = 0.72;
+      ctx.strokeStyle = '#32114d'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(1, 8); ctx.lineTo(16, -4); ctx.moveTo(1, 8); ctx.lineTo(-13, 12); ctx.stroke();
+      ctx.globalAlpha = 1;
+      drawGlyph(ctx, 'fairy', 1, 3, 5.5, '#ffffff');
+    } else if (pu.p.key === 'element') {
       // element orb: small glassy sphere holding a type symbol
       const col = TYPE_COLORS[pu.p.t];
       ctx.shadowColor = col; ctx.shadowBlur = 16;
@@ -1959,7 +2072,8 @@ function drawPowerups() {
       ctx.font = '900 13px Orbitron, sans-serif';
       ctx.fillStyle = '#ffd54f';
       ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-      ctx.fillText(pu.p.key === 'heal' ? 'RECOVER!' : 'CATCH!', pu.x, pu.y - 34);
+      ctx.fillText(pu.p.key === 'riftShard' ? 'RIFT SHARD · ' + (pu.shardIndex + 1) + '/3'
+        : pu.p.key === 'heal' ? 'RECOVER!' : 'CATCH!', pu.x, pu.y - 34);
       ctx.beginPath();
       ctx.moveTo(pu.x - 5, pu.y - 27); ctx.lineTo(pu.x + 5, pu.y - 27); ctx.lineTo(pu.x, pu.y - 20);
       ctx.closePath(); ctx.fill();
@@ -2155,14 +2269,18 @@ function drawShootHint() {
     ctx.restore();
     return; // only one tutorial banner may own the centre lane
   }
-  if (G.state !== 'play' || G.shotsFired >= 3 || G.playT > 20) return;
+  const autoTutor = SETTINGS.autoFire && G.mode !== 'classic';
+  // Auto-fire reaches three shots behind the opening announcement, which used
+  // to retire this lesson before the player could ever see it. Give that mode
+  // a short, guaranteed teaching window after the stage card clears.
+  if (G.state !== 'play' || G.playT > (autoTutor ? 9 : 20) || (!autoTutor && G.shotsFired >= 3)) return;
   // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
   if (G.mode === 'classic' && !blasterArmed()) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
-    ? (IS_TOUCH ? (SETTINGS.autoFire ? 'AUTO-FIRE ON · HOLD FIRE = BIG ATTACK' : 'TAP TO ATTACK · HOLD = BIG ATTACK') : 'HOLD CLICK — RIGHT-CLICK/SHIFT CHARGES AN ATTACK')
+    ? (IS_TOUCH ? (SETTINGS.autoFire ? 'DRAG TO FLY · AUTO-FIRE ON · HOLD = BIG ATTACK' : 'DRAG TO FLY · TAP ATTACK · HOLD = BIG ATTACK') : 'MOVE TO FLY · CLICK TO ATTACK · RIGHT-CLICK/SHIFT CHARGES')
     : G.mode === 'blaster'
-      ? (IS_TOUCH ? (SETTINGS.autoFire ? 'AUTO-FIRE ON · HOLD FIRE = CHARGE SHOT' : 'TAP TO FIRE · HOLD = CHARGE SHOT') : 'CLICK — FIRE · RIGHT-CLICK OR SHIFT — CHARGE SHOT')
+      ? (IS_TOUCH ? (SETTINGS.autoFire ? 'DRAG TO MOVE · AUTO-FIRE ON · HOLD = CHARGE' : 'DRAG TO MOVE · TAP FIRE · HOLD = CHARGE') : 'MOVE TO STEER · CLICK TO FIRE · RIGHT-CLICK/SHIFT CHARGES')
       : (IS_TOUCH ? 'HOLD FIRE TO SHOOT' : 'HOLD CLICK TO SHOOT — MIND THE HEAT');
   ctx.save();
   ctx.globalAlpha = a;
@@ -2325,6 +2443,25 @@ function drawPlayerHealthBar() {
   }
   ctx.restore();
 }
+function drawRiftTracker() {
+  if (!secretEligible() && !G.secret.vmax) return;
+  const hudElem = G.mode === 'junkie';
+  const y = ((G.ballElement || hudElem) ? (G.combo > 1 ? 130 : 112) : (G.combo > 1 ? 112 : 94));
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#b6c3d8';
+  ctx.fillText('RIFT KEY', 20, y);
+  for (let i = 0; i < 3; i++) {
+    const x = 88 + i * 18, held = G.secret.shards[i];
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = held ? (i === 2 ? '#ffffff' : '#d780ff') : 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = held ? '#80e8ff' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.3;
+    ctx.fillRect(-5, -5, 10, 10); ctx.strokeRect(-5, -5, 10, 10); ctx.restore();
+  }
+  ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+  ctx.fillText(secretShardCount() + '/3', 146, y);
+  ctx.restore();
+}
 function drawHUD() {
   const g = ctx.createLinearGradient(0, 0, 0, 56);
   g.addColorStop(0, 'rgba(5,8,25,0.92)'); g.addColorStop(1, 'rgba(5,8,25,0.4)');
@@ -2397,6 +2534,7 @@ function drawHUD() {
       }
     }
   }
+  drawRiftTracker();
   ctx.textAlign = 'center';
   const narrow = W < 560; // phones: wave title drops to the second HUD row
   ctx.font = `900 ${Math.min(16, W / 30)}px Orbitron, sans-serif`;
@@ -2404,7 +2542,8 @@ function drawHUD() {
   const gen = genFor(G.level);
   const stg = stageIdx(G.level);
   const waveY = narrow ? 46 : (G.modifier ? 22 : 28);
-  const waveText = (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + STAGE_NAMES[stg];
+  const waveText = G.secret.vmax ? 'SECRET RIFT · MEW VMAX'
+    : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + STAGE_NAMES[stg];
   ctx.fillText(waveText, W / 2, waveY);
   if (G.modifier && !narrow) {
     ctx.font = '700 10px Orbitron, sans-serif';
@@ -2425,6 +2564,8 @@ function drawHUD() {
     if (G[slot]) active.push({ icon, color, tier: G[slot].tier, t: G[slot].t });
   }
   if (G.shieldCharges > 0) active.push({ icon: 'shield', color: '#66bb6a', tier: G.shieldCharges, t: null });
+  const riftReward = SECRET_UPGRADES.find(s => G.secretUpg[s.key]);
+  if (riftReward) active.push({ icon: riftReward.icon, color: riftReward.color, tier: 1, t: null, label: 'RIFT' });
   const maxSlots = (narrow || IS_TOUCH) ? 3 : 7;
   active.sort((a, b) => (a.t ?? 99) - (b.t ?? 99)); // most urgent first
   const shown = active.slice(0, maxSlots);
@@ -2440,7 +2581,7 @@ function drawHUD() {
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = '700 10px Orbitron, sans-serif';
     ctx.fillStyle = '#fff';
-    ctx.fillText(chip.t == null ? 'x' + chip.tier : (romanTier(chip.tier) || '·'), cx2 + 29, cy - 5);
+    ctx.fillText(chip.label || (chip.t == null ? 'x' + chip.tier : (romanTier(chip.tier) || '·')), cx2 + 29, cy - 5);
     if (chip.t != null) {
       ctx.fillStyle = '#90a4ae';
       ctx.font = '500 9px Orbitron, sans-serif';
@@ -3948,20 +4089,27 @@ function drawOverlays() {
   } else if (G.state === 'upgrade') {
     dim(0.55);
     const draftShort = H < 520;
+    const secretDraft = !!G.secret.rewardDraft;
     const wasBossStage = G.clearedStage === 2;
     const clearedGen = GENS[regionIdx(Math.max(1, G.level - 1))];
     const clearY = draftShort ? 36 : H * 0.16;
-    drawDraftBackdrop(wasBossStage ? clearedGen.accent : '#66bb6a');
-    title(wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!', clearY, Math.min(draftShort ? 30 : 40, W / 12), wasBossStage ? clearedGen.accent : '#66bb6a');
+    const draftAccent = secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
+    drawDraftBackdrop(draftAccent);
+    title(secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!',
+      clearY, Math.min(draftShort ? 30 : 40, W / 12), draftAccent);
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
-    ctx.fillText('+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS', W / 2, clearY + (draftShort ? 28 : 34));
-    if (stageIdx(G.level) === 0 && !draftShort) {
+    ctx.fillText(secretDraft ? '+3000 SECRET BOSS BONUS' : '+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS',
+      W / 2, clearY + (draftShort ? 28 : 34));
+    if (secretDraft && !draftShort) {
+      ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
+      ctx.fillText('CHOOSE ONE FORBIDDEN UPGRADE · THE NORMAL KANTO DRAFT FOLLOWS', W / 2, clearY + 60, W * 0.92);
+    } else if (stageIdx(G.level) === 0 && !draftShort) {
       ctx.font = '900 16px Orbitron, sans-serif';
       ctx.fillStyle = genFor(G.level).accent;
       ctx.fillText('NEXT STOP: ' + genFor(G.level).name, W / 2, H * 0.16 + 62);
     }
-    drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
+    if (!secretDraft) drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
     if (G.upgradeChoices && G.stateT > 0.8) {
       const a = Math.min(1, (G.stateT - 0.8) / 0.4);
       ctx.globalAlpha = a;
@@ -3975,8 +4123,11 @@ function drawOverlays() {
       const headerY = L.card(0).y - (L.stacked || L.short ? 16 : 22);
       const selC = draftSel != null && G.upgradeChoices[draftSel];
       if (!selC) {
-        ctx.fillText((G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE') +
+        ctx.fillText((secretDraft ? 'CHOOSE A SECRET UPGRADE' : G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE') +
           (IS_TOUCH ? ' — TAP A CARD TO INSPECT' : ' — INSPECT, THEN CONFIRM'), W / 2, headerY, W * 0.94);
+      } else if (selC.secret) {
+        ctx.font = '800 11px Orbitron, sans-serif'; ctx.fillStyle = selC.secret.color;
+        ctx.fillText('RIFT EXCLUSIVE · ' + selC.secret.name + ' · UNAVAILABLE IN THE NORMAL TREE', W / 2, headerY, W * 0.94);
       } else if (selC.stack) {
         const owned0 = (G.stacks && G.stacks[selC.stack.key]) || 0;
         ctx.font = '800 11px Orbitron, sans-serif';
@@ -4014,6 +4165,45 @@ function drawOverlays() {
       }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         const c = G.upgradeChoices[i], r = L.card(i);
+        if (c.secret) {
+          const scol = c.secret.color, sel = draftSel === i;
+          const hov = sel || inRect(mouseX, lastMouseY, r);
+          ctx.save();
+          ctx.globalAlpha = a * (draftSel != null && !sel ? 0.55 : 1);
+          if (hov) { ctx.shadowColor = sel ? '#ffffff' : scol; ctx.shadowBlur = sel ? 28 : 22; }
+          roundRect(r.x, r.y, r.w, r.h, 14);
+          ctx.fillStyle = hov ? 'rgba(31,16,61,0.98)' : 'rgba(13,8,35,0.95)'; ctx.fill();
+          ctx.lineWidth = sel ? 3 : hov ? 2.5 : 1.7;
+          ctx.strokeStyle = sel ? '#ffffff' : hov ? scol : scol + '88'; ctx.stroke();
+          ctx.shadowBlur = 0;
+          drawDraftCardEnergy(r, scol, true, sel, i);
+          if (L.stacked) {
+            drawDraftBadge(c.secret.icon, r.x + 35, r.y + r.h / 2, 18, scol, true, i);
+            ctx.textAlign = 'left';
+            ctx.font = '900 9px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
+            ctx.fillText('SECRET · RIFT EXCLUSIVE', r.x + 66, r.y + 17, r.w - 76);
+            ctx.font = '900 15px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
+            ctx.fillText(c.secret.name, r.x + 66, r.y + 38, r.w - 76);
+            ctx.font = bodyFont(10.5, 600); ctx.fillStyle = '#e0e7f0';
+            wrapText(c.secret.desc, r.w - 84).slice(0, 3).forEach((l, li) => ctx.fillText(l, r.x + 66, r.y + 58 + li * 13, r.w - 78));
+          } else {
+            ctx.textAlign = 'center';
+            ctx.font = '900 9px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
+            ctx.fillText('SECRET · RIFT EXCLUSIVE', r.x + r.w / 2, r.y + (L.short ? 13 : 20), r.w - 16);
+            drawDraftBadge(c.secret.icon, r.x + r.w / 2, r.y + (L.short ? 43 : 70), L.short ? 16 : 24, scol, true, i);
+            ctx.font = `900 ${L.short ? 12 : 18}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+            ctx.fillText(c.secret.name, r.x + r.w / 2, r.y + (L.short ? 72 : 111), r.w - 18);
+            ctx.font = bodyFont(L.short ? 9 : 12.5, 600); ctx.fillStyle = '#e8eef6';
+            wrapText(c.secret.desc, r.w - 28).slice(0, L.short ? 2 : 4).forEach((l, li) =>
+              ctx.fillText(l, r.x + r.w / 2, r.y + (L.short ? 91 : 143) + li * (L.short ? 12 : 18), r.w - 20));
+            ctx.font = '800 10px Orbitron, sans-serif'; ctx.fillStyle = sel ? '#a5d6a7' : '#78909c';
+            ctx.fillText(sel ? (IS_TOUCH ? '✓ SELECTED — TAP CONFIRM' : '✓ SELECTED — ENTER CONFIRMS')
+              : (IS_TOUCH ? 'TAP TO INSPECT' : 'INSPECT: CLICK OR PRESS ' + (i + 1)),
+              r.x + r.w / 2, r.y + r.h - 16, r.w - 16);
+          }
+          ctx.restore();
+          continue;
+        }
         // SPACE JUNKIE stack-item card: the tree is full — these stack forever
         if (c.stack) {
           const scol = c.stack.color;
@@ -4159,7 +4349,7 @@ function drawOverlays() {
       }
       // one reroll per draft — a dead hand shouldn't end the build
       const rr = L.reroll;
-      const canRR = !G.rerolled;
+      const canRR = !secretDraft && !G.rerolled;
       const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
       ctx.globalAlpha = a * (canRR ? 1 : 0.35);
       roundRect(rr.x, rr.y, rr.w, rr.h, 16);
@@ -4170,7 +4360,7 @@ function drawOverlays() {
       ctx.stroke();
       ctx.font = '700 12px Orbitron, sans-serif';
       ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-      ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+      ctx.fillText(secretDraft ? 'FIXED SET' : canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
       // CONFIRM — the only thing that actually applies the inspected pick
       const cf = L.confirm, canCF = draftSel != null;
       const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
@@ -4187,12 +4377,12 @@ function drawOverlays() {
       ctx.fillStyle = canCF ? '#d7ffd9' : '#546e7a';
       ctx.fillText(canCF ? (IS_TOUCH ? '✓ CONFIRM' : '✓ CONFIRM (ENTER)') : 'PICK A CARD', cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
       ctx.globalAlpha = a;
-      const tr = L.tree, hovTR = inRect(mouseX, lastMouseY, tr);
+      const tr = L.tree, hovTR = !secretDraft && inRect(mouseX, lastMouseY, tr);
       roundRect(tr.x, tr.y, tr.w, tr.h, 16);
       ctx.fillStyle = hovTR ? 'rgba(128,216,255,0.2)' : 'rgba(255,255,255,0.07)'; ctx.fill();
-      ctx.lineWidth = 1.5; ctx.strokeStyle = hovTR ? '#80d8ff' : 'rgba(255,255,255,0.35)'; ctx.stroke();
-      ctx.font = '700 11px Orbitron, sans-serif'; ctx.fillStyle = hovTR ? '#e0f7ff' : '#80d8ff';
-      ctx.fillText(IS_TOUCH ? 'FULL TREE' : 'FULL TREE (T)', tr.x + tr.w / 2, tr.y + tr.h / 2 + 1, tr.w - 12);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = secretDraft ? 'rgba(255,255,255,0.15)' : hovTR ? '#80d8ff' : 'rgba(255,255,255,0.35)'; ctx.stroke();
+      ctx.font = '700 11px Orbitron, sans-serif'; ctx.fillStyle = secretDraft ? '#546e7a' : hovTR ? '#e0f7ff' : '#80d8ff';
+      ctx.fillText(secretDraft ? 'SECRET ONLY' : IS_TOUCH ? 'FULL TREE' : 'FULL TREE (T)', tr.x + tr.w / 2, tr.y + tr.h / 2 + 1, tr.w - 12);
       ctx.globalAlpha = 1;
       ctx.textAlign = 'center';
       if (upgradeTreeOpen) drawFullUpgradeTree();
@@ -4218,19 +4408,23 @@ function drawOverlays() {
         : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK OR SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
     ).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.47 + i * 22, W * 0.92));
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);
-    // QUIT TO MENU button — bail out of the run
-    const q = pauseQuitGeom();
-    const qHov = inRect(mouseX, lastMouseY, q);
-    ctx.save();
-    roundRect(q.x, q.y, q.w, q.h, 12);
-    ctx.fillStyle = qHov ? 'rgba(239,83,80,0.25)' : 'rgba(239,83,80,0.12)';
-    ctx.fill();
-    ctx.lineWidth = 1.5; ctx.strokeStyle = qHov ? '#ff8a80' : '#ef5350'; ctx.stroke();
-    ctx.font = '900 16px Orbitron, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = qHov ? '#ff8a80' : '#ef9a9a';
-    ctx.fillText('QUIT TO MENU', q.x + q.w / 2, q.y + q.h / 2 + 1);
-    ctx.restore();
+    // Mid-run settings remove the old dead end where changing touch controls
+    // required abandoning the journey. Quit remains visually destructive.
+    for (const [b, label, col, bg] of [
+      [pauseSettingsGeom(), '⚙ SETTINGS', '#80d8ff', '128,216,255'],
+      [pauseQuitGeom(), 'QUIT TO MENU', '#ef9a9a', '239,83,80'],
+    ]) {
+      const hov = inRect(mouseX, lastMouseY, b);
+      ctx.save();
+      roundRect(b.x, b.y, b.w, b.h, 12);
+      ctx.fillStyle = `rgba(${bg},${hov ? 0.25 : 0.12})`; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = hov ? col : col + 'bb'; ctx.stroke();
+      ctx.font = `900 ${W < 480 ? 12 : 15}px Orbitron, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = col;
+      ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 12);
+      ctx.restore();
+    }
     // ✦ CHEAT CODES — a small ornate chip, only ever visible while paused
     {
       const cb2 = cheatBtnGeom();
@@ -4253,6 +4447,7 @@ function drawOverlays() {
       ctx.restore();
     }
     if (cheatOpen) drawCheats();
+    if (advOpen) drawAdvanced();
   }
   if (G.flashT > 0) {
     ctx.fillStyle = `rgba(255,60,60,${G.flashT * (SETTINGS.reduceFlash ? 0.18 : 0.6)})`;
