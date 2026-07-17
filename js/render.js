@@ -1006,8 +1006,8 @@ function drawPilotRig(x, py) {
   const atk = Math.min(1, G.attackAnim);           // 1 at the shot, decays fast
   const lungeY = -9 * atk;                          // lunge upward into the shot
   const sclX = 1 - 0.09 * atk, sclY = 1 + 0.14 * atk; // stretch into the attack
-  const img = getSprite(pil.id);
-  const ok = img.complete && img.naturalWidth;
+  const img = pil.id > 0 ? getSprite(pil.id) : null;
+  const ok = !!(img && img.complete && img.naturalWidth);
   const shadow = ok ? getSilhouette(pil.id, '#060a18') : null;
   const rim = ok ? getSilhouette(pil.id, col) : null;
   const flash = ok ? getSilhouette(pil.id, '#ffffff') : null;
@@ -1031,7 +1031,16 @@ function drawPilotRig(x, py) {
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
   ctx.shadowBlur = mega ? 26 : 12 + 14 * atk;
   if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
-  else drawGlyph(ctx, pil.t, 0, 0, 14, col);
+  else {
+    // Neutral training drone: a compact vector craft, never an implicit
+    // Pokémon. Picking Pikachu is now an explicit, high-power choice.
+    ctx.fillStyle = '#cfd8dc';
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(22, 12); ctx.lineTo(8, 8); ctx.lineTo(0, 17);
+    ctx.lineTo(-8, 8); ctx.lineTo(-22, 12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 2, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-12, 9); ctx.lineTo(12, 9); ctx.stroke();
+  }
   ctx.shadowBlur = 0;
   if (flash && atk > 0.05) { // the attack flash — the mon lights up from within
     ctx.globalCompositeOperation = 'lighter';
@@ -1214,7 +1223,10 @@ function drawPaddle() {
     water: ['#e1f5fe', '#4fc3f7', '#01579b'],
     grass: ['#dcedc8', '#81c784', '#1b5e20'],
   };
-  const hull = HULLS[G.starter] || ['#e3f2fd', '#64b5f6', '#1565c0'];
+  const baseHull = TYPE_COLORS[G.starter];
+  const hull = HULLS[G.starter] || (baseHull
+    ? [mixHex(baseHull, '#ffffff', 0.72), baseHull, mixHex(baseHull, '#020617', 0.55)]
+    : ['#e3f2fd', '#64b5f6', '#1565c0']);
   const g = ctx.createLinearGradient(x, py - 10, x, py + 10);
   if (mega) {
     g.addColorStop(0, '#fff9c4'); g.addColorStop(0.5, `hsl(${(G.time * 160) % 360},85%,62%)`); g.addColorStop(1, '#7b1fa2');
@@ -1285,6 +1297,19 @@ function drawPaddle() {
         ctx.beginPath(); ctx.ellipse(0, -11, 4, 12, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
+    }
+  } else if (G.starter) {
+    // Every additional type gets a readable identity even without a bespoke
+    // silhouette: typed end-caps, a central crest, and one rank pip per form.
+    const tcol = TYPE_COLORS[G.starter];
+    ctx.fillStyle = mixHex(tcol, '#ffffff', 0.35);
+    for (const dir of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(x + dir * (pwv / 2 - 5), py, 5 + sLvl, 0, Math.PI * 2); ctx.fill();
+    }
+    drawGlyph(ctx, G.starter, x, py, 6 + sLvl, '#ffffff');
+    for (let i = 0; i < sLvl; i++) {
+      ctx.fillStyle = i === sLvl - 1 ? '#ffffff' : tcol;
+      ctx.beginPath(); ctx.arc(x + (i - (sLvl - 1) / 2) * 12, py + ph / 2 + 5, 2.4, 0, Math.PI * 2); ctx.fill();
     }
   }
   // VOLLEY adds barrels/cycle fins; IMPACT thickens the amber bore. Their
@@ -3119,18 +3144,31 @@ function drawSetup() {
     ctx.fillText('‹ BACK', bb.x + 8, bb.y + bb.h / 2);
     ctx.textAlign = 'center';
   }
-  // starter Pokémon — a partner whose paddle ability grows all game
-  // (in SPACE JUNKIE the starter IS the ship, so say so)
+  // Starter Pokémon — one three-stage line for every battle type. Six cards
+  // fit at once; the pager keeps the roster readable on phones.
   ctx.font = `700 ${L.narrow ? 15 : 13}px Orbitron, sans-serif`;
   ctx.fillStyle = '#90a4ae';
-  ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR PILOT' : 'STARTER POKÉMON', W / 2, L.startLabelY);
-  for (let i = 0; i < STARTERS.length; i++) {
-    const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
+  ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR PILOT · 18 TYPES' : 'STARTER POKÉMON · 18 TYPES', W / 2, L.startLabelY);
+  const pageItems = starterPageItems();
+  const pageCount = Math.ceil(STARTERS.length / STARTERS_PER_PAGE);
+  for (const [pg, dir, enabled] of [[L.starterPrev, '‹', true], [L.starterNext, '›', true]]) {
     const hov = inRect(mouseX, lastMouseY, pg);
-    const col = st.key === 'none' ? '#90a4ae' : TYPE_COLORS[st.key];
+    roundRect(pg.x, pg.y, pg.w, pg.h, 8);
+    ctx.fillStyle = hov ? 'rgba(255,213,79,0.2)' : 'rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.strokeStyle = enabled ? '#ffd54f88' : '#455a64'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = `900 ${L.short ? 14 : 18}px Orbitron, sans-serif`; ctx.fillStyle = '#ffd54f';
+    ctx.fillText(dir, pg.x + pg.w / 2, pg.y + pg.h / 2);
+  }
+  ctx.font = `800 ${L.short ? 8 : 10}px Orbitron, sans-serif`; ctx.fillStyle = '#b0bec5';
+  ctx.fillText(`${STARTER_PAGE_LABELS[starterPage]} · ${starterPage + 1}/${pageCount}`,
+    L.starterPageLabel.x + L.starterPageLabel.w / 2, L.starterPageLabel.y + L.starterPageLabel.h / 2,
+    L.starterPageLabel.w);
+  for (let i = 0; i < pageItems.length; i++) {
+    const st = pageItems[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
+    const hov = inRect(mouseX, lastMouseY, pg);
+    const col = TYPE_COLORS[st.key];
     const mon = STARTER_MON[st.key];
-    const monCopy = mon ? starterModeCopy(st.key, SETTINGS.mode, 1) : null;
-    const dy = Math.min(11, pg.h * 0.13); // name / ability vertical split, scales with card
+    const monCopy = starterModeCopy(st.key, SETTINGS.mode, 1);
     ctx.save();
     if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 16; }
     roundRect(pg.x, pg.y, pg.w, pg.h, 12);
@@ -3140,43 +3178,35 @@ function drawSetup() {
     ctx.strokeStyle = sel ? col : 'rgba(255,255,255,0.25)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    if (mon) {
-      const img = getSprite(mon.ids[0]);
-      const sp = Math.min(60, pg.h * 0.66);
-      const spx = pg.x + Math.max(6, pg.w * 0.05);
-      if (img.complete && img.naturalWidth) ctx.drawImage(img, spx, pg.y + pg.h / 2 - sp / 2, sp, sp);
-      else drawGlyph(ctx, st.key, spx + sp / 2, pg.y + pg.h / 2, sp * 0.28, col);
-      const txL = spx + sp + 6;           // text column starts right of the sprite
-      const txC = txL + (pg.x + pg.w - 8 - txL) / 2; // its centre
-      const tw = pg.x + pg.w - 8 - txL;   // its available width
-      ctx.font = `900 ${Math.min(17, pg.w / 8.5)}px Orbitron, sans-serif`;
-      ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText(st.label, txC, pg.y + pg.h / 2 - dy, tw);
-      ctx.font = `900 ${Math.min(12, pg.w / 12)}px Orbitron, sans-serif`;
-      ctx.fillStyle = col;
-      ctx.fillText(monCopy.ability, txC, pg.y + pg.h / 2 + dy, tw);
-    } else {
-      // Keep the opt-out visually neutral. In STARFIGHTER the detail line
-      // below explains that Pikachu becomes the automatic pilot; the choice
-      // itself must never masquerade as a selected Pokémon partner.
-      const sp = Math.min(60, pg.h * 0.66);
-      const spx = pg.x + Math.max(6, pg.w * 0.05);
-      const icx = spx + sp / 2, icy = pg.y + pg.h / 2;
-      roundRect(icx - sp * 0.31, icy - 4, sp * 0.62, 8, 4);
-      ctx.fillStyle = '#90a4ae'; ctx.fill();
-      ctx.beginPath(); ctx.arc(icx, icy - 13, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#cfd8dc'; ctx.fill();
-      const txL = spx + sp + 6;
-      const txC = txL + (pg.x + pg.w - 8 - txL) / 2;
-      const tw = pg.x + pg.w - 8 - txL;
-      ctx.font = `900 ${Math.min(17, pg.w / 8.5)}px Orbitron, sans-serif`;
-      ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-      ctx.fillText('NO PARTNER', txC, pg.y + pg.h / 2 - dy, tw);
-      ctx.font = `900 ${Math.min(12, pg.w / 12)}px Orbitron, sans-serif`;
-      ctx.fillStyle = SETTINGS.mode === 'junkie' ? '#f9cc3d' : '#78909c';
-      ctx.fillText(SETTINGS.mode === 'junkie' ? 'PIKACHU AUTO-PILOT' : 'PLAIN PADDLE', txC, pg.y + pg.h / 2 + dy, tw);
+    const img = getSprite(mon.ids[0]);
+    const sp = Math.min(38, pg.h * 0.53, pg.w * 0.43);
+    const spx = pg.x + pg.w / 2 - sp / 2, spy = pg.y + 2;
+    if (img.complete && img.naturalWidth) ctx.drawImage(img, spx, spy, sp, sp);
+    else drawGlyph(ctx, st.key, pg.x + pg.w / 2, spy + sp / 2, sp * 0.28, col);
+    drawGlyph(ctx, st.key, pg.x + 9, pg.y + 9, Math.min(5.5, pg.w * 0.06), col);
+    if (st.key === 'electric') {
+      ctx.font = '900 7px Orbitron, sans-serif'; ctx.fillStyle = '#181100';
+      roundRect(pg.x + pg.w - 23, pg.y + 4, 19, 11, 4); ctx.fillStyle = '#ffd740'; ctx.fill();
+      ctx.fillStyle = '#181100'; ctx.fillText('OP', pg.x + pg.w - 13.5, pg.y + 9.5);
     }
+    ctx.font = `900 ${Math.min(10.5, pg.w / 9)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? '#fff' : '#dce4e8';
+    ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h - 17, pg.w - 6);
+    ctx.font = `800 ${Math.min(7.5, pg.w / 12)}px Orbitron, sans-serif`;
+    ctx.fillStyle = col;
+    ctx.fillText(monCopy.ability, pg.x + pg.w / 2, pg.y + pg.h - 6, pg.w - 6);
     ctx.restore();
+  }
+  // No Partner remains available as a neutral, separate opt-out rather than
+  // consuming one of the type slots.
+  {
+    const pg = L.none, sel = SETTINGS.starter === 'none', hov = inRect(mouseX, lastMouseY, pg);
+    roundRect(pg.x, pg.y, pg.w, pg.h, 8);
+    ctx.fillStyle = sel ? 'rgba(144,164,174,0.24)' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+    ctx.strokeStyle = sel ? '#cfd8dc' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = sel ? 2 : 1; ctx.stroke();
+    ctx.font = `800 ${L.short ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = sel ? '#fff' : '#90a4ae';
+    ctx.fillText(SETTINGS.mode === 'junkie' ? 'NO PARTNER · TRAINING DRONE' : 'NO PARTNER · NEUTRAL PADDLE',
+      pg.x + pg.w / 2, pg.y + pg.h / 2, pg.w - 10);
   }
   // what the SELECTED partner actually does — full-size, readable
   {
@@ -3189,13 +3219,15 @@ function drawSetup() {
     if (selMon) {
       fitText(selCopy.ability + ' — ' + (narrowM ? selCopy.blurb : selCopy.tier), L.starterInfoY,
         12 * Math.max(0.85, L.s), '700', selCol, maxW, BODY);
-      if (!L.short) fitText(narrowM ? 'EVOLVES AT REGIONS 4 & 7 — ABILITY GROWS'
-        : (junkie ? 'YOUR STARTER FLIES THE SHIP' : 'YOUR PARTNER RIDES THE PADDLE') + ' · EVOLVES AT REGIONS 4 & 7 — THE ABILITY GROWS EACH TIME',
+      const electric = SETTINGS.starter === 'electric';
+      if (!L.short) fitText(electric ? 'PIKACHU BECOMES RAICHU IN REGION 5 · OVERDRIVE TIER III IN REGION 7'
+        : narrowM ? `${selMon.names.join(' → ')} · REGIONS 4 & 7`
+        : (junkie ? 'YOUR STARTER FLIES THE SHIP' : 'YOUR PARTNER RIDES THE PADDLE') + ` · ${selMon.names.join(' → ')} · REGIONS 4 & 7`,
         L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
     } else if (junkie) {
-      fitText(narrowM ? 'NO PICK — PIKACHU FLIES THE SHIP' : 'NO PICK — PIKACHU TAKES THE CONTROLS AND FIRES ITS OWN ATTACK',
-        L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#f9cc3d', maxW, BODY);
-      if (!L.short) fitText('EVOLVES AT REGIONS 4 & 7 — THE ATTACK GROWS EACH TIME',
+      fitText(narrowM ? 'NO PARTNER — TRAINING DRONE' : 'NO PARTNER — A NEUTRAL TRAINING DRONE FLIES THE SHIP',
+        L.starterInfoY, 12 * Math.max(0.85, L.s), '700', '#cfd8dc', maxW, BODY);
+      if (!L.short) fitText('NO TYPE ADVANTAGE · NO PARTNER ABILITY',
         L.starterInfoY + 19, 10 * Math.max(0.85, L.s), '500', '#90a4ae', maxW, BODY);
     } else if (SETTINGS.mode === 'blaster') {
       fitText(narrowM ? 'NO PARTNER — NEUTRAL DEFENSE' : 'NO PARTNER — PLAIN PADDLE · NO DEFENSIVE TYPE',
@@ -3267,7 +3299,7 @@ function drawSetup() {
 }
 
 // ---- ACT-BOUNDARY CEREMONY: the game's biggest beat. The partner pulses
-// white faster and faster, whites out, and is REVEALED evolved — then the
+// white faster and faster, blooms into a radiant flash, and is REVEALED evolved — then the
 // act title card lands: "ACT II — TRANSFORMATION". Without a partner the
 // act card alone takes the stage. All state mutation happens in update();
 // this only reads G.ceremony.
@@ -3329,9 +3361,11 @@ function drawCeremony() {
     if (t < 1.9) {
       ctx.font = '700 13px Orbitron, sans-serif';
       ctx.fillStyle = '#e3f2fd';
-      ctx.fillText('WHAT? ' + c.evo.fromName + ' IS EVOLVING!', cx, cy + ms * 0.66);
+      ctx.fillText(c.evo.abilityOnly ? c.evo.fromName + "'S POWER IS SURGING!"
+        : 'WHAT? ' + c.evo.fromName + ' IS EVOLVING!', cx, cy + ms * 0.66);
     } else if (showNew) {
-      title(c.evo.toName + '!', cy + ms * 0.62, Math.min(30, W / 16), col);
+      title(c.evo.abilityOnly ? c.evo.toName + ' · FULL POWER!' : c.evo.toName + '!',
+        cy + ms * 0.62, Math.min(30, W / 16), col);
       ctx.font = bodyFont(Math.min(12, W / 46), 600);
       ctx.fillStyle = '#cfd8dc';
       ctx.fillText(c.evo.ability, cx, cy + ms * 0.62 + Math.min(30, W / 16) * 0.95, W * 0.9);

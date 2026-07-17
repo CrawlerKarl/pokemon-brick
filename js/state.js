@@ -5,7 +5,20 @@
 const MEGA_DUR = 5;      // Mega Evolution duration in seconds
 // skill-tree-aware caps (capstones raise them)
 function shieldCap() { return 3 + 2 * upgN('bulwark'); }
-function megaDur() { return upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR; }
+function megaDur() { return (upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR) + starterMod('megaDur', 0); }
+function starterTierValue(key, tier) {
+  const value = STARTER_MON[G.starter]?.mods?.[key];
+  if (value == null) return 0;
+  return Array.isArray(value) ? (value[Math.max(0, Math.min(value.length - 1, tier - 1))] || 0) : value;
+}
+function applyStarterTierUpgrade(fromTier, toTier) {
+  const hpGain = Math.max(0, starterTierValue('bonusHp', toTier) - starterTierValue('bonusHp', fromTier));
+  if (hpGain) { G.lives += hpGain; G.livesMax += hpGain; }
+  const shieldGain = Math.max(0, starterTierValue('shieldStart', toTier) - starterTierValue('shieldStart', fromTier));
+  if (shieldGain) G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + shieldGain);
+  const megaFloor = starterTierValue('megaStart', toTier);
+  if (megaFloor) G.mega = Math.max(G.mega, megaFloor);
+}
 function barrierCharges() {
   // Kanto's first two classic walls are the learn-to-aim beats: one safety-net
   // return keeps the rally mechanic visible without letting the ball play an
@@ -16,16 +29,22 @@ function barrierCharges() {
     + (G.mode === 'classic' && upgN('intercept') ? 1 : 0);
 }
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
-// ---- SPACE JUNKIE pilots: in junkie mode your starter IS the ship (Pikachu
-// if you fly without a partner). The attack's SHAPE follows the pilot's
+// ---- STARFIGHTER pilots: in junkie mode your starter IS the ship. Flying
+// without a partner uses a neutral training drone. The attack's SHAPE follows the pilot's
 // species; its COLOR + type follow the CURRENT element, so a Charmeleon
 // riding a grass element shoots green fire.
-const PILOT_NONE = { ids: [25, 25, 26], names: ['PIKACHU', 'PIKACHU', 'RAICHU'] };
+const PILOT_NONE = { ids: [0, 0, 0], names: ['TRAINING DRONE', 'TRAINING DRONE', 'TRAINING DRONE'] };
 function pilotInfo() {
   const sm = STARTER_MON[G.starter];
-  if (sm) return { id: sm.ids[G.starterLvl - 1], t: G.starter,
-    shape: G.starter === 'fire' ? 'flame' : G.starter === 'water' ? 'aqua' : 'leaf' };
-  return { id: PILOT_NONE.ids[G.starterLvl - 1], t: 'electric', shape: 'volt' };
+  if (sm) {
+    const shapes = {
+      fire: 'flame', fighting: 'flame', dragon: 'flame',
+      water: 'aqua', ice: 'aqua', steel: 'aqua',
+      grass: 'leaf', bug: 'leaf', poison: 'leaf', ground: 'leaf', rock: 'leaf', flying: 'leaf',
+    };
+    return { id: sm.ids[G.starterLvl - 1], t: G.starter, shape: shapes[G.starter] || 'volt' };
+  }
+  return { id: 0, t: 'normal', shape: 'volt' };
 }
 function attackElement() { return G.ballElement || pilotInfo().t; }
 // the player's current DEFENSIVE type — how effective an enemy's typed attack
@@ -108,7 +127,7 @@ function resumeRun() {
   G.path = { ...c.path }; G.upg = { ...c.upg };
   G.stacks = Object.assign({ orb: 0, ice: 0, bell: 0 }, c.stacks);
   G.catchBonus = c.catchBonus || 0; G.caughtRun = c.caughtRun || 0;
-  G.adapt = c.adapt || 1; G.starterLvl = c.starterLvl || starterStage(c.lvl);
+  G.adapt = c.adapt || 1; G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
   setAnnounce('swift', '#80d8ff', 'JOURNEY RESUMED',
     genFor(c.lvl).name + ' · WAVE ' + c.lvl + ' — WELCOME BACK', 3,
     'SAVED AT EVERY REGION · GAME OVER CLEARS THE SAVE');
@@ -140,6 +159,7 @@ const G = {
   uiTouchPulse: null, shareToast: 0,
   // starter partner: which one, its ability tier, Torrent's return counter
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
+  starterHits: 0, starterKOs: 0, starterChillT: 0,
   ceremony: null, // act-boundary evolution ceremony (end of Hoenn / Kalos)
   encounter: null, // SPACE JUNKIE choreography: one authored encounter per wave
   guardSwapCD: 8, waveThemeObj: null,
@@ -1015,20 +1035,22 @@ function buildLevel(lvl) {
   // ---- starter evolution: the partner grows with the journey ----
   const sm = STARTER_MON[G.starter];
   if (sm) {
-    const sLvl = starterStage(lvl);
+    const sLvl = starterStage(lvl, G.starter);
     if (sLvl > G.starterLvl) {
+      const priorLvl = G.starterLvl;
+      applyStarterTierUpgrade(priorLvl, sLvl);
       G.starterLvl = sLvl;
       G.justEvolved = true; // outranks the stage banner this wave
       getSprite(sm.ids[sLvl - 1]);
       SFX.mega();
-      setAnnounce(G.starter, TYPE_COLORS[G.starter],
-        sm.names[sLvl - 2] + ' EVOLVED INTO ' + sm.names[sLvl - 1] + '!',
-        sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
+      const sameForm = sm.ids[priorLvl - 1] === sm.ids[sLvl - 1];
+      setAnnounce(G.starter, TYPE_COLORS[G.starter], sameForm
+        ? sm.names[sLvl - 1] + ' UNLEASHED ' + sm.ability + ' ' + romanTier(sLvl) + '!'
+        : sm.names[priorLvl - 1] + ' EVOLVED INTO ' + sm.names[sLvl - 1] + '!',
+      sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
     }
-  } else if (junkie) {
-    G.starterLvl = starterStage(lvl); // the default pilot still grows (Pikachu → Raichu)
   }
-  if (junkie) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
+  if (junkie && pilotInfo().id > 0) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
   // arriving at a region's doorstep checkpoints the run (post-draft state —
   // buildLevel runs after every pick, and after knockout tree burns too)
   if (!G.trial && stage === 0) saveCheckpoint();
@@ -1109,8 +1131,9 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
-  G.starterLvl = starterStage(startLevel);
-  G.torrentCount = 0; G.justEvolved = false; G.ceremony = null;
+  G.starterLvl = starterStage(startLevel, G.starter);
+  G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
+  G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
@@ -1126,6 +1149,13 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
     if (dexRewardActive('megaSpark')) G.mega = 0.25;
     if (dexRewardActive('veteran')) { G.lives++; G.livesMax++; }
   }
+  // Partner opening bonuses apply after research rewards so both packages
+  // stack predictably. Rock raises maximum HP; Steel begins shielded; Dragon
+  // and the intentionally overpowered Pikachu line begin with Mega charge.
+  const bonusHp = starterMod('bonusHp', 0);
+  if (bonusHp) { G.lives += bonusHp; G.livesMax += bonusHp; }
+  G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + starterMod('shieldStart', 0));
+  G.mega = Math.max(G.mega, starterMod('megaStart', 0));
   // starting deep? bank the skill-tree advances you'd have earned on the way
   let granted = 0;
   if (startLevel > 1) {

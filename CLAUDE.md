@@ -31,16 +31,19 @@ NEVER rename a key:
 - **junkie** (UI: STARFIGHTER; internal codename "Space Junkie" throughout
   code + docs) — the pure-shooter homage: no wall at all, every
   wave is tight high flocks of small flyers, and **your starter IS the ship**
-  (Pikachu if none), flying vertically and firing its own typed attack.
+  (NO PARTNER uses a neutral vector training drone), flying vertically and
+  firing its own typed attack.
 
 **The title screen is a return-player dashboard, not just a mode picker.**
 `menuLayout()` reserves a progression strip for journey/checkpoint, Pokédex
 research, and dated Daily best/completion/streak state. All three mode cards
 remain visible, but only the hovered card (or one rotating focus card on
 touch/idle) animates; `reduceFlash` freezes them. Setup calls the opt-out
-**NO PARTNER**, shows starting HP + pressure on difficulty cards, and explains
-Pikachu auto-pilot only for STARFIGHTER. Keep render and hit-testing on the
-same layout geometry.
+**NO PARTNER**, shows starting HP + pressure on difficulty cards, and pages an
+18-type starter roster in three groups of six. Each type has a distinct
+three-tier ability in `STARTER_MON`; Pikachu is an intentionally OP explicit
+pick that becomes Raichu in region 5. Keep render and hit-testing on the same
+layout geometry.
 
 ## Editing
 - Everything is `js/*.js`. `index.html` is just the shell — never inline JS.

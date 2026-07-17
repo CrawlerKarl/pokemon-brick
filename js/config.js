@@ -86,9 +86,9 @@ function diff() {
     shotSpeed: p.shotSpeed * speedScale() * (0.9 + 0.24 * sm),
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * (G.daily ? 1 : SETTINGS.drops) * (mod?.key === 'swift' ? 1.4 : 1)
-      * (G.starter === 'grass' ? 1.2 + 0.15 * (G.starterLvl - 1) : 1) // Overgrowth
+      * starterMod('drop', 1)
       * (1 + 0.5 * upgN('fortune')), // Bond path tier 3
-    catchChance: 0.07 * (!G.daily && dexRewardActive('lucky') ? 1.25 : 1),
+    catchChance: 0.07 * (!G.daily && dexRewardActive('lucky') ? 1.25 : 1) * starterMod('catch', 1),
   };
 }
 const SLIDERS = [
@@ -120,11 +120,25 @@ const TOUCH_TOGGLES = [
   { key: 'haptics', label: 'HAPTIC FEEDBACK' },
 ];
 const STARTERS = [
-  { key: 'none', label: 'NO PARTNER' },
-  { key: 'fire', label: 'CHARMANDER' },
-  { key: 'water', label: 'SQUIRTLE' },
-  { key: 'grass', label: 'BULBASAUR' },
+  { key: 'fire', label: 'CHARMANDER' }, { key: 'water', label: 'SQUIRTLE' },
+  { key: 'grass', label: 'BULBASAUR' }, { key: 'electric', label: 'PIKACHU' },
+  { key: 'normal', label: 'STARLY' }, { key: 'flying', label: 'ROOKIDEE' },
+  { key: 'ice', label: 'FRIGIBAX' }, { key: 'fighting', label: 'QUAXLY' },
+  { key: 'poison', label: 'GASTLY' }, { key: 'ground', label: 'SANDILE' },
+  { key: 'psychic', label: 'HATENNA' }, { key: 'bug', label: 'GRUBBIN' },
+  { key: 'rock', label: 'NACLI' }, { key: 'ghost', label: 'LITWICK' },
+  { key: 'dragon', label: 'AXEW' }, { key: 'dark', label: 'IMPIDIMP' },
+  { key: 'steel', label: 'TINKATINK' }, { key: 'fairy', label: 'RALTS' },
 ];
+const STARTERS_PER_PAGE = 6;
+const STARTER_PAGE_LABELS = ['CLASSIC TYPES', 'BATTLE TYPES', 'RARE TYPES'];
+if (SETTINGS.starter !== 'none' && !STARTERS.some(s => s.key === SETTINGS.starter)) SETTINGS.starter = 'none';
+let starterPage = Math.max(0, Math.floor(Math.max(0, STARTERS.findIndex(s => s.key === SETTINGS.starter)) / STARTERS_PER_PAGE));
+function starterPageItems() {
+  const maxPage = Math.ceil(STARTERS.length / STARTERS_PER_PAGE) - 1;
+  starterPage = Math.max(0, Math.min(maxPage, starterPage));
+  return STARTERS.slice(starterPage * STARTERS_PER_PAGE, (starterPage + 1) * STARTERS_PER_PAGE);
+}
 let advOpen = false; // advanced settings panel
 let settingsPage = 0; // 0 = game/accessibility, 1 = touch controls
 function activeSliders() { return settingsPage === 1 ? TOUCH_SLIDERS : SLIDERS; }
@@ -187,7 +201,7 @@ function menuLayout() {
   };
 }
 // PAGE 2 — setup for the chosen mode: starter Pokémon, difficulty, START.
-// Tall portrait phones get 2×2 grids of BIG cards; the sections are then
+// Tall portrait phones get 3×2 grids of BIG cards; the sections are then
 // spread down the whole screen (even vGap) instead of crammed at the top.
 function setupLayout() {
   const short = H < 560;
@@ -200,10 +214,10 @@ function setupLayout() {
   const headSize = short ? Math.min(22, W / 16) : Math.min(46, W / 12);
   const headY = short ? 26 : Math.max(54, H * 0.085);
   const headBottom = headY + headSize * 0.6 + (short ? 12 : 30);
-  // starter + difficulty grids: 2×2 on tall phones, one row otherwise
-  const stCols = narrow ? 2 : 4, stRows = 4 / stCols;
+  // six starters per page: 3×2 on tall phones, one row otherwise
+  const stCols = narrow ? 3 : 6, stRows = STARTERS_PER_PAGE / stCols;
   const stW = (contentW - gap * (stCols - 1)) / stCols;
-  const stH = short ? 40 : narrow ? Math.min(104, Math.max(84, stW * 0.56)) : Math.min(86, stW * 0.66);
+  const stH = short ? 44 : narrow ? Math.min(78, Math.max(70, stW * 0.7)) : Math.min(68, stW * 0.68);
   const dfCols = narrow ? 2 : 4, dfRows = 4 / dfCols;
   const dfW = (contentW - gap * (dfCols - 1)) / dfCols;
   const dfH = short ? 32 : narrow ? 58 : 52;
@@ -211,17 +225,21 @@ function setupLayout() {
   const btnH = short ? 40 : narrow ? 70 : 60;
   const labelGap = short ? 20 : 32; // grid top sits below its section label
   const infoH = short ? 0 : 42;     // starter ability description block
+  const navH = short ? 20 : 26, navGap = short ? 4 : 6, noneH = navH;
   // three section groups distributed with an even gap that soaks up slack
-  const starterGroup = labelGap + stRows * stH + (stRows - 1) * gap + infoH;
+  const starterGroup = labelGap + navH + navGap + stRows * stH + (stRows - 1) * gap + navGap + noneH + infoH;
   const diffGroup = labelGap + dfRows * dfH + (dfRows - 1) * gap;
   const trialH = short ? 24 : 30; // per-game TRIAL link under START
   const bottomPad = short ? 10 : H * 0.05;
   const slack = (H - bottomPad) - headBottom - (starterGroup + diffGroup + btnH + trialH + (short ? 6 : 10));
   const vGap = Math.max(short ? 10 : 18, Math.min(slack / 3, short ? 22 : narrow ? 54 : 40));
   let y = headBottom + vGap;
-  const starterGridY = y + labelGap;
-  const startLabelY = starterGridY - (short ? 12 : 16);
+  const startLabelY = y + (short ? 8 : 12);
+  const starterNavY = y + labelGap;
+  const starterGridY = starterNavY + navH + navGap;
   y = starterGridY + stRows * stH + (stRows - 1) * gap;
+  const noneY = y + navGap;
+  y = noneY + noneH;
   const starterInfoY = short ? y + 8 : y + 18;
   y = short ? y : y + infoH;
   y += vGap;
@@ -233,6 +251,10 @@ function setupLayout() {
   return {
     s, short, narrow, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
     back: { x: 14, y: 14, w: 96, h: 36 },
+    starterPrev: { x: cx - contentW / 2, y: starterNavY, w: Math.min(90, contentW * 0.22), h: navH },
+    starterNext: { x: cx + contentW / 2 - Math.min(90, contentW * 0.22), y: starterNavY, w: Math.min(90, contentW * 0.22), h: navH },
+    starterPageLabel: { x: cx - contentW * 0.25, y: starterNavY, w: contentW * 0.5, h: navH },
+    none: { x: cx - Math.min(210, contentW * 0.62) / 2, y: noneY, w: Math.min(210, contentW * 0.62), h: noneH },
     starter: i => { const c = i % stCols, r = Math.floor(i / stCols);
       return { x: cx - contentW / 2 + c * (stW + gap), y: starterGridY + r * (stH + gap), w: stW, h: stH }; },
     chip: i => { const c = i % dfCols, r = Math.floor(i / dfCols);

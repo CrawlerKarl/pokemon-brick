@@ -3,10 +3,12 @@
 //  UPDATE
 // ============================================================
 function paddleW() {
-  return G.paddle.w * (1 + 0.18 * upgN('wide')) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1);
+  return G.paddle.w * (1 + 0.18 * upgN('wide')) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1)
+    * starterMod('paddle', 1);
 }
 function timeScale() {
-  return (G.fx_slow ? 0.5 : 1) * SETTINGS.speed * (G.dramaticT > 0 ? 0.3 : 1);
+  return (G.fx_slow ? 0.5 : 1) * (G.starterChillT > 0 ? 0.7 : 1)
+    * SETTINGS.speed * (G.dramaticT > 0 ? 0.3 : 1);
 }
 // Dialga's Roar of Time slows only the balls, not the player
 function ballTimeScale() { return G.timeWarpT > 0 ? 0.55 : 1; }
@@ -18,6 +20,8 @@ function scoreMult() {
     * (1 + Math.min(G.combo, 20) * 0.1 * comboAmp)
     * (G.modifier?.key === 'bounty' ? 2 : 1)
     * (1 + G.catchBonus)
+    * starterMod('score', 1)
+    * (1 + Math.min(G.combo, 20) * starterMod('comboScore', 0))
     * (1 + 0.06 * ((G.stacks && G.stacks.bell) || 0)); // SOOTHE BELL stacks
 }
 
@@ -27,6 +31,8 @@ function tickEffects(dt) {
     if (G[k]) { G[k].t -= dt; if (G[k].t <= 0) G[k] = null; }
   }
   if (G.megaT > 0) G.megaT = Math.max(0, G.megaT - dt);
+  else if (G.state === 'play') G.mega = Math.min(1, G.mega + dt * starterMod('megaPassive', 0));
+  G.starterChillT = Math.max(0, (G.starterChillT || 0) - dt);
   if (G.ballElement) {
     G.ballElementT -= dt;
     if (G.ballElementT <= 0) {
@@ -101,6 +107,23 @@ function triggerBrickBehavior(br) {
   }
 }
 
+// Starter follow-up attacks pick nearby live targets and are marked so they
+// cannot recursively trigger another chain, quake, crit, or corrosion hit.
+function starterStrikeTargets(source, count, dmg, element, color, label) {
+  const sx = source.bx + G.fx, sy = source.by + G.fy;
+  const targets = G.bricks.filter(b => !b.dead && b !== source && !b.barrier)
+    .sort((a, b) => Math.hypot(a.bx + G.fx - sx, a.by + G.fy - sy) - Math.hypot(b.bx + G.fx - sx, b.by + G.fy - sy))
+    .slice(0, count);
+  if (!targets.length) return;
+  ringFx(sx, sy, color, 5, 74, 3, 0.34);
+  addFloater(sx, sy - source.h / 2 - 12, label, color, 12);
+  for (const target of targets) {
+    const tx = target.bx + G.fx, ty = target.by + G.fy;
+    ringFx(tx, ty, color, 3, 30, 2, 0.25);
+    damageBrick(target, dmg, tx, ty, element, { starterChain: true });
+  }
+}
+
 function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (!br || br.dead) return;
   const generator = !meta.ignoreShield && shieldGeneratorFor(br);
@@ -128,6 +151,30 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // Late-run mastery remains useful in every mode (ball, bolts, missiles,
   // explosions) without recreating the old giant weapon-capstone spike.
   if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
+  const starterDirect = dmg < 90 && !meta.starterChain && !meta.behavior && !meta.linked;
+  if (starterDirect && G.starter) {
+    G.starterHits = (G.starterHits || 0) + 1;
+    dmg *= starterMod('damage', 1);
+    if (starterPerk() === 'GUTS') {
+      const missing = Math.max(0, (G.livesMax || G.lives) - G.lives);
+      dmg *= 1 + missing * starterMod('guts', 0);
+      if (br.isBoss) dmg *= starterMod('bossDamage', 1);
+    }
+    if (starterPerk() === 'SAND FORCE' && (br.armored || br.shellArmor || br.barrier || br.isBoss)) {
+      dmg *= starterMod('armorDamage', 1);
+    }
+    if (starterPerk() === 'MOXIE') dmg *= 1 + Math.min(G.combo, 20) * starterMod('comboDamage', 0);
+    if (starterPerk() === 'CORROSION') {
+      br.starterCorrosion = Math.min(5, (br.starterCorrosion || 0) + 1);
+      dmg *= 1 + (br.starterCorrosion - 1) * starterMod('corrosion', 0);
+    }
+    const critEvery = starterMod('critEvery', 0);
+    if (critEvery && G.starterHits % critEvery === 0) {
+      dmg *= starterMod('critMul', 1);
+      setCombatNotice('FORESIGHT · PRECISION CRIT', '#ec407a');
+      ringFx(sx, sy, '#ec407a', 4, 46, 3, 0.3);
+    }
+  }
   // type effectiveness: super effective ×2 (PRISM AMPLIFY pushes it further),
   // resisted ×¼ — unless the OMNI LENS capstone ignores resistances outright
   if (element && dmg < 90) {
@@ -158,6 +205,17 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   br.hp -= dmg;
   br.flash = 1;
   haptic('hit');
+  if (starterDirect) {
+    const chainEvery = starterMod('chainEvery', 0);
+    if (chainEvery && G.starterHits % chainEvery === 0) {
+      starterStrikeTargets(br, starterMod('chainTargets', 1), Math.max(0.75, dmg * 0.45), 'electric', '#ffd740', 'OVERDRIVE CHAIN!');
+    }
+    const quakeEvery = starterMod('quakeEvery', 0);
+    if (quakeEvery && G.starterHits % quakeEvery === 0) {
+      starterStrikeTargets(br, Math.min(4, 1 + G.starterLvl), 1, 'ground', '#d4a373', 'SAND FORCE QUAKE!');
+      G.shake = Math.min(12, G.shake + 6);
+    }
+  }
   if (br.behavior === 'link' && !meta.linked) {
     const mate = G.bricks.find(b => !b.dead && b !== br && b.behavior === 'link' && b.linkGroup === br.linkGroup);
     if (mate) {
@@ -235,6 +293,18 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     haptic(br.isBoss ? 'boss' : 'break');
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
+    if (G.starter) {
+      G.starterKOs = (G.starterKOs || 0) + 1;
+      const chillEvery = starterMod('chillEvery', 0);
+      if (chillEvery && G.starterKOs % chillEvery === 0) {
+        G.starterChillT = Math.max(G.starterChillT, starterMod('chillDur', 3));
+        setAnnounce('ice', '#4dd0e1', 'SNOW WARNING!', 'THE BATTLE SLOWS DOWN', 1.8);
+      }
+      const swarmEvery = starterMod('swarmEvery', 0);
+      if (swarmEvery && G.starterKOs % swarmEvery === 0) {
+        starterStrikeTargets(br, starterMod('swarmTargets', 1), 1, 'bug', '#9ccc65', 'SWARM STRIKE!');
+      }
+    }
     // tuned so Mega comes online roughly once per region (3 waves)
     // a squad falls briefly SILENT when its elite falls — the Galaga nod
     if (G.mode === 'junkie' && G.encounter && br.flight && br.flight.sq != null && (br.elite || 0) >= 2) {
@@ -310,9 +380,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       const missingHp = Math.max(0, (G.livesMax || preset().lives) - G.lives);
       if (missingHp > 0) G.healthDropPity = (G.healthDropPity || 0) + 1;
       else G.healthDropPity = 0;
-      const healChance = Math.min(0.24,
-        (0.055 + missingHp * 0.025) * (G.daily ? 1 : SETTINGS.drops) * (br.maxHp >= 3 ? 1.35 : 1));
-      if (missingHp > 0 && (G.healthDropPity >= 10 || gameRand() < healChance)) {
+      const healChance = Math.min(0.42,
+        (0.055 + missingHp * 0.025) * (G.daily ? 1 : SETTINGS.drops) * (br.maxHp >= 3 ? 1.35 : 1)
+        * starterMod('healChance', 1));
+      if (missingHp > 0 && (G.healthDropPity >= starterMod('healPity', 10) || gameRand() < healChance)) {
         G.healthDropPity = 0;
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 112, p: POWERS.heal, rot: 0, hint: true });
       } else if (gameRand() < d.dropChance) {
@@ -755,6 +826,14 @@ function finalizeRun() {
 }
 
 function loseLife(cause = 'MISSED BALL') {
+  const dodge = starterMod('dodge', 0);
+  if (dodge && gameRand() < dodge) {
+    G.invuln = Math.max(G.invuln, 1.1);
+    addFloater(G.paddle.x, shipY() - 42, 'PHASE SHIFT!', '#b388ff', 16);
+    ringFx(G.paddle.x, shipY(), '#b388ff', 6, 78, 3, 0.45);
+    tone(540, 0.18, 'sine', 0.06, 220);
+    return;
+  }
   G.lastDamageCause = cause;
   if (G.runStats) G.runStats.damageTaken++;
   haptic('damage');
@@ -779,7 +858,8 @@ function loseLife(cause = 'MISSED BALL') {
         const t = regressPath(owned[Math.floor(gameRand() * owned.length)]);
         if (t) lost.push(t.name);
       }
-      G.lives = preset().lives;
+      G.lives = preset().lives + starterMod('bonusHp', 0);
+      G.livesMax = Math.max(G.livesMax, G.lives);
       G.shieldCharges = Math.min(G.shieldCharges, shieldCap());
       SFX.gameOver();
       buildLevel(G.level);
@@ -1003,7 +1083,7 @@ function update(dt) {
 
   const target = Math.max(paddleW() / 2 + 8, Math.min(W - paddleW() / 2 - 8, mouseX));
   G.paddle.speed = (target - G.paddle.x) / Math.max(dt, 0.001);
-  const follow = IS_TOUCH ? SETTINGS.touchFollow : 1;
+  const follow = (IS_TOUCH ? SETTINGS.touchFollow : 1) * starterMod('follow', 1);
   G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18 * follow);
   // SPACE JUNKIE: the ship also flies vertically — mouse/finger Y steers it
   // within a band above the old paddle line. On touch the ship rides ~85px
@@ -2370,8 +2450,8 @@ function update(dt) {
       pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 75 * upgN('magnetize')) * dt;
     }
     const pw = paddleW(), py = shipY(); // the ship catches wherever it flies
-    // Overgrowth (grass partner) widens the pickup catch envelope
-    const reach = 18 + (G.starter === 'grass' ? 10 + 6 * G.starterLvl : 0);
+    // Overgrowth widens the pickup catch envelope at each evolution.
+    const reach = 18 + starterMod('catchReach', 0);
     if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + reach) {
       pu.dead = true;
       collectPickup(pu);
@@ -2411,23 +2491,20 @@ function update(dt) {
     // so buildLevel won't re-announce it with the plain banner later.
     if (!G.trial && actIdx(G.level) > actIdx(G.level - 1)) {
       const sm = STARTER_MON[G.starter];
-      const junkie = G.mode === 'junkie';
-      const newLvl = starterStage(G.level);
+      const newLvl = starterStage(G.level, G.starter);
       let evo = null;
-      if ((sm || junkie) && newLvl > G.starterLvl) {
-        const ids = sm ? sm.ids : PILOT_NONE.ids;
-        const names = sm ? sm.names : PILOT_NONE.names;
-        if (ids[newLvl - 1] !== ids[G.starterLvl - 1]) {
-          evo = {
-            fromId: ids[G.starterLvl - 1], toId: ids[newLvl - 1],
-            fromName: names[G.starterLvl - 1], toName: names[newLvl - 1],
-            type: sm ? G.starter : 'electric',
-            ability: sm ? sm.ability + ' ' + romanTier(newLvl) + ' — ' + sm.tiers[newLvl - 1]
-              : "THE PILOT'S ATTACK GROWS",
-          };
-          getSprite(evo.toId);
-          getSprite(evo.fromId);
-        }
+      if (sm && newLvl > G.starterLvl) {
+        const ids = sm.ids, names = sm.names;
+        evo = {
+          fromId: ids[G.starterLvl - 1], toId: ids[newLvl - 1],
+          fromName: names[G.starterLvl - 1], toName: names[newLvl - 1],
+          type: G.starter,
+          abilityOnly: ids[newLvl - 1] === ids[G.starterLvl - 1],
+          ability: sm.ability + ' ' + romanTier(newLvl) + ' — ' + sm.tiers[newLvl - 1],
+        };
+        getSprite(evo.toId);
+        getSprite(evo.fromId);
+        applyStarterTierUpgrade(G.starterLvl, newLvl);
         G.starterLvl = newLvl;
       }
       G.ceremony = { act: actIdx(G.level), t: 0, evo, burst1: false, burst2: false };

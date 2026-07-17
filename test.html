@@ -564,6 +564,7 @@ window.requestAnimationFrame = function () { return 0; };
       for (const t of Object.values(g.tiers)) for (const [id] of t) ids.add(id);
       ids.add(g.boss.id);
     }
+    for (const mon of Object.values(STARTER_MON)) for (const id of mon.ids) ids.add(id);
     const noName = [...ids].filter(id => !NAMES[id]);
     assert(noName.length === 0, 'roster ids missing from NAMES: ' + noName.join(', '));
     const all = [...ids];
@@ -592,10 +593,11 @@ window.requestAnimationFrame = function () { return 0; };
         W = w; H = h;
         const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
         const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
+          starterPrev: S.starterPrev, starterNext: S.starterNext, starterNone: S.none,
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
-        for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = S.starter(i);
+        for (let i = 0; i < STARTERS_PER_PAGE; i++) rects['starter(' + i + ')'] = S.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = S.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
@@ -623,8 +625,33 @@ window.requestAnimationFrame = function () { return 0; };
     assert(DEX_REWARDS.every((r, i) => r.at > 0 && (!i || r.at > DEX_REWARDS[i - 1].at)),
       'research thresholds must be positive and strictly increasing');
     assert(Object.prototype.hasOwnProperty.call(SETTINGS, 'autoFire'), 'auto-fire setting missing');
-    assert(STARTERS[0].key === 'none' && STARTERS[0].label === 'NO PARTNER',
-      'starter opt-out should be named NO PARTNER');
+    assert(STARTERS.length === Object.keys(TYPE_COLORS).length && STARTERS.every(s => STARTER_MON[s.key]),
+      'starter picker must contain one partner line for all 18 types');
+    assert(new Set(Object.values(STARTER_MON).map(m => m.ability)).size === 18,
+      'every starter type needs a distinct ability');
+    assert(Object.values(STARTER_MON).every(m => m.ids.length === 3 && m.names.length === 3 && m.tiers.length === 3),
+      'every starter needs three form/ability tiers');
+    assert(starterStage(13, 'electric') === 2 && starterStage(19, 'electric') === 3,
+      'Pikachu should become Raichu in region 5 and reach tier III in region 7');
+    assert(STARTER_MON.electric.ids[0] === 25 && STARTER_MON.electric.ids[1] === 26 &&
+      STARTER_MON.electric.mods.damage[0] >= 1.5, 'Pikachu is missing or not intentionally overpowered');
+    const savedStarter = SETTINGS.starter, savedMode = SETTINGS.mode, savedPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'blaster'; SETTINGS.preset = 'easy'; SETTINGS.starter = 'electric';
+      resetRun(1, true, { seed: 'starter-overdrive' });
+      assert(G.mega >= 0.35 && G.starterLvl === 1, 'Pikachu did not receive its opening Mega charge');
+      const mk = (x, col) => ({ bx: x, by: 160, hx: x, hy: 160, row: 0, col,
+        w: 60, h: 44, hp: 100, maxHp: 100, poke: { id: 396, t: 'normal' }, flash: 0, wobble: 0 });
+      const first = mk(300, 0), chained = mk(380, 1); G.bricks = [first, chained];
+      for (let i = 0; i < 6; i++) damageBrick(first, 0.1, first.bx, first.by, null);
+      assert(chained.hp < 100, 'Pikachu Overdrive did not chain after six direct hits');
+      SETTINGS.starter = 'rock'; resetRun(1, true, { seed: 'starter-sturdy' });
+      assert(G.lives === PRESETS.easy.lives + 1, 'Sturdy did not grant tier-I bonus HP');
+      SETTINGS.starter = 'steel'; resetRun(1, true, { seed: 'starter-iron-defense' });
+      assert(G.shieldCharges === 1, 'Iron Defense did not grant its opening shield');
+    } finally {
+      SETTINGS.starter = savedStarter; SETTINGS.mode = savedMode; SETTINGS.preset = savedPreset;
+    }
     assert(typeof dailyStreak === 'function' && typeof dailyShortDate === 'function',
       'daily dashboard helpers missing');
     assert(BRICK_BEHAVIOR_ORDER.length === GENS.length,
@@ -634,7 +661,7 @@ window.requestAnimationFrame = function () { return 0; };
     G.combatNotice = null;
     const lvl0 = G.level;
     G.level = 4; drawJourneyMap(H * 0.25, true); G.level = lvl0;
-    return 'Quick Start; mode-safe starter copy; journey map; 5 Pokédex rewards; optional auto-fire';
+    return 'Quick Start; 18 typed starter lines; OP Pikachu→Raichu; journey map; 5 Pokédex rewards';
   });
 
   // 7) storage corruption recovery — never destroys the real save (finally-restore)

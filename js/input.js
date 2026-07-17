@@ -530,9 +530,14 @@ function onPress(x, y) {
     if (menuPage === 'setup') {
       const L = setupLayout();
       if (inRect(x, y, L.back)) { menuPage = 'modes'; SFX.wall(); return; }
-      for (let i = 0; i < STARTERS.length; i++) {
-        if (inRect(x, y, L.starter(i))) { SETTINGS.starter = STARTERS[i].key; saveSettings(); SFX.wall(); return; }
+      const maxStarterPage = Math.ceil(STARTERS.length / STARTERS_PER_PAGE) - 1;
+      if (inRect(x, y, L.starterPrev)) { starterPage = (starterPage + maxStarterPage) % (maxStarterPage + 1); SFX.wall(); return; }
+      if (inRect(x, y, L.starterNext)) { starterPage = (starterPage + 1) % (maxStarterPage + 1); SFX.wall(); return; }
+      const visibleStarters = starterPageItems();
+      for (let i = 0; i < visibleStarters.length; i++) {
+        if (inRect(x, y, L.starter(i))) { SETTINGS.starter = visibleStarters[i].key; saveSettings(); SFX.wall(); return; }
       }
+      if (inRect(x, y, L.none)) { SETTINGS.starter = 'none'; saveSettings(); SFX.wall(); return; }
       const keys = Object.keys(PRESETS);
       for (let i = 0; i < keys.length; i++) {
         if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
@@ -617,14 +622,14 @@ function fireAction(auto = false) {
   if (!blasterArmed()) return;
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
-  G.blasterCD = upgN('hyper') ? 0.24 : 0.3;
+  G.blasterCD = (upgN('hyper') ? 0.24 : 0.3) * starterMod('fireRate', 1);
   G.shotsFired++;
   G.muzzle = 0.12;
   // heat: fire freely like a shooter — a long sustained stream (~15+ shots)
   // before it overheats, and it cools fast, so the lockout is a rare "held it
   // down forever" event rather than a constant governor. Paddle returns still
   // vent it; a water partner's Torrent runs the barrel cooler still.
-  const torrent = G.starter === 'water' ? 0.8 - 0.04 * (G.starterLvl - 1) : 1;
+  const torrent = starterMod('heat', 1);
   // SPACE JUNKIE runs much cooler — you're a Pokémon using its attack, not a
   // cannon — and NEVER-MELT ICE stacks cool it further still
   const modeCool = G.mode === 'junkie' ? 0.88 : 1; // junkie runs a bit cooler, not immune
@@ -677,7 +682,7 @@ function fireCharge(c) {
   });
   // the big shot dumps a decent slug of heat — a full charge is ~0.6 of the
   // bar, so leaning on the charge (or chaining them) really can overheat you
-  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0);
+  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0) * starterMod('heat', 1);
   G.heat = Math.min(1, G.heat + (0.30 + 0.30 * c) * heatMods);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;

@@ -308,129 +308,106 @@ const POWERS = {
   warp:   { key: 'warp',   icon: 'warp',   name: 'SKY WARP',       desc: 'BALLS PHASE UP TO THE HIGH GROUND', color: '#80d8ff' },
   heal:   { key: 'heal',   icon: 'heart',  name: 'MAX POTION',     desc: 'RESTORES 1 HP',              color: '#ff6f91' },
 };
-// ---- starter Pokémon: a partner that rides your paddle for the whole run.
-// Each bakes in a paddle ability that grows as you clear regions, and the
-// partner itself evolves at regions 4 and 7 — so every run plays differently
-// from the first serve depending on who you picked.
+// ---- starter Pokémon: one three-stage partner line for every battle type.
+// Each line owns a distinct, tiered gameplay hook. Pikachu is the deliberate
+// exception to the three-form rule: it starts as Pikachu, evolves into an
+// overpowered Raichu in region 5, then its OVERDRIVE reaches tier III later.
+function starterLine(ids, names, ability, blurb, tiers, mods = {}, modeCopy = null) {
+  const shared = { ability, blurb, tiers };
+  return { ids, names, ability, blurb, tiers, mods,
+    modeCopy: modeCopy || { classic: shared, blaster: shared, junkie: shared } };
+}
 const STARTER_MON = {
-  fire: {
-    ids: [4, 5, 6], names: ['CHARMANDER', 'CHARMELEON', 'CHARIZARD'],
-    ability: 'BLAZE',
-    blurb: 'RETURNS IGNITE THE BALL',
-    tiers: [
-      'PADDLE RETURNS IGNITE THE BALL — NEXT HIT +1 DAMAGE',
-      'IGNITES THE NEXT 2 HITS',
-      'IGNITES THE NEXT 3 HITS AT +2 DAMAGE',
-    ],
-    // Mode-aware menu copy. Keep the legacy fields above for older callers.
-    modeCopy: {
-      classic: {
-        ability: 'BLAZE',
-        blurb: 'RETURNS IGNITE THE BALL',
-        tiers: [
-          'PADDLE RETURNS IGNITE THE BALL — NEXT HIT +1 DAMAGE',
-          'PADDLE RETURNS IGNITE THE NEXT 2 HITS AT +1 DAMAGE',
-          'PADDLE RETURNS IGNITE THE NEXT 3 HITS AT +2 DAMAGE',
-        ],
-      },
-      blaster: {
-        ability: 'FIRE TYPE',
-        blurb: 'FIRE-TYPE DEFENSE',
-        tiers: [
-          'FIRE-TYPE DEFENSE',
-          'FIRE-TYPE DEFENSE',
-          'FIRE-TYPE DEFENSE',
-        ],
-      },
-      junkie: {
-        ability: 'FIRE PILOT',
-        blurb: 'FIRE ATTACKS · FIRE DEFENSE',
-        tiers: [
-          'FIRE-SHAPED ATTACKS · FIRE-TYPE OFFENSE AND DEFENSE',
-          'FIRE-SHAPED ATTACKS · FIRE-TYPE OFFENSE AND DEFENSE',
-          'FIRE-SHAPED ATTACKS · FIRE-TYPE OFFENSE AND DEFENSE',
-        ],
-      },
-    },
-  },
-  water: {
-    ids: [7, 8, 9], names: ['SQUIRTLE', 'WARTORTLE', 'BLASTOISE'],
-    ability: 'TORRENT',
-    blurb: 'COOL BLASTER · SHIELDS',
-    tiers: [
-      'BLASTER RUNS 25% COOLER · EVERY 5 RETURNS RAISE A SHIELD',
-      '30% COOLER · SHIELD EVERY 4 RETURNS',
-      '35% COOLER · SHIELD EVERY 3 RETURNS',
-    ],
-    modeCopy: {
-      classic: {
-        ability: 'TORRENT',
-        blurb: 'COOLER SHOTS · RETURN SHIELDS',
-        tiers: [
-          'SHOTS BUILD 20% LESS HEAT · SHIELD EVERY 5 RETURNS',
-          'SHOTS BUILD 24% LESS HEAT · SHIELD EVERY 4 RETURNS',
-          'SHOTS BUILD 28% LESS HEAT · SHIELD EVERY 3 RETURNS',
-        ],
-      },
-      blaster: {
-        ability: 'TORRENT',
-        blurb: 'COOLER SHOTS · WATER DEFENSE',
-        tiers: [
-          'SHOTS BUILD 20% LESS HEAT · WATER-TYPE DEFENSE',
-          'SHOTS BUILD 24% LESS HEAT · WATER-TYPE DEFENSE',
-          'SHOTS BUILD 28% LESS HEAT · WATER-TYPE DEFENSE',
-        ],
-      },
-      junkie: {
-        ability: 'TORRENT PILOT',
-        blurb: 'WATER ATTACKS · COOLER SHOTS',
-        tiers: [
-          'WATER-TYPE OFFENSE AND DEFENSE · SHOTS BUILD 20% LESS HEAT',
-          'WATER-TYPE OFFENSE AND DEFENSE · SHOTS BUILD 24% LESS HEAT',
-          'WATER-TYPE OFFENSE AND DEFENSE · SHOTS BUILD 28% LESS HEAT',
-        ],
-      },
-    },
-  },
-  grass: {
-    ids: [1, 2, 3], names: ['BULBASAUR', 'IVYSAUR', 'VENUSAUR'],
-    ability: 'OVERGROWTH',
-    blurb: 'MORE DROPS · EASY CATCHES',
-    tiers: [
-      '+20% DROPS · WIDER PICKUP CATCH',
-      '+35% DROPS · WIDER CATCH',
-      '+50% DROPS · HUGE CATCH RANGE',
-    ],
-    modeCopy: {
-      classic: {
-        ability: 'OVERGROWTH',
-        blurb: 'MORE DROPS · EASIER PICKUPS',
-        tiers: [
-          '+20% POWER-UP DROPS · EXPANDED PICKUP CATCH',
-          '+35% POWER-UP DROPS · WIDER PICKUP CATCH',
-          '+50% POWER-UP DROPS · WIDEST PICKUP CATCH',
-        ],
-      },
-      blaster: {
-        ability: 'OVERGROWTH',
-        blurb: 'MORE DROPS · GRASS DEFENSE',
-        tiers: [
-          '+20% POWER-UP DROPS · EXPANDED CATCH · GRASS-TYPE DEFENSE',
-          '+35% POWER-UP DROPS · WIDER CATCH · GRASS-TYPE DEFENSE',
-          '+50% POWER-UP DROPS · WIDEST CATCH · GRASS-TYPE DEFENSE',
-        ],
-      },
-      junkie: {
-        ability: 'OVERGROWTH PILOT',
-        blurb: 'GRASS ATTACKS · MORE DROPS',
-        tiers: [
-          'GRASS-TYPE OFFENSE AND DEFENSE · +20% DROPS · EXPANDED CATCH',
-          'GRASS-TYPE OFFENSE AND DEFENSE · +35% DROPS · WIDER CATCH',
-          'GRASS-TYPE OFFENSE AND DEFENSE · +50% DROPS · WIDEST CATCH',
-        ],
-      },
-    },
-  },
+  normal: starterLine([396, 397, 398], ['STARLY', 'STARAVIA', 'STARAPTOR'], 'ADAPTABILITY',
+    'MORE DAMAGE · MORE SCORE',
+    ['+8% DAMAGE · +5% SCORE', '+15% DAMAGE · +10% SCORE', '+25% DAMAGE · +20% SCORE'],
+    { damage: [1.08, 1.15, 1.25], score: [1.05, 1.1, 1.2] }),
+  fire: starterLine([4, 5, 6], ['CHARMANDER', 'CHARMELEON', 'CHARIZARD'], 'BLAZE',
+    'RETURNS IGNITE · FIRE DAMAGE',
+    ['RETURNS IGNITE 1 HIT · +5% DAMAGE', 'IGNITES 2 HITS · +10% DAMAGE', 'IGNITES 3 HITS · +15% DAMAGE'],
+    { damage: [1.05, 1.1, 1.15] }, {
+      classic: { ability: 'BLAZE', blurb: 'RETURNS IGNITE THE BALL', tiers: [
+        'PADDLE RETURNS IGNITE THE NEXT HIT · +5% DAMAGE',
+        'PADDLE RETURNS IGNITE THE NEXT 2 HITS · +10% DAMAGE',
+        'PADDLE RETURNS IGNITE THE NEXT 3 HITS · +15% DAMAGE'] },
+      blaster: { ability: 'BLAZE', blurb: 'FIRE-TYPE DAMAGE', tiers: ['+5% ALL DAMAGE', '+10% ALL DAMAGE', '+15% ALL DAMAGE'] },
+      junkie: { ability: 'BLAZE PILOT', blurb: 'FIRE ATTACKS · MORE DAMAGE', tiers: ['+5% ALL DAMAGE', '+10% ALL DAMAGE', '+15% ALL DAMAGE'] },
+    }),
+  water: starterLine([7, 8, 9], ['SQUIRTLE', 'WARTORTLE', 'BLASTOISE'], 'TORRENT',
+    'COOLER SHOTS · RETURN SHIELDS',
+    ['20% COOLER · SHIELD EVERY 5 RETURNS', '24% COOLER · SHIELD EVERY 4 RETURNS', '28% COOLER · SHIELD EVERY 3 RETURNS'],
+    { heat: [0.8, 0.76, 0.72] }, {
+      classic: { ability: 'TORRENT', blurb: 'COOLER SHOTS · RETURN SHIELDS', tiers: [
+        'SHOTS BUILD 20% LESS HEAT · SHIELD EVERY 5 RETURNS',
+        'SHOTS BUILD 24% LESS HEAT · SHIELD EVERY 4 RETURNS',
+        'SHOTS BUILD 28% LESS HEAT · SHIELD EVERY 3 RETURNS'] },
+      blaster: { ability: 'TORRENT', blurb: 'COOLER SHOTS · WATER DEFENSE', tiers: [
+        'SHOTS BUILD 20% LESS HEAT · WATER-TYPE DEFENSE',
+        'SHOTS BUILD 24% LESS HEAT · WATER-TYPE DEFENSE',
+        'SHOTS BUILD 28% LESS HEAT · WATER-TYPE DEFENSE'] },
+      junkie: { ability: 'TORRENT PILOT', blurb: 'WATER ATTACKS · COOLER SHOTS', tiers: [
+        'WATER OFFENSE/DEFENSE · SHOTS BUILD 20% LESS HEAT',
+        'WATER OFFENSE/DEFENSE · SHOTS BUILD 24% LESS HEAT',
+        'WATER OFFENSE/DEFENSE · SHOTS BUILD 28% LESS HEAT'] },
+    }),
+  electric: starterLine([25, 26, 26], ['PIKACHU', 'RAICHU', 'RAICHU'], 'OVERDRIVE',
+    'OVERPOWERED DAMAGE · CHAIN LIGHTNING',
+    ['+50% DAMAGE · 35% MEGA · CHAIN EVERY 6 HITS', '+80% DAMAGE · 55% MEGA · CHAIN 2', '+120% DAMAGE · 75% MEGA · CHAIN 3'],
+    { damage: [1.5, 1.8, 2.2], megaStart: [0.35, 0.55, 0.75], megaPassive: [0.012, 0.02, 0.03],
+      fireRate: [0.82, 0.7, 0.58], chainEvery: [6, 5, 4], chainTargets: [1, 2, 3] }),
+  grass: starterLine([1, 2, 3], ['BULBASAUR', 'IVYSAUR', 'VENUSAUR'], 'OVERGROWTH',
+    'MORE DROPS · EASIER PICKUPS',
+    ['+20% DROPS · EXPANDED CATCH', '+35% DROPS · WIDER CATCH', '+50% DROPS · WIDEST CATCH'],
+    { drop: [1.2, 1.35, 1.5], catchReach: [16, 22, 28] }),
+  ice: starterLine([996, 997, 998], ['FRIGIBAX', 'ARCTIBAX', 'BAXCALIBUR'], 'SNOW WARNING',
+    'KOS TRIGGER SLOW-MO',
+    ['EVERY 10 KOS SLOWS TIME 3s', 'EVERY 8 KOS SLOWS TIME 4s', 'EVERY 6 KOS SLOWS TIME 5s'],
+    { chillEvery: [10, 8, 6], chillDur: [3, 4, 5] }),
+  fighting: starterLine([912, 913, 914], ['QUAXLY', 'QUAXWELL', 'QUAQUAVAL'], 'GUTS',
+    'MISSING HP BOOSTS DAMAGE',
+    ['+16% DAMAGE PER MISSING HP', '+24% PER MISSING HP · +20% VS BOSSES', '+34% PER MISSING HP · +30% VS BOSSES'],
+    { guts: [0.16, 0.24, 0.34], bossDamage: [1, 1.2, 1.3] }),
+  poison: starterLine([92, 93, 94], ['GASTLY', 'HAUNTER', 'GENGAR'], 'CORROSION',
+    'REPEATED HITS MELT ARMOR',
+    ['REPEATED HITS STACK +12% DAMAGE', 'STACKS +20% DAMAGE', 'STACKS +30% DAMAGE'],
+    { corrosion: [0.12, 0.2, 0.3] }),
+  ground: starterLine([551, 552, 553], ['SANDILE', 'KROKOROK', 'KROOKODILE'], 'SAND FORCE',
+    'CRUSH ARMOR · TRIGGER QUAKES',
+    ['+25% VS ARMOR/BOSSES · QUAKE EVERY 10 HITS', '+40% · QUAKE EVERY 8', '+60% · QUAKE EVERY 6'],
+    { armorDamage: [1.25, 1.4, 1.6], quakeEvery: [10, 8, 6] }),
+  flying: starterLine([821, 822, 823], ['ROOKIDEE', 'CORVISQUIRE', 'CORVIKNIGHT'], 'TAILWIND',
+    'WIDER RIG · FASTER MOVEMENT',
+    ['+12% WIDTH · +20% FOLLOW', '+20% WIDTH · +35% FOLLOW', '+30% WIDTH · +50% FOLLOW'],
+    { paddle: [1.12, 1.2, 1.3], follow: [1.2, 1.35, 1.5], fireRate: [0.95, 0.9, 0.82] }),
+  psychic: starterLine([856, 857, 858], ['HATENNA', 'HATTREM', 'HATTERENE'], 'FORESIGHT',
+    'GUARANTEED PRECISION CRITS',
+    ['EVERY 8TH HIT DEALS 1.75×', 'EVERY 6TH HIT DEALS 2×', 'EVERY 5TH HIT DEALS 2.25×'],
+    { critEvery: [8, 6, 5], critMul: [1.75, 2, 2.25] }),
+  bug: starterLine([736, 737, 738], ['GRUBBIN', 'CHARJABUG', 'VIKAVOLT'], 'SWARM',
+    'KOS SUMMON EXTRA ATTACKS',
+    ['EVERY 9 KOS HITS 1 EXTRA TARGET', 'EVERY 7 KOS HITS 2', 'EVERY 5 KOS HITS 3'],
+    { swarmEvery: [9, 7, 5], swarmTargets: [1, 2, 3] }),
+  rock: starterLine([932, 933, 934], ['NACLI', 'NACLSTACK', 'GARGANACL'], 'STURDY',
+    'EXTRA MAXIMUM HP', ['START WITH +1 HP', 'START WITH +2 HP', 'START WITH +3 HP'],
+    { bonusHp: [1, 2, 3] }),
+  ghost: starterLine([607, 608, 609], ['LITWICK', 'LAMPENT', 'CHANDELURE'], 'PHASE SHIFT',
+    'CHANCE TO IGNORE DAMAGE', ['15% DODGE CHANCE', '22% DODGE CHANCE', '30% DODGE CHANCE'],
+    { dodge: [0.15, 0.22, 0.3] }),
+  dragon: starterLine([610, 611, 612], ['AXEW', 'FRAXURE', 'HAXORUS'], 'DRAGONHEART',
+    'START CHARGED · LONGER MEGA',
+    ['START 20% MEGA · +1s DURATION', 'START 35% · +2s', 'START 50% · +3s'],
+    { megaStart: [0.2, 0.35, 0.5], megaPassive: [0.008, 0.012, 0.018], megaDur: [1, 2, 3] }),
+  dark: starterLine([859, 860, 861], ['IMPIDIMP', 'MORGREM', 'GRIMMSNARL'], 'MOXIE',
+    'COMBOS AMPLIFY DAMAGE/SCORE',
+    ['COMBOS ADD +1.5% DAMAGE EACH', '+2.5% DAMAGE EACH', '+4% DAMAGE EACH'],
+    { comboDamage: [0.015, 0.025, 0.04], comboScore: [0.01, 0.015, 0.025] }),
+  steel: starterLine([957, 958, 959], ['TINKATINK', 'TINKATUFF', 'TINKATON'], 'IRON DEFENSE',
+    'START WITH SHIELDS', ['START WITH 1 SHIELD', 'START WITH 2 SHIELDS', 'START WITH 3 SHIELDS'],
+    { shieldStart: [1, 2, 3] }),
+  fairy: starterLine([280, 281, 282], ['RALTS', 'KIRLIA', 'GARDEVOIR'], 'WISH',
+    'MORE POTIONS · EASIER CATCHES',
+    ['POTION PITY 7 · +20% CATCHES', 'PITY 5 · +35% CATCHES', 'PITY 4 · +55% CATCHES'],
+    { healPity: [7, 5, 4], healChance: [1.25, 1.5, 1.8], catch: [1.2, 1.35, 1.55] }),
 };
 
 // Returns copy that describes what the starter actually does in the selected
@@ -448,10 +425,18 @@ function starterModeCopy(starter, mode = 'classic', tier = 1) {
   };
 }
 // partner ability level: grows with total regions cleared (evolves at 4 & 7)
-function starterStage(level) {
+function starterStage(level, starter = SETTINGS.starter) {
   const regionsIn = Math.floor((level - 1) / STAGES);
+  if (starter === 'electric') return regionsIn >= 6 ? 3 : regionsIn >= 4 ? 2 : 1;
   return regionsIn >= 6 ? 3 : regionsIn >= 3 ? 2 : 1;
 }
+function starterMod(key, fallback = 0) {
+  const mon = STARTER_MON[G.starter];
+  const value = mon && mon.mods && mon.mods[key];
+  if (value == null) return fallback;
+  return Array.isArray(value) ? (value[Math.max(0, Math.min(value.length - 1, G.starterLvl - 1))] ?? fallback) : value;
+}
+function starterPerk() { return STARTER_MON[G.starter]?.ability || null; }
 
 // ---- species-aware MOTION PROFILES (type is only the fallback) ----
 // A ground dragon should not flap; a serpent should undulate; a boulder

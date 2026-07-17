@@ -16,14 +16,15 @@ variety, and Legendary Pokémon appear only inside dedicated boss bricks.
 **BLASTER** attacks walls directly, while **STARFIGHTER** owns the full
 Space-Invaders/Galaga flight-pattern fantasy. Journey through 9 regions
 (3 stages each — Arrival, Challenge, and a Legendary boss), draft a permanent skill tree, pick a
-starter partner whose paddle ability evolves, and catch Pokémon for a
+one of 18 typed starter partners whose ability evolves, and catch Pokémon for a
 persistent Pokédex. Three modes — **BREAKER** (`classic`, ball +
 earned blaster), **BLASTER** (ball-less pure firepower on the same walls),
 and **STARFIGHTER** (`junkie` — pilot your Pokémon through all-flying
 waves). Runs auto-save at each
 region — pick up with CONTINUE. The journey is a three-act play (gens 1–3 /
-4–6 / 7–9): each act boundary lands on a partner evolution and plays a full
-evolution ceremony, and Space Junkie's wave choreography develops one
+4–6 / 7–9): each act boundary normally lands on a partner evolution and plays
+a full evolution ceremony (Pikachu's special Raichu jump comes in region 5),
+and Space Junkie's wave choreography develops one
 movement verb per act — ASSEMBLE, TRANSFORM, COMBINE. Every region's finale
 is THE GAUNTLET: a three-round title fight (sub-legendary sentinels → the
 legendary → the mythical).
@@ -136,8 +137,9 @@ picking a mode leads to page 2, setup (starter + difficulty + START,
   block); boss waves keep their choreography but guards ride **bare**.
   Pattern unlocks come one region early (`unlockR` — region 1 stays on the
   clean shapes in every mode), dives start at wave 2,
-  and reinforcements from region 1. **Your starter IS the ship** (Pikachu→
-  Raichu if none): `pilotInfo()`/`attackElement()` (state.js). The attack's
+  and reinforcements from region 1. **Your starter IS the ship**; NO PARTNER
+  uses a neutral training drone rather than silently assigning a Pokémon:
+  `pilotInfo()`/`attackElement()` (state.js). The attack's
   SHAPE follows the pilot species — flame / water jet / razor leaf /
   lightning (`drawTypedBolt`, render.js) — while its COLOR + damage type
   follow the CURRENT element, so a Charmeleon riding a grass element shoots
@@ -415,15 +417,39 @@ restores 1 HP and a pity counter guarantees one after 10 eligible kills.
 `G.livesMax` remains the maximum and POKÉ REVIVE can grow it further.
 
 ### Starter partners (`STARTER_MON` data.js ~314)
-Charmander/Squirtle/Bulbasaur (or the explicit **NO PARTNER** option). A
-partner rides the paddle, tints its glow,
-seeds the serve element, and its paddle ability grows + partner **evolves**
-at regions 4 & 7 (`starterStage`). Paddle hull is themed and gets more
-elaborate per evolution (render.js `drawPaddle`): flame crests / Blastoise
-shoulder cannons / Venusaur fronds. Blaze (ignite returns), Torrent (cooler
-blaster + rhythm shields), Overgrowth (more drops + wide catch). Setup keeps
-NO PARTNER visually neutral; STARFIGHTER separately explains that Pikachu is
-the automatic pilot. Difficulty cards show both starting HP and pressure.
+Setup uses a three-page, six-card picker with **one three-tier partner line for
+each of the 18 battle types**, plus a separate **NO PARTNER** option. A partner
+rides the paddle (or pilots STARFIGHTER), tints its rig, seeds the permanent
+serve element, and improves at regions 4 & 7 (`starterStage`). Each line has
+three local sprites, form names, tier copy, and distinct modifiers:
+
+| Type | Evolution line | Ability |
+| --- | --- | --- |
+| Normal | Starly → Staravia → Staraptor | Adaptability: damage + score |
+| Fire | Charmander → Charmeleon → Charizard | Blaze: damage + ignited returns |
+| Water | Squirtle → Wartortle → Blastoise | Torrent: cooler shots + return shields |
+| Electric | Pikachu → Raichu | Overdrive: OP damage, rapid fire, Mega charge, chain lightning |
+| Grass | Bulbasaur → Ivysaur → Venusaur | Overgrowth: more drops + pickup reach |
+| Ice | Frigibax → Arctibax → Baxcalibur | Snow Warning: KO-triggered slow motion |
+| Fighting | Quaxly → Quaxwell → Quaquaval | Guts: missing-HP and boss damage |
+| Poison | Gastly → Haunter → Gengar | Corrosion: repeated-hit damage stacks |
+| Ground | Sandile → Krokorok → Krookodile | Sand Force: armor damage + quakes |
+| Flying | Rookidee → Corvisquire → Corviknight | Tailwind: wider, faster rig |
+| Psychic | Hatenna → Hattrem → Hatterene | Foresight: guaranteed precision crits |
+| Bug | Grubbin → Charjabug → Vikavolt | Swarm: KO-triggered extra attacks |
+| Rock | Nacli → Naclstack → Garganacl | Sturdy: extra maximum HP |
+| Ghost | Litwick → Lampent → Chandelure | Phase Shift: chance to ignore damage |
+| Dragon | Axew → Fraxure → Haxorus | Dragonheart: starting/passive Mega + duration |
+| Dark | Impidimp → Morgrem → Grimmsnarl | Moxie: combo damage + score |
+| Steel | Tinkatink → Tinkatuff → Tinkaton | Iron Defense: starting shields |
+| Fairy | Ralts → Kirlia → Gardevoir | Wish: more potions + easier catches |
+
+Pikachu is intentionally overpowered: tier I starts at +50% damage, 35% Mega,
+faster shots, and chain lightning. It becomes Raichu in **region 5**; region 7
+unlocks Overdrive III without pretending Raichu evolves into itself. Paddle
+hulls derive a palette and crest from every chosen type, while Fire/Water/Grass
+keep their bespoke flame, cannon, and frond silhouettes. NO PARTNER is neutral;
+STARFIGHTER renders a vector training drone with no partner ability.
 
 ### HUD and first-wave coaching
 The HUD identifies a permanent starter element as **PARTNER** and a temporary
