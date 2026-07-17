@@ -74,7 +74,7 @@ sometimes doesn't fire — trigger manually with
 | `setup.js` | Canvas, `resize()` (with a no-op guard — see Gotchas), DPR, safe-area, `IS_TOUCH` |
 | `config.js` | `PRESETS` (difficulty), `SETTINGS`, `diff()` (the one difficulty curve), menu/advanced/trial **layout geometry** |
 | `audio.js` | SFX synth (`tone`/`noiseBurst`), per-region chiptune with chord progression + echo bus (`musicTick`) |
-| `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`PATHS`** (skill tree) + `JUNKIE_ITEMS`/`STACK_ITEMS`, **`STARTER_MON`**, **`GENS`** (region/roster/boss data) + **`HABITAT_PACKS`/`TYPE_CLUSTERS`** (wave ecology), `NAMES`, sprite loading, `drawGlyph` (all vector icons) |
+| `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`BRICK_BEHAVIORS`** + region order, **`PATHS`** (skill tree) + `JUNKIE_ITEMS`/`STACK_ITEMS`, **`STARTER_MON`**, **`GENS`** (region/roster/boss data) + **`HABITAT_PACKS`/`TYPE_CLUSTERS`** (wave ecology), `NAMES`, sprite loading, `drawGlyph` (all vector icons) |
 | `scenery.js` | Per-region prerendered backgrounds (`drawScene[...]` — iconic towns), starfield, ambient weather |
 | `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
 | `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
@@ -92,12 +92,16 @@ the repo: `test.html` (headless invariant suite), `package.json`
 ## Game modes (`SETTINGS.mode`, picked on the title screen)
 The menu is TWO pages (`menuPage`, config.js): page 1 is the WAVEBREAKER
 title (+ POKÉMON EDITION skin badge) and mode select — THREE equal diorama
-cards (`drawModeCard`, render.js), each running a looping LIVE DEMO of its
+cards (`drawModeCard`, render.js), each with a looping LIVE DEMO of its
 mechanic: BREAKER rallies a ball paddle↔wall with per-brick hit flashes,
 BLASTER winds up a charge ring then looses a fat bolt between volley fans,
 and STARFIGHTER banks its mascot-ship under an orbiting flock, flaring a
 rider on every hit. Mascots per card: Geodude / Blastoise / Rayquaza
-(`MODE_MASCOTS`). A prominent **QUICK START** launches
+(`MODE_MASCOTS`). Only the hovered card animates on desktop; when nothing is
+hovered (and on touch) focus rotates one card at a time. `reduceFlash` freezes
+all three previews. Beneath them, the dashboard strip shows the saved journey,
+Pokédex/research progress, and dated Daily status. A prominent **QUICK START**
+launches
 the recommended first run (Breaker · Easy · Charmander) immediately;
 picking a mode leads to page 2, setup (starter + difficulty + START,
 `setupLayout`). Quitting/game over always lands back on page 1.
@@ -403,20 +407,34 @@ own that tier.
 ### Knockout (not game-over) — `loseLife()` update.js
 Losing all lives **burns 2 random tree levels** (`regressPath`), refills
 lives, and **retries the wave**. Real game-over only when the tree is empty.
-Lives show top-right as both a persistent segmented **HP rail** and a
-**health ring** (`drawPlayerHealthBar` / `drawLifeRing`, render.js), with a
-matching bar above the character after a hit. Easy starts with 5 HP, Normal
-with 4. When hurt, defeated enemies can drop a pulsing **MAX POTION**; it
+Lives show top-right in one persistent segmented **HP rail** with its numeric
+current/maximum count (`drawPlayerHealthBar`, render.js), plus a matching bar
+above the character after a hit. Easy starts with 5 HP, Normal with 4. When
+hurt, defeated enemies can drop a pulsing **MAX POTION**; it
 restores 1 HP and a pity counter guarantees one after 10 eligible kills.
 `G.livesMax` remains the maximum and POKÉ REVIVE can grow it further.
 
 ### Starter partners (`STARTER_MON` data.js ~314)
-Charmander/Squirtle/Bulbasaur (or none). Rides the paddle, tints its glow,
+Charmander/Squirtle/Bulbasaur (or the explicit **NO PARTNER** option). A
+partner rides the paddle, tints its glow,
 seeds the serve element, and its paddle ability grows + partner **evolves**
 at regions 4 & 7 (`starterStage`). Paddle hull is themed and gets more
 elaborate per evolution (render.js `drawPaddle`): flame crests / Blastoise
 shoulder cannons / Venusaur fronds. Blaze (ignite returns), Torrent (cooler
-blaster + rhythm shields), Overgrowth (more drops + wide catch).
+blaster + rhythm shields), Overgrowth (more drops + wide catch). Setup keeps
+NO PARTNER visually neutral; STARFIGHTER separately explains that Pikachu is
+the automatic pilot. Difficulty cards show both starting HP and pressure.
+
+### HUD and first-wave coaching
+The HUD identifies a permanent starter element as **PARTNER** and a temporary
+override as **POWER-UP**/**ITEM** with its remaining duration. Mega shows a
+percentage plus “HITS CHARGE” until ready. Classic non-boss waves keep the
+current region's brick behavior in a dedicated `REGION RULE` rail; type
+effectiveness uses `G.combatNotice`/`setCombatNotice` in a backed feedback rail
+instead of text over the target formation. Brick corners have fixed ownership:
+behavior top-right, type bottom-right, and HP top-left only after damage.
+Wave 1 teaches one action at a time: move/aim while serving, then reach the
+high ground after launch (`G.coachStep`).
 
 ### Rally / high-ground (the "pinball up top" mechanic)
 Armored top row = "guardian wall" (multi-hit, color-shifting HP). Getting the
@@ -490,7 +508,8 @@ save best score or Pokédex catches (`G.trial` flag).
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
 
 Persisted in `localStorage`: `pkbrk-settings`, `pkbrk-best`, `pkbrk-dex`,
-`pkbrk-dexs`, `pkbrk-music`, `pkbrk-run` (the region checkpoint), `pkbrk-v`
+`pkbrk-dexs`, `pkbrk-music`, `pkbrk-daily`, `pkbrk-run` (the region
+checkpoint), `pkbrk-v`
 (storage version). ALWAYS go through `loadStore`/`saveStore` (setup.js) —
 they survive corrupt values and full/blocked storage; raw
 `JSON.parse(localStorage...)` at module scope once bricked startup.
@@ -503,8 +522,10 @@ journey, never repeatedly on a checkpoint resume or trial jump.
 
 **Region checkpoints:** every non-trial run auto-saves at each region's
 first wave (`saveCheckpoint`, state.js, hooked at the end of `buildLevel`);
-the title screen grows a CONTINUE button (`RUN_CKPT`), and a true game over
-(empty skill tree) clears it. **Draft reroll:** one per upgrade screen
+the title screen grows a CONTINUE button (`RUN_CKPT`). Knockouts and a true
+game over retain the latest region checkpoint; starting a new journey replaces
+it when the next region checkpoint is reached. **Draft reroll:** one per
+upgrade screen
 (`rerollDraft`, input.js; `rollUpgradeChoices`, update.js).
 
 **Fonts are local** (`assets/fonts/orbitron.woff2`, variable weight 400-900,
@@ -514,7 +535,7 @@ doesn't trigger @font-face). Orbitron is for titles/numbers; body copy uses
 
 **Title screen fits short landscape** (`menuLayout`/`setupLayout` short/
 oneRow/stacked variants, config.js): under H=560 every gap compresses and
-the footer links collapse to one row; under W=520 the two mode cards stack.
+the footer links collapse to one row; under W=620 all three mode cards stack.
 Both menu pages are covered by the `menu fit across viewports` test — keep
 it green when adding menu items.
 

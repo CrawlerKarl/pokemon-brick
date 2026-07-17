@@ -51,7 +51,7 @@ const SHIP_BAND = 120;
 function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 // ---- REGION CHECKPOINTS: 27 stages is a long arcade run, so the run is
 // saved at every region's doorstep. CONTINUE on the title screen resumes it;
-// a true game-over (empty skill tree) clears it. Trial runs never save.
+// knockouts and true game-over retain the latest checkpoint. Trial runs never save.
 let RUN_CKPT = (v => (v && typeof v === 'object' && v.v === 1 && v.lvl >= 4) ? v : null)(loadStore('pkbrk-run', 'null'));
 function saveCheckpoint() {
   if (G.daily) return;

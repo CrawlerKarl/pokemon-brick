@@ -20,8 +20,8 @@ keys below are storage-stable — saves, checkpoints and tests reference them, s
 NEVER rename a key:
 - **classic** (UI: BREAKER) — ball-first brick-breaker (the original). The ball is THE
   weapon; there is NO free blaster. The blaster is EARNED and gated by
-  `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or an
-  offense-path draft (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
+  `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or
+  tier 3 of an offense path (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
   touch FIRE pad is hidden, and the shoot hint is suppressed.
 - **blaster** (UI: BLASTER) — same waves, NO ball; you clear everything by shooting. Charge
   a fat piercing shot with right-click / Shift, or on touch **hold the FIRE
@@ -32,6 +32,15 @@ NEVER rename a key:
   code + docs) — the pure-shooter homage: no wall at all, every
   wave is tight high flocks of small flyers, and **your starter IS the ship**
   (Pikachu if none), flying vertically and firing its own typed attack.
+
+**The title screen is a return-player dashboard, not just a mode picker.**
+`menuLayout()` reserves a progression strip for journey/checkpoint, Pokédex
+research, and dated Daily best/completion/streak state. All three mode cards
+remain visible, but only the hovered card (or one rotating focus card on
+touch/idle) animates; `reduceFlash` freezes them. Setup calls the opt-out
+**NO PARTNER**, shows starting HP + pressure on difficulty cards, and explains
+Pikachu auto-pilot only for STARFIGHTER. Keep render and hit-testing on the
+same layout geometry.
 
 ## Editing
 - Everything is `js/*.js`. `index.html` is just the shell — never inline JS.
@@ -46,7 +55,7 @@ real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
-- **Automated invariants:** open `/test.html` (drives the sim headless, 20
+- **Automated invariants:** open `/test.html` (drives the sim headless, 27
   checks, sets `window.TEST_RESULTS`). Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
@@ -78,7 +87,9 @@ phone — flag anything only verifiable there.
   red ring. Elite (`maxHp≥3`) shots are HEAVY: splash hitbox, pierce resist,
   extra life if super-effective. Keep this in the `G.enemyShots` hit block
   (update.js); typeless shots (`type` absent) must stay neutral so tests pass.
-- **Classic/blaster: blocks are a STATIC wall; flyers NEVER overlap it.**
+- **Classic is brick-only; Blaster may mix a STATIC wall with flyers.** Classic
+  must never create free flyers, dives, or attack reinforcements. Where Blaster
+  has both populations, flyers NEVER overlap the wall.
   `G.blocksStatic` (`!hasBoss`) skips march/descent/sway. `flightGeom`/
   `clampOpen` place patterns so they can't enter the grid rect (square loops
   AROUND it; open patterns stay in the band BELOW). **After any flyer-geometry
@@ -117,8 +128,8 @@ phone — flag anything only verifiable there.
   smooth journey curve in `diff()` (smoothstep over the 9 regions: ×0.78
   opening → ~×1.1 middle → ×1.4 finale — replaces the per-act steps); the
   act boundary plays the evolution ceremony (`G.ceremony`, drawCeremony).
-  Progress is NEVER wiped: a true game over keeps the region checkpoint
-  (CONTINUE always works, saved from region 1 on). The pause screen hides
+  Progress is NEVER wiped by knockout or game over: the latest region checkpoint
+  remains available through CONTINUE. The pause screen hides
   an ornate ✦ CHEAT CODES panel (CHEAT_ITEMS, data.js) — using it sets
   `G.cheated` and the run's best score is not recorded.
 - **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
@@ -132,8 +143,10 @@ phone — flag anything only verifiable there.
   keep the classic straight bolt. Junkie separation is EASED (per-rider
   sepX/sepY: fast build, ~0.4s release) so a kill never snaps neighbours;
   riders float in one by one (`flight.entering`, excluded from solver+tests).
-- **Bosses are BARE legendaries** (`drawBossMon`, render.js — no card), with
-  **three phases** at ⅔/⅓ HP (`br.phase`, set in `damageBrick`): each transition
+- **Boss presentation is mode-specific.** BREAKER finales use oversized,
+  moving **boss bricks** (`drawBossBrick`) and brick guards; BLASTER and
+  STARFIGHTER use bare legendaries (`drawBossMon`). All share **three phases**
+  at ⅔/⅓ HP (`br.phase`, set in `damageBrick`): each transition
   fires a shockwave, and phase 3 (last stand) summons a minion ring + faster,
   wider fire. Boss abilities keyed by id in `BOSS_ABILITIES`.
 - **Wave ecology.** Each wave draws ONE habitat (`pickWaveTheme` → a curated
@@ -154,7 +167,7 @@ phone — flag anything only verifiable there.
   with forever-stacking `STACK_ITEMS` (`G.stacks`). One counted badge per
   owned path/stack category orbits the junkie pilot; paddle modes show tiers
   on the build rail. Runs auto-save at each region (`saveCheckpoint`/
-  `RUN_CKPT`); a true game over clears it. One draft reroll per screen. The
+  `RUN_CKPT`); knockout and true game over retain the latest checkpoint. One draft reroll per screen. The
   draft cards lead with the upgrade name + a big description; **FULL TREE is
   tap-to-inspect** — node rects come from `upgradeTreeLayout`, tap sets
   `treeSel`, `drawTreeDetail` explains it. Keep render + hit-test using the
@@ -162,6 +175,14 @@ phone — flag anything only verifiable there.
 - **Readability over density.** The ball/character must never get lost. Caps:
   `flyerBudget` ≤20, junkie squads ≤26, particles ≤450, rings ≤24. The ball's
   glow scales with `clutter`.
+- **HUD information has fixed ownership.** Player health is one segmented
+  `HP current/max` component plus the temporary on-hit bar—do not redraw the
+  old separate life ring. Element copy distinguishes permanent PARTNER/PILOT
+  types from timed POWER-UP/ITEM overrides. Mega always exposes percentage or
+  remaining duration. Classic's region rule and type-matchup combat feedback
+  live in dedicated backed rails, not over bricks. Brick corners are behavior
+  top-right, type bottom-right, and damaged HP top-left. First-wave coaching is
+  sequential (`G.coachStep`): aim during serve, high-ground goal after launch.
 
 ## Performance (mobile is the target — keep it smooth)
 - **Never allocate gradients or set `shadowBlur` per-entity per-frame in hot
