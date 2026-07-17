@@ -478,6 +478,21 @@ function trialFromSummary() {
   trialSel.region = regionIdx(G.level); trialSel.stage = stageIdx(G.level); trialSel.round = 0;
   G.state = 'menu'; menuPage = 'setup'; trialOpen = true;
 }
+function startTrialSelection() {
+  trialOpen = false;
+  resetRun(trialSel.region * STAGES + trialSel.stage + 1, true);
+  // Legendary-stage trials can skip directly to any finale tier. Kanto's
+  // fourth STARFIGHTER tile forces the Rift encounter without changing the
+  // player's persistent key or rewards.
+  if (trialSel.stage === 2 && trialSel.round > 0 && G.gauntlet) {
+    for (const b of G.bricks) if (b.subBoss) b.dead = true;
+    gauntletWake();
+    if (trialSel.round >= 2) {
+      for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+      gauntletSummonMythic(trialSel.round === 3);
+    }
+  }
+}
 async function shareDailyResult() {
   const text = dailyShareText();
   try {
@@ -548,29 +563,22 @@ function onPress(x, y) {
         trialOpen = false; return;
       }
       for (let i = 0; i < GENS.length; i++) {
-        if (inRect(x, y, T.region(i))) { trialSel.region = i; SFX.wall(); return; }
+        if (inRect(x, y, T.region(i))) {
+          trialSel.region = i;
+          if (i !== 0 && trialSel.round === 3) trialSel.round = 2;
+          SFX.wall(); return;
+        }
       }
       for (let i = 0; i < STAGES; i++) {
         if (inRect(x, y, T.stage(i))) { trialSel.stage = i; trialSel.round = 0; SFX.wall(); return; }
       }
       if (T.rounds) {
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < T.roundCount; i++) {
           if (inRect(x, y, T.round(i))) { trialSel.round = i; SFX.wall(); return; }
         }
       }
       if (inRect(x, y, T.start)) {
-        trialOpen = false;
-        resetRun(trialSel.region * STAGES + trialSel.stage + 1, true);
-        // jump straight to a specific gauntlet round — test just the
-        // legendary (round 2) or just the mythical (round 3)
-        if (trialSel.stage === 2 && trialSel.round > 0 && G.gauntlet) {
-          for (const b of G.bricks) if (b.subBoss) b.dead = true;
-          gauntletWake();
-          if (trialSel.round === 2) {
-            for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
-            gauntletSummonMythic();
-          }
-        }
+        startTrialSelection();
         return;
       }
       return;

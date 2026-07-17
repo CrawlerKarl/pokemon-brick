@@ -975,6 +975,45 @@ const BOSS_STYLE = {
   890: 'perimeter',  // Eternatus: rides the top rim end to end, raining bombs
   1007: 'charge',    // Koraidon: tears back and forth at full sprint
 };
+// SPACE JUNKIE gauntlets are authored as 27 distinct arrival beats: one
+// sentinel formation, one legendary entrance, and one mythical entrance per
+// region. The keys are read by update.js for motion and render.js for the
+// matching arena effect; they deliberately do not affect Breaker/Blaster.
+const SENTINEL_ENTRANCE_STYLES = [
+  'prism', 'stampede', 'monolith', 'orbit', 'swords', 'cocoon', 'totem', 'stormfront', 'shrine',
+];
+const LEGENDARY_ENTRANCE_STYLES = {
+  150: 'psybreak', 249: 'maelstrom', 384: 'skycoil', 483: 'timesplit', 644: 'thunderhead',
+  717: 'blackwing', 792: 'moonrise', 890: 'voidcrown', 1007: 'suncharge',
+};
+const MYTHIC_ENTRANCE_STYLES = {
+  151: 'wishgate', 251: 'timebloom', 385: 'starfall', 491: 'nightmare', 494: 'victorflare',
+  719: 'diamondbirth', 802: 'shadowstep', 893: 'junglecall', 1025: 'toxicmask',
+};
+const MYTHIC_BATTLE_STYLES = {
+  151: 'orbit', 251: 'flutter', 385: 'starfall', 491: 'ambush', 494: 'burst',
+  719: 'crystal', 802: 'brawler', 893: 'vine', 1025: 'trick',
+};
+const MYTHIC_ABILITIES = {
+  151: { name: 'GENESIS HALO', cd: 5.0 }, 251: { name: 'TIME BLOOM', cd: 6.2 },
+  385: { name: 'DOOM DESIRE', cd: 6.0 }, 491: { name: 'NIGHT TERROR', cd: 5.6 },
+  494: { name: 'VICTORY BURN', cd: 5.2 }, 719: { name: 'DIAMOND STORM', cd: 6.1 },
+  802: { name: 'SPECTRAL COMBO', cd: 5.0 }, 893: { name: 'JUNGLE LASH', cd: 5.8 },
+  1025: { name: 'POISON PUPPET', cd: 5.4 },
+};
+const GAUNTLET_ENTRANCE_NAMES = {
+  prism: 'PRISM DESCENT', stampede: 'BEAST STAMPEDE', monolith: 'MONOLITH RISE',
+  orbit: 'LAKE ORBIT', swords: 'SACRED CROSSING', cocoon: 'COCOON BREACH',
+  totem: 'ISLAND RITE', stormfront: 'CROWNED STORM', shrine: 'SHRINE PROCESSION',
+  psybreak: 'PSYCHIC BREAK', maelstrom: 'MAELSTROM ASCENT', skycoil: 'SKY COIL',
+  timesplit: 'TIME FRACTURE', thunderhead: 'THUNDERHEAD', blackwing: 'BLACK SUN',
+  moonrise: 'MOONRISE', voidcrown: 'VOID CROWN', suncharge: 'SUN CHARGE',
+  wishgate: 'WISH GATE', timebloom: 'TIME BLOOM', starfall: 'STARFALL',
+  nightmare: 'NIGHTMARE STEP', victorflare: 'VICTORY FLARE', diamondbirth: 'DIAMOND BIRTH',
+  shadowstep: 'SHADOW STEP', junglecall: 'JUNGLE CALL', toxicmask: 'TOXIC MASQUERADE',
+  maxrift: 'MAX RIFT',
+};
+function gauntletEntranceName(style) { return GAUNTLET_ENTRANCE_NAMES[style] || 'BOSS ARRIVAL'; }
 
 // names for everything in the rosters — the Pokédex shows them
 const NAMES = {

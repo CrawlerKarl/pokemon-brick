@@ -248,26 +248,29 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (br.isBoss && br.hp > 0) {
     SFX.bossHit();
     G.mega = Math.min(1, G.mega + 0.004);
-    // ---- THREE boss phases at ⅔ and ⅓ HP. Each transition is an event:
-    // hit-stop, a dodgeable radial shockwave of shots, and at the LAST
-    // STAND the legendary calls in a ring of bare minions.
-    const newPhase = br.hp > br.maxHp * 2 / 3 ? 1 : br.hp > br.maxHp / 3 ? 2 : 3;
+    // Phase count belongs to the encounter tier. STARFIGHTER legendaries
+    // split at 50% (two phases), mythicals split at ⅔/⅓ (three), and the
+    // sentinels never enter this boss-only transition path.
+    const phaseCount = bossPhaseCount(br);
+    const fracLeft = Math.max(0, br.hp / br.maxHp);
+    const newPhase = Math.min(phaseCount, 1 + Math.floor((1 - fracLeft) * phaseCount));
     if (newPhase > br.phase) {
       br.phase = newPhase;
+      const lastStand = newPhase === phaseCount;
       SFX.enrage();
       G.shake = 14; G.flashT = 0.18;
       G.freeze = Math.max(G.freeze, 0.18);
       const bx3 = br.bx + G.fx, by3 = br.by + G.fy;
-      burst(bx3, by3, newPhase === 3 ? '#ff5252' : '#ff8a65', 40, 420, 0.9);
-      ringFx(bx3, by3, newPhase === 3 ? '#ff1744' : '#ff8a65', 10, 160, 4, 0.55);
+      burst(bx3, by3, lastStand ? '#ff5252' : '#ff8a65', 40, 420, 0.9);
+      ringFx(bx3, by3, lastStand ? '#ff1744' : '#ff8a65', 10, 160, 4, 0.55);
       // shockwave ring — slow enough to weave through
-      const nRing = newPhase === 3 ? 12 : 8;
+      const nRing = lastStand ? 12 : 8;
       const spR = (170 + diff().lv * 10) * diff().shotSpeed;
       for (let i = 0; i < nRing; i++) {
-        const a = (i / nRing) * Math.PI * 2 + (newPhase === 3 ? 0.26 : 0);
+        const a = (i / nRing) * Math.PI * 2 + (lastStand ? 0.26 : 0);
         G.enemyShots.push({ x: bx3, y: by3, vx: Math.cos(a) * spR, vy: Math.sin(a) * spR, boss: true, type: br.poke.t });
       }
-      if (newPhase === 3 && !br.addsCalled) {
+      if (lastStand && !br.addsCalled) {
         br.addsCalled = true; // the last stand summons a guard ring
         const gen2 = genFor(G.level);
         const pool4 = gen2.tiers[1];
@@ -298,9 +301,9 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
           G.bricks.push(add);
         }
       }
-      setAnnounce('alert', newPhase === 3 ? '#ff1744' : '#ff5252',
-        br.poke.n.toUpperCase() + (newPhase === 3 ? ' — LAST STAND!' : ' IS ENRAGED!'),
-        newPhase === 3 ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4);
+      setAnnounce('alert', lastStand ? '#ff1744' : '#ff5252',
+        br.poke.n.toUpperCase() + (lastStand ? ' — LAST STAND!' : ' IS ENRAGED!'),
+        lastStand ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4);
       haptic('boss');
     }
   }
@@ -740,7 +743,8 @@ function collectPickup(pu) {
 function bossAbility(boss) {
   const id = boss.poke.id;
   const ab = boss.secretBoss ? { name: 'MAX MIRAGE', cd: 5.4 }
-    : BOSS_ABILITIES[id] || (boss.mythic ? { name: 'MYTHIC BLINK', cd: 5 } : null);
+    : boss.mythic ? (MYTHIC_ABILITIES[id] || { name: 'MYTHIC BLINK', cd: 5 })
+      : BOSS_ABILITIES[id] || null;
   if (!ab) return;
   const bx = boss.bx + G.fx, by = boss.by + G.fy;
   if (boss.secretBoss) {
@@ -764,6 +768,60 @@ function bossAbility(boss) {
     ringFx(nx, by, '#ffffff', 10, 170, 4, 0.55);
     tone(980, 0.2, 'sine', 0.07, -480);
   } else switch (id) {
+    case 151: { // Mew: a rotating halo with one generous missing spoke
+      const lim = boss.w / 2 + 24;
+      boss.hx = lim + gameRand() * Math.max(1, W - lim * 2) - G.fx; boss.bx = boss.hx;
+      const sp = (190 + diff().lv * 8) * diff().shotSpeed, rot = G.time * 0.7;
+      for (let i = 0; i < 8; i++) if (i !== 5) {
+        const a = rot + i * Math.PI / 4;
+        G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'psychic' });
+      }
+      ringFx(boss.bx + G.fx, by, '#ff80ab', 8, 145, 4, 0.5); break;
+    }
+    case 251: { // Celebi: slows time, then plants a slow spiralling seed bloom
+      G.timeWarpT = 2.4;
+      const sp = 145 * diff().shotSpeed;
+      for (let i = 0; i < 5; i++) { const a = G.time + i * Math.PI * 2 / 5; G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'grass', r: 12 }); }
+      ringFx(bx, by, '#9ccc65', 10, 180, 4, 0.7); break;
+    }
+    case 385: { // Jirachi: three readable falling-star lanes
+      const gap = Math.min(120, W * 0.16);
+      for (const off of [-gap, 0, gap]) G.columnStrikes.push({ x: Math.max(28, Math.min(W - 28, G.paddle.x + off)), w: 34, warn: 1.15, strike: 0.26, color: '#ffd54f' });
+      break;
+    }
+    case 491: { // Darkrai: vanishes, crosses behind you, returns with a dark fan
+      boss.phaseT = 1.5;
+      boss.hx = Math.max(boss.w / 2, Math.min(W - boss.w / 2, W - G.paddle.x)) - G.fx; boss.bx = boss.hx;
+      G.telegraphs.push({ br: boss, boss: true, fan: true, t: 0.85, max: 0.85 });
+      burst(boss.bx + G.fx, by, '#5c4b8a', 28, 280, 0.7); break;
+    }
+    case 494: { // Victini: a fast victory lap leaves a five-way flame wake
+      boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.8, fast: true };
+      const aim = Math.atan2(shipY() - by, G.paddle.x - bx), sp = 225 * diff().shotSpeed;
+      for (const off of [-0.5, -0.25, 0, 0.25, 0.5]) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(aim + off) * sp, vy: Math.sin(aim + off) * sp, boss: true, type: 'fire' });
+      break;
+    }
+    case 719: { // Diancie: crystal facets close around the player's lane
+      const gap = Math.min(105, W * 0.14);
+      for (const off of [-gap, gap]) G.columnStrikes.push({ x: Math.max(30, Math.min(W - 30, G.paddle.x + off)), w: 48, warn: 1.2, strike: 0.42, color: '#f8bbd0' });
+      G.columnStrikes.push({ x: G.paddle.x, w: 26, warn: 1.65, strike: 0.28, color: '#80d8ff' }); break;
+    }
+    case 802: { // Marshadow: short, direct rush followed by a tight combo
+      boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.15, fast: true };
+      G.telegraphs.push({ br: boss, boss: true, fan: true, t: 0.48, max: 0.48 }); break;
+    }
+    case 893: { // Zarude: heavy vine fan from alternating arena flanks
+      boss.hx = (boss.hx < W / 2 ? W * 0.74 : W * 0.26) - G.fx; boss.bx = boss.hx;
+      const aim = Math.atan2(shipY() - by, G.paddle.x - (boss.bx + G.fx)), sp = 165 * diff().shotSpeed;
+      for (const off of [-0.7, -0.35, 0, 0.35, 0.7]) G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(aim + off) * sp, vy: Math.sin(aim + off) * sp, boss: true, type: 'grass', r: 13 });
+      break;
+    }
+    case 1025: { // Pecharunt: mirror-steps and hangs a crooked poison wheel
+      boss.hx = Math.max(boss.w / 2, Math.min(W - boss.w / 2, W - G.paddle.x)) - G.fx; boss.bx = boss.hx;
+      const sp = 180 * diff().shotSpeed;
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + (i % 2 ? 0.2 : -0.2); G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'poison', r: 12 }); }
+      break;
+    }
     case 150: { // Mewtwo: teleport — a 0.5s anticipation (guards compress,
       // psychic flash) THEN the jump, so the wings vanish and reform WITH it
       burst(bx, by, '#ec407a', 20, 260, 0.5);
@@ -1026,6 +1084,7 @@ function subAbility(br2) {
 // Called from update() each frame.
 function updateSentinels(dt, ts) {
   if (!G.gauntlet || G.gauntlet.phase !== 0 || (G.state !== 'play' && G.state !== 'serve')) return;
+  if (G.gauntlet.entry?.role === 'sentinel') return;
   const gj2 = G.gauntlet;
   gj2.subT += dt * ts;
   const t4 = gj2.subT;
@@ -1063,33 +1122,154 @@ function updateSentinels(dt, ts) {
   }
 }
 
+function gauntletEntryPoint(style, k = 0, n = 1, target = false) {
+  const mid = (n - 1) / 2, spread = Math.min(130, W * 0.15);
+  if (target) {
+    switch (style) {
+      case 'prism': return { x: W / 2 + (k - mid) * spread, y: 150 + Math.abs(k - mid) * 42 };
+      case 'stampede': return { x: W / 2 + (k - mid) * spread * 1.08, y: 155 + (k % 2) * 42 };
+      case 'monolith': return { x: W / 2 + (k - mid) * spread * 0.9, y: 128 + k * 48 };
+      case 'orbit': { const a = k / n * Math.PI * 2 - Math.PI / 2; return { x: W / 2 + Math.cos(a) * W * 0.2, y: 180 + Math.sin(a) * 64 }; }
+      case 'swords': return { x: W / 2 + (k - mid) * spread, y: 140 + Math.abs(k - mid) * 58 };
+      case 'cocoon': { const a = (k - mid) * 0.9; return { x: W / 2 + Math.sin(a) * W * 0.22, y: 176 + Math.cos(a) * 56 }; }
+      case 'totem': return { x: W / 2 + (k - mid) * spread * 0.78, y: 126 + (k % 3) * 54 };
+      case 'stormfront': return { x: W / 2 + (k - mid) * spread * 1.1, y: 138 + (k % 2) * 70 };
+      case 'shrine': return { x: W / 2 + (k - mid) * spread, y: 168 + Math.abs(k - mid) * 28 };
+      default: return { x: W / 2 + (k - mid) * spread, y: 165 };
+    }
+  }
+  switch (style) {
+    case 'prism': return { x: k % 2 ? -100 : W + 100, y: 30 + k * 36 };
+    case 'stampede': return { x: -140 - k * 50, y: 155 + (k % 2) * 42 };
+    case 'monolith': return { x: W / 2 + (k - mid) * spread * 0.9, y: H + 110 + k * 35 };
+    case 'orbit': { const a = k / n * Math.PI * 2 + Math.PI; return { x: W / 2 + Math.cos(a) * W * 0.48, y: 180 + Math.sin(a) * H * 0.32 }; }
+    case 'swords': return { x: k < n / 2 ? -120 : W + 120, y: -90 - k * 25 };
+    case 'cocoon': { const a = k / n * Math.PI * 2; return { x: W / 2 + Math.cos(a) * 34, y: 176 + Math.sin(a) * 34 }; }
+    case 'totem': return { x: W / 2 + (k - mid) * 30, y: -110 - k * 90 };
+    case 'stormfront': return { x: W * (0.18 + k / Math.max(1, n - 1) * 0.64), y: -130 - k * 45 };
+    case 'shrine': return { x: -110 - k * 75, y: 118 + k * 42 };
+    default: return { x: -100, y: 150 };
+  }
+}
+
+function beginGauntletEntry(role, round, style, boss, color, dur = 2.8) {
+  if (!G.gauntlet || G.mode !== 'junkie') return;
+  const e = { role, round, style, t: 0, dur, color, boss,
+    targetX: boss?.hx ?? W / 2, targetY: boss?.hy ?? 150 };
+  G.gauntlet.entry = e;
+  if (boss) {
+    boss.gauntletEntering = true;
+    boss.introAlpha = 0; boss.introScale = 0.55; boss.introRot = 0;
+  }
+  G.enemyShots = []; G.telegraphs = []; G.columnStrikes = [];
+  G.bossIntro = dur;
+}
+
+function updateGauntletEntrance(dt) {
+  const e = G.gauntlet?.entry;
+  if (!e || (G.state !== 'play' && G.state !== 'serve')) return;
+  e.t += dt;
+  const p = Math.min(1, e.t / e.dur), q = p * p * (3 - 2 * p);
+  const pulse = Math.sin(p * Math.PI), style = e.style;
+  G.bossIntro = Math.max(G.bossIntro, Math.max(0, e.dur - e.t));
+  if (e.role === 'sentinel') {
+    const living = G.bricks.filter(b => !b.dead && b.subBoss);
+    for (let i = 0; i < living.length; i++) {
+      const br = living[i], k = br.subIdx || i, n = Math.max(1, br.subN || living.length);
+      const a = gauntletEntryPoint(style, k, n, false), z = gauntletEntryPoint(style, k, n, true);
+      let bendX = 0, bendY = 0;
+      if (style === 'prism') bendY = -90 * pulse;
+      else if (style === 'stampede') bendX = 90 * pulse;
+      else if (style === 'orbit') { bendX = Math.sin(p * Math.PI * 2 + k) * 85 * pulse; bendY = Math.cos(p * Math.PI * 2 + k) * 55 * pulse; }
+      else if (style === 'swords') bendX = (k - (n - 1) / 2) * -65 * pulse;
+      else if (style === 'cocoon') { bendX = Math.cos(p * Math.PI * 4 + k) * 105 * pulse; bendY = Math.sin(p * Math.PI * 4 + k) * 70 * pulse; }
+      else if (style === 'stormfront') bendX = Math.sin(p * Math.PI * 7 + k) * 46 * pulse;
+      else if (style === 'shrine') bendY = -38 * Math.sin(p * Math.PI * 3 + k);
+      br.bx = a.x + (z.x - a.x) * q + bendX - G.fx;
+      br.by = a.y + (z.y - a.y) * q + bendY - G.fy;
+      br.hx = br.bx; br.hy = br.by;
+      br.introAlpha = Math.min(1, p * 2.8);
+      br.introScale = 0.7 + q * 0.3;
+      br.introRot = style === 'swords' ? (k - (n - 1) / 2) * (1 - q) * 0.42 : 0;
+    }
+  } else {
+    const br = e.boss && !e.boss.dead ? e.boss : G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
+    if (br) {
+      const tx = e.targetX, ty = e.targetY;
+      let sx = tx, sy = -Math.max(150, br.h), bendX = 0, bendY = 0, scale = 0.55 + q * 0.45, rot = 0;
+      if (['maelstrom', 'moonrise', 'timebloom', 'junglecall'].includes(style)) sy = H + br.h;
+      if (['skycoil', 'suncharge', 'shadowstep', 'victorflare'].includes(style)) { sx = style === 'shadowstep' ? W + br.w : -br.w; sy = ty; }
+      if (['psybreak', 'timesplit', 'blackwing', 'voidcrown', 'nightmare', 'diamondbirth', 'toxicmask', 'maxrift'].includes(style)) { sx = tx; sy = ty; }
+      switch (style) {
+        case 'psybreak': bendX = Math.sin(p * Math.PI * 8) * W * 0.16 * (1 - q); scale = 1.25 - q * 0.25; break;
+        case 'maelstrom': bendX = Math.sin(p * Math.PI * 4) * W * 0.18 * pulse; rot = pulse * 0.55; break;
+        case 'skycoil': bendY = Math.sin(p * Math.PI * 3) * 115 * pulse; rot = -0.35 * (1 - q); break;
+        case 'timesplit': scale = 0.12 + q * 0.88; rot = (1 - q) * Math.PI; break;
+        case 'thunderhead': bendX = Math.sin(p * Math.PI * 9) * 75 * (1 - q); break;
+        case 'blackwing': scale = 1.7 - q * 0.7; rot = Math.sin(p * Math.PI * 2) * 0.22; break;
+        case 'moonrise': bendY = -110 * pulse; scale = 0.75 + q * 0.25; break;
+        case 'voidcrown': scale = 2.2 - q * 1.2; rot = -(1 - q) * 0.7; break;
+        case 'suncharge': bendX = 120 * pulse; scale = 0.72 + q * 0.28; break;
+        case 'wishgate': scale = 0.05 + q * 0.95; rot = (1 - q) * -1.2; break;
+        case 'timebloom': bendX = Math.sin(p * Math.PI * 3) * 90 * pulse; scale = 0.4 + q * 0.6; break;
+        case 'starfall': bendX = Math.sin(p * Math.PI * 5) * 48 * pulse; rot = (1 - q) * 0.8; break;
+        case 'nightmare': bendX = Math.cos(p * Math.PI * 6) * 160 * (1 - q); scale = 1.45 - q * 0.45; break;
+        case 'victorflare': bendY = -95 * pulse; rot = pulse * -0.35; break;
+        case 'diamondbirth': scale = 0.08 + q * 0.92; rot = (1 - q) * Math.PI * 1.5; break;
+        case 'shadowstep': bendX = -Math.sin(p * Math.PI * 4) * 110 * pulse; break;
+        case 'junglecall': bendX = Math.sin(p * Math.PI * 2) * W * 0.2 * pulse; break;
+        case 'toxicmask': scale = 1.8 - q * 0.8; rot = Math.sin(p * Math.PI * 5) * 0.3 * (1 - q); break;
+        case 'maxrift': scale = 0.04 + q * 0.96; rot = (1 - q) * Math.PI * 2; break;
+      }
+      br.bx = sx + (tx - sx) * q + bendX - G.fx;
+      br.by = sy + (ty - sy) * q + bendY - G.fy;
+      br.introAlpha = Math.min(1, style === 'nightmare' ? p * 1.6 : p * 2.5);
+      br.introScale = scale; br.introRot = rot;
+    }
+  }
+  if (p >= 1) {
+    for (const br of G.bricks) if (br.gauntletEntering || (e.role === 'sentinel' && br.subBoss)) {
+      br.gauntletEntering = false; br.introAlpha = 1; br.introScale = 1; br.introRot = 0;
+    }
+    G.gauntlet.entry = null;
+    G.bossIntro = 0.45;
+  }
+}
+
 // ---- gauntlet round transitions — used by the controller AND trial jumps
 function gauntletWake() {
   const gj = G.gauntlet;
   if (!gj) return;
   gj.phase = 1;
+  let legend = null;
   for (const b of G.bricks) {
     if (!b.dormant) continue;
     b.dormant = false;
     if (b.isBoss) {
       b.bx = b.hx = gj.origX;
+      legend = b;
       burst(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 44, 400, 0.9);
       ringFx(b.bx + G.fx, b.by + G.fy, TYPE_COLORS[b.poke.t], 8, 180, 5, 0.6);
     }
   }
-  G.bossIntro = 1.4;
+  if (G.mode === 'junkie' && legend) {
+    const style = LEGENDARY_ENTRANCE_STYLES[legend.poke.id] || 'psybreak';
+    beginGauntletEntry('legendary', 2, style, legend, TYPE_COLORS[legend.poke.t], 2.8);
+  } else G.bossIntro = 1.4;
   G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
   SFX.roar();
   const gen2 = genFor(G.level);
+  const legendStyle = LEGENDARY_ENTRANCE_STYLES[gen2.boss.id] || 'psybreak';
   setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
-    'ROUND 2 — THE LEGENDARY', 3);
+    'ROUND 2 — THE LEGENDARY' + (G.mode === 'junkie' ? ' · 2 PHASES' : ''), 3,
+    G.mode === 'junkie' ? gauntletEntranceName(legendStyle) : null);
 }
-function gauntletSummonMythic() {
+function gauntletSummonMythic(forceSecret = false) {
   const gj = G.gauntlet;
   if (!gj) return;
   gj.phase = 2;
   const gen2 = genFor(G.level);
-  const riftOpen = secretEligible() && secretShardCount() === 3;
+  const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
   if (riftOpen) {
     const vw = Math.min(300, Math.max(170, W * 0.38));
     const vh = Math.min(230, vw * 0.82);
@@ -1098,21 +1278,22 @@ function gauntletSummonMythic() {
     G.bricks.push({
       bx: W / 2, by: Math.max(145, H * 0.2), hx: W / 2, hy: Math.max(145, H * 0.2),
       row: -1, col: -1, w: vw, h: vh,
-      hp: vHp, maxHp: vHp, phase: 1, mythic: true, secretBoss: true, mewVmax: true,
+      hp: vHp, maxHp: vHp, phase: 1, phaseCount: 3, roundRole: 'secret', mythic: true, secretBoss: true, mewVmax: true,
       poke: { id: 151, t: 'psychic', n: 'MEW VMAX' },
       isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
       abilityCD: 4.4,
     });
     burst(W / 2, H * 0.22, '#d780ff', 70, 480, 1.1);
     ringFx(W / 2, H * 0.22, '#80d8ff', 14, Math.min(W * 0.42, 300), 6, 0.8);
-    G.enemyShots = []; G.telegraphs = []; G.columnStrikes = [];
-    G.bossIntro = 1.8;
+    const vmax = G.bricks[G.bricks.length - 1];
+    if (G.mode === 'junkie') beginGauntletEntry('secret', 3, 'maxrift', vmax, '#d780ff', 3.1);
+    else { G.enemyShots = []; G.telegraphs = []; G.columnStrikes = []; G.bossIntro = 1.8; }
     G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); G.flashT = Math.max(G.flashT, 0.2);
     SFX.roar();
     G.announce = null; G.announceQueue = [];
     setAnnounce('fairy', '#d780ff', 'RIFT BREACH · MEW VMAX!',
-      'SECRET ROUND — THE NORMAL MEW FIGHT HAS BEEN REPLACED', 4,
-      'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE');
+      'SECRET ROUND · 3 PHASES — THE NORMAL MEW FIGHT HAS BEEN REPLACED', 4,
+      'MAX RIFT · DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE');
     return;
   }
   const [mid, mt2] = gen2.gauntlet.myth;
@@ -1120,7 +1301,7 @@ function gauntletSummonMythic() {
   G.bricks.push({
     bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
     w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
-    hp: mHp, maxHp: mHp, phase: 1, mythic: true,
+    hp: mHp, maxHp: mHp, phase: 1, phaseCount: 3, roundRole: 'mythical', mythic: true,
     poke: { id: mid, t: mt2, n: NAMES[mid] },
     isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
     abilityCD: 3.5,
@@ -1128,11 +1309,15 @@ function gauntletSummonMythic() {
   getSprite(mid);
   burst(W / 2, 150, '#ff80ab', 40, 380, 0.9);
   ringFx(W / 2, 150, '#ff80ab', 8, 170, 5, 0.6);
-  G.bossIntro = 1.4;
+  const myth = G.bricks[G.bricks.length - 1];
+  const mythStyle = MYTHIC_ENTRANCE_STYLES[mid] || 'wishgate';
+  if (G.mode === 'junkie') beginGauntletEntry('mythical', 3, mythStyle, myth, '#ff80ab', 2.8);
+  else G.bossIntro = 1.4;
   G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
   SFX.roar();
   setAnnounce('fairy', '#ff80ab', NAMES[mid].toUpperCase() + ' — THE MYTHICAL!',
-    'FINAL ROUND — FASTER AND WILDER', 3.2);
+    'FINAL ROUND · 3 PHASES — A NEW KIND OF FIGHT', 3.2,
+    G.mode === 'junkie' ? gauntletEntranceName(mythStyle) : null);
 }
 
 function updateSpriteKinematics(dt) {
@@ -1539,6 +1724,7 @@ function update(dt) {
       br.hx = br.bx; br.hy = br.by;
     }
   }
+  updateGauntletEntrance(dt);
   updateSentinels(dt, ts);
   // ---- THE GAUNTLET: three rounds per finale. Round 1 the sentinels hold
   // the arena; felling them wakes the LEGENDARY (and its wings); felling
@@ -1577,7 +1763,7 @@ function update(dt) {
         if (br.dead || !br.guard) continue;
         const g2 = br.guard;
         // last stand: surviving wing guards become the OUTER orbit
-        if ((boss.phase || 1) >= 3 && g2.ring == null) g2.ring = 0;
+        if (bossLastStand(boss) && g2.ring == null) g2.ring = 0;
         let tx, ty;
         if (g2.ring != null) {
           // counter-rotating orbits, centered on the boss EVERY update
@@ -1836,7 +2022,8 @@ function update(dt) {
       const t2 = G.swayT, sp2 = 0.45 + bp * 0.22;
       const jk3 = G.mode === 'junkie';
       const yAmp = jk3 ? 1 : 0.45; // classic keeps clear of its guard wall
-      const style = boss.mythic ? 'mythic' : (BOSS_STYLE[boss.poke.id] || 'anchor');
+      const style = boss.secretBoss ? 'maxrift' : boss.mythic
+        ? (MYTHIC_BATTLE_STYLES[boss.poke.id] || 'mythic') : (BOSS_STYLE[boss.poke.id] || 'anchor');
       switch (style) {
         case 'infinity': // a wide figure-eight through mid-air
           boss.bx = boss.hx + Math.sin(t2 * sp2) * W * (0.16 + bp * 0.02);
@@ -1874,6 +2061,36 @@ function update(dt) {
           boss.bx = boss.hx + Math.sin(t2 * 1.1) * W * 0.2 + Math.sin(t2 * 2.3) * 40;
           boss.by = boss.hy + (Math.sin(t2 * 1.7) * 36 + Math.sin(t2 * 0.6) * 16) * yAmp;
           break;
+        case 'orbit':
+          boss.bx = boss.hx + Math.cos(t2 * (0.75 + bp * 0.12)) * W * 0.2;
+          boss.by = boss.hy + Math.sin(t2 * (0.75 + bp * 0.12)) * 70; break;
+        case 'flutter':
+          boss.bx = boss.hx + Math.sin(t2 * 1.7) * W * 0.16;
+          boss.by = boss.hy + Math.sin(t2 * 3.4) * 42 + Math.cos(t2 * 0.5) * 24; break;
+        case 'starfall':
+          boss.bx = boss.hx + Math.sin(t2 * 0.8) * W * 0.27;
+          boss.by = boss.hy + Math.abs(Math.sin(t2 * 1.6)) * 82; break;
+        case 'ambush':
+          boss.bx = boss.hx + Math.tanh(Math.sin(t2 * 0.72) * 3.2) * W * 0.3;
+          boss.by = boss.hy + Math.cos(t2 * 1.44) * 28; break;
+        case 'burst':
+          boss.bx = boss.hx + Math.sin(t2 * (1.3 + bp * 0.18)) * W * 0.3;
+          boss.by = boss.hy + Math.abs(Math.cos(t2 * 2.6)) * 48; break;
+        case 'crystal':
+          boss.bx = boss.hx + Math.round(Math.sin(t2 * 0.55) * 2) * W * 0.13;
+          boss.by = boss.hy + Math.sin(t2 * 1.1) * 24; break;
+        case 'brawler':
+          boss.bx = boss.hx + Math.tanh(Math.sin(t2 * 1.25) * 2.5) * W * 0.25;
+          boss.by = boss.hy + Math.abs(Math.sin(t2 * 2.5)) * 96; break;
+        case 'vine':
+          boss.bx = boss.hx + Math.sin(t2 * 0.55) * W * 0.28;
+          boss.by = boss.hy + Math.sin(t2 * 1.1 + Math.sin(t2 * 0.4)) * 58; break;
+        case 'trick':
+          boss.bx = boss.hx + Math.sin(t2 * 1.9) * Math.cos(t2 * 0.37) * W * 0.28;
+          boss.by = boss.hy + Math.sin(t2 * 2.3) * 50; break;
+        case 'maxrift':
+          boss.bx = boss.hx + Math.sin(t2 * 0.65) * W * 0.18;
+          boss.by = boss.hy + Math.sin(t2 * 1.3) * 38 + Math.cos(t2 * 0.43) * 20; break;
         default: // 'anchor' — the classic high, imperious patrol
           boss.bx = boss.hx + (mt >= 1 || bp >= 2
             ? Math.sin(t2 * sp2) * Math.min(90 + bp * 26, W * (0.07 + bp * 0.02))
@@ -2381,8 +2598,10 @@ function update(dt) {
       if (BOSS_ABILITIES[boss.poke.id] || boss.mythic || boss.secretBoss) {
         boss.abilityCD -= dt * ts;
         if (boss.abilityCD <= 0) {
-          const abilityBase = boss.secretBoss ? 5.4 : (BOSS_ABILITIES[boss.poke.id]?.cd || 5);
-          boss.abilityCD = abilityBase * (boss.phase === 3 ? 0.62 : boss.phase === 2 ? 0.78 : 1);
+          const abilityBase = boss.secretBoss ? 5.4
+            : boss.mythic ? (MYTHIC_ABILITIES[boss.poke.id]?.cd || 5)
+              : (BOSS_ABILITIES[boss.poke.id]?.cd || 5);
+          boss.abilityCD = abilityBase * (bossLastStand(boss) ? 0.62 : boss.phase === 2 ? 0.78 : 1);
           bossAbility(boss);
         }
       }
@@ -2411,7 +2630,7 @@ function update(dt) {
       if (boss.phaseT > 0) boss.phaseT -= dt;
       G.bossShotCD -= dt * ts;
       if (G.bossShotCD <= 0) {
-        G.bossShotCD = d.bossShotInt * (boss.phase === 3 ? 0.5 : boss.phase === 2 ? 0.7 : 1)
+        G.bossShotCD = d.bossShotInt * (bossLastStand(boss) ? 0.5 : boss.phase === 2 ? 0.7 : 1)
           * (boss.secretBoss ? 0.88 : boss.mythic ? 0.7 : 1);
         G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
       }
@@ -2456,9 +2675,9 @@ function update(dt) {
               ? [G.swayT * 0.9, G.swayT * 0.9 + Math.PI * 2 / 3, G.swayT * 0.9 + Math.PI * 4 / 3]
               : [G.swayT * 0.9, G.swayT * 0.9 + Math.PI])
           : bStyle === 'perimeter'
-            ? (tg.br.phase === 3 ? [DOWN - 0.32, DOWN, DOWN + 0.32]
+            ? (bossLastStand(tg.br) ? [DOWN - 0.32, DOWN, DOWN + 0.32]
               : tg.br.phase === 2 ? [DOWN - 0.2, DOWN + 0.2] : [DOWN])
-          : tg.br.phase === 3 ? [base - 0.6, base - 0.3, base, base + 0.3, base + 0.6]
+          : bossLastStand(tg.br) ? [base - 0.6, base - 0.3, base, base + 0.3, base + 0.6]
           : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
         for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: tg.br.poke.t });
       } else {

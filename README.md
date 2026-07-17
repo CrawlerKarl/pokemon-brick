@@ -86,7 +86,7 @@ sometimes doesn't fire — trigger manually with
 | `scenery.js` | Per-region prerendered backgrounds (`drawScene[...]` — iconic towns), starfield, ambient weather |
 | `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
 | `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
-| `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ 3-phase boss), `bossAbility`, `loseLife` (knockout), rally/barrier, level-clear |
+| `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ tiered boss phases), `bossAbility`, `loseLife` (knockout), rally/barrier, level-clear |
 | `render.js` | All drawing: bricks + free-flyers (gait animation), bosses (`drawBossMon`), paddle / junkie pilot rig, HUD, menus, Pokédex, draft screen; **FX sprite caches + `drawBloom`/`drawAtmosphere`** (see Graphics & performance) |
 | `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop; a bootstrap guard retries until the viewport + vignette exist) |
 
@@ -321,11 +321,14 @@ dedicated controller cycling THREE formations (rotating triangle, sweeping
 battle line, weaving sentry posts) with TYPED specials on a 4.8–7.4s cadence
 (`subAbility`: Frost Fan, Bolt Strike columns, Ember Rain, Tidal Line,
 Boulder Toss, Flash Cannon, Warp Pulse, Spore Burst, Dragon Pulse) — they
-are OUT of the regular fire pool. The legendary lies `dormant` (parked at
-x=-2000, skipped everywhere). **Round 2** — `gauntletWake()`: the legendary
-descends with its wing guards. **Round 3** — `gauntletSummonMythic()`: the
-mythical (0.6× HP, 0.7× fire interval, MYTHIC BLINK teleport-burst, erratic
-drift). Trial mode can jump straight to any round. Fire-by-rank everywhere:
+are OUT of the regular fire pool. In STARFIGHTER these are one-phase fights.
+The legendary lies `dormant` (parked at x=-2000, skipped everywhere).
+**Round 2** — `gauntletWake()`: the legendary descends with its wing guards
+and runs two phases. **Round 3** — `gauntletSummonMythic()`: the mythical
+(0.6× HP, three phases) uses a species-specific arena path and signature
+attack: Genesis Halo, Time Bloom, Doom Desire, Night Terror, Victory Burn,
+Diamond Storm, Spectral Combo, Jungle Lash, or Poison Puppet. Trial mode can
+jump straight to any round. Fire-by-rank everywhere:
 unevolved = straight bolt; evolved elites (`br.elite ≥ 2`) = AIMED heavy
 splash; sentinels = aimed 3-shot fans.
 
@@ -338,7 +341,17 @@ MIRAGE pattern). Defeating it awards +3000 and a no-reroll choice of
 **PARADOX HEART** (+1 max HP, full heal/Mega), **RIFT LENS** (+15% damage,
 ignore resistance), or **ECHO RELAY** (every seventh hit chains twice). The
 chosen reward and completed Rift state are carried by checkpoint v2; v1 saves
-remain accepted. Trial and daily runs preserve the normal Mew finale.
+remain accepted. STARFIGHTER Trial exposes Mew VMAX directly as a fourth
+Kanto finale choice; that practice encounter never changes persistent Rift
+progress. Daily runs preserve the normal Mew finale.
+
+### STARFIGHTER finale entrances (`GAUNTLET_ENTRANCE_NAMES`, data.js)
+Every generation has three authored arrival beats: one for its sentinels, one
+for its legendary, and one for its mythical (27 distinct style keys), plus the
+Kanto secret's MAX RIFT. `updateGauntletEntrance()` owns the approach path,
+scale, rotation, and timing while `drawGauntletEntranceFx()` draws a matching
+arena sigil and the explicit **ONE / TWO / THREE PHASES** tier card. Enemy fire
+and ordinary boss patrols stay paused until the entrance completes.
 
 ### Boss arena archetypes (`BOSS_STYLE`, data.js)
 Every legendary owns its arena differently: Mewtwo's still high anchor,
@@ -352,9 +365,12 @@ boss; low-diving styles stay above the ship band.
 ### Boss battles (`drawBossMon` render.js, phases in `damageBrick`)
 Legendaries are **BARE** — a huge bare Pokémon holding the arena (breathing
 aura, orbiting energy ring, silhouette shadow + rim light, its own gait), never
-a card. **Three phases** at ⅔/⅓ HP (`br.phase`): each transition fires a
+a card. Phase count is encounter-authored (`br.phaseCount`): STARFIGHTER
+sentinels have one phase, legendaries two (50% split), and mythicals/secret
+Mew VMAX three (⅔/⅓ splits). Other game modes retain their three-phase boss
+structure. Each transition fires a
 dodgeable radial **shockwave** of shots + hit-stop, widens/quickens the patrol,
-and adds spread fire; the **last stand** (phase 3) also summons a ring of bare
+and adds spread fire; the final phase also summons a ring of bare
 minions (`br.addsCalled`) and halves ability cooldowns. Signature abilities are
 keyed by legendary id in `BOSS_ABILITIES` (teleport, gusts, sweeps, time-warp,
 column strikes, fans, phase-out…). Boss HP scales with region + journey loop.
@@ -490,8 +506,9 @@ score + Mega charge. **Sky Warp** power-up phases balls up through blocks.
 ### Trial mode (per-game, with gauntlet round picker)
 Trial lives on each game's SETUP page (inherits the chosen mode). Region ×
 stage grid; picking a LEGENDARY stage reveals a ROUND row (FULL GAUNTLET /
-★ the legendary by name / ✦ the mythical) — start jumps straight to that
-round via `gauntletWake()`/`gauntletSummonMythic()`. `resetRun(startLevel,
+★ the legendary by name / ✦ the mythical). STARFIGHTER Kanto adds
+**◆ MEW VMAX · SECRET** as a direct practice choice. Start jumps straight to
+that round via `gauntletWake()`/`gauntletSummonMythic(forceSecret)`. `resetRun(startLevel,
 trial=true)` grants the tree advances you'd have earned. Trial runs never
 save best score or Pokédex catches (`G.trial` flag).
 

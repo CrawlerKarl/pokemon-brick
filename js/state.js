@@ -216,6 +216,8 @@ const G = {
 function setCombatNotice(text, color, duration = 1.15) {
   G.combatNotice = { text, color, t: duration, max: duration };
 }
+function bossPhaseCount(br) { return Math.max(1, br?.phaseCount || 3); }
+function bossLastStand(br) { return (br?.phase || 1) >= bossPhaseCount(br); }
 let dexScroll = 0, dexDragY = null, dexDragStart = 0;
 // FLOOR = bottom of the playable area, above any phone home-indicator;
 // on touch screens the paddle rides higher so fingers don't cover it
@@ -583,7 +585,8 @@ function buildLevel(lvl) {
       hx: W / 2, hy: bossY, row: -1, col: -1,
       hp: bossHp, maxHp: bossHp, phase: 1,
       poke: { id: gen.boss.id, n: gen.boss.n, t: gen.boss.t },
-      isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
+      isBoss: true, roundRole: 'legendary', phaseCount: G.mode === 'junkie' && gen.gauntlet ? 2 : 3,
+      flash: 0, wobble: gameRand() * Math.PI * 2,
       abilityCD: (BOSS_ABILITIES[gen.boss.id]?.cd || 8) * 0.7,
     });
     gridTop = bossY + bossH / 2 + 26;
@@ -597,7 +600,7 @@ function buildLevel(lvl) {
       const legend = G.bricks[G.bricks.length - 1];
       legend.dormant = true;
       legend.bx = legend.hx = -2000; // parked off-stage until round 2
-      G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp, subT: 0, subAbilityCD: 4 };
+      G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp, subT: 0, subAbilityCD: 4, entry: null };
       const subs = gen.gauntlet.subs;
       const subHp = Math.max(5, Math.round(bossHp * (subs.length === 1 ? 0.85 : 0.42)));
       for (let i = 0; i < subs.length; i++) {
@@ -606,6 +609,7 @@ function buildLevel(lvl) {
           bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -2, col: i,
           w: Math.min(92, bw * 1.25), h: Math.min(80, bh * 1.4),
           hp: subHp, maxHp: subHp, bare: true, subBoss: true, elite: 3,
+          roundRole: 'sentinel', phaseCount: 1, phase: 1,
           subIdx: i, subN: subs.length,
           poke: { id: sid, t: st2, n: NAMES[sid] },
           flash: 0, wobble: i * 2.1,
@@ -615,7 +619,8 @@ function buildLevel(lvl) {
       getSprite(gen.gauntlet.myth[0]);
       setAnnounce('alert', gen.accent, 'THE ' + gen.name + ' GAUNTLET',
         'ROUND 1 — THE SENTINELS: ' + subs.map(x => NAMES[x[0]].toUpperCase()).join(' · '), 3.6,
-        'THREE ROUNDS — EACH HARDER THAN THE LAST');
+        (G.mode === 'junkie' ? gauntletEntranceName(SENTINEL_ENTRANCE_STYLES[rIdx]) + ' · ' : '') +
+          'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES');
     } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
     // never pays a cache-miss hitch mid-fight
@@ -864,6 +869,21 @@ function buildLevel(lvl) {
     }
     G.encounter = { family: 'bossWings', act: actIdx(lvl) + 1, actBeat: 'climax', t: 0, squads: [], attackSq: -1 };
     G.guardSwapCD = 8;
+    if (G.gauntlet) {
+      const sentinels = G.bricks.filter(b => b.subBoss && !b.dead);
+      G.gauntlet.entry = {
+        role: 'sentinel', round: 1, style: SENTINEL_ENTRANCE_STYLES[rIdx],
+        t: 0, dur: 2.8, color: gen.accent,
+      };
+      for (let i = 0; i < sentinels.length; i++) {
+        const br = sentinels[i], side = i % 2 ? -1 : 1;
+        br.introFromX = side > 0 ? W + 90 + i * 34 : -90 - i * 34;
+        br.introFromY = 54 + (i % 3) * 52;
+        br.bx = br.hx = br.introFromX;
+        br.by = br.hy = br.introFromY;
+        br.introAlpha = 0;
+      }
+    }
   }
   if (junkie && !hasBoss) {
     const usable = W - margin * 2;
@@ -1024,7 +1044,7 @@ function buildLevel(lvl) {
   if (hasBoss) {
     // gauntlet finales announce ROUND 1 instead — the legendary's own intro
     // card plays when it actually descends (round 2)
-    G.bossIntro = G.gauntlet ? 0 : 1.6;
+    G.bossIntro = G.gauntlet ? (junkie ? 2.8 : 0) : 1.6;
     SFX.roar();
   } else if (stage === 0) {
     // a region that OPENS an act carries the act name on its banner

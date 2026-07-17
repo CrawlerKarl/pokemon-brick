@@ -365,7 +365,8 @@ const GAIT_HOVER = new Set(['ghost', 'psychic', 'fairy', 'poison']);
 function drawBossMon(br, x, y) {
   const col = TYPE_COLORS[br.poke.t];
   const ph = br.phase || 1;
-  const phCol = ph === 3 ? '#ff1744' : ph === 2 ? '#ff8a65' : col;
+  const phases = bossPhaseCount(br), lastStand = bossLastStand(br);
+  const phCol = lastStand ? '#ff1744' : ph === 2 ? '#ff8a65' : col;
   const t = G.time;
   const s = Math.max(br.w * 1.15, br.h * 1.9);
   // legendaries move like themselves too
@@ -375,37 +376,41 @@ function drawBossMon(br, x, y) {
   const yb = y + bobY - s * 0.06;
   ctx.save();
   const phased = br.phaseT > 0 ? 0.35 + 0.1 * Math.sin(t * 6) : 1; // Lunala phases out
-  ctx.globalAlpha = phased;
+  const introAlpha = br.introAlpha == null ? 1 : br.introAlpha;
+  ctx.globalAlpha = phased * introAlpha;
+  if (br.introScale != null || br.introRot) {
+    ctx.translate(x, y); ctx.rotate(br.introRot || 0); ctx.scale(br.introScale ?? 1, br.introScale ?? 1); ctx.translate(-x, -y);
+  }
   // arena aura — a big breathing glow that reddens with the fight
   // (cached sprite, scaled: no per-frame gradient on the biggest fill)
   const ar = s * (0.72 + 0.05 * Math.sin(t * 2.4));
-  ctx.globalAlpha = phased * (ph >= 2 ? 0.95 : 0.75);
+  ctx.globalAlpha = phased * introAlpha * (ph >= 2 ? 0.95 : 0.75);
   const bAur = auraSprite(phCol);
   ctx.drawImage(bAur, x - ar, yb - ar, ar * 2, ar * 2);
-  ctx.globalAlpha = phased;
+  ctx.globalAlpha = phased * introAlpha;
   // orbiting energy ring — two arcs, faster and angrier each phase
   const rr = s * 0.58, spin = t * (0.7 + ph * 0.4);
   ctx.lineWidth = 2.5; ctx.lineCap = 'round';
   for (let i = 0; i < 2; i++) {
-    ctx.globalAlpha = phased * (0.4 + 0.1 * ph);
+    ctx.globalAlpha = phased * introAlpha * (0.4 + 0.1 * ph);
     ctx.strokeStyle = phCol;
     ctx.beginPath();
     ctx.ellipse(x, yb, rr, rr * 0.42, 0, spin + i * Math.PI, spin + i * Math.PI + Math.PI * 0.55);
     ctx.stroke();
   }
-  ctx.globalAlpha = phased;
+  ctx.globalAlpha = phased * introAlpha;
   // last stand: crackling sparks around the body
-  if (ph === 3) {
+  if (lastStand) {
     ctx.strokeStyle = '#ff8a80'; ctx.lineWidth = 1.6;
     for (let i = 0; i < 3; i++) {
       const a2 = t * 7 + i * 2.1 + br.wobble;
       const sx2 = x + Math.cos(a2) * s * 0.42, sy2 = yb + Math.sin(a2 * 1.3) * s * 0.34;
-      ctx.globalAlpha = phased * (0.3 + 0.5 * Math.abs(Math.sin(t * 11 + i * 3)));
+      ctx.globalAlpha = phased * introAlpha * (0.3 + 0.5 * Math.abs(Math.sin(t * 11 + i * 3)));
       ctx.beginPath();
       ctx.moveTo(sx2 - 5, sy2 + 5); ctx.lineTo(sx2 + 2, sy2 - 1); ctx.lineTo(sx2 - 2, sy2 - 2); ctx.lineTo(sx2 + 5, sy2 - 8);
       ctx.stroke();
     }
-    ctx.globalAlpha = phased;
+    ctx.globalAlpha = phased * introAlpha;
   }
   // shadow → rim light → the legendary itself
   const img = getSprite(br.poke.id);
@@ -418,24 +423,24 @@ function drawBossMon(br, x, y) {
   ctx.rotate(gaitRot);
   ctx.scale(1, sclY);
   if (shadow) {
-    ctx.globalAlpha = phased * 0.35;
+    ctx.globalAlpha = phased * introAlpha * 0.35;
     ctx.drawImage(shadow, -s / 2 + 7, -s / 2 + 10, s, s * 0.97);
   }
   if (rim) {
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = phased * (0.42 + (ph === 3 ? 0.22 * Math.abs(Math.sin(t * 6)) : ph === 2 ? 0.14 : 0));
+    ctx.globalAlpha = phased * introAlpha * (0.42 + (lastStand ? 0.22 * Math.abs(Math.sin(t * 6)) : ph === 2 ? 0.14 : 0));
     const rs = s * 1.07;
     ctx.drawImage(rim, -rs / 2, -rs / 2 - 2, rs, rs);
     ctx.globalCompositeOperation = 'source-over';
   }
-  ctx.globalAlpha = phased;
+  ctx.globalAlpha = phased * introAlpha;
   // no shadowBlur on a 200px+ sprite (mobile GPU stall) — the rim-light
   // silhouette above already carries the glow
   if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
   else drawGlyph(ctx, 'pokeball', 0, 0, br.h * 0.4, '#ffffff33');
   if (flashS && br.flash > 0.3) { // hits light the legendary up from within
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = phased * (br.flash - 0.3) * 0.9;
+    ctx.globalAlpha = phased * introAlpha * (br.flash - 0.3) * 0.9;
     ctx.drawImage(flashS, -s / 2, -s / 2, s, s);
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -444,9 +449,9 @@ function drawBossMon(br, x, y) {
   const hh = br.h / 2;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 13px Orbitron, sans-serif';
-  ctx.fillStyle = ph === 3 ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
+  ctx.fillStyle = lastStand ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-  ctx.fillText((ph === 3 ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''), x, y - hh - 26);
+  ctx.fillText((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''), x, y - hh - 26);
   ctx.shadowBlur = 0;
   const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
   roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
@@ -457,12 +462,12 @@ function drawBossMon(br, x, y) {
     hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
     ctx.fillStyle = hg; ctx.fill();
   }
-  // phase notches on the bar at ⅔ and ⅓, plus pips under it
+  // phase notches and pips mirror this boss's authored phase count.
   ctx.fillStyle = 'rgba(6,9,24,0.9)';
-  for (const f2 of [1 / 3, 2 / 3]) ctx.fillRect(x - bw2 / 2 + bw2 * f2 - 1, y - hh - 16, 2, 8);
-  for (let i = 0; i < 3; i++) {
+  for (let i = 1; i < phases; i++) ctx.fillRect(x - bw2 / 2 + bw2 * i / phases - 1, y - hh - 16, 2, 8);
+  for (let i = 0; i < phases; i++) {
     ctx.beginPath();
-    ctx.arc(x - 16 + i * 16, y - hh - 3, 3.4, 0, Math.PI * 2);
+    ctx.arc(x - (phases - 1) * 8 + i * 16, y - hh - 3, 3.4, 0, Math.PI * 2);
     ctx.fillStyle = i < ph ? phCol : 'rgba(255,255,255,0.2)';
     ctx.fill();
   }
@@ -476,10 +481,15 @@ function drawMewVmax(br, x, y) {
   const s = Math.min(W * 0.5, H * 0.43, Math.max(br.w * 1.35, br.h * 1.72)) * pulse;
   const yy = y + Math.sin(t * 1.7 + br.wobble) * 7;
   ctx.save();
+  const introAlpha = br.introAlpha == null ? 1 : br.introAlpha;
+  ctx.globalAlpha = introAlpha;
+  if (br.introScale != null || br.introRot) {
+    ctx.translate(x, y); ctx.rotate(br.introRot || 0); ctx.scale(br.introScale ?? 1, br.introScale ?? 1); ctx.translate(-x, -y);
+  }
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = 0.72;
+  ctx.globalAlpha = 0.72 * introAlpha;
   ctx.drawImage(auraSprite(phCol), x - s * 0.72, yy - s * 0.72, s * 1.44, s * 1.44);
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.55 * introAlpha;
   ctx.strokeStyle = phCol; ctx.lineWidth = 3; ctx.lineCap = 'round';
   for (let i = 0; i < 3; i++) {
     const rr = s * (0.37 + i * 0.09);
@@ -488,14 +498,14 @@ function drawMewVmax(br, x, y) {
     ctx.stroke();
   }
   ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = introAlpha;
   if (MEW_VMAX_IMG.complete && MEW_VMAX_IMG.naturalWidth) {
     ctx.drawImage(MEW_VMAX_IMG, x - s / 2, yy - s / 2, s, s);
     if (br.flash > 0.35) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = (br.flash - 0.35) * 0.65;
       ctx.drawImage(MEW_VMAX_IMG, x - s / 2, yy - s / 2, s, s);
-      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = introAlpha;
     }
   } else drawGlyph(ctx, 'psychic', x, yy, s * 0.2, '#d780ff');
   const frac = Math.max(0, br.hp / br.maxHp), barW = Math.min(W * 0.55, Math.max(190, br.w * 1.12));
@@ -628,7 +638,7 @@ function drawBricks() {
     // of the glide read as stutter) and eases back in once it lands (settleT)
     const bobAmp = br.entry ? 0 : (br.settleT == null ? 1 : br.settleT);
     let y = br.by + G.fy + Math.sin(G.time * 2 + br.wobble) * (br.isBoss ? 4 : 2.5) * bobAmp;
-    if (br.isBoss) y += introOff;
+    if (br.isBoss && !br.gauntletEntering && !(G.gauntlet && G.mode === 'junkie')) y += introOff;
     const col = TYPE_COLORS[br.poke.t];
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
     const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
@@ -640,7 +650,8 @@ function drawBricks() {
     if (bareMon(br)) {
       const img2 = getSprite(br.poke.id, br.shiny);
       ctx.save();
-      const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1);
+      ctx.globalAlpha = br.introAlpha == null ? 1 : br.introAlpha;
+      const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1) * (br.introScale ?? 1);
       // ---- NATURAL LOCOMOTION: nothing floats like a stamp. All motion
       // state (velocity, facing, bank, gait phase) is computed in update()
       // with dt — render only READS it, so 60 Hz and 120 Hz look identical.
@@ -695,7 +706,7 @@ function drawBricks() {
       if (img2.complete && img2.naturalWidth) {
         ctx.save();
         ctx.translate(x, yb);
-        ctx.rotate(bank + gaitRot);
+        ctx.rotate(bank + gaitRot + (br.introRot || 0));
         ctx.scale(face * sclX, sclY);
         ctx.drawImage(img2, -s2 / 2, -s2 / 2, s2, s2);
         ctx.restore();
@@ -1021,7 +1032,7 @@ function drawBricks() {
     ctx.restore();
   }
   // boss intro banner
-  if (G.bossIntro > 0 && boss) {
+  if (G.bossIntro > 0 && boss && !(G.gauntlet && G.mode === 'junkie')) {
     const a = Math.min(1, (1.6 - G.bossIntro) / 0.4) * Math.min(1, G.bossIntro / 0.25);
     ctx.save();
     ctx.globalAlpha = a;
@@ -2356,6 +2367,100 @@ function drawDangerLine() {
   ctx.setLineDash([]);
 }
 
+// Each STARFIGHTER finale arrival gets a distinct arena sigil. Motion is
+// authored in updateGauntletEntrance; this layer supplies the matching gate,
+// storm, eclipse, shrine, or rift language without changing hitboxes.
+function drawGauntletEntranceFx() {
+  const e = G.gauntlet?.entry;
+  if (!e || G.mode !== 'junkie') return;
+  const p = Math.min(1, e.t / e.dur), pulse = Math.sin(p * Math.PI);
+  const styles = Object.keys(GAUNTLET_ENTRANCE_NAMES), si = Math.max(0, styles.indexOf(e.style));
+  const cx = W / 2, cy = Math.min(H * 0.34, 245), col = e.color || '#80d8ff';
+  const reduced = SETTINGS.reduceFlash ? 0.45 : 1;
+  ctx.save();
+  ctx.globalAlpha = pulse * 0.2 * reduced;
+  ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.translate(cx, cy);
+  const spokes = 3 + si % 7, dir = si % 2 ? -1 : 1;
+  const baseR = Math.min(W, H) * (0.12 + (si % 4) * 0.018) * (0.45 + p * 1.4);
+  ctx.strokeStyle = col; ctx.fillStyle = col;
+  ctx.lineWidth = 1.4 + si % 3;
+  ctx.globalAlpha = pulse * 0.75;
+  ctx.setLineDash(si % 3 === 0 ? [12, 8] : si % 3 === 1 ? [3, 7] : []);
+  ctx.beginPath();
+  for (let i = 0; i < spokes; i++) {
+    const a = dir * p * (0.8 + si * 0.035) + i * Math.PI * 2 / spokes;
+    const r1 = baseR * (0.36 + (i % 2) * 0.13), r2 = baseR;
+    ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1 * 0.62);
+    ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2 * 0.62);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  for (let r = 0; r < 2 + si % 3; r++) {
+    ctx.globalAlpha = pulse * (0.62 - r * 0.12);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, baseR * (0.5 + r * 0.24), baseR * (0.2 + r * 0.1),
+      dir * p * (si % 5 + 1) * 0.24 + r * 0.55, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // The strongest motifs read instantly even before the nameplate appears.
+  if (['stormfront', 'thunderhead', 'starfall'].includes(e.style)) {
+    ctx.lineWidth = 3; ctx.globalAlpha = pulse;
+    for (let i = -2; i <= 2; i++) {
+      const x = i * W * 0.085 + Math.sin(i * 9 + p * 16) * 18;
+      ctx.beginPath(); ctx.moveTo(x, -cy - 20); ctx.lineTo(x - 16, -38);
+      ctx.lineTo(x + 12, 4); ctx.lineTo(x - 8, 72); ctx.stroke();
+    }
+  } else if (['blackwing', 'moonrise', 'nightmare', 'voidcrown'].includes(e.style)) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = pulse * 0.82; ctx.fillStyle = '#02030d';
+    ctx.beginPath(); ctx.arc(0, 0, baseR * 0.58, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.stroke();
+  } else if (['prism', 'swords', 'diamondbirth'].includes(e.style)) {
+    ctx.globalAlpha = pulse * 0.7;
+    for (let i = 0; i < spokes; i++) {
+      const a = i * Math.PI * 2 / spokes + p;
+      ctx.save(); ctx.rotate(a); ctx.beginPath();
+      ctx.moveTo(0, -baseR * 0.12); ctx.lineTo(baseR * 0.7, 0);
+      ctx.lineTo(0, baseR * 0.12); ctx.closePath(); ctx.stroke(); ctx.restore();
+    }
+  } else if (['totem', 'shrine', 'junglecall', 'toxicmask'].includes(e.style)) {
+    ctx.font = `900 ${18 + si % 5 * 2}px Orbitron, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + dir * p;
+      ctx.globalAlpha = pulse * (0.45 + (i % 2) * 0.25);
+      ctx.fillText(i % 2 ? '◇' : '✦', Math.cos(a) * baseR * 0.72, Math.sin(a) * baseR * 0.42);
+    }
+  } else if (e.style === 'maxrift') {
+    ctx.globalAlpha = pulse; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(0, -baseR); ctx.bezierCurveTo(-45, -baseR * 0.4, 50, baseR * 0.25, 0, baseR); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.save();
+  const a = Math.min(1, p * 5) * Math.min(1, (1 - p) * 6 + 0.2);
+  const bannerY = W < 520 ? Math.min(310, H * 0.46) : Math.max(82, Math.min(110, H * 0.145));
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const plateW = Math.min(W - 24, 560);
+  roundRect(cx - plateW / 2, bannerY - 23, plateW, 58, 13);
+  ctx.fillStyle = 'rgba(3,6,20,0.48)'; ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = a * 0.5; ctx.stroke();
+  ctx.globalAlpha = a;
+  ctx.font = `900 ${Math.min(24, Math.max(15, W / 30))}px Orbitron, sans-serif`;
+  ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 18;
+  ctx.fillText('ROUND ' + e.round + ' · ' + gauntletEntranceName(e.style), cx, bannerY, W - 28);
+  ctx.shadowBlur = 0;
+  ctx.font = `700 ${Math.min(12, Math.max(9, W / 62))}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#eef7ff';
+  const detail = e.role === 'sentinel' ? 'SUB-LEGENDARIES · ONE PHASE'
+    : e.role === 'legendary' ? 'LEGENDARY · TWO PHASES' : e.role === 'secret' ? 'SECRET MYTHICAL · THREE PHASES' : 'MYTHICAL · THREE PHASES';
+  ctx.fillText(detail, cx, bannerY + 25, W - 28);
+  ctx.restore();
+}
+
 // player health ring — our own character's vitals, styled like the enemy HP
 // dials: a glowing arc over a faint track, tick-segmented per life, with the
 // count in the middle. Greens → amber → red as it drains; the last life pulses.
@@ -3641,22 +3746,26 @@ function drawTrial() {
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
     ctx.fillText((i + 1) + '/3 ' + STAGE_NAMES[i], r.x + r.w / 2, r.y + r.h / 2 + 1, r.w - 8);
   }
-  // LEGENDARY stage → pick your gauntlet round (test just Mewtwo, or Mew)
+  // LEGENDARY stage → pick a gauntlet round. STARFIGHTER Kanto also exposes
+  // the secret replacement fight directly so it can be practiced on demand.
   if (T.rounds) {
     const gsel = GENS[trialSel.region];
     const labels = ['FULL GAUNTLET', '★ ' + gsel.boss.n.toUpperCase(),
-      gsel.gauntlet ? '✦ ' + (NAMES[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL'];
-    for (let i = 0; i < 3; i++) {
+      gsel.gauntlet ? '✦ ' + (NAMES[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL',
+      '◆ MEW VMAX · SECRET'];
+    for (let i = 0; i < T.roundCount; i++) {
       const rr2 = T.round(i), sel2 = trialSel.round === i;
       const hov2 = inRect(mouseX, lastMouseY, rr2);
       roundRect(rr2.x, rr2.y, rr2.w, rr2.h, 9);
-      ctx.fillStyle = sel2 ? 'rgba(255,128,171,0.22)' : hov2 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+      const secret = i === 3;
+      ctx.fillStyle = sel2 ? (secret ? 'rgba(128,216,255,0.24)' : 'rgba(255,128,171,0.22)')
+        : hov2 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
       ctx.fill();
       ctx.lineWidth = sel2 ? 2 : 1;
-      ctx.strokeStyle = sel2 ? '#ff80ab' : 'rgba(255,255,255,0.22)';
+      ctx.strokeStyle = sel2 ? (secret ? '#80d8ff' : '#ff80ab') : 'rgba(255,255,255,0.22)';
       ctx.stroke();
       ctx.font = `900 ${Math.min(10, rr2.w / 11)}px Orbitron, sans-serif`;
-      ctx.fillStyle = sel2 ? '#ff80ab' : '#cfd8dc';
+      ctx.fillStyle = sel2 ? (secret ? '#80d8ff' : '#ff80ab') : '#cfd8dc';
       ctx.fillText(labels[i], rr2.x + rr2.w / 2, rr2.y + rr2.h / 2 + 1, rr2.w - 8);
     }
   }
@@ -4522,6 +4631,7 @@ function render() {
   if (shk > 0) ctx.translate((Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk);
   drawBackground();
   if (G.state !== 'menu' && G.state !== 'dex') {
+    drawGauntletEntranceFx();
     drawDangerLine();
     drawRallyZone();
     drawTelegraphs();

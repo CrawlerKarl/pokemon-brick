@@ -211,6 +211,7 @@ function menuLayout() {
 function setupLayout() {
   const short = H < 560;
   const narrow = W < 620 && H >= 660; // tall portrait: 2×2 grids, big cards
+  const compactPhone = narrow && H < 760; // browser chrome can trim a tall phone to ~670px
   const s = Math.max(0.72, Math.min(1.1, H / 780, W / 720));
   const cx = W / 2;
   const marginX = Math.max(16, W * 0.05);
@@ -222,22 +223,23 @@ function setupLayout() {
   // six starters per page: 3×2 on tall phones, one row otherwise
   const stCols = narrow ? 3 : 6, stRows = STARTERS_PER_PAGE / stCols;
   const stW = (contentW - gap * (stCols - 1)) / stCols;
-  const stH = short ? 44 : narrow ? Math.min(78, Math.max(70, stW * 0.7)) : Math.min(68, stW * 0.68);
+  const stH = short ? 44 : compactPhone ? 60 : narrow ? Math.min(78, Math.max(70, stW * 0.7)) : Math.min(68, stW * 0.68);
   const dfCols = narrow ? 2 : 4, dfRows = 4 / dfCols;
   const dfW = (contentW - gap * (dfCols - 1)) / dfCols;
-  const dfH = short ? 32 : narrow ? 58 : 52;
+  const dfH = short ? 32 : compactPhone ? 50 : narrow ? 58 : 52;
   const btnW = narrow ? contentW : Math.min(340, contentW);
-  const btnH = short ? 40 : narrow ? 70 : 60;
-  const labelGap = short ? 20 : 32; // grid top sits below its section label
-  const infoH = short ? 0 : 42;     // starter ability description block
-  const navH = short ? 20 : 26, navGap = short ? 4 : 6, noneH = navH;
+  const btnH = short ? 40 : compactPhone ? 56 : narrow ? 70 : 60;
+  const labelGap = short ? 20 : compactPhone ? 26 : 32; // grid top sits below its section label
+  const infoH = short ? 0 : compactPhone ? 34 : 42;     // starter ability description block
+  const navH = short ? 20 : compactPhone ? 24 : 26, navGap = short ? 4 : compactPhone ? 5 : 6, noneH = navH;
   // three section groups distributed with an even gap that soaks up slack
   const starterGroup = labelGap + navH + navGap + stRows * stH + (stRows - 1) * gap + navGap + noneH + infoH;
   const diffGroup = labelGap + dfRows * dfH + (dfRows - 1) * gap;
-  const trialH = short ? 24 : 30; // per-game TRIAL link under START
-  const bottomPad = short ? 10 : H * 0.05;
+  const trialH = short ? 24 : compactPhone ? 28 : 30; // per-game TRIAL link under START
+  const bottomPad = short ? 10 : compactPhone ? 14 : H * 0.05;
   const slack = (H - bottomPad) - headBottom - (starterGroup + diffGroup + btnH + trialH + (short ? 6 : 10));
-  const vGap = Math.max(short ? 10 : 18, Math.min(slack / 3, short ? 22 : narrow ? 54 : 40));
+  const vGap = Math.max(short ? 10 : compactPhone ? 8 : 18,
+    Math.min(slack / 3, short ? 22 : compactPhone ? 24 : narrow ? 54 : 40));
   let y = headBottom + vGap;
   const startLabelY = y + (short ? 8 : 12);
   const starterNavY = y + labelGap;
@@ -254,7 +256,7 @@ function setupLayout() {
   y += vGap;
   const btnY = y;
   return {
-    s, short, narrow, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
+    s, short, narrow, compactPhone, headY, headSize, startLabelY, starterInfoY, chipsLabelY,
     back: { x: 14, y: 14, w: 96, h: 36 },
     starterPrev: { x: cx - contentW / 2, y: starterNavY, w: Math.min(90, contentW * 0.22), h: navH },
     starterNext: { x: cx + contentW / 2 - Math.min(90, contentW * 0.22), y: starterNavY, w: Math.min(90, contentW * 0.22), h: navH },
@@ -296,17 +298,24 @@ function trialLayout() {
   const chipW = (pw - 60 - 20) / 3, chipH = 48, stageH = 38;
   const gridY = 96;
   // picking a LEGENDARY stage reveals a round row: jump straight to the
-  // sentinels, the legendary, or the mythical of that region's gauntlet
+  // sentinels, the legendary, or the mythical of that region's gauntlet.
+  // Kanto adds a fourth direct-entry tile for the Mew VMAX secret encounter.
   const rounds = trialSel.stage === 2;
-  const roundH = 34, roundGap = rounds ? roundH + 14 : 0;
+  const secretRound = rounds && trialSel.region === 0 && SETTINGS.mode === 'junkie';
+  const roundCount = secretRound ? 4 : 3;
+  const roundH = 34, roundRows = secretRound ? 2 : 1;
+  const roundGap = rounds ? roundRows * (roundH + 8) + 6 : 0;
   const ph = gridY + 3 * (chipH + 10) + 30 + stageH + roundGap + 84;
   const px = W / 2 - pw / 2, py = Math.max(16, H / 2 - ph / 2);
   const stageY = py + gridY + 3 * (chipH + 10) + 24;
   return {
-    px, py, pw, ph, rounds,
+    px, py, pw, ph, rounds, secretRound, roundCount,
     region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + 10), w: chipW, h: chipH }),
     stage: i => ({ x: px + 30 + i * (chipW + 10), y: stageY, w: chipW, h: stageH }),
-    round: i => ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
+    round: i => secretRound
+      ? ({ x: px + 30 + (i % 2) * ((pw - 70) / 2 + 10),
+          y: stageY + stageH + 12 + Math.floor(i / 2) * (roundH + 8), w: (pw - 70) / 2, h: roundH })
+      : ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
     start: { x: px + pw / 2 - 110, y: py + ph - 60, w: 220, h: 44 },
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };

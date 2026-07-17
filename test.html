@@ -304,6 +304,8 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.gauntlet && G.gauntlet.phase === 0, 'the finale should open at gauntlet round 1');
     const subs = G.bricks.filter(b => b.subBoss && !b.dead);
     assert(subs.length === 3, 'round 1 should field the three legendary birds, got ' + subs.length);
+    assert(subs.every(b => b.phaseCount === 1), 'sub-legendaries must remain one-phase encounters');
+    assert(G.gauntlet.entry && G.gauntlet.entry.style === 'prism', 'Kanto sentinels lost their PRISM DESCENT entrance');
     assert(G.bricks.some(b => b.isBoss && b.dormant), 'the legendary should lie dormant in round 1');
     assert(G.bricks.every(b => b.isBoss || b.guard || b.subBoss), 'junkie boss wave must not contain legacy grid bricks');
     assert(G.encounter && G.encounter.actBeat === 'climax', 'boss wave must expose the climax beat');
@@ -312,6 +314,8 @@ window.requestAnimationFrame = function () { return 0; };
     await runFrames(30);
     const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     assert(boss && G.gauntlet.phase === 1, 'felling the birds should wake Mewtwo (round 2)');
+    assert(boss.phaseCount === 2, 'the STARFIGHTER legendary must have two phases');
+    assert(G.gauntlet.entry && G.gauntlet.entry.style === 'psybreak', 'Mewtwo lost its PSYCHIC BREAK entrance');
     const guards = G.bricks.filter(b => b.guard && !b.dead);
     assert(guards.length >= 10 && guards.every(g => !g.dormant), 'Mewtwo should wake with ≥10 wing guards');
     await runFrames(240);
@@ -328,9 +332,61 @@ window.requestAnimationFrame = function () { return 0; };
     const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
     assert(myth && G.gauntlet.phase === 2, 'felling Mewtwo should summon Mew (round 3)');
     assert(myth.poke.id === 151, 'the Kanto mythical should be Mew, got #' + myth.poke.id);
+    assert(myth.phaseCount === 3, 'the mythical must have three phases');
+    assert(G.gauntlet.entry && G.gauntlet.entry.style === 'wishgate', 'Mew lost its WISH GATE entrance');
     assert(ERR.length === e0, 'errors during choreography test: ' + ERR.slice(e0).join(' | '));
     assert(fails.length === 0, fails.join(' ; '));
     return 'authored families; 3-round gauntlet: birds → Mewtwo (wings anchored) → Mew';
+  });
+
+  test('junkie finales have unique entrances, tiered phases, and direct secret trial', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'easy';
+    const sentinelStyles = new Set(), legendStyles = new Set(), mythStyles = new Set();
+    for (let region = 0; region < GENS.length; region++) {
+      resetRun(region * STAGES + 3, true, { seed: 'entrance-' + region });
+      sentinelStyles.add(G.gauntlet.entry?.style);
+      const sentinels = G.bricks.filter(b => b.subBoss && !b.dead);
+      assert(sentinels.length && sentinels.every(b => b.phaseCount === 1),
+        GENS[region].name + ' sentinels are not one phase');
+      for (const b of sentinels) b.dead = true;
+      gauntletWake();
+      const legend = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
+      assert(legend && legend.phaseCount === 2, GENS[region].name + ' legendary is not two phases');
+      legendStyles.add(G.gauntlet.entry?.style);
+      for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+      gauntletSummonMythic(false);
+      const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
+      assert(myth && myth.phaseCount === 3, GENS[region].name + ' mythical is not three phases');
+      mythStyles.add(G.gauntlet.entry?.style);
+    }
+    assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
+    assert(legendStyles.size === 9, 'legendary entrances are not unique across all generations');
+    assert(mythStyles.size === 9, 'mythical entrances are not unique across all generations');
+
+    trialSel.region = 0; trialSel.stage = 2; trialSel.round = 3;
+    const layout = trialLayout();
+    assert(layout.secretRound && layout.roundCount === 4, 'Kanto STARFIGHTER trial does not expose the secret tile');
+    startTrialSelection();
+    const vmax = G.bricks.find(b => b.secretBoss && !b.dead);
+    assert(G.trial && vmax && vmax.mewVmax && vmax.phaseCount === 3,
+      'direct trial did not launch three-phase Mew VMAX');
+    assert(G.gauntlet.entry && G.gauntlet.entry.style === 'maxrift', 'direct secret trial skipped the MAX RIFT entrance');
+
+    resetRun(6, true, { seed: 'phase-thresholds' });
+    G.starter = null;
+    for (const b of G.bricks) if (b.subBoss) b.dead = true;
+    gauntletWake();
+    const legend = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
+    damageBrick(legend, legend.maxHp * 0.51, legend.bx, legend.by, null);
+    assert(legend.phase === 2 && bossLastStand(legend), 'legendary did not reach its two-phase last stand at half HP');
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    gauntletSummonMythic();
+    const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
+    damageBrick(myth, myth.maxHp * 0.35, myth.bx, myth.by, null);
+    assert(myth.phase === 2 && !bossLastStand(myth), 'mythical phase 2 incorrectly became its last stand');
+    damageBrick(myth, myth.maxHp * 0.34, myth.bx, myth.by, null);
+    assert(myth.phase === 3 && bossLastStand(myth), 'mythical did not reach its third-phase last stand');
+    return '27 unique tier entrances; 1/2/3 phase ladder; Trial launches Mew VMAX through MAX RIFT';
   });
 
   // 2a-iii) Mode identity: Brick Breaker is bricks all the way through, while
@@ -589,7 +645,7 @@ window.requestAnimationFrame = function () { return 0; };
     const bad = [];
     let count = 0;
     try {
-      for (const [w, h] of [[375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
+      for (const [w, h] of [[310, 670], [375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
         const L = menuLayout(), S = setupLayout(), U = upgradeLayout(), A = advLayout();
         const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, trial: S.trial, adv: L.adv, back: S.back, start: S.start,
@@ -613,7 +669,7 @@ window.requestAnimationFrame = function () { return 0; };
       resize(); // belt and braces: recompute from the real viewport
     }
     assert(bad.length === 0, 'geometry off-screen: ' + bad.join(' ; '));
-    return '5 viewports × ' + count + ' rects (both menu pages) all on-screen';
+    return '6 viewports × ' + count + ' rects (both menu pages) all on-screen';
   });
 
   test('guided onboarding + Pokédex research progression', async () => {
