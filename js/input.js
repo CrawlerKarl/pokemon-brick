@@ -226,24 +226,35 @@ window.addEventListener('keydown', e => {
   // 1/2/3 pick, R rerolls, T opens the complete tree between waves
   if (e.code === 'KeyT' && G.state === 'upgrade' && G.upgradeChoices && !G.secret.rewardDraft && G.stateT > 0.8) {
     upgradeTreeOpen = !upgradeTreeOpen;
-    if (upgradeTreeOpen) treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
+    if (upgradeTreeOpen) syncTreeSelectionToDraft();
     SFX.wall();
   }
-  if (!upgradeTreeOpen && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
+  if (G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 && /^Digit[123]$/.test(e.code)) {
     // digits SELECT (inspect); Enter / the same digit again confirms
     const i = +e.code.slice(5) - 1;
     if (G.upgradeChoices[i]) {
       if (draftSel === i) pickUpgrade(i);
-      else { draftSel = i; SFX.wall(); }
+      else selectDraftChoice(i);
     }
   }
-  if (!upgradeTreeOpen && G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 &&
+  if (G.state === 'upgrade' && G.upgradeChoices && G.stateT > 0.8 &&
       (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && draftSel != null) {
     pickUpgrade(draftSel);
   }
-  if (!upgradeTreeOpen && e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices &&
+  if (e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices &&
       !G.secret.rewardDraft && !G.rerolled && G.stateT > 0.8) {
     rerollDraft();
+  }
+  if (upgradeTreeOpen && G.state === 'upgrade' && G.stateT > 0.8 &&
+      ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
+    if (e.code === 'ArrowLeft') treeSel.ti = Math.max(0, treeSel.ti - 1);
+    if (e.code === 'ArrowRight') treeSel.ti = Math.min(3, treeSel.ti + 1);
+    if (e.code === 'ArrowUp') treeSel.pi = (treeSel.pi + PATH_KEYS.length - 1) % PATH_KEYS.length;
+    if (e.code === 'ArrowDown') treeSel.pi = (treeSel.pi + 1) % PATH_KEYS.length;
+    const offer = choiceIndexForTreeNode(treeSel.pi, treeSel.ti);
+    if (offer >= 0) draftSel = offer;
+    SFX.wall();
+    e.preventDefault();
   }
   // ↑↑↓↓←→←→BA — some legends never die
   konamiIdx = e.code === KONAMI[konamiIdx] ? konamiIdx + 1 : (e.code === KONAMI[0] ? 1 : 0);
@@ -338,30 +349,71 @@ function upgradeLayout() {
 }
 // which tree node the player last tapped, so the detail panel can explain it
 let treeSel = { pi: 0, ti: 0 };
-// FULL TREE: paths are ROWS, tiers march LEFT→RIGHT (tier 1 … capstone). Each
-// node is a tappable tile with its name + description; the selected one lights
-// up, and a detail panel across the bottom spells it out in big text.
+function choiceIndexForTreeNode(pi, ti) {
+  const pk = PATH_KEYS[pi];
+  return (G.upgradeChoices || []).findIndex(c => c.pathKey === pk && c.tierIdx === ti);
+}
+function selectDraftChoice(i) {
+  const c = G.upgradeChoices && G.upgradeChoices[i];
+  if (!c) return;
+  draftSel = i;
+  if (c.pathKey) treeSel = { pi: Math.max(0, PATH_KEYS.indexOf(c.pathKey)), ti: c.tierIdx };
+  SFX.wall();
+}
+function syncTreeSelectionToDraft() {
+  if (draftSel != null && G.upgradeChoices?.[draftSel]?.pathKey) {
+    const c = G.upgradeChoices[draftSel];
+    treeSel = { pi: Math.max(0, PATH_KEYS.indexOf(c.pathKey)), ti: c.tierIdx };
+    return;
+  }
+  const first = (G.upgradeChoices || []).find(c => c.pathKey);
+  if (first) treeSel = { pi: Math.max(0, PATH_KEYS.indexOf(first.pathKey)), ti: first.tierIdx };
+  else treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
+}
+// FULL TREE: the same 24 authored upgrades are arranged as a six-spoke
+// constellation. The current implementation stays balance/save compatible;
+// this geometry is presentation-only until the branching graph ships.
 function upgradeTreeLayout() {
-  const panel = { x: Math.max(8, W * 0.02), y: Math.max(8, H * 0.03),
-    w: Math.min(W - 16, W * 0.96), h: Math.min(H - 16, H * 0.94) };
-  const compact = W < 720;
-  const pad = compact ? 8 : 14;
-  const headH = 46;
-  const labelW = compact ? 62 : Math.min(120, panel.w * 0.13);
-  const detailH = Math.min(150, Math.max(compact ? 100 : 116, panel.h * 0.2));
-  const colGap = compact ? 5 : 8, rowGap = compact ? 5 : 8;
-  const gridTop = panel.y + headH;
-  const gridBot = panel.y + panel.h - detailH - 8;
-  const rows = PATH_KEYS.length;
-  const rowH = (gridBot - gridTop - rowGap * (rows - 1)) / rows;
-  const boxesX = panel.x + pad + labelW + colGap;
-  const nodeW = (panel.x + panel.w - pad - boxesX - colGap * 3) / 4;
+  const panel = { x: Math.max(8 + SAFE_L, W * 0.02), y: Math.max(8 + SAFE_T, H * 0.025),
+    w: Math.min(W - 16 - SAFE_L - SAFE_R, W * 0.96), h: Math.min(H - 16 - SAFE_T - SAFE_B, H * 0.95) };
+  const compact = W < 720 || H < 520;
+  const pad = compact ? 10 : 16, headH = compact ? 54 : 64;
+  const sideDetail = panel.w >= 700 && panel.w > panel.h * 1.12;
+  const detailSize = sideDetail
+    ? Math.min(350, Math.max(270, panel.w * 0.28))
+    : Math.min(190, Math.max(150, panel.h * 0.23));
+  const map = sideDetail
+    ? { x: panel.x + pad, y: panel.y + headH, w: panel.w - detailSize - pad * 3, h: panel.h - headH - pad }
+    : { x: panel.x + pad, y: panel.y + headH, w: panel.w - pad * 2, h: panel.h - headH - detailSize - pad * 2 };
+  const detail = sideDetail
+    ? { x: panel.x + panel.w - detailSize - pad, y: panel.y + headH, w: detailSize, h: panel.h - headH - pad }
+    : { x: panel.x + pad, y: panel.y + panel.h - detailSize - pad, w: panel.w - pad * 2, h: detailSize };
+  const cx = map.x + map.w / 2, cy = map.y + map.h / 2 + (sideDetail ? 4 : 0);
+  const radius = Math.max(74, Math.min(map.w * 0.39, map.h * 0.41) - (compact ? 4 : 10));
+  const inner = Math.max(30, radius * 0.28);
+  const step = (radius - inner) / 3;
+  const drawR = Math.max(8, Math.min(compact ? 12 : 17, step * 0.34));
+  const hitR = Math.max(drawR + 5, Math.min(22, step * 0.53));
+  const buttonH = compact ? 32 : 38;
+  const buttonY = detail.y + detail.h - buttonH - 10;
+  const buttonGap = 8;
+  const buttonW = (detail.w - 20 - buttonGap) / 2;
   return {
-    panel, compact, labelW, nodeW, rowH,
+    panel, compact, sideDetail, map, detail, center: { x: cx, y: cy }, radius, inner, step, drawR,
     close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
-    detail: { x: panel.x + pad, y: panel.y + panel.h - detailH, w: panel.w - pad * 2, h: detailH - 8 },
-    label: pi => ({ x: panel.x + pad, y: gridTop + pi * (rowH + rowGap), w: labelW, h: rowH }),
-    node: (pi, ti) => ({ x: boxesX + ti * (nodeW + colGap), y: gridTop + pi * (rowH + rowGap), w: nodeW, h: rowH }),
+    reroll: { x: detail.x + 10, y: buttonY, w: buttonW, h: buttonH },
+    confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
+    label: pi => {
+      const a = -Math.PI / 2 + pi * Math.PI / 3;
+      const lr = radius + (compact ? 22 : 42);
+      return { x: cx + Math.cos(a) * lr, y: cy + Math.sin(a) * lr, a };
+    },
+    node: (pi, ti) => {
+      const a = -Math.PI / 2 + pi * Math.PI / 3;
+      const rr = inner + ti * step;
+      const nx = cx + Math.cos(a) * rr, ny = cy + Math.sin(a) * rr;
+      return { x: nx - hitR, y: ny - hitR, w: hitR * 2, h: hitR * 2, cx: nx, cy: ny, r: drawR, hitR, a };
+    },
   };
 }
 function applySecretUpgrade(secret) {
@@ -380,18 +432,23 @@ function queueSecretRewardNotice() {
     reward.desc, 3, 'SECRET UPGRADE · ONLY FOUND BEYOND THE KANTO RIFT');
   G.secret.lastReward = null;
 }
+function beginUpgradeInstallFx(icon, color, name, pathKey = null, tierIdx = 0) {
+  G.upgradeFx = { icon, color, name, pathKey, tierIdx, t: 2.4, max: 2.4 };
+}
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
   draftSel = null;
   if (c.secret) {
     applySecretUpgrade(c.secret);
+    beginUpgradeInstallFx(c.secret.icon, c.secret.color, c.secret.name, 'secret', 3);
     G.secret.lastReward = c.secret;
     G.secret.rewardDraft = false;
     G.secret.vmax = false;
     G.upgradeChoices = G.secret.deferredChoices;
     G.secret.deferredChoices = null;
-    upgradeTreeOpen = false;
+    upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices && G.upgradeChoices.every(x => x.pathKey);
+    if (upgradeTreeOpen) syncTreeSelectionToDraft();
     G.stateT = 0;
     G.rerolled = false;
     SFX.mega();
@@ -405,6 +462,7 @@ function pickUpgrade(i) {
   // late-run mastery STACK pick (literal held item in SPACE JUNKIE)
   if (c.stack) {
     G.stacks[c.stack.key] = (G.stacks[c.stack.key] || 0) + 1;
+    beginUpgradeInstallFx(c.stack.icon, c.stack.color, c.stack.name, 'mastery', Math.min(3, G.stacks[c.stack.key] - 1));
     G.upgradeChoices = null;
     upgradeTreeOpen = false;
     SFX.power();
@@ -418,6 +476,7 @@ function pickUpgrade(i) {
   }
   const junkieName = junkieTierName(c.pathKey, c.tierIdx);
   const tier = advancePath(c.pathKey);
+  beginUpgradeInstallFx(tier.icon, c.path.color, junkieName, c.pathKey, c.tierIdx);
   G.upgradeChoices = null;
   upgradeTreeOpen = false;
   SFX.power();
@@ -462,6 +521,7 @@ function rerollDraft() {
   G.rerolled = true;
   draftSel = null; // fresh hand, fresh inspection
   rollUpgradeChoices();
+  if (upgradeTreeOpen) syncTreeSelectionToDraft();
   SFX.wall();
 }
 function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
@@ -533,10 +593,19 @@ function onPress(x, y) {
       if (upgradeTreeOpen) {
         const T = upgradeTreeLayout();
         if (inRect(x, y, T.close) || !inRect(x, y, T.panel)) { upgradeTreeOpen = false; return; }
-        // tap a node tile → select it so the detail panel explains it
+        if (draftSel != null && inRect(x, y, T.confirm)) { pickUpgrade(draftSel); return; }
+        if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, T.reroll)) { rerollDraft(); return; }
+        // Tap a node to inspect it. Offered nodes also become the active pick,
+        // but still require the dedicated INSTALL action below the details.
         for (let pi = 0; pi < PATH_KEYS.length; pi++) {
           for (let ti = 0; ti < 4; ti++) {
-            if (inRect(x, y, T.node(pi, ti))) { treeSel = { pi, ti }; SFX.wall(); return; }
+            if (inRect(x, y, T.node(pi, ti))) {
+              treeSel = { pi, ti };
+              const offer = choiceIndexForTreeNode(pi, ti);
+              if (offer >= 0) draftSel = offer;
+              SFX.wall();
+              return;
+            }
           }
         }
         return;
@@ -729,6 +798,7 @@ function fireAction(auto = false) {
       mega: G.megaT > 0,
       shape: pil ? pil.shape : null,
       element: pil ? attackElement() : null,
+      tier: pil ? G.starterLvl : 1, // the attack itself grows as the partner evolves
     });
   }
   SFX.blaster();
@@ -748,6 +818,7 @@ function fireCharge(c) {
     heavy: !!upgN('heavy'), explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0,
     shape: pil ? pil.shape : null,
     element: pil ? attackElement() : null,
+    tier: pil ? G.starterLvl : 1,
   });
   // the big shot dumps a decent slug of heat — a full charge is ~0.6 of the
   // bar, so leaning on the charge (or chaining them) really can overheat you

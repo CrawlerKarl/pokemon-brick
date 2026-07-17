@@ -37,10 +37,16 @@ const PILOT_NONE = { ids: [0, 0, 0], names: ['TRAINING DRONE', 'TRAINING DRONE',
 function pilotInfo() {
   const sm = STARTER_MON[G.starter];
   if (sm) {
+    // every type FAMILY has a signature attack silhouette (drawTypedBolt,
+    // render.js) — the shape follows the pilot's species, the color follows
+    // the current element, and the whole attack grows at partner tiers II/III
     const shapes = {
-      fire: 'flame', fighting: 'flame', dragon: 'flame',
-      water: 'aqua', ice: 'aqua', steel: 'aqua',
-      grass: 'leaf', bug: 'leaf', poison: 'leaf', ground: 'leaf', rock: 'leaf', flying: 'leaf',
+      fire: 'flame', dragon: 'draco', fighting: 'fist',
+      water: 'aqua', ice: 'shard', steel: 'gear',
+      grass: 'leaf', bug: 'sting', poison: 'venom',
+      ground: 'quake', rock: 'quake', flying: 'gale',
+      normal: 'pixel', psychic: 'psy', fairy: 'star',
+      ghost: 'wisp', dark: 'claw',
     };
     return { id: sm.ids[G.starterLvl - 1], t: G.starter, shape: shapes[G.starter] || 'volt' };
   }
@@ -179,6 +185,7 @@ const G = {
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
   uiTouchPulse: null, shareToast: 0,
+  upgradeFx: null, // short install animation after a permanent draft pick
   // starter partner: which one, its ability tier, Torrent's return counter
   starter: null, starterLvl: 1, torrentCount: 0, justEvolved: false,
   starterHits: 0, starterKOs: 0, starterChillT: 0,
@@ -1187,7 +1194,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.charge = 0; G.chargeCD = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;
-  G.stacks = { orb: 0, ice: 0, bell: 0 }; G.attackAnim = 0;
+  G.stacks = { orb: 0, ice: 0, bell: 0 }; G.attackAnim = 0; G.upgradeFx = null;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;

@@ -130,16 +130,18 @@ const TOUCH_TOGGLES = [
   { key: 'leftHanded', label: 'LEFT-HANDED BUTTONS' },
   { key: 'haptics', label: 'HAPTIC FEEDBACK' },
 ];
+// labels MUST match STARTER_MON's tier-1 names (data.js) — config.js parses
+// before data.js, so they can't be derived here; keep the two in sync
 const STARTERS = [
   { key: 'fire', label: 'CHARMANDER' }, { key: 'water', label: 'SQUIRTLE' },
   { key: 'grass', label: 'BULBASAUR' }, { key: 'electric', label: 'PIKACHU' },
-  { key: 'normal', label: 'STARLY' }, { key: 'flying', label: 'ROOKIDEE' },
-  { key: 'ice', label: 'FRIGIBAX' }, { key: 'fighting', label: 'QUAXLY' },
-  { key: 'poison', label: 'GASTLY' }, { key: 'ground', label: 'SANDILE' },
-  { key: 'psychic', label: 'HATENNA' }, { key: 'bug', label: 'GRUBBIN' },
-  { key: 'rock', label: 'NACLI' }, { key: 'ghost', label: 'LITWICK' },
-  { key: 'dragon', label: 'AXEW' }, { key: 'dark', label: 'IMPIDIMP' },
-  { key: 'steel', label: 'TINKATINK' }, { key: 'fairy', label: 'RALTS' },
+  { key: 'normal', label: 'PORYGON' }, { key: 'flying', label: 'PIDGEY' },
+  { key: 'ice', label: 'SPHEAL' }, { key: 'fighting', label: 'MACHOP' },
+  { key: 'poison', label: 'NIDORAN' }, { key: 'ground', label: 'RHYHORN' },
+  { key: 'psychic', label: 'ABRA' }, { key: 'bug', label: 'CATERPIE' },
+  { key: 'rock', label: 'LARVITAR' }, { key: 'ghost', label: 'GASTLY' },
+  { key: 'dragon', label: 'DRATINI' }, { key: 'dark', label: 'SANDILE' },
+  { key: 'steel', label: 'MAGNEMITE' }, { key: 'fairy', label: 'TOGEPI' },
 ];
 if (SETTINGS.starter !== 'none' && !STARTERS.some(s => s.key === SETTINGS.starter)) SETTINGS.starter = 'none';
 let advOpen = false; // advanced settings panel

@@ -41,9 +41,12 @@ remain visible, but only the hovered card (or one rotating focus card on
 touch/idle) animates; `reduceFlash` freezes them. Setup calls the opt-out
 **NO PARTNER**, shows starting HP + pressure on difficulty cards, and pages an
 18-type starter roster in three groups of six. Each type has a distinct
-three-tier ability in `STARTER_MON`; Pikachu is an intentionally OP explicit
-pick that becomes Raichu in region 5. Keep render and hit-testing on the same
-layout geometry.
+three-tier ability in `STARTER_MON`, an ICONIC species line (Dratini/dragon,
+Machop/fighting, Gastly/ghost, Magnemite/steel…), and its own signature
+attack silhouette (`pilotInfo().shape` → `drawTypedBolt`, 14 shapes) that
+scales up + gains a flourish at partner tiers II/III (`L.tier`). Pikachu is
+an intentionally OP explicit pick that becomes Raichu in region 5. Keep
+render and hit-testing on the same layout geometry.
 
 ## Editing
 - Everything is `js/*.js`. `index.html` is just the shell — never inline JS.
@@ -168,7 +171,8 @@ phone — flag anything only verifiable there.
   its `demo` tier (SPLASH CHARGE) makes charged shots detonate for AoE
   (`chargeSplash`, update.js). As paths cap, every mode fills empty offers
   with forever-stacking `STACK_ITEMS` (`G.stacks`). One counted badge per
-  owned path/stack category orbits the junkie pilot; paddle modes show tiers
+  owned path/stack category docks as a fixed wing HARDPOINT chip under the
+  junkie pilot (stable slots, never crossing the sprite); paddle modes show tiers
   on the build rail. Runs auto-save at each region (`saveCheckpoint`/
   `RUN_CKPT`); knockout and true game over retain the latest checkpoint. One draft reroll per screen. The
   draft cards lead with the upgrade name + a big description; **FULL TREE is

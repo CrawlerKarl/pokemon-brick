@@ -649,18 +649,23 @@ window.requestAnimationFrame = function () { return 0; };
         W = w; H = h;
         setupStep = 'pilot'; const P = setupLayout();
         setupStep = 'difficulty'; const D = setupLayout();
-        const L = menuLayout(), U = upgradeLayout(), A = advLayout();
+        const L = menuLayout(), U = upgradeLayout(), T = upgradeTreeLayout(), A = advLayout();
         const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, adv: L.adv,
           pilotBack: P.back, pilotNone: P.none, pilotNext: P.next,
           difficultyBack: D.back, pilotSummary: D.summary, editPilot: D.editPilot,
           trial: D.trial, start: D.start,
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
-          reroll: U.reroll, confirm: U.confirm, fullTree: U.tree };
+          reroll: U.reroll, confirm: U.confirm, fullTree: U.tree,
+          constellation: T.panel, constellationDetail: T.detail,
+          constellationReroll: T.reroll, constellationInstall: T.confirm };
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = P.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
+        for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+          for (let ti = 0; ti < 4; ti++) rects['constellation(' + pi + ',' + ti + ')'] = T.node(pi, ti);
+        }
         count = Object.keys(rects).length;
         for (const [name, r] of Object.entries(rects)) {
           if (!(r.x >= -2 && r.y >= -2 && r.x + r.w <= w + 2 && r.y + r.h <= h + 2)) {

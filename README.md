@@ -155,9 +155,16 @@ default to STARFIGHTER; existing saved mode preferences remain respected.
   clean shapes in every mode), dives start at wave 2,
   and reinforcements from region 1. **Your starter IS the ship**; NO PARTNER
   uses a neutral training drone rather than silently assigning a Pokémon:
-  `pilotInfo()`/`attackElement()` (state.js). The attack's
-  SHAPE follows the pilot species — flame / water jet / razor leaf /
-  lightning (`drawTypedBolt`, render.js) — while its COLOR + damage type
+  `pilotInfo()`/`attackElement()` (state.js). Every partner line is an
+  ICONIC species (Dratini→Dragonite for dragon, Machop for fighting,
+  Gastly for ghost, Magnemite for steel, Togepi for fairy, Porygon for
+  normal…). The attack's SHAPE is the type family's signature — 14 shapes:
+  flame, draco (serpentine pulse), fist, aqua, shard (ice lance), gear
+  (sawblade), leaf, sting (needle fan), venom (glob), quake (boulder), gale
+  (air cutter), pixel (Porygon data-burst), psy (warp rings), star, wisp,
+  claw, volt (`drawTypedBolt`, render.js) — each SCALES UP at partner tiers
+  II/III and gains a tier-III flourish (extra fork, wisplets, echo blades…),
+  while its COLOR + damage type
   follow the CURRENT element, so a Charmeleon riding a grass element shoots
   **green fire**, and `damageBrick` applies real type effectiveness (element
   orbs become the key tactical pickup; a worn-off element falls back to the
@@ -187,8 +194,10 @@ default to STARFIGHTER; existing saved mode preferences remain respected.
   down (HUD shows `TYPE · Ns`) and reverts to the pilot's innate type;
   element orbs drop far more often (junkie branch of the orb block).
   **Held items:** the draft re-skins the same 5×4 tree as Pokémon items
-  (`JUNKIE_ITEMS`, data.js); one counted badge per owned path/stack category
-  orbits the pilot,
+  (`JUNKIE_ITEMS`, data.js); one counted diamond chip per owned path/stack
+  category docks as a fixed WING HARDPOINT under the pilot (stable slots
+  filling outward left/right, banking with the ship, capped paths glint —
+  replaced the old orbiting ring that crossed the sprite),
   and late drafts offer `STACK_ITEMS` that stack forever (Life Orb damage /
   Never-Melt Ice cooling / Soothe Bell score — `G.stacks`).
   The pilot renders pseudo-3D (silhouette shadow + element rim light) and
@@ -442,9 +451,9 @@ input.js; `drawTreeDetail`, render.js). Node rects come from `upgradeTreeLayout`
 so render and hit-testing can't drift. Upgrade **symbols are glossy faux-3D
 badges** (`iconBadge`/`blitBadge`, render.js — baked per colour/size) used in
 the tree and draft cards. A **HUD build strip** shows owned paths, every
-non-junkie tier adds a colored hardware socket to the paddle, and Junkie shows
-one compact orbiting badge per owned path/stack category (with a count) so the
-pilot stays readable. As authored paths cap, all modes fill empty offers with small
+non-junkie tier adds a colored hardware socket to the paddle, and Junkie racks
+one compact wing-hardpoint chip per owned path/stack category (with a count) so
+the pilot stays readable. As authored paths cap, all modes fill empty offers with small
 forever-stacking mastery items instead of dead reward screens. Caps read via
 `shieldCap`/`megaDur`/`barrierCharges` (state.js). `upgN(key)` = does the player
 own that tier.

@@ -1077,25 +1077,166 @@ function drawFragments() {
   }
 }
 
+// Composable STARFIGHTER hardware. Every tier changes its path's silhouette or
+// count without adding another large HUD badge; fixed wing hardpoints remain
+// the exact numeric record. Compatible paths occupy separate visual slots.
+function drawPilotUpgradeHardware(x, y, s, preview = false) {
+  const volley = pathLvl('arsenal'), impact = pathLvl('impact'), prism = pathLvl('prism');
+  const aegis = pathLvl('aegis'), surge = pathLvl('surge'), bond = pathLvl('bond');
+  if (!(volley || impact || prism || aegis || surge || bond)) return;
+  const motion = SETTINGS.reduceFlash ? 0.12 : 1;
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+  // SURGE · core slot: ring → kill sparks → power veins → apex crown.
+  if (surge) {
+    const col = PATHS.surge.color, rx = s * 0.5, ry = s * 0.29;
+    ctx.globalAlpha = 0.46 + surge * 0.08;
+    ctx.strokeStyle = col; ctx.lineWidth = 1.3 + surge * 0.28;
+    ctx.setLineDash([5 + surge, 5]); ctx.lineDashOffset = -G.time * 12 * motion;
+    ctx.beginPath(); ctx.ellipse(x, y + 4, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    if (surge >= 2) {
+      for (let i = 0; i < Math.min(4, surge + 1); i++) {
+        const a = G.time * 0.7 * motion + i * Math.PI * 2 / Math.min(4, surge + 1);
+        ctx.fillStyle = i % 2 ? '#fff9c4' : col;
+        ctx.beginPath(); ctx.arc(x + Math.cos(a) * rx, y + 4 + Math.sin(a) * ry, 1.5 + (i % 2), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (surge >= 3) {
+      ctx.globalAlpha = 0.48;
+      for (const dir of [-1, 1]) {
+        ctx.strokeStyle = col; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x + dir * 7, y + 10); ctx.lineTo(x + dir * s * 0.34, y + s * 0.25); ctx.stroke();
+      }
+    }
+    if (surge >= 4) {
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = '#fffde7'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(x - 8, y - s * 0.5); ctx.lineTo(x, y - s * 0.64); ctx.lineTo(x + 8, y - s * 0.5); ctx.stroke();
+    }
+  }
+
+  // PRISM · lens slot: one facet per owned tier; tier III starts the compass.
+  if (prism) {
+    const col = PATHS.prism.color, turn = prism >= 3 ? G.time * 0.18 * motion : 0;
+    for (let i = 0; i < prism; i++) {
+      const a = turn - Math.PI / 4 + i * Math.PI / 2;
+      const px = x + Math.cos(a) * s * 0.55, py = y + Math.sin(a) * s * 0.48;
+      ctx.save(); ctx.translate(px, py); ctx.rotate(a + Math.PI / 4);
+      ctx.globalAlpha = prism >= 4 ? 0.72 : 0.48 + i * 0.06;
+      ctx.fillStyle = col + '55'; ctx.strokeStyle = i === prism - 1 ? '#e0ffff' : col; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(4, 0); ctx.lineTo(0, 6); ctx.lineTo(-4, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // AEGIS · wing/shield slot: sockets and plates remain even between shields.
+  if (aegis) {
+    const col = PATHS.aegis.color, rr = s * 0.64;
+    for (let i = 0; i < aegis + 1; i++) {
+      const a = Math.PI * (1.14 + i * (0.72 / Math.max(1, aegis)));
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+      ctx.globalAlpha = 0.5 + i * 0.06; ctx.fillStyle = col;
+      constellationHex(px, py, 2.5 + (aegis >= 2 ? 1 : 0)); ctx.fill();
+    }
+    ctx.globalAlpha = 0.38 + aegis * 0.07; ctx.strokeStyle = col; ctx.lineWidth = 1.2 + aegis * 0.25;
+    ctx.beginPath(); ctx.arc(x, y, rr, Math.PI * 1.12, Math.PI * 1.88); ctx.stroke();
+    if (aegis >= 3) {
+      ctx.fillStyle = col + '88';
+      for (const dir of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(x + dir * s * 0.34, y + 5); ctx.lineTo(x + dir * s * 0.68, y + 14);
+        ctx.lineTo(x + dir * s * 0.5, y + 24); ctx.closePath(); ctx.fill();
+      }
+    }
+    if (aegis >= 4) {
+      const a = Math.PI * 1.12 + ((G.time * 0.18 * motion) % 0.76) * Math.PI;
+      ctx.globalAlpha = 0.95; ctx.fillStyle = '#e8f5e9';
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * rr, y + Math.sin(a) * rr, 3.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // BOND · utility slot: magnet vanes → bond crest → charm → heart canister.
+  if (bond) {
+    const col = PATHS.bond.color;
+    ctx.globalAlpha = 0.8; ctx.strokeStyle = col; ctx.lineWidth = 2.2;
+    for (const dir of [-1, 1]) {
+      ctx.beginPath(); ctx.arc(x + dir * s * 0.47, y + 8, 6, dir > 0 ? Math.PI * 0.58 : Math.PI * 1.42,
+        dir > 0 ? Math.PI * 1.42 : Math.PI * 0.58, dir < 0); ctx.stroke();
+    }
+    const bx = x + s * 0.44, by = y + s * 0.36;
+    if (bond >= 2) {
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(bx, by, 4.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(bx, by, 4.2, Math.PI, 0); ctx.fill();
+    }
+    if (bond >= 3) { ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(bx, by + 9, 2.8, 0, Math.PI * 2); ctx.fill(); }
+    if (bond >= 4) drawGlyph(ctx, 'heart', x - s * 0.44, y + s * 0.36, 5, '#ff80ab');
+  }
+
+  // Weapon slots compose last, closest to the nose. VOLLEY owns muzzle count
+  // and fins while IMPACT owns bore weight and charge hardware.
+  const my = y - s * 0.48;
+  if (impact) {
+    const col = PATHS.impact.color, br = 5 + impact * 1.15;
+    ctx.globalAlpha = 0.76; ctx.strokeStyle = col; ctx.lineWidth = 1.5 + impact * 0.3;
+    ctx.beginPath(); ctx.arc(x, my, br, 0, Math.PI * 2); ctx.stroke();
+    if (impact >= 2) {
+      for (let i = 0; i < 2; i++) {
+        const a = G.time * 1.2 * motion + i * Math.PI;
+        ctx.fillStyle = '#ffccbc'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * (br + 4), my + Math.sin(a) * (br + 4), 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (impact >= 3) {
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2;
+        ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * (br + 2), my + Math.sin(a) * (br + 2));
+        ctx.lineTo(x + Math.cos(a) * (br + 5), my + Math.sin(a) * (br + 5)); ctx.stroke();
+      }
+    }
+    if (impact >= 4) { ctx.globalAlpha = 0.52; ctx.beginPath(); ctx.arc(x, my, br + 7, 0, Math.PI * 2); ctx.stroke(); }
+  }
+  if (volley) {
+    const col = PATHS.arsenal.color;
+    ctx.globalAlpha = 0.82; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    if (volley >= 1) { ctx.beginPath(); ctx.arc(x, my, 9 + volley, 0, Math.PI * 2); ctx.stroke(); }
+    if (volley >= 2) {
+      for (const dir of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(x + dir * 8, my - 10); ctx.lineTo(x + dir * 13, my); ctx.lineTo(x + dir * 8, my + 5); ctx.stroke();
+      }
+    }
+    if (volley >= 3) {
+      for (const dir of [-1, 1]) {
+        ctx.fillStyle = '#e0f7ff'; roundRect(x + dir * 7 - 2.5, my - 9, 5, 12, 2); ctx.fill();
+      }
+    }
+    if (volley >= 4) {
+      ctx.fillStyle = col + 'aa';
+      for (const dir of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(x + dir * 12, my + 2); ctx.lineTo(x + dir * 23, my + 8); ctx.lineTo(x + dir * 15, my + 13); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+}
+
 // ---- SPACE JUNKIE ship: no paddle at all — the pilot IS the ship. A bare
 // Pokémon with an element-colored aura and jet exhaust, banking with your
 // movement and free to fly vertically inside its band. A Charmeleon riding
 // a grass element visibly runs green from aura to exhaust to muzzle.
-function drawPilotRig(x, py) {
+function drawPilotRig(x, py, preview = false) {
   const pil = pilotInfo();
   const col = TYPE_COLORS[attackElement()] || '#80d8ff';
   const mega = G.megaT > 0;
-  const s = 54 + G.starterLvl * 6;
-  const bob = Math.sin(G.time * 3.2) * 2.5;
+  const s = preview ? 42 + G.starterLvl * 3 : 54 + G.starterLvl * 6;
+  const bob = Math.sin(G.time * 3.2) * (preview ? 1.2 : 2.5);
   const y = py + bob;
-  const tilt = Math.max(-0.34, Math.min(0.34, G.paddle.speed * 0.00028));
+  const tilt = preview ? 0 : Math.max(-0.34, Math.min(0.34, G.paddle.speed * 0.00028));
   // element aura — the "this is you" glow
   const ag = ctx.createRadialGradient(x, y, 4, x, y, s * 0.8);
   ag.addColorStop(0, col + '3c'); ag.addColorStop(0.7, col + '14'); ag.addColorStop(1, col + '00');
   ctx.fillStyle = ag;
   ctx.beginPath(); ctx.arc(x, y, s * 0.8, 0, Math.PI * 2); ctx.fill();
   // jet exhaust under the mon, flickering in the element color
-  const fl = 1 + 0.35 * Math.sin(G.time * 26) + 0.18 * Math.sin(G.time * 57);
+  const fl = (preview ? 0.68 : 1) + 0.35 * Math.sin(G.time * 26) + 0.18 * Math.sin(G.time * 57);
   ctx.save();
   ctx.translate(x, y + s * 0.34);
   ctx.rotate(tilt * 0.6);
@@ -1108,6 +1249,7 @@ function drawPilotRig(x, py) {
   ctx.quadraticCurveTo(4, 14 * fl, 7, 0);
   ctx.closePath(); ctx.fill();
   ctx.restore();
+  drawPilotUpgradeHardware(x, y, s, preview);
   // ---- the pilot itself, with a pseudo-3D treatment: a soft drop shadow
   // below-right, an element-colored rim light behind, and — when firing —
   // a real ATTACK animation: the mon lunges nose-up with squash & stretch
@@ -1159,14 +1301,18 @@ function drawPilotRig(x, py) {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
-  // ---- held items orbit the pilot. One badge per PATH/stack category keeps
-  // the build fantasy without allowing 24 separate icons to bury the pilot.
-  // The small count preserves the exact progression information.
-  {
+  // ---- the WING LOADOUT DOCK. Held items used to orbit the pilot on a ring
+  // that crossed the sprite every second — now they rack up as fixed
+  // HARDPOINTS under the wings, ordnance-style: paths fill outward from the
+  // fuselage in a stable order (a build always lives in the same slot),
+  // alternating left/right, angled slightly with the ship's tilt. One chip
+  // per PATH/stack category keeps 24 icons from burying the pilot, and the
+  // count preserves exact progression information.
+  if (!preview) {
     const badges = [];
     for (const pk of PATH_KEYS) {
       const lvl = pathLvl(pk);
-      if (lvl) badges.push({ icon: PATHS[pk].tiers[lvl - 1].icon, color: PATHS[pk].color, count: lvl });
+      if (lvl) badges.push({ icon: PATHS[pk].tiers[lvl - 1].icon, color: PATHS[pk].color, count: lvl, capped: lvl >= 4 });
     }
     for (const si of STACK_ITEMS) {
       const n = (G.stacks && G.stacks[si.key]) || 0;
@@ -1176,36 +1322,51 @@ function drawPilotRig(x, py) {
     const shown = badges.slice(0, maxBadges);
     const extra = Math.max(0, badges.length - shown.length);
     if (shown.length) {
-      const orbitR = s * 0.68 + 10;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(tilt * 0.5); // the rack banks WITH the ship
       for (let i = 0; i < shown.length; i++) {
-        const a2 = (i / shown.length) * Math.PI * 2 + G.time * 0.55;
-        const bx2 = x + Math.cos(a2) * orbitR;
-        const by2 = y + Math.sin(a2) * orbitR * 0.55; // flattened ring = orbit depth
-        const behind = Math.sin(a2) < 0; // top half of the ring passes BEHIND
+        // slots fan outward: 1st left wing, 2nd right wing, 3rd far left…
+        const side = i % 2 ? 1 : -1;
+        const rank = Math.floor(i / 2);
+        const bx2 = side * (s * 0.42 + 12 + rank * 17);
+        const by2 = s * 0.34 + 6 + rank * 3.5; // outer slots trail slightly
+        const b = shown[i];
         ctx.save();
-        ctx.globalAlpha = behind ? 0.45 : 0.95;
-        ctx.beginPath(); ctx.arc(bx2, by2, 7, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(8,12,28,0.85)'; ctx.fill();
-        ctx.lineWidth = 1.2; ctx.strokeStyle = shown[i].color; ctx.stroke();
-        drawGlyph(ctx, shown[i].icon, bx2, by2, 3.8, shown[i].color);
-        if (shown[i].count > 1) {
+        ctx.translate(bx2, by2);
+        ctx.rotate(Math.PI / 4); // diamond chip = mounted ordnance, not UI
+        ctx.globalAlpha = 0.95;
+        roundRect(-6.5, -6.5, 13, 13, 3);
+        ctx.fillStyle = 'rgba(8,12,28,0.88)'; ctx.fill();
+        ctx.lineWidth = b.capped ? 1.8 : 1.2;
+        ctx.strokeStyle = b.color; ctx.stroke();
+        if (b.capped) { // a mastered path's hardpoint glints
+          ctx.globalAlpha = 0.5 + 0.3 * Math.sin(G.time * 4 + i);
+          ctx.stroke();
+          ctx.globalAlpha = 0.95;
+        }
+        ctx.rotate(-Math.PI / 4);
+        drawGlyph(ctx, b.icon, 0, 0, 3.8, b.color);
+        ctx.restore();
+        if (b.count > 1) {
           ctx.font = '900 6.5px Orbitron, sans-serif';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillStyle = '#fff';
-          ctx.fillText(String(shown[i].count), bx2 + 6, by2 + 6);
+          ctx.fillText(String(b.count), bx2 + 8, by2 + 8);
         }
-        ctx.restore();
       }
       if (extra > 0) {
-        ctx.font = '900 9px Orbitron, sans-serif';
+        ctx.font = '900 8px Orbitron, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ffd54f';
-        ctx.fillText('+' + extra, x + orbitR + 14, y);
+        const lastRank = Math.floor((shown.length - 1) / 2);
+        ctx.fillText('+' + extra, 0, s * 0.34 + 20 + lastRank * 3.5);
       }
+      ctx.restore();
     }
   }
   // muzzle flash at the nose, in the element color
-  if (G.muzzle > 0) {
+  if (!preview && G.muzzle > 0) {
     const m = G.muzzle / 0.18;
     const my = y - s * 0.55;
     const fg = ctx.createRadialGradient(x, my, 0, x, my, 16 * m);
@@ -1216,7 +1377,7 @@ function drawPilotRig(x, py) {
     ctx.beginPath(); ctx.arc(x, my, 16 * m, 0, Math.PI * 2); ctx.fill();
   }
   // blaster heat gauge rides below the exhaust — full bar = overheat lockout
-  if (G.heat > 0.02 || G.overheat > 0) {
+  if (!preview && (G.heat > 0.02 || G.overheat > 0)) {
     const hw2 = 46, hy = py + s * 0.62 + 12;
     const hot = G.overheat > 0;
     ctx.globalAlpha = hot ? 0.55 + 0.4 * Math.abs(Math.sin(G.time * 8)) : 0.85;
@@ -1722,13 +1883,17 @@ function drawTelegraphs() {
 }
 
 // ---- SPACE JUNKIE typed attacks: the bolt's SHAPE is the pilot's species
-// (flame / water jet / razor leaf / lightning), its COLOR is the CURRENT
-// element — a Charmeleon riding a grass element shoots green fire.
-// Rendered modern: every bolt gets a long additive light-trail, a hot white
-// core, and layered glow drawn in 'lighter' so shots feel like energy.
+// family (14 signatures — flame, draco, fist, aqua, shard, gear, leaf, sting,
+// venom, quake, gale, pixel, psy, star, wisp, claw, volt), its COLOR is the
+// CURRENT element — a Charmeleon riding a grass element shoots green fire.
+// The whole attack GROWS with the partner: tier II/III bolts scale up and
+// each shape adds a signature flourish at tier III (extra fork, twin trails,
+// echo blades…). Rendered modern: every bolt gets a long additive light-
+// trail, a hot white core, and layered glow drawn in 'lighter'.
 function drawTypedBolt(L) {
   const col = TYPE_COLORS[L.element] || '#80d8ff';
   const t = G.time;
+  const tier = Math.max(1, Math.min(3, L.tier || 1));
   ctx.save();
   // 1) motion trail — soft light streak in two plain alpha strokes
   // (no per-bolt gradient allocation; this runs for every bolt every frame)
@@ -1741,6 +1906,10 @@ function drawTypedBolt(L) {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   ctx.shadowColor = col; ctx.shadowBlur = 14;
+  // evolved partners hit VISIBLY harder: the whole attack scales up a step
+  // per tier (geometry only — hitboxes are unchanged, generosity stays)
+  const sz = 1 + (tier - 1) * 0.16;
+  if (sz !== 1) { ctx.translate(L.x, L.y); ctx.scale(sz, sz); ctx.translate(-L.x, -L.y); }
   if (L.shape === 'flame') {
     // a living flame tongue — layered outer flame, inner tongue, white core
     const flick = 1 + 0.22 * Math.sin(t * 31 + L.x * 0.7);
@@ -1760,10 +1929,10 @@ function drawTypedBolt(L) {
     flame(0.62, col);
     flame(0.34, 'rgba(255,255,255,0.95)');
     ctx.globalCompositeOperation = 'source-over';
-    // ember sparks peeling off the tail
+    // ember sparks peeling off the tail — more of them each tier
     ctx.globalAlpha = 0.6;
     ctx.fillStyle = col;
-    for (let e = 0; e < 2; e++) {
+    for (let e = 0; e < 1 + tier; e++) {
       const ex = L.x + Math.sin(t * (23 + e * 9) + L.y * 0.2 + e * 2) * (4 + e * 3);
       ctx.beginPath(); ctx.arc(ex, L.y + h * (0.5 + e * 0.18), 2.4 - e * 0.8, 0, Math.PI * 2); ctx.fill();
     }
@@ -1789,6 +1958,11 @@ function drawTypedBolt(L) {
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 12) * 3.4, L.y + 20, 2.6, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(L.x - Math.sin(t * 15) * 3.4, L.y + 28, 1.8, 0, Math.PI * 2); ctx.fill();
+    if (tier >= 3) { // tier III: a second ripple chasing the dart
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(L.x, L.y + 6, 8 + ((t * 36 + L.y) % 10), 0, Math.PI * 2); ctx.stroke();
+    }
   } else if (L.shape === 'leaf') {
     // a spinning razor leaf inside a slicing light-disc
     ctx.globalCompositeOperation = 'lighter';
@@ -1819,6 +1993,317 @@ function drawTypedBolt(L) {
     ctx.quadraticCurveTo(9, -3, 0, 13);
     ctx.quadraticCurveTo(-9, -3, 0, -13);
     ctx.fill();
+    if (tier >= 3) { // tier III: a third blade in the storm
+      ctx.rotate(-0.7);
+      ctx.globalAlpha = 0.22;
+      ctx.beginPath();
+      ctx.moveTo(0, -13);
+      ctx.quadraticCurveTo(9, -3, 0, 13);
+      ctx.quadraticCurveTo(-9, -3, 0, -13);
+      ctx.fill();
+    }
+  } else if (L.shape === 'draco') {
+    // DRAGON — a serpentine dragon-pulse: sinuous body riding a standing
+    // wave, fanged arrowhead; tier III grows twin whisker-trails
+    const len = 32, wave = 4 + tier;
+    const body = (lw, color, ph, damp) => {
+      ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= 8; i++) {
+        const yy = L.y - len * 0.55 + (i / 8) * len;
+        const xx = L.x + Math.sin(t * 22 + i * 1.05 + ph + L.x * 0.13) * wave * (damp ? 1 - i / 10 : 1);
+        i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+      }
+      ctx.stroke();
+    };
+    body(7, col, 0, true);
+    ctx.shadowBlur = 0;
+    body(2.4, 'rgba(255,255,255,0.92)', 0, true);
+    if (tier >= 3) {
+      ctx.globalAlpha = 0.38;
+      body(1.5, col, 2.2, false); body(1.5, col, 4.4, false);
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = '#ffffff'; // the fanged head
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y - len * 0.55 - 9);
+    ctx.lineTo(L.x + 5.5, L.y - len * 0.55 + 2);
+    ctx.lineTo(L.x, L.y - len * 0.55 - 1);
+    ctx.lineTo(L.x - 5.5, L.y - len * 0.55 + 2);
+    ctx.closePath(); ctx.fill();
+  } else if (L.shape === 'fist') {
+    // FIGHTING — a blunt force comet: knuckle block behind a white impact
+    // wedge, flanked by speed lines; tier III adds a shockwave collar
+    const k = 9;
+    ctx.fillStyle = col;
+    roundRect(L.x - k, L.y - k * 0.7, k * 2, k * 1.5, 4); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y - k * 1.5);
+    ctx.lineTo(L.x + k * 0.8, L.y - k * 0.4);
+    ctx.lineTo(L.x - k * 0.8, L.y - k * 0.4);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.55; // speed lines trailing the punch
+    for (const sx of [-k - 4, k + 4]) {
+      ctx.beginPath(); ctx.moveTo(L.x + sx, L.y - 2); ctx.lineTo(L.x + sx * 0.8, L.y + 16); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    if (tier >= 3) {
+      ctx.globalAlpha = 0.4 + 0.25 * Math.sin(t * 30);
+      ctx.beginPath(); ctx.arc(L.x, L.y, k * 1.9, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  } else if (L.shape === 'shard') {
+    // ICE — a crystal lance: faceted diamond with a glint, frost motes in
+    // tow; tier III flies with two flanking shardlets
+    const h = 17, w4 = 6.5;
+    const crystal = (cx2, cy2, scl, alpha) => {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(cx2, cy2 - h * scl);
+      ctx.lineTo(cx2 + w4 * scl, cy2);
+      ctx.lineTo(cx2, cy2 + h * 0.7 * scl);
+      ctx.lineTo(cx2 - w4 * scl, cy2);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; // lit facet
+      ctx.beginPath();
+      ctx.moveTo(cx2, cy2 - h * scl);
+      ctx.lineTo(cx2 + w4 * scl, cy2);
+      ctx.lineTo(cx2, cy2 - h * 0.25 * scl);
+      ctx.closePath(); ctx.fill();
+    };
+    crystal(L.x, L.y, 1, 1);
+    ctx.shadowBlur = 0;
+    if (tier >= 3) { crystal(L.x - 10, L.y + 9, 0.5, 0.75); crystal(L.x + 10, L.y + 9, 0.5, 0.75); }
+    ctx.globalAlpha = 0.7; // frost motes
+    ctx.fillStyle = '#ffffff';
+    for (let e = 0; e < tier; e++) {
+      const ex = L.x + Math.sin(t * 17 + e * 2.4 + L.y * 0.1) * 7;
+      ctx.beginPath(); ctx.arc(ex, L.y + 14 + e * 7, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (L.shape === 'gear') {
+    // STEEL — a whirring sawgear: toothed disc spinning fast, molten core;
+    // tier III adds a counter-rotating outer ring
+    ctx.translate(L.x, L.y);
+    ctx.save();
+    ctx.rotate(t * 9 + L.y * 0.05);
+    ctx.fillStyle = col;
+    for (let i = 0; i < 8; i++) { // teeth
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-2.2, -12.5, 4.4, 5);
+    }
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+    if (tier >= 3) {
+      ctx.save();
+      ctx.rotate(-t * 6);
+      ctx.globalAlpha = 0.55;
+      ctx.setLineDash([5, 7]);
+      ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+  } else if (L.shape === 'sting') {
+    // BUG — a fanned volley of needle darts: 2/3/4 stingers each tier
+    const n = 1 + tier;
+    ctx.shadowBlur = 8;
+    for (let i = 0; i < n; i++) {
+      const off = (i - (n - 1) / 2) * 9;
+      const drop = Math.abs(i - (n - 1) / 2) * 5;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(L.x + off, L.y - 14 + drop);
+      ctx.lineTo(L.x + off + 2.6, L.y + 6 + drop);
+      ctx.lineTo(L.x + off - 2.6, L.y + 6 + drop);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; // needle point
+      ctx.beginPath();
+      ctx.moveTo(L.x + off, L.y - 14 + drop);
+      ctx.lineTo(L.x + off + 1.4, L.y - 6 + drop);
+      ctx.lineTo(L.x + off - 1.4, L.y - 6 + drop);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (L.shape === 'venom') {
+    // POISON — a corrosive glob: wobbling droplet, rising toxin bubbles;
+    // more bubbles each tier, a drip tail at tier III
+    const wob = 1 + 0.14 * Math.sin(t * 21 + L.x);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y - 13 * wob);
+    ctx.quadraticCurveTo(L.x + 9, L.y + 2, L.x, L.y + 10 * wob);
+    ctx.quadraticCurveTo(L.x - 9, L.y + 2, L.x, L.y - 13 * wob);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.ellipse(L.x - 2.5, L.y - 4, 1.8, 3.2, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.65; // toxin bubbles boiling off
+    ctx.strokeStyle = col; ctx.lineWidth = 1.3;
+    for (let e = 0; e < tier + 1; e++) {
+      const ph = (t * 2.2 + e * 0.83) % 1;
+      ctx.globalAlpha = 0.65 * (1 - ph);
+      ctx.beginPath();
+      ctx.arc(L.x + Math.sin(e * 2.7 + t * 3) * 8, L.y + 6 - ph * 20, 2 + ph * 2.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (tier >= 3) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(L.x + Math.sin(t * 9) * 2, L.y + 20, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (L.shape === 'quake') {
+    // GROUND/ROCK — a hurled boulder: tumbling faceted chunk with a dust
+    // wake; tier III carries orbiting pebbles
+    ctx.translate(L.x, L.y);
+    ctx.rotate(t * 5.5 + L.y * 0.03);
+    ctx.fillStyle = col;
+    ctx.beginPath(); // irregular facet silhouette
+    ctx.moveTo(0, -12); ctx.lineTo(9, -5); ctx.lineTo(11, 5); ctx.lineTo(3, 12);
+    ctx.lineTo(-8, 9); ctx.lineTo(-11, -2); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; // lit facets
+    ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(9, -5); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-11, -2); ctx.lineTo(0, -2); ctx.lineTo(-8, 9); ctx.closePath(); ctx.fill();
+    ctx.rotate(-(t * 5.5 + L.y * 0.03));
+    ctx.globalAlpha = 0.4; // dust wake
+    ctx.fillStyle = col;
+    for (let e = 0; e < 2; e++) {
+      const ph = (t * 2.6 + e * 0.5) % 1;
+      ctx.beginPath(); ctx.arc(Math.sin(e * 4 + t * 4) * 6, 13 + ph * 12, 3.5 * (1 - ph) + 1, 0, Math.PI * 2); ctx.fill();
+    }
+    if (tier >= 3) {
+      ctx.globalAlpha = 0.85;
+      for (let e = 0; e < 2; e++) {
+        const a2 = t * 7 + e * Math.PI;
+        ctx.beginPath(); ctx.arc(Math.cos(a2) * 15, Math.sin(a2) * 9, 2.4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  } else if (L.shape === 'gale') {
+    // FLYING — an air cutter: spinning crescent blade; tier III throws a
+    // crossed second crescent
+    ctx.translate(L.x, L.y);
+    const blades = tier >= 3 ? 2 : 1;
+    for (let b = 0; b < blades; b++) {
+      ctx.save();
+      ctx.rotate(t * 11 + b * Math.PI / 2);
+      ctx.globalAlpha = b ? 0.55 : 1;
+      ctx.strokeStyle = col; ctx.lineCap = 'round';
+      ctx.lineWidth = 5.5;
+      ctx.beginPath(); ctx.arc(0, 0, 12, -0.4, Math.PI + 0.4); ctx.stroke();
+      if (!b) { ctx.shadowBlur = 0; }
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 0.5; // slipstream streaks
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(-7, 14); ctx.lineTo(-9, 26); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(7, 14); ctx.lineTo(9, 26); ctx.stroke();
+  } else if (L.shape === 'pixel') {
+    // NORMAL (Porygon) — a DIGITAL burst: a diamond of flickering data
+    // squares that resolves more voxels each tier, white kernel at core
+    const cells = tier === 1 ? [[0, -8], [0, 0], [0, 8], [-6, 0], [6, 0]]
+      : tier === 2 ? [[0, -10], [0, 0], [0, 10], [-7, -4], [7, -4], [-7, 6], [7, 6]]
+      : [[0, -12], [0, 0], [0, 12], [-8, -6], [8, -6], [-8, 6], [8, 6], [-13, 0], [13, 0]];
+    for (let i = 0; i < cells.length; i++) {
+      const flick = 0.55 + 0.45 * Math.sin(t * 26 + i * 1.9 + L.y * 0.15);
+      ctx.globalAlpha = flick;
+      ctx.fillStyle = col;
+      ctx.fillRect(L.x + cells[i][0] - 3, L.y + cells[i][1] - 3, 6, 6);
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(L.x - 2, L.y - 2, 4, 4);
+  } else if (L.shape === 'psy') {
+    // PSYCHIC — a warp lens: pulsing eye-dot inside expanding thought
+    // rings; one more ring per tier
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = col;
+    for (let r0 = 0; r0 < 1 + tier; r0++) {
+      const ph = (t * 1.6 + r0 / (1 + tier)) % 1;
+      ctx.globalAlpha = 0.8 * (1 - ph);
+      ctx.lineWidth = 2.2 - ph;
+      ctx.beginPath(); ctx.ellipse(L.x, L.y, 4 + ph * 15, (4 + ph * 15) * 0.72, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = col; ctx.shadowBlur = 12;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(L.x, L.y, 5.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(L.x, L.y, 2.2, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (L.shape === 'star') {
+    // FAIRY — a wishing star: rotating four-point star (five at tier III)
+    // shedding glitter motes
+    ctx.translate(L.x, L.y);
+    ctx.rotate(t * 3.2);
+    const pts = tier >= 3 ? 5 : 4, R1 = 12, R2 = 4.5;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    for (let i = 0; i < pts * 2; i++) {
+      const a2 = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
+      const rr = i % 2 ? R2 : R1;
+      i ? ctx.lineTo(Math.cos(a2) * rr, Math.sin(a2) * rr) : ctx.moveTo(Math.cos(a2) * rr, Math.sin(a2) * rr);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(-t * 3.2);
+    ctx.fillStyle = col; // glitter shed behind
+    for (let e = 0; e < tier; e++) {
+      const ph = (t * 2.4 + e * 0.61) % 1;
+      ctx.globalAlpha = 0.8 * (1 - ph);
+      const gx = Math.sin(e * 2.6 + t * 5) * 9;
+      ctx.beginPath(); ctx.arc(gx, 10 + ph * 16, 1.7, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (L.shape === 'wisp') {
+    // GHOST — a will-o'-wisp: a wavering spectral teardrop trailing smoke
+    // rings; tier III flies with two minion wisplets
+    const sway = Math.sin(t * 9 + L.y * 0.12) * 3;
+    const wispAt = (cx2, cy2, scl, alpha) => {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(cx2, cy2 - 14 * scl);
+      ctx.quadraticCurveTo(cx2 + 8 * scl, cy2 - 2 * scl, cx2, cy2 + 9 * scl);
+      ctx.quadraticCurveTo(cx2 - 8 * scl, cy2 - 2 * scl, cx2, cy2 - 14 * scl);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath(); ctx.arc(cx2, cy2 - 3 * scl, 2.6 * scl, 0, Math.PI * 2); ctx.fill();
+    };
+    wispAt(L.x + sway, L.y, 1, 0.95);
+    ctx.shadowBlur = 0;
+    if (tier >= 3) { wispAt(L.x + sway * -0.7 - 11, L.y + 10, 0.5, 0.6); wispAt(L.x + sway * -0.7 + 11, L.y + 10, 0.5, 0.6); }
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4; // smoke rings left behind
+    for (let e = 0; e < tier; e++) {
+      const ph = (t * 1.8 + e * 0.57) % 1;
+      ctx.globalAlpha = 0.55 * (1 - ph);
+      ctx.beginPath(); ctx.arc(L.x - sway * 0.6, L.y + 14 + ph * 18, 3 + ph * 5, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else if (L.shape === 'claw') {
+    // DARK — a feral slash: crossed crescent claw-marks snapping with a
+    // jitter; a third gash joins at tier III
+    ctx.translate(L.x, L.y);
+    const jit = Math.sin(t * 47 + L.y) * 0.08;
+    const slashes = tier >= 3 ? 3 : 2;
+    for (let b = 0; b < slashes; b++) {
+      ctx.save();
+      ctx.rotate(-0.5 + b * (slashes === 3 ? 0.5 : 1) + jit);
+      ctx.globalAlpha = b === slashes - 1 ? 1 : 0.7;
+      ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.arc(0, 2, 13, -Math.PI * 0.82, -Math.PI * 0.18); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(0, 2, 13, -Math.PI * 0.75, -Math.PI * 0.25); ctx.stroke();
+      ctx.restore();
+    }
   } else { // 'volt' — a forked lightning bolt with a halo flash
     const h = 36, seg = 6;
     ctx.globalCompositeOperation = 'lighter';
@@ -1842,6 +2327,8 @@ function drawTypedBolt(L) {
     jag(5, 1.8, 'rgba(255,255,255,0.95)', 0);
     ctx.globalAlpha = 0.45; // side fork
     jag(9, 1.4, col, 3.1);
+    if (tier >= 2) { ctx.globalAlpha = 0.3; jag(13, 1.2, col, 7.7); }
+    if (tier >= 3) { ctx.globalAlpha = 0.22; jag(17, 1.1, col, 11.3); }
   }
   ctx.restore();
 }
@@ -2421,6 +2908,39 @@ function drawShield() {
   ctx.strokeStyle = `rgba(165,214,167,${a + 0.3})`;
   ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(0, fl - 8); ctx.lineTo(W, fl - 8); ctx.stroke();
+  ctx.restore();
+}
+
+// Every permanent pick gets the same concise acquisition grammar: its glyph
+// travels into the player, the matching path color locks into a hex ring, and
+// one segment remains for each tier. It reads even with reduced flash enabled.
+function drawUpgradeInstallFx() {
+  const fx = G.upgradeFx;
+  if (!fx) return;
+  const p = 1 - fx.t / fx.max;
+  const settle = Math.min(1, p / 0.42);
+  const fade = p < 0.78 ? 1 : Math.max(0, (1 - p) / 0.22);
+  const x = G.paddle.x, y = shipY();
+  const col = fx.color || '#80d8ff';
+  ctx.save();
+  ctx.globalAlpha = fade * (SETTINGS.reduceFlash ? 0.78 : 1);
+  ctx.globalCompositeOperation = SETTINGS.reduceFlash ? 'source-over' : 'lighter';
+  const by = y - 92 * (1 - settle);
+  const br = 13 - settle * 3;
+  blitBadge(fx.icon || 'star', x, by, br, col, 'lit');
+  if (settle > 0.35) {
+    const lock = Math.min(1, (settle - 0.35) / 0.65);
+    const rr = 18 + lock * 34 + p * 8;
+    ctx.strokeStyle = col; ctx.lineWidth = 3 - p * 1.2;
+    constellationHex(x, y, rr, Math.PI / 6 + p * (SETTINGS.reduceFlash ? 0.08 : 0.32)); ctx.stroke();
+    const segs = Math.max(1, Math.min(4, (fx.tierIdx | 0) + 1));
+    for (let i = 0; i < segs; i++) {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / segs;
+      const sx = x + Math.cos(a) * (rr + 7), sy = y + Math.sin(a) * (rr + 7);
+      ctx.fillStyle = i === segs - 1 ? '#ffffff' : col;
+      constellationHex(sx, sy, 3.6, Math.PI / 6); ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
@@ -4055,131 +4575,259 @@ function drawDex() {
   ctx.fillText('◀ BACK', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
 }
 
-// Modal atlas for the entire authored tree. Desktop gets five readable path
-// columns with full descriptions; narrow/short screens get five rows with all
-// four tier nodes still visible at once. Nothing is hidden behind hover.
+function constellationHex(x, y, r, rot = Math.PI / 6) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = rot + i * Math.PI / 3;
+    const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+    if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// The constellation is both atlas and choice surface. It deliberately maps
+// the current 24 save-compatible tiers before the later branching graph adds
+// more nodes, so the visual redesign can ship without changing balance.
 function drawFullUpgradeTree() {
   const T = upgradeTreeLayout(), p = T.panel;
   ctx.save();
   ctx.globalAlpha = 1;
-  dim(0.74);
-  ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = 24;
-  roundRect(p.x, p.y, p.w, p.h, 18);
-  ctx.fillStyle = 'rgba(6,10,27,0.985)'; ctx.fill();
+  dim(0.82);
+  ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = 30;
+  roundRect(p.x, p.y, p.w, p.h, 22);
+  const pg = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
+  pg.addColorStop(0, 'rgba(8,14,38,0.992)');
+  pg.addColorStop(0.55, 'rgba(5,9,27,0.992)');
+  pg.addColorStop(1, 'rgba(12,7,31,0.992)');
+  ctx.fillStyle = pg; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(128,216,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(128,216,255,0.65)'; ctx.lineWidth = 2; ctx.stroke();
+
+  // restrained star field inside the panel: enough depth to sell a star map,
+  // deterministic so it never flickers while the player is reading.
+  ctx.save();
+  roundRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4, 20); ctx.clip();
+  for (let i = 0; i < 34; i++) {
+    const sx = p.x + 18 + ((i * 89.7) % Math.max(1, p.w - 36));
+    const sy = p.y + 18 + ((i * 53.3) % Math.max(1, p.h - 36));
+    const tw = SETTINGS.reduceFlash ? 0.45 : 0.4 + 0.25 * Math.sin(G.time * 0.8 + i);
+    ctx.globalAlpha = 0.16 + tw * 0.2;
+    ctx.fillStyle = i % 5 ? '#b3e5fc' : '#ffd54f';
+    ctx.beginPath(); ctx.arc(sx, sy, i % 7 ? 0.8 : 1.4, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 ${Math.min(22, p.w / 22)}px Orbitron, sans-serif`;
+  ctx.font = `900 ${Math.min(T.compact ? 18 : 24, p.w / 24)}px Orbitron, sans-serif`;
   ctx.fillStyle = '#e3f2fd';
-  ctx.fillText('UPGRADE TREE', p.x + p.w / 2, p.y + 24);
-  ctx.font = '600 9px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
-  ctx.fillText('EACH ROW BUILDS LEFT → RIGHT · ' + (IS_TOUCH ? 'TAP' : 'CLICK') + ' ANY UPGRADE FOR DETAILS', p.x + p.w / 2, p.y + 40, p.w - 90);
-  // clamp the stored selection in case the roster/paths changed
+  ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION', p.x + p.w / 2, p.y + (T.compact ? 18 : 22));
+  const ownedN = totalPathLevels();
+  const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
+  ctx.font = `700 ${T.compact ? 7.5 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
+  const buildLine = T.compact
+    ? 'BUILD ' + ownedN + '/24 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
+    : 'BUILD ' + ownedN + '/24 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
+      ' · THREE GLOWING NODES ARE THIS STAGE’S OFFERS';
+  ctx.fillText(buildLine, p.x + p.w / 2, p.y + (T.compact ? 37 : 45), p.w - 96);
+
   treeSel.pi = Math.max(0, Math.min(PATH_KEYS.length - 1, treeSel.pi | 0));
   treeSel.ti = Math.max(0, Math.min(3, treeSel.ti | 0));
 
-  const small = T.compact;
+  const map = T.map, C = T.center;
+  ctx.save();
+  roundRect(map.x, map.y, map.w, map.h, 16); ctx.clip();
+  // Four readable progression rings. They are tier rings today, not false
+  // evolution locks; Form gates can later reuse the exact same geometry.
+  const ringNames = ['TIER I', 'TIER II', 'TIER III', 'CAPSTONE'];
+  for (let ti = 0; ti < 4; ti++) {
+    const rr = T.inner + ti * T.step;
+    ctx.setLineDash(ti === 3 ? [4, 7] : [2, 8]);
+    ctx.lineDashOffset = -G.time * (SETTINGS.reduceFlash ? 2 : 8);
+    ctx.strokeStyle = ti === 3 ? 'rgba(255,213,79,0.22)' : 'rgba(128,216,255,0.13)';
+    ctx.lineWidth = ti === 3 ? 1.5 : 1;
+    ctx.beginPath(); ctx.arc(C.x, C.y, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    if (!T.compact || ti === 3) {
+      ctx.font = `700 ${T.compact ? 6.5 : 8}px Orbitron, sans-serif`;
+      ctx.fillStyle = ti === 3 ? 'rgba(255,213,79,0.58)' : 'rgba(128,216,255,0.4)';
+      ctx.fillText(ringNames[ti], C.x, C.y - rr + (ti === 0 ? -8 : -6));
+    }
+  }
+
+  // Connectors first, behind their nodes. Owned routes are solid; an offered
+  // frontier gets one slow moving light path from the nearest owned tier.
   for (let pi = 0; pi < PATH_KEYS.length; pi++) {
     const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk);
-    // row label: path name + role, on the left
-    const lb = T.label(pi);
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.font = `900 ${small ? 9 : 12}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-    wrapText(P.name, lb.w).slice(0, 2).forEach((ln, li) => ctx.fillText(ln, lb.x, lb.y + lb.h / 2 - (small ? 8 : 10) + li * (small ? 10 : 13), lb.w));
-    if (!small) { ctx.font = '600 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#90a4ae'; ctx.fillText(pathRole(pk), lb.x, lb.y + lb.h / 2 + 16, lb.w); }
-    // connector rail behind the row — brightens up to the owned tier
-    for (let ti = 0; ti < 3; ti++) {
-      const a = T.node(pi, ti), b = T.node(pi, ti + 1);
-      ctx.strokeStyle = ti + 1 <= lvl ? P.color : 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = ti + 1 <= lvl ? 2.5 : 1.5;
-      ctx.beginPath(); ctx.moveTo(a.x + a.w, a.y + a.h / 2); ctx.lineTo(b.x, b.y + b.h / 2); ctx.stroke();
+    for (let ti = 0; ti < 4; ti++) {
+      const b = T.node(pi, ti);
+      const a = ti ? T.node(pi, ti - 1) : { cx: C.x, cy: C.y };
+      const owned = ti < lvl;
+      const offer = choiceIndexForTreeNode(pi, ti);
+      ctx.setLineDash(owned ? [] : [4, 7]);
+      ctx.lineDashOffset = offer >= 0 ? -G.time * (SETTINGS.reduceFlash ? 5 : 28) : 0;
+      ctx.strokeStyle = owned ? P.color : offer >= 0 ? P.color + 'dd' : 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = owned ? 3 : offer >= 0 ? 2.4 : 1.2;
+      ctx.beginPath(); ctx.moveTo(a.cx, a.cy); ctx.lineTo(b.cx, b.cy); ctx.stroke();
+      if (offer >= 0) {
+        ctx.setLineDash([]); ctx.globalAlpha = 0.26;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(a.cx, a.cy); ctx.lineTo(b.cx, b.cy); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     }
-    // the four tier tiles, left → right
+  }
+  ctx.setLineDash([]);
+
+  // Nodes use shape + icon + connector state, never color alone. Only the
+  // three offers pulse, keeping a full late-run map calm and scannable.
+  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+    const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk);
     for (let ti = 0; ti < 4; ti++) {
       const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
       const sel = treeSel.pi === pi && treeSel.ti === ti;
       const n = T.node(pi, ti);
+      const offer = choiceIndexForTreeNode(pi, ti);
+      const offered = offer >= 0;
+      const chosen = offered && draftSel === offer;
+      const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + offer * 1.7);
       ctx.save();
-      if (sel) { ctx.shadowColor = P.color; ctx.shadowBlur = 18; }
-      roundRect(n.x, n.y, n.w, n.h, 9);
-      ctx.fillStyle = sel ? mixHex(P.color, '#0a0e1c', 0.55) : owned ? P.color + '26' : next ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
+      if (sel || offered) { ctx.shadowColor = offered ? '#ffffff' : P.color; ctx.shadowBlur = offered ? 14 + pulse * 10 : 15; }
+      constellationHex(n.cx, n.cy, n.r + (ti === 3 ? 2 : 0));
+      ctx.fillStyle = chosen ? mixHex(P.color, '#ffffff', 0.22) : owned ? mixHex(P.color, '#071022', 0.55)
+        : offered ? mixHex(P.color, '#071022', 0.72) : next ? 'rgba(18,28,52,0.94)' : 'rgba(9,14,28,0.9)';
       ctx.fill();
-      ctx.lineWidth = sel ? 2.5 : next ? 1.8 : 1;
-      ctx.strokeStyle = sel ? '#fff' : owned ? P.color : next ? P.color + 'cc' : 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = chosen ? 3 : offered ? 2.4 : sel ? 2.2 : owned ? 1.8 : 1;
+      ctx.strokeStyle = chosen || sel ? '#fff' : offered || owned ? P.color : next ? P.color + 'aa' : 'rgba(255,255,255,0.14)';
       ctx.stroke();
       ctx.shadowBlur = 0;
-      // polished badge icon
-      const iconR = Math.max(9, Math.min(small ? 13 : 17, n.h * 0.24));
-      const iconCX = small ? n.x + n.w / 2 : n.x + 6 + iconR;
-      const iconCY = small ? n.y + iconR + 6 : n.y + n.h * 0.32;
-      const badge = iconBadge(tier.icon, P.color, Math.round(iconR), (owned || next || sel) ? 'lit' : 'dim');
-      ctx.globalAlpha = owned || next || sel ? 1 : 0.7;
-      ctx.drawImage(badge, iconCX - badge.width / 2, iconCY - badge.height / 2);
+      const iconR = Math.max(6, n.r * 0.72);
+      const badge = iconBadge(tier.icon, P.color, Math.round(iconR), (owned || next || sel || offered) ? 'lit' : 'dim');
+      ctx.globalAlpha = owned || next || sel || offered ? 1 : 0.52;
+      ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
       ctx.globalAlpha = 1;
-      // name — brighter + bolder when selected
-      const nameCol = sel ? '#fff' : owned ? P.color : next ? '#e8eef6' : '#8595a0';
-      const nm = (ti === 3 ? '★ ' : '') + junkieTierName(pk, ti);
-      if (small) {
-        ctx.textAlign = 'center';
-        ctx.font = `${sel ? 900 : 800} ${sel ? 7.5 : 7}px Orbitron, sans-serif`; ctx.fillStyle = nameCol;
-        wrapText(nm, n.w - 6).slice(0, 2).forEach((ln, li) => ctx.fillText(ln, n.x + n.w / 2, iconCY + iconR + 9 + li * 8, n.w - 4));
-      } else {
-        const tx = n.x + 12 + iconR * 2, tw = n.x + n.w - 8 - tx;
-        ctx.textAlign = 'left';
-        ctx.font = `${sel ? 900 : 800} ${sel ? 10 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = nameCol;
-        ctx.fillText(nm, tx, n.y + 15, tw);
-        // the description text, right in the box (bolder/brighter when selected)
-        ctx.font = bodyFont(sel ? 8.5 : 8, sel ? 700 : 600);
-        ctx.fillStyle = sel ? '#eef3fa' : owned || next ? '#aeb9c8' : '#6b7684';
-        const maxLines = n.h >= 78 ? 3 : 2;
-        wrapText(tierDesc(pk, ti), tw).slice(0, maxLines).forEach((ln, li) => ctx.fillText(ln, tx, n.y + 30 + li * 11, tw));
-        // status tag, bottom-right
-        ctx.textAlign = 'right'; ctx.font = '800 6.5px Orbitron, sans-serif';
-        ctx.fillStyle = owned ? P.color : next ? '#cfd8dc' : '#546e7a';
-        ctx.fillText(owned ? 'OWNED' : next ? 'NEXT' : 'TIER ' + (ti + 1), n.x + n.w - 8, n.y + n.h - 8);
+      if (owned) {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.68, n.cy + n.r * 0.65, 3.2, 0, Math.PI * 2); ctx.fill();
+      }
+      if (offered) {
+        const hx = n.cx - n.r * 0.82, hy = n.cy - n.r * 0.86;
+        ctx.beginPath(); ctx.arc(hx, hy, Math.max(7, n.r * 0.52), 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff'; ctx.fill();
+        ctx.font = `900 ${Math.max(7, n.r * 0.58)}px Orbitron, sans-serif`;
+        ctx.fillStyle = '#071022'; ctx.fillText(String(offer + 1), hx, hy + 0.5);
       }
       ctx.restore();
     }
+    // constellation identity stays outside the busy node field
+    const lb = T.label(pi);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${T.compact ? 7.5 : 10}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
+    ctx.fillText(P.name, lb.x, lb.y, T.compact ? 58 : 90);
+    if (!T.compact) {
+      ctx.font = '600 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+      ctx.fillText(pathRole(pk), lb.x, lb.y + 12, 100);
+    }
   }
-  // ---- detail panel: explain the selected node in full, readable text ----
+
+  // The actual current build sits at the center, so installing a node has an
+  // immediate visual referent instead of feeling like a detached menu choice.
+  ctx.save();
+  const corePulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 1.9);
+  ctx.strokeStyle = `rgba(255,255,255,${0.22 + corePulse * 0.18})`; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(C.x, C.y, T.inner * 0.68, 0, Math.PI * 2); ctx.stroke();
+  if (G.mode === 'junkie') drawPilotRig(C.x, C.y, true);
+  else {
+    blitBadge('pokeball', C.x, C.y, Math.max(12, T.inner * 0.38), '#80d8ff', 'lit');
+    const sm = STARTER_MON[G.starter], img = sm && getSprite(sm.ids[G.starterLvl - 1]);
+    if (img && img.complete && img.naturalWidth) {
+      const ss = Math.max(26, T.inner * 0.72);
+      ctx.drawImage(img, C.x - ss / 2, C.y - ss / 2, ss, ss);
+    }
+  }
+  ctx.font = `900 ${T.compact ? 6.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#e3f2fd';
+  ctx.fillText('PILOT CORE · ' + ownedN, C.x, C.y + T.inner * 0.83);
+  ctx.restore();
+  ctx.restore();
+
   drawTreeDetail(T);
   const cb = T.close;
   roundRect(cb.x, cb.y, cb.w, cb.h, 9);
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.font = '900 17px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 16px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#cfd8dc';
   ctx.fillText('×', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
   ctx.restore();
 }
-// the tap-to-inspect detail card at the bottom of the full tree
+
+// Persistent node details: effect, exact state, path progress, visible rig
+// tell, and the one install action. The map itself stays almost text-free.
 function drawTreeDetail(T) {
   const d = T.detail;
   const pk = PATH_KEYS[treeSel.pi], P = PATHS[pk], lvl = pathLvl(pk), ti = treeSel.ti;
   const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
-  roundRect(d.x, d.y, d.w, d.h, 12);
-  ctx.fillStyle = 'rgba(12,18,40,0.96)'; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = P.color + 'aa'; ctx.stroke();
-  const pad = 16;
-  // status pill (right)
-  const status = owned ? 'OWNED' : next ? 'NEXT UP' : 'LOCKED · TIER ' + (ti + 1);
-  const statusCol = owned ? P.color : next ? '#fff' : '#8595a0';
-  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = statusCol;
-  ctx.fillText(status, d.x + d.w - pad, d.y + 14, d.w * 0.4);
-  // icon + path + tier name (left)
-  const db = iconBadge(tier.icon, P.color, 17, 'lit');
-  ctx.drawImage(db, d.x + pad, d.y + 8, 34, 34);
+  const offer = choiceIndexForTreeNode(treeSel.pi, treeSel.ti);
+  const offered = offer >= 0, chosen = offered && draftSel === offer;
+  const status = owned ? 'OWNED' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
+    : next ? 'REACHABLE · NOT OFFERED' : 'LOCKED · REQUIRES TIER ' + ti;
+  const statusCol = owned ? P.color : offered ? '#ffffff' : next ? P.color : '#78909c';
+  const choice = offered ? G.upgradeChoices[offer] : null;
+  const pad = T.compact ? 11 : 16;
+  roundRect(d.x, d.y, d.w, d.h, 14);
+  ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
+  ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? P.color : P.color + '88'; ctx.stroke();
+
+  const iconSize = T.sideDetail ? 44 : T.compact ? 32 : 38;
+  const db = iconBadge(tier.icon, P.color, Math.round(iconSize / 2), owned || offered || next ? 'lit' : 'dim');
+  ctx.drawImage(db, d.x + pad, d.y + pad, iconSize, iconSize);
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.font = '800 9.5px Orbitron, sans-serif'; ctx.fillStyle = P.color;
-  ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + 42, d.y + 12, d.w - 130);
-  ctx.font = `900 ${Math.min(19, d.w / 22)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
-  ctx.fillText(junkieTierName(pk, ti), d.x + pad + 42, d.y + 26, d.w - 130);
-  // the full description — the whole point: readable, wrapped
-  ctx.font = bodyFont(Math.min(13, d.w / 34), 600); ctx.fillStyle = '#cfd8ea';
-  const descTop = d.y + 52;
-  wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, 3).forEach((line, li) =>
-    ctx.fillText(line, d.x + pad, descTop + li * 17, d.w - pad * 2));
+  ctx.font = `800 ${T.compact ? 7.5 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
+  ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
+  ctx.font = `900 ${T.compact ? 12 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.fillText(junkieTierName(pk, ti), d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
+  ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
+  ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
+
+  let y = d.y + pad + Math.max(iconSize + 8, 54);
+  ctx.font = bodyFont(T.compact ? 9 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
+  const descLines = wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, T.sideDetail ? 5 : 2);
+  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 16), d.w - pad * 2));
+  y += descLines.length * (T.compact ? 12 : 16) + (T.compact ? 5 : 10);
+
+  ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
+  ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
+  y += T.compact ? 11 : 14;
+  ctx.font = bodyFont(T.compact ? 8 : 9.5, 650); ctx.fillStyle = '#aebdca';
+  const visualLines = wrapText(tier.visual || P.tell, d.w - pad * 2).slice(0, T.sideDetail ? 3 : 1);
+  visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 10 : 13), d.w - pad * 2));
+  y += visualLines.length * (T.compact ? 10 : 13) + 7;
+
+  if (T.sideDetail && choice) {
+    ctx.font = '800 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
+    ctx.fillText((choice.tags || []).join('  +  '), d.x + pad, y, d.w - pad * 2);
+    y += 15;
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillText(choice.synergy || P.summary, d.x + pad, y, d.w - pad * 2);
+  }
+
+  const rr = T.reroll, canRR = !G.rerolled && !G.secret.rewardDraft;
+  const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
+  roundRect(rr.x, rr.y, rr.w, rr.h, 11);
+  ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+  ctx.lineWidth = 1.3; ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,213,79,0.55)') : 'rgba(255,255,255,0.15)'; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `800 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
+  ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL · R') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+
+  const cf = T.confirm, canCF = chosen;
+  const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
+  if (canCF) { ctx.shadowColor = P.color; ctx.shadowBlur = hovCF ? 18 : 10; }
+  roundRect(cf.x, cf.y, cf.w, cf.h, 11);
+  ctx.fillStyle = canCF ? (hovCF ? P.color + '55' : P.color + '34') : 'rgba(255,255,255,0.06)'; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = canCF ? 2 : 1.2; ctx.strokeStyle = canCF ? '#ffffff' : 'rgba(255,255,255,0.15)'; ctx.stroke();
+  ctx.font = `900 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
+  ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OFFER ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS NODE' : 'CHOOSE A GLOWING NODE',
+    cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
 }
 
 // Compact journey map shown between every stage. Nine persistent region nodes
@@ -4773,6 +5421,7 @@ function render() {
     drawBalls();
     drawServeGuide();
     if (G.state !== 'gameover' && G.state !== 'upgrade') drawPaddle();
+    if (G.state !== 'gameover' && G.state !== 'upgrade') drawUpgradeInstallFx();
     drawShootHint();
     drawParticles();
     drawAnnounce();

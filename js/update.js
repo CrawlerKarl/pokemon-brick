@@ -1394,6 +1394,7 @@ function update(dt) {
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
   G.hurtHud = Math.max(0, (G.hurtHud || 0) - dt); // on-hit health readout at the player
   G.attackAnim = Math.max(0, G.attackAnim - dt * 4.5); // pilot lunge decays fast
+  if (G.upgradeFx) { G.upgradeFx.t -= dt; if (G.upgradeFx.t <= 0) G.upgradeFx = null; }
   if (G.uiTouchPulse) { G.uiTouchPulse.t -= dt; if (G.uiTouchPulse.t <= 0) G.uiTouchPulse = null; }
   G.shareToast = Math.max(0, (G.shareToast || 0) - dt);
   if (G.combatNotice) {
@@ -2905,8 +2906,12 @@ function update(dt) {
       G.upgradeChoices = SECRET_UPGRADES.map(secret => ({ secret }));
       G.score += 3000;
     }
-    upgradeTreeOpen = false;
+    // The constellation is now the primary choice surface while all three
+    // offers are authored path nodes. Mixed mastery/secret hands keep the
+    // compact cards because those satellites are not part of graph parity yet.
+    upgradeTreeOpen = G.mode === 'junkie' && !secretVictory && !!G.upgradeChoices && G.upgradeChoices.every(c => c.pathKey);
     draftSel = null; // nothing inspected yet on a fresh draft
+    if (upgradeTreeOpen) syncTreeSelectionToDraft();
     G.rerolled = secretVictory; // forbidden rewards are a fixed, one-time set
     // ---- ACT BOUNDARY: clearing Hoenn (→ act II) or Kalos (→ act III) is
     // the game's biggest beat — a full evolution ceremony plays before the
