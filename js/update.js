@@ -1403,10 +1403,28 @@ function update(dt) {
           tx = boss.bx + (tx - boss.bx) * 0.12;
           ty = boss.by + (ty - boss.by) * 0.12;
         }
+        // wing slots stay ON the battlefield: a boss hugging a screen edge
+        // would otherwise park its outer wing past the edge, out of reach of
+        // every upward bolt (bolts fire from inside the screen)
+        tx = Math.max(28, Math.min(W - 28, tx));
+        ty = Math.max(44, Math.min(H * 0.8, ty));
         const kk = Math.min(1, dt * ts * (boss.reformT > 0 ? 10 : 5));
         br.bx += (tx - br.bx) * kk;
         br.by += (ty - br.by) * kk;
         br.hx = br.bx; br.hy = br.by;
+      }
+    } else {
+      // ORPHANED WINGS fall with their legendary. Their anchor is gone (the
+      // round's final boss felled mid-sweep), and an untethered guard simply
+      // froze wherever its slot last was — which could be past the screen
+      // edge, unhittable, silently blocking the every-brick-dead wave-clear
+      // check: an empty-looking arena that never advances. Round transitions
+      // are safe: the controller summons the next round's boss before this
+      // block runs, so a live anchor exists on every mid-gauntlet frame.
+      // (dormant wings are round-1 sleepers parked with their legendary —
+      // they haven't entered the fight, so they're not orphans)
+      for (const br of G.bricks) {
+        if (!br.dead && br.guard && !br.dormant) damageBrick(br, 9999, br.bx + G.fx, br.by + G.fy);
       }
     }
   }
