@@ -1196,12 +1196,24 @@ window.requestAnimationFrame = function () { return 0; };
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
+        // constellation nodes may OVERFLOW small viewports by design (the
+        // compact chart enforces a big minimum scale and pans instead) — the
+        // guarantee is that the camera can bring every node inside the map box
+        treePan.x = 0; treePan.y = 0;
+        const TP = upgradeTreeLayout();
+        const mcx = TP.map.x + TP.map.w / 2, mcy = TP.map.y + TP.map.h / 2;
+        const reach = (name, n) => {
+          if (Math.abs(n.cx - mcx) > TP.map.w / 2 + TP.panLim.x + 2 ||
+              Math.abs(n.cy - mcy) > TP.map.h / 2 + TP.panLim.y + 2) {
+            bad.push(w + '×' + h + ' ' + name + ' unreachable by pan');
+          }
+        };
         for (let pi = 0; pi < PATH_KEYS.length; pi++) {
-          for (let ti = 0; ti < 4; ti++) rects['constellation(' + pi + ',' + ti + ')'] = T.node(pi, ti);
-          rects['super(' + pi + ')'] = T.superNode(pi);
+          for (let ti = 0; ti < 4; ti++) reach('constellation(' + pi + ',' + ti + ')', TP.node(pi, ti));
+          reach('super(' + pi + ')', TP.superNode(pi));
         }
-        for (let bi = 0; bi < WEB_BRIDGES.length; bi++) rects['bridge(' + bi + ')'] = T.bridgeNode(bi);
-        for (let si = 0; si < WEB_SATELLITES.length; si++) rects['satellite(' + si + ')'] = T.satNode(si);
+        for (let bi = 0; bi < WEB_BRIDGES.length; bi++) reach('bridge(' + bi + ')', TP.bridgeNode(bi));
+        for (let si = 0; si < WEB_SATELLITES.length; si++) reach('satellite(' + si + ')', TP.satNode(si));
         count = Object.keys(rects).length;
         for (const [name, r] of Object.entries(rects)) {
           if (!(r.x >= -2 && r.y >= -2 && r.x + r.w <= w + 2 && r.y + r.h <= h + 2)) {

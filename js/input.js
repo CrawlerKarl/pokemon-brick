@@ -37,6 +37,11 @@ window.addEventListener('mousemove', e => {
   if (performance.now() - lastTouchT < 900) return;
   mouseX = e.clientX; lastMouseY = e.clientY;
   if (dragSlider >= 0) setSliderFromX(dragSlider, e.clientX);
+  if (treeDrag && treeDrag.id === 'mouse') {
+    if (!upgradeTreeOpen || G.state !== 'upgrade') { treeDrag = null; return; }
+    treePan.x = treeDrag.sx + (e.clientX - treeDrag.x);
+    treePan.y = treeDrag.sy + (e.clientY - treeDrag.y);
+  }
 });
 window.addEventListener('mouseup', () => { if (dragSlider >= 0) { dragSlider = -1; saveSettings(); } });
 // mobile browsers replay taps as synthetic mouse events ~300ms later — that
@@ -74,10 +79,12 @@ window.addEventListener('mousedown', e => {
   }
   fireHeld = true;
   onPress(e.clientX, e.clientY);
+  if (treeDrag && treeDrag.id == null) treeDrag.id = 'mouse';
 });
 window.addEventListener('mouseup', e => {
   if (e.button === 2) { chargeHeld = false; return; }
   fireHeld = false;
+  if (treeDrag && treeDrag.id === 'mouse') treeDrag = null;
 });
 // right-click charges instead of opening the context menu during play
 window.addEventListener('contextmenu', e => {
@@ -141,6 +148,8 @@ window.addEventListener('touchstart', e => {
     } else {
       mouseX = x; lastMouseY = y;
       onPress(x, y);
+      // a constellation drag begun by this touch belongs to this touch
+      if (treeDrag && treeDrag.id == null) treeDrag.id = t.identifier;
     }
   }
 }, { passive: true });
@@ -148,6 +157,12 @@ let onPressDexTapPending = null;
 window.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
     if (uiTouchIds.has(t.identifier)) { claimUiTouch(t.identifier); continue; } // button touches never steer
+    if (treeDrag && t.identifier === treeDrag.id) { // pan the constellation
+      if (!upgradeTreeOpen || G.state !== 'upgrade') { treeDrag = null; continue; }
+      treePan.x = treeDrag.sx + (t.clientX - treeDrag.x);
+      treePan.y = treeDrag.sy + (t.clientY - treeDrag.y);
+      continue;
+    }
     if (G.state === 'dex' && dexDragY != null) {
       dexScroll = Math.max(0, dexScroll - (t.clientY - dexDragY));
       dexDragY = t.clientY;
@@ -171,6 +186,7 @@ window.addEventListener('touchend', e => {
     // Releasing before the hold threshold is a normal tap. Once promoted to a
     // charge, release is handled above and update() fires the built-up shot.
     if (t.identifier === touchFirePendingId) { touchFirePendingId = null; fireAction(); }
+    if (treeDrag && t.identifier === treeDrag.id) treeDrag = null;
     if (G.state === 'dex' && onPressDexTapPending && Math.abs(t.clientY - dexDragStart) < 10) {
       onPress(onPressDexTapPending.x, onPressDexTapPending.y);
     }
@@ -185,6 +201,7 @@ window.addEventListener('touchcancel', e => {
   for (const t of e.changedTouches) {
     if (uiTouchIds.has(t.identifier)) claimUiTouch(t.identifier);
     uiTouchIds.delete(t.identifier);
+    if (treeDrag && t.identifier === treeDrag.id) treeDrag = null;
     if (t.identifier === paddleTouchId) paddleTouchId = null;
     if (t.identifier === fireTouchId) { fireTouchId = null; fireHeld = false; }
     if (t.identifier === chargeTouchId) {
@@ -276,6 +293,7 @@ window.addEventListener('keydown', e => {
     }
     const offer = choiceIndexForSel(treeSel);
     if (offer >= 0) draftSel = offer;
+    ensureTreeSelVisible(); // the camera follows the keyboard cursor
     SFX.wall();
     e.preventDefault();
   }
@@ -373,6 +391,31 @@ function upgradeLayout() {
 // which tree node the player last tapped, so the detail panel can explain it.
 // kind: 'tier' (pi,ti) · 'bridge' (bi) · 'super' (pi) · 'sat' (si)
 let treeSel = { kind: 'tier', pi: 0, ti: 0 };
+// MOBILE: the constellation no longer shrinks to fit — it enforces a large
+// minimum scale and the player drags the chart around instead. treePan is the
+// camera offset (clamped in upgradeTreeLayout); treeDrag tracks one active
+// drag begun on empty map space ('mouse' or a touch identifier).
+let treePan = { x: 0, y: 0 }, treeDrag = null;
+function treeSelNodeRect(T) {
+  const kind = treeSel.kind || 'tier';
+  if (kind === 'bridge') return T.bridgeNode(treeSel.bi);
+  if (kind === 'super') return T.superNode(treeSel.pi);
+  if (kind === 'sat') return T.satNode(treeSel.si);
+  return T.node(treeSel.pi, treeSel.ti);
+}
+// pan the camera just enough that the current selection sits inside the map
+// box — keyboard nav and offer-sync always land on-screen
+function ensureTreeSelVisible() {
+  const T = upgradeTreeLayout();
+  if (!T.panLim.x && !T.panLim.y) return;
+  const n = treeSelNodeRect(T);
+  const mcx = T.map.x + T.map.w / 2, mcy = T.map.y + T.map.h / 2;
+  const mx = Math.max(40, T.map.w / 2 - 52), my = Math.max(40, T.map.h / 2 - 52);
+  if (n.cx < mcx - mx) treePan.x += (mcx - mx) - n.cx;
+  else if (n.cx > mcx + mx) treePan.x += (mcx + mx) - n.cx;
+  if (n.cy < mcy - my) treePan.y += (mcy - my) - n.cy;
+  else if (n.cy > mcy + my) treePan.y += (mcy + my) - n.cy;
+}
 // the draft-offer index for ANY web node (or -1) — render + input share this
 function choiceIndexForTreeNode(pi, ti) {
   const pk = PATH_KEYS[pi];
@@ -408,16 +451,21 @@ function selectDraftChoice(i) {
   draftSel = i;
   const sel = treeSelForChoice(c);
   if (sel) treeSel = sel;
+  if (upgradeTreeOpen) ensureTreeSelVisible();
   SFX.wall();
 }
 function syncTreeSelectionToDraft() {
   const chosen = draftSel != null && treeSelForChoice(G.upgradeChoices?.[draftSel]);
-  if (chosen) { treeSel = chosen; return; }
-  for (const c of G.upgradeChoices || []) {
-    const sel = treeSelForChoice(c);
-    if (sel) { treeSel = sel; return; }
+  if (chosen) treeSel = chosen;
+  else {
+    let found = null;
+    for (const c of G.upgradeChoices || []) {
+      found = treeSelForChoice(c);
+      if (found) break;
+    }
+    treeSel = found || { kind: 'tier', pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
   }
-  treeSel = { kind: 'tier', pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
+  if (upgradeTreeOpen) ensureTreeSelVisible();
 }
 // FULL WEB: 24 anchor tiers on six spokes, six bridges between ADJACENT
 // wedges (WEB_SPOKE_ORDER makes the bridge cycle adjacent), one superskill
@@ -431,14 +479,19 @@ function upgradeTreeLayout() {
   const sideDetail = panel.w >= 700 && panel.w > panel.h * 1.12;
   const detailSize = sideDetail
     ? Math.min(350, Math.max(270, panel.w * 0.28))
-    : Math.min(190, Math.max(150, panel.h * 0.23));
+    : compact
+      ? Math.min(232, Math.max(196, panel.h * 0.26)) // phones: a real bottom sheet
+      : Math.min(190, Math.max(150, panel.h * 0.23));
   const map = sideDetail
     ? { x: panel.x + pad, y: panel.y + headH, w: panel.w - detailSize - pad * 3, h: panel.h - headH - pad }
     : { x: panel.x + pad, y: panel.y + headH, w: panel.w - pad * 2, h: panel.h - headH - detailSize - pad * 2 };
   const detail = sideDetail
     ? { x: panel.x + panel.w - detailSize - pad, y: panel.y + headH, w: detailSize, h: panel.h - headH - pad }
     : { x: panel.x + pad, y: panel.y + panel.h - detailSize - pad, w: panel.w - pad * 2, h: detailSize };
-  const radius = Math.max(74, Math.min(map.w * 0.39, map.h * 0.43) - (compact ? 2 : 10));
+  let radius = Math.max(74, Math.min(map.w * 0.39, map.h * 0.43) - (compact ? 2 : 10));
+  // MOBILE readability beats fitting: the compact chart enforces a big
+  // minimum scale — it may overflow the map box; treePan (below) covers it
+  if (compact) radius = Math.max(radius, 235);
   // when the map is WIDTH-limited (tall portrait), the box is far taller than
   // the constellation — reclaim the dead band: the detail panel grows a
   // little and the map re-centers on what it actually uses
@@ -451,15 +504,24 @@ function upgradeTreeLayout() {
       detail.y -= extraDetail; detail.h += extraDetail;
     }
   }
-  const cx = map.x + map.w / 2, cy = map.y + map.h / 2 + (sideDetail ? 4 : 0);
+  // clamp the camera to the chart's real extent (labels included); desktop
+  // fits entirely, so its pan locks to zero and nothing changes there
+  const contentR = radius + (compact ? 36 : 60);
+  const panLim = {
+    x: Math.max(0, contentR - map.w / 2 + 8),
+    y: Math.max(0, contentR - map.h / 2 + 8),
+  };
+  treePan.x = Math.max(-panLim.x, Math.min(panLim.x, treePan.x));
+  treePan.y = Math.max(-panLim.y, Math.min(panLim.y, treePan.y));
+  const cx = map.x + map.w / 2 + treePan.x, cy = map.y + map.h / 2 + (sideDetail ? 4 : 0) + treePan.y;
   // the inner ring must clear the pilot preview (sprite + aura + hardpoint
   // rack); the CAPSTONE ring stops at 84% so the superskill/satellite crown
-  // ring (93%) and the wedge labels beyond it all fit inside the map box
-  const inner = Math.max(40, radius * 0.28);
+  // ring (93%) and the wedge labels beyond it all fit inside the chart
+  const inner = Math.max(48, radius * 0.28);
   const capR = radius * 0.84;
   const step = (capR - inner) / 3;
-  const drawR = Math.max(8, Math.min(compact ? 12 : 17, step * 0.4));
-  const hitR = Math.max(drawR + 5, Math.min(22, step * 0.62));
+  const drawR = Math.max(8, Math.min(compact ? 16 : 17, step * 0.4));
+  const hitR = Math.max(drawR + 5, Math.min(compact ? 27 : 22, step * 0.62));
   // every path keeps its PATH_KEYS index (pi) everywhere; only the drawn
   // ANGLE follows WEB_SPOKE_ORDER, which makes each bridge's two wedges
   // adjacent on screen
@@ -469,12 +531,12 @@ function upgradeTreeLayout() {
     const hr = Math.max(r2 + 5, hitR);
     return { x: nx - hr, y: ny - hr, w: hr * 2, h: hr * 2, cx: nx, cy: ny, r: r2, hitR: hr, a };
   };
-  const buttonH = compact ? 32 : 38;
+  const buttonH = compact ? 40 : 38;
   const buttonY = detail.y + detail.h - buttonH - 10;
   const buttonGap = 8;
   const buttonW = (detail.w - 20 - buttonGap) / 2;
   return {
-    panel, compact, sideDetail, map, detail, center: { x: cx, y: cy }, radius, inner, step, drawR,
+    panel, compact, sideDetail, map, detail, center: { x: cx, y: cy }, radius, inner, step, drawR, panLim,
     close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
     reroll: { x: detail.x + 10, y: buttonY, w: buttonW, h: buttonH },
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
@@ -745,6 +807,11 @@ function onPress(x, y) {
             selectMapNode({ kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path)), ti: 3 });
             return;
           }
+        }
+        // empty map space starts a CAMERA DRAG (phones overflow the box);
+        // the press handlers stamp the pointer/touch that owns it
+        if (inRect(x, y, T.map) && (T.panLim.x || T.panLim.y)) {
+          treeDrag = { x, y, sx: treePan.x, sy: treePan.y, id: null };
         }
         return;
       }

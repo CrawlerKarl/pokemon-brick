@@ -2,7 +2,7 @@
 // ============================================================
 //  REGION BACKGROUNDS (prerendered per gen)
 // ============================================================
-let bgSky = null, bgScenery = null, bgGen = -1;
+let bgSky = null, bgScenery = null, bgWash = null, bgGen = -1;
 // how dark the current sky is (0 bright day … 1 true night) — the starfield
 // and other night-only dressing read this so stars never shine at noon
 let SCENE_DARK = 1;
@@ -103,6 +103,22 @@ function buildBackground(genIdx, stage = 2) {
     c.fillStyle = 'rgba(255,240,215,' + (0.16 * (1 - scene.dark)).toFixed(3) + ')';
     c.fillRect(0, 0, W, H);
     c.globalCompositeOperation = 'source-over';
+  }
+  // ---- COMBAT CONTRAST WASH: the brighter the authored sky, the harder the
+  // sprites fight it — so gameplay lays a deep-navy wash over the whole scene,
+  // strongest in the TOP band where the flocks fly, easing toward the ship's
+  // lane. Baked once per scene (a cached canvas, zero per-frame cost); the
+  // menu never draws it, so the title keeps its postcard look.
+  bgWash = null;
+  if (scene.dark < 0.85) {
+    const base = 0.44 * Math.pow(1 - scene.dark, 1.15);
+    bgWash = document.createElement('canvas'); bgWash.width = W; bgWash.height = H;
+    const wc = bgWash.getContext('2d');
+    const wg = wc.createLinearGradient(0, 0, 0, H);
+    wg.addColorStop(0, 'rgba(6,11,30,' + Math.min(0.6, base * 1.2).toFixed(3) + ')');
+    wg.addColorStop(0.55, 'rgba(6,11,30,' + base.toFixed(3) + ')');
+    wg.addColorStop(1, 'rgba(6,11,30,' + (base * 0.6).toFixed(3) + ')');
+    wc.fillStyle = wg; wc.fillRect(0, 0, W, H);
   }
 }
 function silhouetteBase(c, color, baseY) {

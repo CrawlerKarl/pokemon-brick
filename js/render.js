@@ -76,7 +76,11 @@ function drawBackground() {
   }
   ctx.globalAlpha = 1;
   ctx.drawImage(bgScenery, -par * 12 - W * 0.015, 0, W * 1.03, H);
-  if (G.state !== 'menu' && G.state !== 'dex') drawAtmosphere(genIdx); // depth wash over gameplay scenes
+  if (!onMenu) {
+    // combat contrast wash (cached) — bright skies never swallow the sprites
+    if (bgWash) ctx.drawImage(bgWash, 0, 0, W, H);
+    drawAtmosphere(genIdx); // depth wash over gameplay scenes
+  }
   drawAmbient(genIdx);
 }
 
@@ -4820,7 +4824,7 @@ function drawFullUpgradeTree() {
   ctx.restore();
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 ${Math.min(T.compact ? 15 : 24, p.w / 26)}px Orbitron, sans-serif`;
+  ctx.font = `900 ${Math.min(T.compact ? 18 : 24, p.w / (T.compact ? 20 : 26))}px Orbitron, sans-serif`;
   ctx.fillStyle = '#e3f2fd';
   // maxWidth keeps the title clear of the close button on phones
   ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION',
@@ -4830,7 +4834,7 @@ function drawFullUpgradeTree() {
   const satOwnedN = WEB_SATELLITES.filter(s => (G.stacks && G.stacks[s.stackKey]) > 0).length;
   const ownedN = totalBuildLevels() + satOwnedN;
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
-  ctx.font = `700 ${T.compact ? 7.5 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
+  ctx.font = `700 ${T.compact ? 9 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
   const buildLine = T.compact
     ? 'BUILD ' + ownedN + '/39 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
     : 'BUILD ' + ownedN + '/39 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
@@ -4861,7 +4865,7 @@ function drawFullUpgradeTree() {
       // ring names live on the EMPTY diagonal between the VOLLEY and IMPACT
       // spokes — straight up they printed across the top spoke's nodes
       const la = -Math.PI / 3;
-      ctx.font = `700 ${T.compact ? 6.5 : 8}px Orbitron, sans-serif`;
+      ctx.font = `700 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`;
       ctx.fillStyle = ti === 3 ? 'rgba(255,213,79,0.62)' : 'rgba(128,216,255,0.45)';
       ctx.fillText(ringNames[ti], C.x + Math.cos(la) * (rr + 6), C.y + Math.sin(la) * (rr + 6));
     }
@@ -4982,8 +4986,8 @@ function drawFullUpgradeTree() {
     // constellation identity stays outside the busy node field
     const lb = T.label(pi);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `900 ${T.compact ? 7.5 : 10}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-    ctx.fillText(P.name, lb.x, lb.y, T.compact ? 58 : 90);
+    ctx.font = `900 ${T.compact ? 10.5 : 10}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
+    ctx.fillText(P.name, lb.x, lb.y, T.compact ? 88 : 90);
     if (!T.compact) {
       ctx.font = '600 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
       ctx.fillText(pathRole(pk), lb.x, lb.y + 12, 100);
@@ -5139,7 +5143,7 @@ function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
   ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.07)'; ctx.fill();
   ctx.lineWidth = 1.3; ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,213,79,0.55)') : 'rgba(255,255,255,0.15)'; ctx.stroke();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `800 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
+  ctx.font = `800 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
   ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL · R') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
 
   const cf = T.confirm, canCF = chosen;
@@ -5149,7 +5153,7 @@ function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
   ctx.fillStyle = canCF ? (hovCF ? accent + '55' : accent + '34') : 'rgba(255,255,255,0.06)'; ctx.fill();
   ctx.shadowBlur = 0;
   ctx.lineWidth = canCF ? 2 : 1.2; ctx.strokeStyle = canCF ? '#ffffff' : 'rgba(255,255,255,0.15)'; ctx.stroke();
-  ctx.font = `900 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
+  ctx.font = `900 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
   ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OFFER ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS NODE' : 'CHOOSE A GLOWING NODE',
     cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
 }
@@ -5200,43 +5204,43 @@ function drawTreeDetailWeb(T) {
   roundRect(d.x, d.y, d.w, d.h, 14);
   ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
   ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? color : color + '88'; ctx.stroke();
-  const iconSize = T.sideDetail ? 44 : T.compact ? 32 : 38;
+  const iconSize = T.sideDetail ? 44 : T.compact ? 40 : 38;
   const lit = status !== 'LOCKED';
   const db = iconBadge(icon, color, Math.round(iconSize / 2), lit ? 'lit' : 'dim');
   ctx.drawImage(db, d.x + pad, d.y + pad, iconSize, iconSize);
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.font = `800 ${T.compact ? 7.5 : 9}px Orbitron, sans-serif`; ctx.fillStyle = color;
+  ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = color;
   ctx.fillText(heading, d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
-  ctx.font = `900 ${T.compact ? 12 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
   ctx.fillText(name, d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
-  ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
+  ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
   ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
 
   let y = d.y + pad + Math.max(iconSize + 8, 54);
-  ctx.font = bodyFont(T.compact ? 9 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
-  const descLines = wrapText(desc, d.w - pad * 2).slice(0, T.sideDetail ? 4 : 2);
-  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 16), d.w - pad * 2));
-  y += descLines.length * (T.compact ? 12 : 16) + (T.compact ? 5 : 10);
+  ctx.font = bodyFont(T.compact ? 11 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
+  const descLines = wrapText(desc, d.w - pad * 2).slice(0, T.sideDetail ? 4 : 3);
+  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 15 : 16), d.w - pad * 2));
+  y += descLines.length * (T.compact ? 15 : 16) + (T.compact ? 5 : 10);
 
   if (locks.length) {
     // exact lock reasons — the player never needs a guide to see the route
-    ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#ffab91';
+    ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#ffab91';
     ctx.fillText('TO UNLOCK', d.x + pad, y, d.w - pad * 2);
-    y += T.compact ? 11 : 14;
-    ctx.font = bodyFont(T.compact ? 8 : 9.5, 650); ctx.fillStyle = '#ffcdb8';
+    y += T.compact ? 13 : 14;
+    ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#ffcdb8';
     for (const reason of locks.slice(0, 3)) {
       ctx.fillText('· ' + reason, d.x + pad, y, d.w - pad * 2);
-      y += T.compact ? 10 : 13;
+      y += T.compact ? 12 : 13;
     }
     y += 4;
   } else {
-    ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = color;
+    ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = color;
     ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
-    y += T.compact ? 11 : 14;
-    ctx.font = bodyFont(T.compact ? 8 : 9.5, 650); ctx.fillStyle = '#aebdca';
+    y += T.compact ? 13 : 14;
+    ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#aebdca';
     const visualLines = wrapText(visual, d.w - pad * 2).slice(0, T.sideDetail ? 2 : 1);
-    visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 10 : 13), d.w - pad * 2));
-    y += visualLines.length * (T.compact ? 10 : 13) + 5;
+    visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 13), d.w - pad * 2));
+    y += visualLines.length * (T.compact ? 12 : 13) + 5;
     if (T.sideDetail && proc) {
       ctx.fillStyle = '#90a4ae';
       const procLines = wrapText('PROC · ' + proc, d.w - pad * 2).slice(0, 2);
@@ -5264,30 +5268,30 @@ function drawTreeDetail(T) {
   ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
   ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? P.color : P.color + '88'; ctx.stroke();
 
-  const iconSize = T.sideDetail ? 44 : T.compact ? 32 : 38;
+  const iconSize = T.sideDetail ? 44 : T.compact ? 40 : 38;
   const db = iconBadge(tier.icon, P.color, Math.round(iconSize / 2), owned || offered || next ? 'lit' : 'dim');
   ctx.drawImage(db, d.x + pad, d.y + pad, iconSize, iconSize);
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.font = `800 ${T.compact ? 7.5 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
+  ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
   ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
-  ctx.font = `900 ${T.compact ? 12 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
   ctx.fillText(junkieTierName(pk, ti), d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
-  ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
+  ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
   ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
 
   let y = d.y + pad + Math.max(iconSize + 8, 54);
-  ctx.font = bodyFont(T.compact ? 9 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
-  const descLines = wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, T.sideDetail ? 5 : 2);
-  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 16), d.w - pad * 2));
-  y += descLines.length * (T.compact ? 12 : 16) + (T.compact ? 5 : 10);
+  ctx.font = bodyFont(T.compact ? 11 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
+  const descLines = wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, T.sideDetail ? 5 : 3);
+  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 15 : 16), d.w - pad * 2));
+  y += descLines.length * (T.compact ? 15 : 16) + (T.compact ? 5 : 10);
 
-  ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
+  ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
   ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
-  y += T.compact ? 11 : 14;
-  ctx.font = bodyFont(T.compact ? 8 : 9.5, 650); ctx.fillStyle = '#aebdca';
+  y += T.compact ? 13 : 14;
+  ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#aebdca';
   const visualLines = wrapText(tier.visual || P.tell, d.w - pad * 2).slice(0, T.sideDetail ? 3 : 1);
-  visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 10 : 13), d.w - pad * 2));
-  y += visualLines.length * (T.compact ? 10 : 13) + 7;
+  visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 13), d.w - pad * 2));
+  y += visualLines.length * (T.compact ? 12 : 13) + 7;
 
   if (T.sideDetail && choice) {
     ctx.font = '800 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
