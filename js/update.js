@@ -425,6 +425,9 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         const pu = { x: br.bx + G.fx, y: br.by + G.fy, vy: 130, p, srcType: br.poke.t, rot: 0 };
         if (G.level === 1 && G.dropHint < 2) { pu.hint = true; G.dropHint++; } // first drops get a CATCH! tag
         G.powerups.push(pu);
+        // BOND FORTUNE proc: the blessed drop rate shows itself — every drop
+        // born under Fortune arrives with a gold blessing ring
+        if (upgN('fortune')) { ringFx(pu.x, pu.y, '#ffd54f', 4, 26, 2, 0.32); sparkle(pu.x, pu.y, 4); }
       } else if (gameRand() < d.catchChance && (G.daily || !DEX.has(br.poke.id))) {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
       }
@@ -716,6 +719,9 @@ function collectPickup(pu) {
     G.resistStreak = 0;
     SFX.power();
     burst(pu.x, pu.y, TYPE_COLORS[pu.p.t], 16, 200);
+    // PRISM SCALE proc: the extended clock is announced AT the pickup — the
+    // tier stops being an invisible multiplier on a timer nobody reads
+    if (upgN('attune')) addFloater(pu.x, pu.y - 22, 'ATTUNED · +50% DURATION', '#4dd0e1', 11);
     const strong = (EFFECTIVE[pu.p.t] || []).slice(0, 3).join(', ').toUpperCase();
     setAnnounce(pu.p.t, TYPE_COLORS[pu.p.t], pu.p.t.toUpperCase() + ' BALL',
       strong ? '2× vs ' + strong : 'ELEMENT CHANGED', 1.8);

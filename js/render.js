@@ -1394,7 +1394,10 @@ function drawPilotRig(x, py, preview = false) {
     const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
     if (frac > 0.01) {
       roundRect(x - hw2 / 2, hy - 3, hw2 * Math.min(1, frac), 6, 3);
-      ctx.fillStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : frac > 0.33 ? '#ffd54f' : '#80d8ff';
+      // COOLANT's persistent tell lives on the gauge itself: a teal-running
+      // loop while heat is managed, so the cooler curve is visibly YOURS
+      ctx.fillStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : frac > 0.33 ? '#ffd54f'
+        : (upgN('coolant') ? '#4dd0e1' : '#80d8ff');
       ctx.fill();
     }
     if (hot) {
@@ -1623,7 +1626,10 @@ function drawPaddle() {
     const frac = hot ? 1 - Math.min(1, (OVERHEAT_DUR - G.overheat) / OVERHEAT_DUR) : G.heat;
     if (frac > 0.01) {
       roundRect(x - hw2 / 2, hy - 3, hw2 * Math.min(1, frac), 6, 3);
-      ctx.fillStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : frac > 0.33 ? '#ffd54f' : '#80d8ff';
+      // COOLANT's persistent tell lives on the gauge itself: a teal-running
+      // loop while heat is managed, so the cooler curve is visibly YOURS
+      ctx.fillStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : frac > 0.33 ? '#ffd54f'
+        : (upgN('coolant') ? '#4dd0e1' : '#80d8ff');
       ctx.fill();
     }
     if (hot) {
@@ -3450,8 +3456,20 @@ function drawTouchControls() {
     if (frac > 0.02) {
       ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 5, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
       ctx.lineWidth = 4;
-      ctx.strokeStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : '#ffd54f';
+      // COOLANT tints the managed band teal — the cooler loop reads on the pad
+      ctx.strokeStyle = hot ? '#ff5252' : frac > 0.66 ? '#ff7043' : (upgN('coolant') && frac <= 0.33 ? '#4dd0e1' : '#ffd54f');
       ctx.stroke();
+    }
+    // HYPER CYCLE's persistent tell: a thin spun-up cycler ring ticking
+    // around inside the pad (static dashes under reduceFlash)
+    if (upgN('hyper') && !hot) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.setLineDash([3, 6]);
+      ctx.lineDashOffset = SETTINGS.reduceFlash ? 0 : -G.time * 30;
+      ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 16, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
     }
     // charge fill — an inner ring winding up as you hold
     if (charging) {
@@ -4724,7 +4742,10 @@ function drawFullUpgradeTree() {
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.68, n.cy + n.r * 0.65, 3.2, 0, Math.PI * 2); ctx.fill();
       }
       if (offered) {
-        const hx = n.cx - n.r * 0.82, hy = n.cy - n.r * 0.86;
+        // capstone offers tuck their number chip on the CENTRE side of the
+        // node — outward it printed over the spoke's constellation label
+        const hx = ti === 3 ? n.cx - Math.cos(n.a) * n.r * 1.18 - n.r * 0.2 : n.cx - n.r * 0.82;
+        const hy = ti === 3 ? n.cy - Math.sin(n.a) * n.r * 1.18 : n.cy - n.r * 0.86;
         ctx.beginPath(); ctx.arc(hx, hy, Math.max(7, n.r * 0.52), 0, Math.PI * 2);
         ctx.fillStyle = '#ffffff'; ctx.fill();
         ctx.font = `900 ${Math.max(7, n.r * 0.58)}px Orbitron, sans-serif`;
@@ -4826,6 +4847,45 @@ function drawTreeDetail(T) {
     y += 15;
     ctx.fillStyle = '#90a4ae';
     ctx.fillText(choice.synergy || P.summary, d.x + pad, y, d.w - pad * 2);
+  }
+
+  // ---- PATH PROGRESS: the roomy side panel's dead space now shows where
+  // this node sits in its path — all four tiers as slots (owned filled,
+  // this node ringed, live offers glowing, the rest dim). Render-only.
+  if (T.sideDetail) {
+    const stripY = T.reroll.y - 96;
+    if (stripY > y + 24) {
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+      ctx.fillText('PATH PROGRESS · ' + pathLvl(pk) + '/4 OWNED', d.x + pad, stripY - 10, d.w - pad * 2);
+      const gap2 = 8, cellW = (d.w - pad * 2 - gap2 * 3) / 4, cellH = 62;
+      for (let tt = 0; tt < 4; tt++) {
+        const cx2 = d.x + pad + tt * (cellW + gap2);
+        const ownedT = tt < pathLvl(pk), isSel = tt === ti;
+        const offT = choiceIndexForTreeNode(treeSel.pi, tt) >= 0;
+        ctx.save();
+        if (offT) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 8; }
+        roundRect(cx2, stripY, cellW, cellH, 9);
+        ctx.fillStyle = ownedT ? mixHex(P.color, '#071022', 0.6) : 'rgba(255,255,255,0.05)'; ctx.fill();
+        ctx.lineWidth = isSel ? 2.2 : 1.2;
+        ctx.strokeStyle = isSel ? '#ffffff' : ownedT || offT ? P.color : 'rgba(255,255,255,0.16)';
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        const badge2 = iconBadge(P.tiers[tt].icon, P.color, 9, (ownedT || offT || isSel) ? 'lit' : 'dim');
+        ctx.globalAlpha = ownedT || offT || isSel ? 1 : 0.5;
+        ctx.drawImage(badge2, cx2 + cellW / 2 - badge2.width / 2, stripY + 16 - badge2.height / 2);
+        ctx.globalAlpha = 1;
+        ctx.textAlign = 'center';
+        ctx.font = '800 7px Orbitron, sans-serif';
+        ctx.fillStyle = ownedT ? P.color : '#90a4ae';
+        ctx.fillText(tt === 3 ? 'CAP' : 'TIER ' + (tt + 1), cx2 + cellW / 2, stripY + 34);
+        ctx.font = '600 6.5px Orbitron, sans-serif';
+        ctx.fillStyle = ownedT ? '#cfd8dc' : '#607d8b';
+        ctx.fillText(junkieTierName(pk, tt), cx2 + cellW / 2, stripY + 48, cellW - 8);
+        ctx.restore();
+      }
+      ctx.textAlign = 'left';
+    }
   }
 
   const rr = T.reroll, canRR = !G.rerolled && !G.secret.rewardDraft;
