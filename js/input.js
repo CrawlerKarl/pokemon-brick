@@ -247,11 +247,34 @@ window.addEventListener('keydown', e => {
   }
   if (upgradeTreeOpen && G.state === 'upgrade' && G.stateT > 0.8 &&
       ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
-    if (e.code === 'ArrowLeft') treeSel.ti = Math.max(0, treeSel.ti - 1);
-    if (e.code === 'ArrowRight') treeSel.ti = Math.min(3, treeSel.ti + 1);
-    if (e.code === 'ArrowUp') treeSel.pi = (treeSel.pi + PATH_KEYS.length - 1) % PATH_KEYS.length;
-    if (e.code === 'ArrowDown') treeSel.pi = (treeSel.pi + 1) % PATH_KEYS.length;
-    const offer = choiceIndexForTreeNode(treeSel.pi, treeSel.ti);
+    // ←/→ walk a spoke outward: core tiers → superskill → satellite (a bridge
+    // exits onto its two wedges); ↑/↓ cycle spokes in DISPLAY order (or hop
+    // bridge to bridge), so the cursor always moves the way the map looks.
+    const kind = treeSel.kind || 'tier';
+    const spokePiAt = pos => Math.max(0, PATH_KEYS.indexOf(WEB_SPOKE_ORDER[((pos % 6) + 6) % 6]));
+    const satOf = pi => WEB_SATELLITES.findIndex(s => s.path === PATH_KEYS[pi]);
+    if (e.code === 'ArrowLeft') {
+      if (kind === 'sat') treeSel = { kind: 'super', pi: treeSel.pi, ti: 3 };
+      else if (kind === 'super') treeSel = { kind: 'tier', pi: treeSel.pi, ti: 3 };
+      else if (kind === 'bridge') treeSel = { kind: 'tier', pi: Math.max(0, PATH_KEYS.indexOf(WEB_BRIDGES[treeSel.bi].paths[0])), ti: 1 };
+      else treeSel = { kind: 'tier', pi: treeSel.pi, ti: Math.max(0, treeSel.ti - 1) };
+    } else if (e.code === 'ArrowRight') {
+      if (kind === 'tier' && treeSel.ti >= 3) treeSel = { kind: 'super', pi: treeSel.pi, ti: 3 };
+      else if (kind === 'tier') treeSel = { kind: 'tier', pi: treeSel.pi, ti: treeSel.ti + 1 };
+      else if (kind === 'super' && satOf(treeSel.pi) >= 0) treeSel = { kind: 'sat', si: satOf(treeSel.pi), pi: treeSel.pi, ti: 3 };
+      else if (kind === 'bridge') treeSel = { kind: 'tier', pi: Math.max(0, PATH_KEYS.indexOf(WEB_BRIDGES[treeSel.bi].paths[1])), ti: 1 };
+    } else {
+      const dir = e.code === 'ArrowDown' ? 1 : -1;
+      if (kind === 'bridge') treeSel = { kind: 'bridge', bi: (treeSel.bi + dir + 6) % 6, pi: 0, ti: 0 };
+      else {
+        const npi = spokePiAt(WEB_SPOKE_ORDER.indexOf(PATH_KEYS[treeSel.pi]) + dir);
+        if (kind === 'sat') treeSel = satOf(npi) >= 0
+          ? { kind: 'sat', si: satOf(npi), pi: npi, ti: 3 }
+          : { kind: 'super', pi: npi, ti: 3 };
+        else treeSel = { kind, pi: npi, ti: treeSel.ti };
+      }
+    }
+    const offer = choiceIndexForSel(treeSel);
     if (offer >= 0) draftSel = offer;
     SFX.wall();
     e.preventDefault();
@@ -347,32 +370,59 @@ function upgradeLayout() {
     confirm: { x: W / 2 - cbw / 2, y: ay, w: cbw, h: 34 },
     tree: { x: W / 2 + row / 2 - bw, y: ay, w: bw, h: 34 } };
 }
-// which tree node the player last tapped, so the detail panel can explain it
-let treeSel = { pi: 0, ti: 0 };
+// which tree node the player last tapped, so the detail panel can explain it.
+// kind: 'tier' (pi,ti) · 'bridge' (bi) · 'super' (pi) · 'sat' (si)
+let treeSel = { kind: 'tier', pi: 0, ti: 0 };
+// the draft-offer index for ANY web node (or -1) — render + input share this
 function choiceIndexForTreeNode(pi, ti) {
   const pk = PATH_KEYS[pi];
   return (G.upgradeChoices || []).findIndex(c => c.pathKey === pk && c.tierIdx === ti);
+}
+function choiceIndexForSel(sel) {
+  const cs = G.upgradeChoices || [];
+  if (!sel || sel.kind === 'tier' || sel.kind == null) return choiceIndexForTreeNode(sel.pi, sel.ti);
+  if (sel.kind === 'bridge') return cs.findIndex(c => c.web && c.web.key === WEB_BRIDGES[sel.bi].key);
+  if (sel.kind === 'super') {
+    const sup = superForPath(PATH_KEYS[sel.pi]);
+    return sup ? cs.findIndex(c => c.web && c.web.key === sup.key) : -1;
+  }
+  if (sel.kind === 'sat') return cs.findIndex(c => c.stack && c.stack.key === WEB_SATELLITES[sel.si].stackKey);
+  return -1;
+}
+function treeSelForChoice(c) {
+  if (!c) return null;
+  if (c.pathKey) return { kind: 'tier', pi: Math.max(0, PATH_KEYS.indexOf(c.pathKey)), ti: c.tierIdx };
+  if (c.web) {
+    if (c.webKind === 'super') return { kind: 'super', pi: Math.max(0, PATH_KEYS.indexOf(c.web.path)), ti: 3 };
+    return { kind: 'bridge', bi: Math.max(0, WEB_BRIDGE_KEYS.indexOf(c.web.key)), pi: 0, ti: 0 };
+  }
+  if (c.stack) {
+    const si = WEB_SATELLITES.findIndex(s => s.stackKey === c.stack.key);
+    if (si >= 0) return { kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path)), ti: 3 };
+  }
+  return null;
 }
 function selectDraftChoice(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
   draftSel = i;
-  if (c.pathKey) treeSel = { pi: Math.max(0, PATH_KEYS.indexOf(c.pathKey)), ti: c.tierIdx };
+  const sel = treeSelForChoice(c);
+  if (sel) treeSel = sel;
   SFX.wall();
 }
 function syncTreeSelectionToDraft() {
-  if (draftSel != null && G.upgradeChoices?.[draftSel]?.pathKey) {
-    const c = G.upgradeChoices[draftSel];
-    treeSel = { pi: Math.max(0, PATH_KEYS.indexOf(c.pathKey)), ti: c.tierIdx };
-    return;
+  const chosen = draftSel != null && treeSelForChoice(G.upgradeChoices?.[draftSel]);
+  if (chosen) { treeSel = chosen; return; }
+  for (const c of G.upgradeChoices || []) {
+    const sel = treeSelForChoice(c);
+    if (sel) { treeSel = sel; return; }
   }
-  const first = (G.upgradeChoices || []).find(c => c.pathKey);
-  if (first) treeSel = { pi: Math.max(0, PATH_KEYS.indexOf(first.pathKey)), ti: first.tierIdx };
-  else treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
+  treeSel = { kind: 'tier', pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) };
 }
-// FULL TREE: the same 24 authored upgrades are arranged as a six-spoke
-// constellation. The current implementation stays balance/save compatible;
-// this geometry is presentation-only until the branching graph ships.
+// FULL WEB: 24 anchor tiers on six spokes, six bridges between ADJACENT
+// wedges (WEB_SPOKE_ORDER makes the bridge cycle adjacent), one superskill
+// crowning each spoke and three mastery satellites docked on their home
+// wedges — 39 addressable nodes. Render and hit-testing share these rects.
 function upgradeTreeLayout() {
   const panel = { x: Math.max(8 + SAFE_L, W * 0.02), y: Math.max(8 + SAFE_T, H * 0.025),
     w: Math.min(W - 16 - SAFE_L - SAFE_R, W * 0.96), h: Math.min(H - 16 - SAFE_T - SAFE_B, H * 0.95) };
@@ -403,11 +453,22 @@ function upgradeTreeLayout() {
   }
   const cx = map.x + map.w / 2, cy = map.y + map.h / 2 + (sideDetail ? 4 : 0);
   // the inner ring must clear the pilot preview (sprite + aura + hardpoint
-  // rack) — ring-one nodes were landing ON the pilot at landscape sizes
-  const inner = Math.max(46, radius * 0.32);
-  const step = (radius - inner) / 3;
-  const drawR = Math.max(8, Math.min(compact ? 12 : 17, step * 0.34));
-  const hitR = Math.max(drawR + 5, Math.min(22, step * 0.53));
+  // rack); the CAPSTONE ring stops at 84% so the superskill/satellite crown
+  // ring (93%) and the wedge labels beyond it all fit inside the map box
+  const inner = Math.max(40, radius * 0.28);
+  const capR = radius * 0.84;
+  const step = (capR - inner) / 3;
+  const drawR = Math.max(8, Math.min(compact ? 12 : 17, step * 0.4));
+  const hitR = Math.max(drawR + 5, Math.min(22, step * 0.62));
+  // every path keeps its PATH_KEYS index (pi) everywhere; only the drawn
+  // ANGLE follows WEB_SPOKE_ORDER, which makes each bridge's two wedges
+  // adjacent on screen
+  const spokeA = pi => -Math.PI / 2 + WEB_SPOKE_ORDER.indexOf(PATH_KEYS[pi]) * Math.PI / 3;
+  const at = (a, rr, r2) => {
+    const nx = cx + Math.cos(a) * rr, ny = cy + Math.sin(a) * rr;
+    const hr = Math.max(r2 + 5, hitR);
+    return { x: nx - hr, y: ny - hr, w: hr * 2, h: hr * 2, cx: nx, cy: ny, r: r2, hitR: hr, a };
+  };
   const buttonH = compact ? 32 : 38;
   const buttonY = detail.y + detail.h - buttonH - 10;
   const buttonGap = 8;
@@ -417,17 +478,28 @@ function upgradeTreeLayout() {
     close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
     reroll: { x: detail.x + 10, y: buttonY, w: buttonW, h: buttonH },
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
+    spokeA,
     label: pi => {
-      const a = -Math.PI / 2 + pi * Math.PI / 3;
+      const a = spokeA(pi);
       // tighter on compact maps so the top/bottom labels stay inside the box
       const lr = radius + (compact ? 15 : 42);
       return { x: cx + Math.cos(a) * lr, y: cy + Math.sin(a) * lr, a };
     },
-    node: (pi, ti) => {
-      const a = -Math.PI / 2 + pi * Math.PI / 3;
-      const rr = inner + ti * step;
-      const nx = cx + Math.cos(a) * rr, ny = cy + Math.sin(a) * rr;
-      return { x: nx - hitR, y: ny - hitR, w: hitR * 2, h: hitR * 2, cx: nx, cy: ny, r: drawR, hitR, a };
+    node: (pi, ti) => at(spokeA(pi), inner + ti * step, drawR + (ti === 3 ? 1 : 0)),
+    // a bridge sits on the BOUNDARY between its two wedges at mid-ring height
+    bridgeNode: bi => {
+      const b = WEB_BRIDGES[bi];
+      const s0 = WEB_SPOKE_ORDER.indexOf(b.paths[0]), s1 = WEB_SPOKE_ORDER.indexOf(b.paths[1]);
+      // the boundary halfway between the two spokes (handles the 5↔0 wrap)
+      const mid = (Math.abs(s0 - s1) === 1 ? (s0 + s1) / 2 : 5.5);
+      return at(-Math.PI / 2 + mid * Math.PI / 3, inner + 2.05 * step, drawR * 0.92);
+    },
+    // the superskill crowns its spoke just past the capstone, offset to one
+    // side; the mastery satellite docks on the other side of the same crown
+    superNode: pi => at(spokeA(pi) - 0.3, radius * 0.93, drawR + 2),
+    satNode: si => {
+      const pi = Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path));
+      return at(spokeA(pi) + 0.3, radius * 0.93, Math.max(6, drawR * 0.72));
     },
   };
 }
@@ -465,7 +537,7 @@ function pickUpgrade(i) {
     G.secret.vmax = false;
     G.upgradeChoices = G.secret.deferredChoices;
     G.secret.deferredChoices = null;
-    upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices && G.upgradeChoices.every(x => x.pathKey);
+    upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices && G.upgradeChoices.every(x => x.pathKey || x.web || x.stack);
     if (upgradeTreeOpen) syncTreeSelectionToDraft();
     G.stateT = 0;
     G.rerolled = false;
@@ -651,15 +723,27 @@ function onPress(x, y) {
         if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, T.reroll)) { rerollDraft(); return; }
         // Tap a node to inspect it. Offered nodes also become the active pick,
         // but still require the dedicated INSTALL action below the details.
+        // Bridges, superskills and satellites are addressable exactly like
+        // tier nodes — one shared select routine keeps render + input honest.
+        const selectMapNode = sel => {
+          treeSel = sel;
+          const offer = choiceIndexForSel(sel);
+          if (offer >= 0) draftSel = offer;
+          SFX.wall();
+        };
         for (let pi = 0; pi < PATH_KEYS.length; pi++) {
           for (let ti = 0; ti < 4; ti++) {
-            if (inRect(x, y, T.node(pi, ti))) {
-              treeSel = { pi, ti };
-              const offer = choiceIndexForTreeNode(pi, ti);
-              if (offer >= 0) draftSel = offer;
-              SFX.wall();
-              return;
-            }
+            if (inRect(x, y, T.node(pi, ti))) { selectMapNode({ kind: 'tier', pi, ti }); return; }
+          }
+          if (inRect(x, y, T.superNode(pi))) { selectMapNode({ kind: 'super', pi, ti: 3 }); return; }
+        }
+        for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
+          if (inRect(x, y, T.bridgeNode(bi))) { selectMapNode({ kind: 'bridge', bi, pi: 0, ti: 0 }); return; }
+        }
+        for (let si = 0; si < WEB_SATELLITES.length; si++) {
+          if (inRect(x, y, T.satNode(si))) {
+            selectMapNode({ kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path)), ti: 3 });
+            return;
           }
         }
         return;
@@ -674,7 +758,7 @@ function onPress(x, y) {
       }
       if (draftSel != null && inRect(x, y, L.confirm)) { pickUpgrade(draftSel); return; }
       if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
-      if (!G.secret.rewardDraft && inRect(x, y, L.tree)) { upgradeTreeOpen = true; treeSel = { pi: 0, ti: Math.min(3, pathLvl(PATH_KEYS[0])) }; SFX.wall(); return; }
+      if (!G.secret.rewardDraft && inRect(x, y, L.tree)) { upgradeTreeOpen = true; syncTreeSelectionToDraft(); SFX.wall(); return; }
     }
     return;
   }

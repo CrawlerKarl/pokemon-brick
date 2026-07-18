@@ -4825,17 +4825,23 @@ function drawFullUpgradeTree() {
   // maxWidth keeps the title clear of the close button on phones
   ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION',
     p.x + p.w / 2, p.y + (T.compact ? 18 : 22), p.w - 116);
-  const ownedN = totalPathLevels();
+  // the build count spans the whole web: 24 tiers + 6 bridges + 6 superskills
+  // + 3 satellites (a satellite counts once at any rank) = 39 nodes
+  const satOwnedN = WEB_SATELLITES.filter(s => (G.stacks && G.stacks[s.stackKey]) > 0).length;
+  const ownedN = totalBuildLevels() + satOwnedN;
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
   ctx.font = `700 ${T.compact ? 7.5 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
   const buildLine = T.compact
-    ? 'BUILD ' + ownedN + '/24 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
-    : 'BUILD ' + ownedN + '/24 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
+    ? 'BUILD ' + ownedN + '/39 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
+    : 'BUILD ' + ownedN + '/39 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
       ' · THREE GLOWING NODES ARE THIS STAGE’S OFFERS';
   ctx.fillText(buildLine, p.x + p.w / 2, p.y + (T.compact ? 37 : 45), p.w - 96);
 
+  if (!treeSel.kind) treeSel.kind = 'tier';
   treeSel.pi = Math.max(0, Math.min(PATH_KEYS.length - 1, treeSel.pi | 0));
   treeSel.ti = Math.max(0, Math.min(3, treeSel.ti | 0));
+  if (treeSel.kind === 'bridge') treeSel.bi = Math.max(0, Math.min(WEB_BRIDGES.length - 1, treeSel.bi | 0));
+  if (treeSel.kind === 'sat') treeSel.si = Math.max(0, Math.min(WEB_SATELLITES.length - 1, treeSel.si | 0));
 
   const map = T.map, C = T.center;
   ctx.save();
@@ -4860,6 +4866,12 @@ function drawFullUpgradeTree() {
       ctx.fillText(ringNames[ti], C.x + Math.cos(la) * (rr + 6), C.y + Math.sin(la) * (rr + 6));
     }
   }
+  // the CROWN ring: superskills + mastery satellites orbit past the capstones
+  ctx.setLineDash([2, 10]);
+  ctx.lineDashOffset = -G.time * (SETTINGS.reduceFlash ? 2 : 8);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(C.x, C.y, T.radius * 0.93, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
 
   // Connectors first, behind their nodes. Owned routes are solid; an offered
   // frontier gets one slow moving light path from the nearest owned tier.
@@ -4885,13 +4897,53 @@ function drawFullUpgradeTree() {
   }
   ctx.setLineDash([]);
 
+  // ---- WEB connectors: each bridge ties the TIER II nodes of its two
+  // wedges together (each half in that wedge's color); each superskill hangs
+  // off its capstone with a faint recipe thread back to its bridge; each
+  // satellite docks off its capstone. Drawn under the nodes.
+  const connectTo = (from, to, col, owned, offered) => {
+    ctx.setLineDash(owned ? [] : [4, 7]);
+    ctx.lineDashOffset = offered ? -G.time * (SETTINGS.reduceFlash ? 5 : 28) : 0;
+    ctx.strokeStyle = owned ? col : offered ? col + 'dd' : 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = owned ? 2.6 : offered ? 2.4 : 1.1;
+    ctx.beginPath(); ctx.moveTo(from.cx, from.cy); ctx.lineTo(to.cx, to.cy); ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
+    const b = WEB_BRIDGES[bi], n = T.bridgeNode(bi);
+    const owned = !!upgN(b.key);
+    const offered = choiceIndexForSel({ kind: 'bridge', bi }) >= 0;
+    for (const pk of b.paths) {
+      connectTo(T.node(PATH_KEYS.indexOf(pk), 1), n, PATHS[pk].color, owned, offered);
+    }
+  }
+  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+    const sup = superForPath(PATH_KEYS[pi]);
+    if (sup) {
+      const n = T.superNode(pi);
+      const owned = !!upgN(sup.key);
+      const offered = choiceIndexForSel({ kind: 'super', pi }) >= 0;
+      connectTo(T.node(pi, 3), n, sup.color, owned, offered);
+      // the recipe thread: bridge → super, barely-there until it matters
+      ctx.globalAlpha = owned || offered ? 0.5 : 0.16;
+      connectTo(T.bridgeNode(WEB_BRIDGE_KEYS.indexOf(sup.bridge)), n, sup.color, owned, offered);
+      ctx.globalAlpha = 1;
+    }
+  }
+  for (let si = 0; si < WEB_SATELLITES.length; si++) {
+    const sat = WEB_SATELLITES[si], item = stackItem(sat.stackKey);
+    const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
+    connectTo(T.node(PATH_KEYS.indexOf(sat.path), 3), T.satNode(si), item.color,
+      rank > 0, choiceIndexForSel({ kind: 'sat', si }) >= 0);
+  }
+
   // Nodes use shape + icon + connector state, never color alone. Only the
   // three offers pulse, keeping a full late-run map calm and scannable.
   for (let pi = 0; pi < PATH_KEYS.length; pi++) {
     const pk = PATH_KEYS[pi], P = PATHS[pk], lvl = pathLvl(pk);
     for (let ti = 0; ti < 4; ti++) {
       const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
-      const sel = treeSel.pi === pi && treeSel.ti === ti;
+      const sel = (treeSel.kind || 'tier') === 'tier' && treeSel.pi === pi && treeSel.ti === ti;
       const n = T.node(pi, ti);
       const offer = choiceIndexForTreeNode(pi, ti);
       const offered = offer >= 0;
@@ -4938,6 +4990,111 @@ function drawFullUpgradeTree() {
     }
   }
 
+  // ---- WEB nodes: bridges (two-tone), superskills (double-hex crowns) and
+  // mastery satellites (ranked pips). Same state language: only offers pulse.
+  const offerChip = (n, offer) => {
+    const hx = n.cx - n.r * 0.9, hy = n.cy - n.r * 0.95;
+    ctx.beginPath(); ctx.arc(hx, hy, Math.max(7, n.r * 0.52), 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.font = `900 ${Math.max(7, n.r * 0.58)}px Orbitron, sans-serif`;
+    ctx.fillStyle = '#071022'; ctx.fillText(String(offer + 1), hx, hy + 0.5);
+  };
+  for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
+    const b = WEB_BRIDGES[bi], n = T.bridgeNode(bi);
+    const owned = !!upgN(b.key), eligible = bridgeEligible(b);
+    const sel = treeSel.kind === 'bridge' && treeSel.bi === bi;
+    const offer = choiceIndexForSel({ kind: 'bridge', bi });
+    const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + bi * 1.3);
+    const cA = PATHS[b.paths[0]].color, cB = PATHS[b.paths[1]].color;
+    ctx.save();
+    if (sel || offered) { ctx.shadowColor = offered ? '#ffffff' : b.color; ctx.shadowBlur = offered ? 14 + pulse * 10 : 15; }
+    constellationHex(n.cx, n.cy, n.r, 0); // flat-top: bridges read differently
+    ctx.fillStyle = chosen ? mixHex(b.color, '#ffffff', 0.22) : owned ? mixHex(b.color, '#071022', 0.5)
+      : offered ? mixHex(b.color, '#071022', 0.72) : 'rgba(9,14,28,0.9)';
+    ctx.fill();
+    // TWO-TONE border: a solid half in each wedge's color, never color-alone
+    ctx.lineWidth = chosen || sel ? 2.6 : owned || offered ? 2 : eligible ? 1.6 : 1;
+    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cA : 'rgba(255,255,255,0.14)';
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cB : 'rgba(255,255,255,0.2)';
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
+    ctx.shadowBlur = 0;
+    const lit = owned || offered || eligible || sel;
+    const badge = iconBadge(b.icon, b.color, Math.max(6, Math.round(n.r * 0.66)), lit ? 'lit' : 'dim');
+    ctx.globalAlpha = lit ? 1 : 0.45;
+    ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
+    ctx.globalAlpha = 1;
+    if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.7, n.cy + n.r * 0.66, 2.8, 0, Math.PI * 2); ctx.fill(); }
+    if (offered) offerChip(n, offer);
+    ctx.restore();
+  }
+  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+    const sup = superForPath(PATH_KEYS[pi]);
+    if (!sup) continue;
+    const n = T.superNode(pi);
+    const owned = !!upgN(sup.key), eligible = superEligible(sup);
+    const sel = treeSel.kind === 'super' && treeSel.pi === pi;
+    const offer = choiceIndexForSel({ kind: 'super', pi });
+    const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + pi * 1.1);
+    ctx.save();
+    if (sel || offered || owned) { ctx.shadowColor = offered ? '#ffffff' : sup.color; ctx.shadowBlur = offered ? 15 + pulse * 10 : owned ? 13 : 15; }
+    // the DOUBLE HEX star crown marks a superskill — shape, not color alone
+    constellationHex(n.cx, n.cy, n.r + 1.5, Math.PI / 6);
+    ctx.fillStyle = chosen ? mixHex(sup.color, '#ffffff', 0.25) : owned ? mixHex(sup.color, '#071022', 0.45)
+      : offered ? mixHex(sup.color, '#071022', 0.7) : 'rgba(9,14,28,0.92)';
+    ctx.fill();
+    ctx.lineWidth = chosen || sel ? 2.6 : owned || offered ? 2.2 : eligible ? 1.7 : 1;
+    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered ? sup.color : eligible ? sup.color + 'aa' : 'rgba(255,255,255,0.16)';
+    ctx.stroke();
+    constellationHex(n.cx, n.cy, n.r + 1.5, 0);
+    ctx.globalAlpha = owned || offered || eligible || sel ? 0.8 : 0.3;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    const lit = owned || offered || eligible || sel;
+    const badge = iconBadge(sup.icon, sup.color, Math.max(7, Math.round(n.r * 0.62)), lit ? 'lit' : 'dim');
+    ctx.globalAlpha = lit ? 1 : 0.4;
+    ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
+    ctx.globalAlpha = 1;
+    if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.72, n.cy + n.r * 0.68, 3, 0, Math.PI * 2); ctx.fill(); }
+    if (offered) offerChip(n, offer);
+    ctx.restore();
+  }
+  for (let si = 0; si < WEB_SATELLITES.length; si++) {
+    const sat = WEB_SATELLITES[si], item = stackItem(sat.stackKey);
+    const n = T.satNode(si);
+    const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
+    const unlocked = pathLvl(sat.path) >= 4;
+    const sel = treeSel.kind === 'sat' && treeSel.si === si;
+    const offer = choiceIndexForSel({ kind: 'sat', si });
+    const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + si * 2.1);
+    ctx.save();
+    if (sel || offered) { ctx.shadowColor = offered ? '#ffffff' : item.color; ctx.shadowBlur = offered ? 12 + pulse * 8 : 12; }
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r, 0, Math.PI * 2); // circles = repeatable
+    ctx.fillStyle = chosen ? mixHex(item.color, '#ffffff', 0.22) : rank ? mixHex(item.color, '#071022', 0.5)
+      : offered ? mixHex(item.color, '#071022', 0.72) : 'rgba(9,14,28,0.9)';
+    ctx.fill();
+    ctx.lineWidth = chosen || sel ? 2.2 : rank || offered ? 1.8 : unlocked ? 1.4 : 1;
+    ctx.strokeStyle = chosen || sel ? '#fff' : rank || offered ? item.color : unlocked ? item.color + 'aa' : 'rgba(255,255,255,0.14)';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    const lit = rank || offered || unlocked || sel;
+    const badge = iconBadge(item.icon, item.color, Math.max(5, Math.round(n.r * 0.62)), lit ? 'lit' : 'dim');
+    ctx.globalAlpha = lit ? 1 : 0.45;
+    ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
+    ctx.globalAlpha = 1;
+    if (rank > 0) { // the rank readout IS the ∞-stack record
+      ctx.font = `900 ${Math.max(6.5, n.r * 0.7)}px Orbitron, sans-serif`;
+      ctx.fillStyle = '#fff';
+      ctx.fillText('×' + rank, n.cx, n.cy + n.r + 8);
+    }
+    if (offered) offerChip(n, offer);
+    ctx.restore();
+  }
+
   // The actual current build sits at the center, so installing a node has an
   // immediate visual referent instead of feeling like a detached menu choice.
   ctx.save();
@@ -4973,9 +5130,126 @@ function drawFullUpgradeTree() {
   ctx.restore();
 }
 
+// The shared REROLL / INSTALL action row at the panel's foot — tier and web
+// details both end in exactly these two actions.
+function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
+  const rr = T.reroll, canRR = !G.rerolled && !G.secret.rewardDraft;
+  const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
+  roundRect(rr.x, rr.y, rr.w, rr.h, 11);
+  ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+  ctx.lineWidth = 1.3; ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,213,79,0.55)') : 'rgba(255,255,255,0.15)'; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `800 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
+  ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL · R') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+
+  const cf = T.confirm, canCF = chosen;
+  const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
+  if (canCF) { ctx.shadowColor = accent; ctx.shadowBlur = hovCF ? 18 : 10; }
+  roundRect(cf.x, cf.y, cf.w, cf.h, 11);
+  ctx.fillStyle = canCF ? (hovCF ? accent + '55' : accent + '34') : 'rgba(255,255,255,0.06)'; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = canCF ? 2 : 1.2; ctx.strokeStyle = canCF ? '#ffffff' : 'rgba(255,255,255,0.15)'; ctx.stroke();
+  ctx.font = `900 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
+  ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OFFER ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS NODE' : 'CHOOSE A GLOWING NODE',
+    cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
+}
+
+// Detail panel for the WEB nodes (bridges / superskills / satellites): name,
+// exact state, effect in THIS mode, the rig tells, and — when locked — every
+// unmet requirement spelled out. No guide required.
+function drawTreeDetailWeb(T) {
+  const d = T.detail, kind = treeSel.kind;
+  const offer = choiceIndexForSel(treeSel);
+  const offered = offer >= 0, chosen = offered && draftSel === offer;
+  let color, icon, name, heading, desc, visual, proc, status, statusCol, locks = [];
+  if (kind === 'bridge') {
+    const b = WEB_BRIDGES[treeSel.bi];
+    const owned = !!upgN(b.key), eligible = bridgeEligible(b);
+    color = b.color; icon = b.icon; name = b.name;
+    heading = 'FORM II BRIDGE · ' + PATHS[b.paths[0]].name + ' × ' + PATHS[b.paths[1]].name;
+    desc = webNodeDesc(b); visual = b.visual; proc = b.proc;
+    locks = owned || offered || eligible ? [] : webLockReason(b, 'bridge');
+    status = owned ? 'OWNED' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
+      : eligible ? 'REACHABLE · NOT OFFERED' : 'LOCKED';
+    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
+  } else if (kind === 'super') {
+    const sup = superForPath(PATH_KEYS[treeSel.pi]);
+    const owned = !!upgN(sup.key), eligible = superEligible(sup);
+    color = sup.color; icon = sup.icon; name = sup.name;
+    heading = '★ SUPERSKILL · ' + PATHS[sup.path].name + ' APEX';
+    desc = webNodeDesc(sup); visual = sup.visual; proc = sup.proc;
+    locks = owned || offered || eligible ? [] : webLockReason(sup, 'super');
+    status = owned ? '★ ONLINE' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
+      : eligible ? 'RECIPE COMPLETE · NOT OFFERED' : 'LOCKED';
+    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
+  } else {
+    const sat = WEB_SATELLITES[treeSel.si], item = stackItem(sat.stackKey);
+    const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
+    const unlocked = pathLvl(sat.path) >= 4;
+    color = item.color; icon = item.icon; name = item.name;
+    heading = 'MASTERY SATELLITE · REPEATS FOREVER';
+    desc = item.desc;
+    visual = 'A COUNTED SATELLITE CHIP DOCKS ON THE ' + PATHS[sat.path].name + ' WEDGE';
+    proc = 'ITS RANK READS OUT ON THE MAP AND THE WING RACK';
+    locks = unlocked || offered || rank ? [] : webLockReason(sat, 'sat');
+    status = rank ? 'OWNED ×' + rank : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
+      : unlocked ? 'REACHABLE · OFFERED WHEN SLOTS REMAIN' : 'LOCKED';
+    statusCol = rank ? color : offered ? '#ffffff' : unlocked ? color : '#78909c';
+  }
+  const pad = T.compact ? 11 : 16;
+  roundRect(d.x, d.y, d.w, d.h, 14);
+  ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
+  ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? color : color + '88'; ctx.stroke();
+  const iconSize = T.sideDetail ? 44 : T.compact ? 32 : 38;
+  const lit = status !== 'LOCKED';
+  const db = iconBadge(icon, color, Math.round(iconSize / 2), lit ? 'lit' : 'dim');
+  ctx.drawImage(db, d.x + pad, d.y + pad, iconSize, iconSize);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.font = `800 ${T.compact ? 7.5 : 9}px Orbitron, sans-serif`; ctx.fillStyle = color;
+  ctx.fillText(heading, d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
+  ctx.font = `900 ${T.compact ? 12 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.fillText(name, d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
+  ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
+  ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
+
+  let y = d.y + pad + Math.max(iconSize + 8, 54);
+  ctx.font = bodyFont(T.compact ? 9 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
+  const descLines = wrapText(desc, d.w - pad * 2).slice(0, T.sideDetail ? 4 : 2);
+  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 16), d.w - pad * 2));
+  y += descLines.length * (T.compact ? 12 : 16) + (T.compact ? 5 : 10);
+
+  if (locks.length) {
+    // exact lock reasons — the player never needs a guide to see the route
+    ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#ffab91';
+    ctx.fillText('TO UNLOCK', d.x + pad, y, d.w - pad * 2);
+    y += T.compact ? 11 : 14;
+    ctx.font = bodyFont(T.compact ? 8 : 9.5, 650); ctx.fillStyle = '#ffcdb8';
+    for (const reason of locks.slice(0, 3)) {
+      ctx.fillText('· ' + reason, d.x + pad, y, d.w - pad * 2);
+      y += T.compact ? 10 : 13;
+    }
+    y += 4;
+  } else {
+    ctx.font = `800 ${T.compact ? 7 : 8}px Orbitron, sans-serif`; ctx.fillStyle = color;
+    ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
+    y += T.compact ? 11 : 14;
+    ctx.font = bodyFont(T.compact ? 8 : 9.5, 650); ctx.fillStyle = '#aebdca';
+    const visualLines = wrapText(visual, d.w - pad * 2).slice(0, T.sideDetail ? 2 : 1);
+    visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 10 : 13), d.w - pad * 2));
+    y += visualLines.length * (T.compact ? 10 : 13) + 5;
+    if (T.sideDetail && proc) {
+      ctx.fillStyle = '#90a4ae';
+      const procLines = wrapText('PROC · ' + proc, d.w - pad * 2).slice(0, 2);
+      procLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * 13, d.w - pad * 2));
+    }
+  }
+  drawTreeDetailButtons(T, offered, chosen, offer, color);
+}
+
 // Persistent node details: effect, exact state, path progress, visible rig
 // tell, and the one install action. The map itself stays almost text-free.
 function drawTreeDetail(T) {
+  if ((treeSel.kind || 'tier') !== 'tier') { drawTreeDetailWeb(T); return; }
   const d = T.detail;
   const pk = PATH_KEYS[treeSel.pi], P = PATHS[pk], lvl = pathLvl(pk), ti = treeSel.ti;
   const tier = P.tiers[ti], owned = ti < lvl, next = ti === lvl;
@@ -5062,25 +5336,7 @@ function drawTreeDetail(T) {
     }
   }
 
-  const rr = T.reroll, canRR = !G.rerolled && !G.secret.rewardDraft;
-  const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
-  roundRect(rr.x, rr.y, rr.w, rr.h, 11);
-  ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.07)'; ctx.fill();
-  ctx.lineWidth = 1.3; ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,213,79,0.55)') : 'rgba(255,255,255,0.15)'; ctx.stroke();
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `800 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-  ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL · R') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
-
-  const cf = T.confirm, canCF = chosen;
-  const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
-  if (canCF) { ctx.shadowColor = P.color; ctx.shadowBlur = hovCF ? 18 : 10; }
-  roundRect(cf.x, cf.y, cf.w, cf.h, 11);
-  ctx.fillStyle = canCF ? (hovCF ? P.color + '55' : P.color + '34') : 'rgba(255,255,255,0.06)'; ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = canCF ? 2 : 1.2; ctx.strokeStyle = canCF ? '#ffffff' : 'rgba(255,255,255,0.15)'; ctx.stroke();
-  ctx.font = `900 ${T.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
-  ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OFFER ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS NODE' : 'CHOOSE A GLOWING NODE',
-    cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
+  drawTreeDetailButtons(T, offered, chosen, offer, P.color);
 }
 
 // Compact journey map shown between every stage. Nine persistent region nodes

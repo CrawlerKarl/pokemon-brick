@@ -3265,10 +3265,11 @@ function update(dt) {
       G.upgradeChoices = SECRET_UPGRADES.map(secret => ({ secret }));
       G.score += 3000;
     }
-    // The constellation is now the primary choice surface while all three
-    // offers are authored path nodes. Mixed mastery/secret hands keep the
-    // compact cards because those satellites are not part of graph parity yet.
-    upgradeTreeOpen = G.mode === 'junkie' && !secretVictory && !!G.upgradeChoices && G.upgradeChoices.every(c => c.pathKey);
+    // The constellation is the primary choice surface for every normal hand —
+    // tiers, bridges, superskills, and satellites all live on the map now.
+    // Only the fixed secret Rift draft keeps its dedicated cards.
+    upgradeTreeOpen = G.mode === 'junkie' && !secretVictory && !!G.upgradeChoices &&
+      G.upgradeChoices.every(c => c.pathKey || c.web || c.stack);
     draftSel = null; // nothing inspected yet on a fresh draft
     if (upgradeTreeOpen) syncTreeSelectionToDraft();
     G.rerolled = secretVictory; // forbidden rewards are a fixed, one-time set

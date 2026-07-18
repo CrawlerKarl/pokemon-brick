@@ -667,6 +667,73 @@ window.requestAnimationFrame = function () { return 0; };
     return 'all 6 bridges + 6 superskills proc correctly · webbed pilot renders clean in junkie + classic';
   });
 
+  // 2w-iic) the map addresses all 39 nodes: geometry is sane, every offer
+  // kind resolves to its node, taps select, and the install path completes.
+  test('upgrade web: map addresses and installs every node kind', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    const T = upgradeTreeLayout();
+    // bridge nodes sit BETWEEN their two spokes; supers/satellites crown theirs
+    for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
+      const b = WEB_BRIDGES[bi], n = T.bridgeNode(bi);
+      const a0 = T.node(PATH_KEYS.indexOf(b.paths[0]), 1), a1 = T.node(PATH_KEYS.indexOf(b.paths[1]), 1);
+      const d0 = Math.hypot(n.cx - a0.cx, n.cy - a0.cy), d1 = Math.hypot(n.cx - a1.cx, n.cy - a1.cy);
+      assert(Math.abs(d0 - d1) < 40, b.key + ' is not centred between its wedges (' + (d0 | 0) + ' vs ' + (d1 | 0) + ')');
+    }
+    // no two addressable nodes overlap their DRAWN radii (hit boxes may touch)
+    const all = [];
+    for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+      for (let ti = 0; ti < 4; ti++) all.push({ id: 'tier ' + pi + ',' + ti, n: T.node(pi, ti) });
+      all.push({ id: 'super ' + pi, n: T.superNode(pi) });
+    }
+    for (let bi = 0; bi < 6; bi++) all.push({ id: 'bridge ' + bi, n: T.bridgeNode(bi) });
+    for (let si = 0; si < 3; si++) all.push({ id: 'sat ' + si, n: T.satNode(si) });
+    assert(all.length === 39, 'expected 39 addressable nodes, got ' + all.length);
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+      const a = all[i], b = all[j];
+      const gap = Math.hypot(a.n.cx - b.n.cx, a.n.cy - b.n.cy);
+      assert(gap > a.n.r + b.n.r + 2, a.id + ' overlaps ' + b.id + ' (gap ' + (gap | 0) + ')');
+    }
+    // every offer kind resolves to its map node and installs from the map
+    G.starterLvl = 3;
+    for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
+    G.upg.calibrated = 1;
+    G.state = 'upgrade'; G.stateT = 2;
+    rollUpgradeChoices(); // super 'meteor' takes the Explore slot
+    const superIdx = (G.upgradeChoices || []).findIndex(c => c.web && c.webKind === 'super');
+    assert(superIdx >= 0, 'no super offered for the map test');
+    const meteorPi = PATH_KEYS.indexOf('arsenal');
+    assert(choiceIndexForSel({ kind: 'super', pi: meteorPi }) === superIdx,
+      'the super offer did not resolve to its map node');
+    selectDraftChoice(superIdx);
+    assert(treeSel.kind === 'super' && treeSel.pi === meteorPi, 'selecting the offer did not move the map cursor');
+    render(); // web detail panel renders without errors
+    pickUpgrade(superIdx);
+    assert(upgN('meteor') === 1, 'installing from the map did not grant the superskill');
+    // a satellite offer resolves to its docked node
+    for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
+    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) G.upg[k] = 1;
+    G.state = 'upgrade'; G.stateT = 2;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.every(c => c.stack), 'full web should deal satellites');
+    for (let i = 0; i < 3; i++) {
+      const si = WEB_SATELLITES.findIndex(s => s.stackKey === G.upgradeChoices[i].stack.key);
+      assert(si >= 0 && choiceIndexForSel({ kind: 'sat', si }) === i,
+        'satellite offer ' + i + ' did not resolve to its node');
+    }
+    treeSel = { kind: 'sat', si: 0, pi: PATH_KEYS.indexOf(WEB_SATELLITES[0].path), ti: 3 };
+    render();
+    // locked nodes explain themselves in the detail panel
+    G.path = {}; G.upg = {}; G.starterLvl = 1;
+    treeSel = { kind: 'bridge', bi: 0, pi: 0, ti: 0 };
+    render();
+    treeSel = { kind: 'super', pi: 0, ti: 3 };
+    render();
+    assert(ERR.length === e0, 'errors during map test: ' + ERR.slice(e0).join(' | '));
+    return '39 nodes placed without overlap · bridges centred · super/satellite offers resolve, select, install · locked panels render';
+  });
+
   // 2w-iii) checkpoint migration: v1/v2 accepted, normalized v3 out, lossless
   // tier mapping, grandfathered web keys, and hostile shapes never throw.
   test('checkpoint migration: v1/v2 → v3 round-trip', async () => {
@@ -1131,7 +1198,10 @@ window.requestAnimationFrame = function () { return 0; };
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
         for (let pi = 0; pi < PATH_KEYS.length; pi++) {
           for (let ti = 0; ti < 4; ti++) rects['constellation(' + pi + ',' + ti + ')'] = T.node(pi, ti);
+          rects['super(' + pi + ')'] = T.superNode(pi);
         }
+        for (let bi = 0; bi < WEB_BRIDGES.length; bi++) rects['bridge(' + bi + ')'] = T.bridgeNode(bi);
+        for (let si = 0; si < WEB_SATELLITES.length; si++) rects['satellite(' + si + ')'] = T.satNode(si);
         count = Object.keys(rects).length;
         for (const [name, r] of Object.entries(rects)) {
           if (!(r.x >= -2 && r.y >= -2 && r.x + r.w <= w + 2 && r.y + r.h <= h + 2)) {
