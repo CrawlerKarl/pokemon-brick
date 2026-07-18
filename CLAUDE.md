@@ -40,7 +40,10 @@ research, and dated Daily best/completion/streak state. All three mode cards
 remain visible, but only the hovered card (or one rotating focus card on
 touch/idle) animates; `reduceFlash` freezes them. Setup calls the opt-out
 **NO PARTNER**, shows starting HP + pressure on difficulty cards, and pages an
-18-type starter roster in three groups of six. Each type has a distinct
+18-type starter roster in three groups of six. The title card puts an actual
+partner inside the custom STARFIGHTER flight rig — never a legendary mascot.
+Mode cards must lead with their literal recipes: YOU FLY + FIRE, BALL + PADDLE,
+or NO BALL + DIRECT FIRE. Each type has a distinct
 three-tier ability in `STARTER_MON`, an ICONIC species line (Dratini/dragon,
 Machop/fighting, Gastly/ghost, Magnemite/steel…), and its own signature
 attack silhouette (`pilotInfo().shape` → `drawTypedBolt`, 14 shapes) that
@@ -88,11 +91,14 @@ phone — flag anything only verifiable there.
   `shipY()` (junkie) — every "where is the player" check must use `shipY()`,
   not `PADDLE_Y()`.
 - **Enemy fire is TYPED and effectiveness-aware.** Each shot carries a `type`
-  (firing mon's) and renders in that colour. Vs the player's `playerType()`:
-  a resisted normal shot is DEFLECTED (no life lost), super-effective shows a
-  red ring. Elite (`maxHp≥3`) shots are HEAVY: splash hitbox, pierce resist,
-  extra life if super-effective. Keep this in the `G.enemyShots` hit block
-  (update.js); typeless shots (`type` absent) must stay neutral so tests pass.
+  (firing mon's) and renders in that colour. `SHOT_CLASSES` keeps visual size,
+  collision size, interception HP, and threat independent; micro / standard /
+  heavy / massive volleys are budgeted by `starThreatCap`. Rank is explicit
+  (`attackRank` / `elite`) and NEVER inferred from maximum HP. Vs the player's
+  `playerType()`, a resisted normal shot is DEFLECTED; heavy fire pierces the
+  resist. Every landed projectile costs exactly ONE life on Adventure — type
+  advantage changes feedback, never surprise damage. Boss projectile kinds are
+  keyed by species in `BOSS_PROJECTILE_KIND`; typeless legacy shots stay neutral.
 - **Classic is brick-only; Blaster may mix a STATIC wall with flyers.** Classic
   must never create free flyers, dives, or attack reinforcements. Where Blaster
   has both populations, flyers NEVER overlap the wall.
@@ -149,7 +155,8 @@ phone — flag anything only verifiable there.
 - **Every finale is a three-round GAUNTLET** (`gen.gauntlet`, data.js; the
   controller lives in update.js): sub-legendaries → the legendary (dormant
   until round 2, `br.dormant` parks it off-stage) → the mythical
-  (`br.mythic`: 0.6× HP, 0.6× fire interval, generic MYTHIC BLINK ability).
+  (`br.mythic`: 0.82× legendary HP in STARFIGHTER, legacy 0.6× elsewhere,
+  with species-specific movement, fire, and signature ability).
   Sub-legendaries (`br.subBoss`) fire aimed 3-shot fans; evolved elites
   (`br.elite ≥ 2`) fire AIMED heavy bolts; only the unevolved rank-and-file
   keep the classic straight bolt. Junkie separation is EASED (per-rider
@@ -159,8 +166,10 @@ phone — flag anything only verifiable there.
   moving **boss bricks** (`drawBossBrick`) and brick guards; BLASTER and
   STARFIGHTER use bare legendaries (`drawBossMon`). All share **three phases**
   at ⅔/⅓ HP (`br.phase`, set in `damageBrick`): each transition
-  fires a shockwave, and phase 3 (last stand) summons a minion ring + faster,
-  wider fire. Boss abilities keyed by id in `BOSS_ABILITIES`.
+  fires a shockwave with one readable escape spoke, applies a 0.78s damage gate,
+  and phase 3 (last stand) summons a minion ring + faster, wider fire. Boss
+  abilities keyed by id in `BOSS_ABILITIES`; regular volleys are also authored
+  per species by `spawnBossFire`.
 - **Wave ecology.** Each wave draws ONE habitat (`pickWaveTheme` → a curated
   `HABITAT_PACKS` pack or a `TYPE_CLUSTERS` fallback) via `themedPool`, so
   Pokémon that belong together appear together, spanning evolution tiers. Pack
@@ -214,6 +223,11 @@ phone — flag anything only verifiable there.
   hit-testing share the rects); locked fusions stay compact silhouettes
   until 2 ranks in both paths, connectors draw ONLY for owned/offered/
   selected fusions, and the detail panel states exact lock reasons.
+- **The upgrade web owns a real camera.** `treeZoom` starts at 1.15 desktop /
+  1.30 touch and clamps to 0.65–1.85. Drag anywhere on the map to pan; wheel or
+  two-finger pinch zooms around the pointer/midpoint. The − / + / FIT / FOCUS
+  controls are part of the shared `upgradeTreeLayout`, so rendering and hit
+  testing must remain camera-consistent.
 - **Readability over density.** The ball/character must never get lost. Caps:
   `flyerBudget` ≤20, junkie squads ≤26, particles ≤450, rings ≤24. The ball's
   glow scales with `clutter`.

@@ -37,7 +37,7 @@ function haptic(kind = 'tap') {
   const now = performance.now();
   if (now - lastHapticAt < (kind === 'hit' ? 45 : 80)) return;
   lastHapticAt = now;
-  const patterns = { tap: 8, hit: 5, break: 12, item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35], mega: [16, 30, 16, 30, 44] };
+  const patterns = { tap: 8, hit: 5, break: 12, warn: [9, 34, 14], item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35], mega: [16, 30, 16, 30, 44] };
   navigator.vibrate(patterns[kind] || patterns.tap);
 }
 

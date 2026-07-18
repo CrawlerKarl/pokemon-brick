@@ -3,10 +3,10 @@
 //  SETTINGS & DIFFICULTY (all knobs in one place)
 // ============================================================
 const PRESETS = {
-  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.5,  shotSpeed: 0.65, bossHp: 0.68, brickHp: 0.9,  ballSpeed: 0.85, lives: 5 },
-  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 1.0,  shotSpeed: 0.9,  bossHp: 1.12, brickHp: 1.15, ballSpeed: 0.95, lives: 4 },
-  hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3 },
-  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1 },
+  easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.5,  shotSpeed: 0.65, bossHp: 0.68, brickHp: 0.9,  ballSpeed: 0.85, lives: 5, starThreat: 0.72, heatBuild: 0.39, heatCool: 0.29 },
+  normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 1.0,  shotSpeed: 0.9,  bossHp: 1.12, brickHp: 1.15, ballSpeed: 0.95, lives: 4, starThreat: 1.0,  heatBuild: 0.42, heatCool: 0.28 },
+  hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3, starThreat: 1.24, heatBuild: 0.44, heatCool: 0.27 },
+  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1, starThreat: 1.36, heatBuild: 0.44, heatCool: 0.27 },
 };
 const DIFFICULTY_UI = {
   easy: { name: 'SCENIC', tone: 'FORGIVING', desc: 'MORE HEALTH · GENTLER FIRE' },
@@ -61,12 +61,12 @@ const SKIN_EDITION = 'POKÉMON EDITION';
 // (classic / blaster / junkie) are storage-stable: saved settings, run
 // checkpoints and tests reference them, so never rename a key.
 const MODES = [
-  { key: 'junkie',  label: 'STARFIGHTER', desc: '★ FEATURED CAMPAIGN', accent: '#c06cff',
-    lines: ['FULL-FLIGHT POKÉMON COMBAT', 'FLY · DODGE · CHARGE · EVOLVE'] },
-  { key: 'classic', label: 'BREAKER', desc: 'ARCADE CLASSIC', accent: '#ffd54f',
-    lines: ['BOUNCE THE BALL · BREAK THE WALL', 'BUILD RALLIES · EARN A BLASTER'] },
-  { key: 'blaster', label: 'BLASTER', desc: 'ARCADE SHOOTER', accent: '#4dd0e1',
-    lines: ['BREAK THE WALL WITH PURE FIREPOWER', 'TAP TO SHOOT · HOLD TO CHARGE'] },
+  { key: 'junkie',  label: 'STARFIGHTER', desc: '★ FEATURED · FLYING SHOOTER', mechanic: 'YOU FLY + FIRE', accent: '#c06cff',
+    lines: ['PILOT A POKÉMON · DODGE ENEMY FIRE', 'TAP TO ATTACK · HOLD FOR PIERCING CHARGE'] },
+  { key: 'classic', label: 'BREAKER', desc: 'CLASSIC · BRICK BREAKER', mechanic: 'BALL + PADDLE', accent: '#ffd54f',
+    lines: ['BOUNCE THE BALL · BREAK EVERY BLOCK', 'MOVE THE PADDLE · BUILD RALLIES'] },
+  { key: 'blaster', label: 'BLASTER', desc: 'ARCADE · WALL SHOOTER', mechanic: 'NO BALL · DIRECT FIRE', accent: '#4dd0e1',
+    lines: ['SHOOT THE BLOCK WALL DIRECTLY', 'TAP TO FIRE · HOLD FOR PIERCING CHARGE'] },
 ];
 if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'junkie';
 function saveSettings() { saveStore('pkbrk-settings', SETTINGS); }
@@ -86,6 +86,15 @@ function diff() {
   const jr = Math.min(1, Math.floor((G.level - 1) / STAGES) / 8);
   const sm = jr * jr * (3 - 2 * jr); // smoothstep 0→1 across the 9 regions
   const curve = 0.78 + 0.62 * sm;    // ×0.78 opening → ~×1.1 middle → ×1.4 finale
+  const ri = Math.max(0, Math.min(8, Math.floor((G.level - 1) / STAGES)));
+  // STARFIGHTER schedules PATTERNS, not raw bullets. Early regions attack
+  // more often than the old opening but use tiny, slow sparks; late regions
+  // spend the same budget on either a swarm or one siege projectile. Keeping
+  // these intervals separate prevents Ace/One Life's legacy shotRate scalar
+  // from turning a 12-pellet visual pattern into twelve independent attacks.
+  const starIntervals = [1.8, 1.62, 1.45, 1.3, 1.18, 1.08, 1.0, 0.94, 0.88];
+  const starBossIntervals = [2.55, 2.48, 2.38, 2.28, 2.18, 2.08, 2.0, 1.92, 1.84];
+  const starThreat = (p.starThreat || 1) * Math.max(0.82, a);
   return {
     lv: lvl,
     descent: (3 + lvl * 1.4) * p.descent * a * (mod?.key === 'swift' ? 1.35 : 1) * Math.max(0.7, Math.min(1, H / 900)),
@@ -93,6 +102,10 @@ function diff() {
       * (stageIdx(G.level) === 2 ? 1.35 : 1)
       / (mod?.key === 'ambush' ? 1.8 : mod?.key === 'bounty' ? 1.3 : 1),
     bossShotInt: Math.max(1.8, 4.5 - lvl * 0.2) / (p.shotRate * a) / (0.88 + 0.38 * sm),
+    starShotInt: starIntervals[ri] / starThreat
+      / (mod?.key === 'ambush' ? 1.18 : mod?.key === 'bounty' ? 1.08 : 1),
+    starBossShotInt: starBossIntervals[ri] / starThreat,
+    starThreatCap: (2.5 + ri * 0.375) * Math.sqrt(starThreat),
     ballSpeed: 520 * p.ballSpeed * speedScale(),
     shotSpeed: p.shotSpeed * speedScale() * (0.9 + 0.24 * sm),
     // drops are rare on purpose — each one should feel like an event

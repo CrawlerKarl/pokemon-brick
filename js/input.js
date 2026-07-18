@@ -39,8 +39,12 @@ window.addEventListener('mousemove', e => {
   if (dragSlider >= 0) setSliderFromX(dragSlider, e.clientX);
   if (treeDrag && treeDrag.id === 'mouse') {
     if (!upgradeTreeOpen || G.state !== 'upgrade') { treeDrag = null; return; }
-    treePan.x = treeDrag.sx + (e.clientX - treeDrag.x);
-    treePan.y = treeDrag.sy + (e.clientY - treeDrag.y);
+    const dx = e.clientX - treeDrag.x, dy = e.clientY - treeDrag.y;
+    if (treeDrag.moved || Math.hypot(dx, dy) >= 7) {
+      treeDrag.moved = true;
+      treePan.x = treeDrag.sx + dx;
+      treePan.y = treeDrag.sy + dy;
+    }
   }
 });
 window.addEventListener('mouseup', () => { if (dragSlider >= 0) { dragSlider = -1; saveSettings(); } });
@@ -77,6 +81,13 @@ window.addEventListener('mousedown', e => {
     chargeHeld = true; audio();
     return;
   }
+  if (G.state === 'upgrade' && upgradeTreeOpen) {
+    const T = upgradeTreeLayout();
+    if (inRect(e.clientX, e.clientY, T.map)) {
+      treeDrag = { x: e.clientX, y: e.clientY, sx: treePan.x, sy: treePan.y, id: 'mouse', moved: false };
+      return;
+    }
+  }
   fireHeld = true;
   onPress(e.clientX, e.clientY);
   if (treeDrag && treeDrag.id == null) treeDrag.id = 'mouse';
@@ -84,7 +95,11 @@ window.addEventListener('mousedown', e => {
 window.addEventListener('mouseup', e => {
   if (e.button === 2) { chargeHeld = false; return; }
   fireHeld = false;
-  if (treeDrag && treeDrag.id === 'mouse') treeDrag = null;
+  if (treeDrag && treeDrag.id === 'mouse') {
+    const tap = !treeDrag.moved, tx = treeDrag.x, ty = treeDrag.y;
+    treeDrag = null;
+    if (tap) onPress(tx, ty);
+  }
 });
 // right-click charges instead of opening the context menu during play
 window.addEventListener('contextmenu', e => {
@@ -94,14 +109,42 @@ window.addEventListener('keyup', e => {
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') chargeHeld = false;
 });
 window.addEventListener('wheel', e => {
+  if (G.state === 'upgrade' && upgradeTreeOpen) {
+    const T = upgradeTreeLayout();
+    if (inRect(e.clientX, e.clientY, T.map)) {
+      setTreeZoomAt(e.clientX, e.clientY, treeZoom * Math.exp(-e.deltaY * 0.0015));
+      e.preventDefault();
+      return;
+    }
+  }
   if (G.state === 'dex') dexScroll = Math.max(0, dexScroll + e.deltaY);
-}, { passive: true });
+}, { passive: false });
 
 window.addEventListener('touchstart', e => {
   audio();
   lastTouchT = performance.now();
   for (const t of e.changedTouches) {
     const x = t.clientX, y = t.clientY;
+    if (G.state === 'upgrade' && upgradeTreeOpen) {
+      const T = upgradeTreeLayout();
+      if (inRect(x, y, T.map)) {
+        treeTouches.set(t.identifier, { x, y, startX: x, startY: y });
+        if (treeTouches.size === 1) {
+          treeDrag = { x, y, sx: treePan.x, sy: treePan.y, id: t.identifier, moved: false };
+        } else {
+          const pts = Array.from(treeTouches.entries()).slice(0, 2);
+          const a = pts[0][1], b = pts[1][1];
+          const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+          const mx = T.map.x + T.map.w / 2, my = T.map.y + T.map.h / 2 + (T.sideDetail ? 4 : 0);
+          treePinch = { ids: [pts[0][0], pts[1][0]], dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+            zoom: treeZoom, worldX: (midX - (mx + treePan.x)) / treeZoom,
+            worldY: (midY - (my + treePan.y)) / treeZoom };
+          treeDrag = null;
+        }
+        e.preventDefault();
+        continue;
+      }
+    }
     if (G.state === 'play' || G.state === 'serve') {
       if (paused) { // pause screen is modal — route taps through onPress
         onPress(x, y);
@@ -152,15 +195,38 @@ window.addEventListener('touchstart', e => {
       if (treeDrag && treeDrag.id == null) treeDrag.id = t.identifier;
     }
   }
-}, { passive: true });
+}, { passive: false });
 let onPressDexTapPending = null;
 window.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    const p = treeTouches.get(t.identifier);
+    if (p) { p.x = t.clientX; p.y = t.clientY; }
+  }
+  if (treePinch && upgradeTreeOpen && G.state === 'upgrade') {
+    const a = treeTouches.get(treePinch.ids[0]), b = treeTouches.get(treePinch.ids[1]);
+    if (a && b) {
+      const T = upgradeTreeLayout();
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      treeZoom = Math.max(0.65, Math.min(1.85,
+        treePinch.zoom * Math.hypot(a.x - b.x, a.y - b.y) / treePinch.dist));
+      const mx = T.map.x + T.map.w / 2, my = T.map.y + T.map.h / 2 + (T.sideDetail ? 4 : 0);
+      treePan.x = midX - mx - treePinch.worldX * treeZoom;
+      treePan.y = midY - my - treePinch.worldY * treeZoom;
+      upgradeTreeLayout();
+      e.preventDefault();
+      return;
+    }
+  }
   for (const t of e.changedTouches) {
     if (uiTouchIds.has(t.identifier)) { claimUiTouch(t.identifier); continue; } // button touches never steer
     if (treeDrag && t.identifier === treeDrag.id) { // pan the constellation
       if (!upgradeTreeOpen || G.state !== 'upgrade') { treeDrag = null; continue; }
-      treePan.x = treeDrag.sx + (t.clientX - treeDrag.x);
-      treePan.y = treeDrag.sy + (t.clientY - treeDrag.y);
+      const dx = t.clientX - treeDrag.x, dy = t.clientY - treeDrag.y;
+      if (treeDrag.moved || Math.hypot(dx, dy) >= 7) {
+        treeDrag.moved = true;
+        treePan.x = treeDrag.sx + dx;
+        treePan.y = treeDrag.sy + dy;
+      }
       continue;
     }
     if (G.state === 'dex' && dexDragY != null) {
@@ -177,7 +243,18 @@ window.addEventListener('touchmove', e => {
 }, { passive: false });
 window.addEventListener('touchend', e => {
   lastTouchT = performance.now();
+  let endedPinch = false;
   for (const t of e.changedTouches) {
+    if (treeTouches.has(t.identifier)) {
+      treeTouches.delete(t.identifier);
+      if (treePinch && treePinch.ids.includes(t.identifier)) { treePinch = null; endedPinch = true; }
+      else if (treeDrag && t.identifier === treeDrag.id) {
+        const tap = !treeDrag.moved, tx = treeDrag.x, ty = treeDrag.y;
+        treeDrag = null;
+        if (tap) onPress(tx, ty);
+      }
+      continue;
+    }
     if (uiTouchIds.has(t.identifier)) claimUiTouch(t.identifier);
     uiTouchIds.delete(t.identifier);
     if (t.identifier === paddleTouchId) paddleTouchId = null;
@@ -191,6 +268,11 @@ window.addEventListener('touchend', e => {
       onPress(onPressDexTapPending.x, onPressDexTapPending.y);
     }
   }
+  if (endedPinch && treeTouches.size === 1) {
+    const entry = Array.from(treeTouches.entries())[0];
+    treeDrag = { x: entry[1].x, y: entry[1].y, sx: treePan.x, sy: treePan.y,
+      id: entry[0], moved: true };
+  }
   onPressDexTapPending = null; dexDragY = null;
   if (dragSlider >= 0) { dragSlider = -1; saveSettings(); }
 });
@@ -198,7 +280,10 @@ window.addEventListener('touchend', e => {
 // so autofire and paddle control can't get stuck
 window.addEventListener('touchcancel', e => {
   lastTouchT = performance.now();
+  let cancelledTreePinch = false;
   for (const t of e.changedTouches) {
+    treeTouches.delete(t.identifier);
+    if (treePinch && treePinch.ids.includes(t.identifier)) cancelledTreePinch = true;
     if (uiTouchIds.has(t.identifier)) claimUiTouch(t.identifier);
     uiTouchIds.delete(t.identifier);
     if (treeDrag && t.identifier === treeDrag.id) treeDrag = null;
@@ -209,6 +294,13 @@ window.addEventListener('touchcancel', e => {
       G.charge = 0; // a system-cancel is not a deliberate charged-shot release
     }
     if (t.identifier === touchFirePendingId) touchFirePendingId = null; // cancelled, no shot
+  }
+  if (cancelledTreePinch) treePinch = null;
+  if (treeTouches.size === 0) { treeDrag = null; treePinch = null; }
+  else if (!treePinch && treeTouches.size === 1) {
+    const entry = Array.from(treeTouches.entries())[0];
+    treeDrag = { x: entry[1].x, y: entry[1].y, sx: treePan.x, sy: treePan.y,
+      id: entry[0], moved: true };
   }
   onPressDexTapPending = null; dexDragY = null;
 });
@@ -437,11 +529,29 @@ function sameTreeSel(a, b) {
   if (k === 'apex') return a.ai === b.ai;
   return a.si === b.si;
 }
-// MOBILE: the constellation no longer shrinks to fit — it enforces a large
-// minimum scale and the player drags the chart around instead. treePan is the
-// camera offset (clamped in upgradeTreeLayout); treeDrag tracks one active
-// drag begun on empty map space ('mouse' or a touch identifier).
-let treePan = { x: 0, y: 0 }, treeDrag = null;
+// The constellation is a proper camera: it starts close enough to read, pans
+// from any point, pinches around the gesture midpoint, and can still zoom out
+// to the complete 50-node atlas. treeZoom intentionally survives while the
+// current run is alive; resetRun calls resetTreeCamera for a fresh journey.
+let treePan = { x: 0, y: 0 }, treeZoom = 1.2, treeDrag = null, treePinch = null;
+const treeTouches = new Map();
+function defaultTreeZoom() { return (W < 720 || H < 520) ? 1.3 : 1.15; }
+function resetTreeCamera() {
+  treePan.x = 0; treePan.y = 0; treeZoom = defaultTreeZoom();
+  treeDrag = null; treePinch = null; treeTouches.clear();
+}
+function setTreeZoomAt(x, y, next) {
+  const old = treeZoom;
+  next = Math.max(0.65, Math.min(1.85, next));
+  if (Math.abs(next - old) < 0.001) return;
+  const T = upgradeTreeLayout();
+  const mx = T.map.x + T.map.w / 2, my = T.map.y + T.map.h / 2 + (T.sideDetail ? 4 : 0);
+  const ratio = next / old;
+  treePan.x = x - mx - (x - (mx + treePan.x)) * ratio;
+  treePan.y = y - my - (y - (my + treePan.y)) * ratio;
+  treeZoom = next;
+  upgradeTreeLayout(); // clamp against the new content extent
+}
 function treeSelNodeRect(T) {
   const kind = treeSel.kind || 'tier';
   if (kind === 'bridge') return T.bridgeNode(treeSel.bi);
@@ -540,6 +650,7 @@ function upgradeTreeLayout() {
   // MOBILE readability beats fitting: the compact chart enforces a big
   // minimum scale — it may overflow the map box; treePan (below) covers it
   if (compact) radius = Math.max(radius, 235);
+  radius *= treeZoom;
   // when the map is WIDTH-limited (tall portrait), the box is far taller than
   // the constellation — reclaim the dead band: the detail panel grows a
   // little and the map re-centers on what it actually uses
@@ -568,8 +679,8 @@ function upgradeTreeLayout() {
   const inner = Math.max(48, radius * 0.28);
   const capR = radius * 0.84;
   const step = (capR - inner) / 3;
-  const drawR = Math.max(8, Math.min(compact ? 16 : 17, step * 0.4));
-  const hitR = Math.max(drawR + 5, Math.min(compact ? 27 : 22, step * 0.62));
+  const drawR = Math.max(8, Math.min(compact ? 20 : 22, step * 0.4));
+  const hitR = Math.max(drawR + 5, Math.min(compact ? 31 : 27, step * 0.62));
   // every path keeps its PATH_KEYS index (pi) everywhere; only the drawn
   // ANGLE follows WEB_SPOKE_ORDER, which makes each bridge's two wedges
   // adjacent on screen
@@ -583,9 +694,15 @@ function upgradeTreeLayout() {
   const buttonY = detail.y + detail.h - buttonH - 10;
   const buttonGap = 8;
   const buttonW = (detail.w - 20 - buttonGap) / 2;
+  const camY = map.y + 8, camH = 30, camGap = 5;
+  const camX = map.x + 8;
   return {
-    panel, compact, sideDetail, map, detail, center: { x: cx, y: cy }, radius, inner, step, drawR, panLim,
+    panel, compact, sideDetail, map, detail, center: { x: cx, y: cy }, radius, inner, step, drawR, panLim, zoom: treeZoom,
     close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
+    zoomOut: { x: camX, y: camY, w: 30, h: camH },
+    zoomIn: { x: camX + 30 + camGap, y: camY, w: 30, h: camH },
+    fit: { x: camX + 60 + camGap * 2, y: camY, w: 42, h: camH },
+    focus: { x: camX + 102 + camGap * 3, y: camY, w: 52, h: camH },
     reroll: { x: detail.x + 10, y: buttonY, w: buttonW, h: buttonH },
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
     spokeA,
@@ -833,6 +950,14 @@ function onPress(x, y) {
       if (upgradeTreeOpen) {
         const T = upgradeTreeLayout();
         if (inRect(x, y, T.close) || !inRect(x, y, T.panel)) { upgradeTreeOpen = false; return; }
+        const zx = T.map.x + T.map.w / 2, zy = T.map.y + T.map.h / 2;
+        if (inRect(x, y, T.zoomOut)) { setTreeZoomAt(zx, zy, treeZoom / 1.2); SFX.wall(); return; }
+        if (inRect(x, y, T.zoomIn)) { setTreeZoomAt(zx, zy, treeZoom * 1.2); SFX.wall(); return; }
+        if (inRect(x, y, T.fit)) { treeZoom = 0.65; treePan.x = 0; treePan.y = 0; upgradeTreeLayout(); SFX.wall(); return; }
+        if (inRect(x, y, T.focus)) {
+          treeZoom = defaultTreeZoom(); treePan.x = 0; treePan.y = 0;
+          ensureTreeSelVisible(); SFX.wall(); return;
+        }
         if (draftSel != null && inRect(x, y, T.confirm)) { pickUpgrade(draftSel); return; }
         if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, T.reroll)) { rerollDraft(); return; }
         // Tap a node to inspect it. Offered nodes also become the active pick,
@@ -865,11 +990,8 @@ function onPress(x, y) {
             return;
           }
         }
-        // empty map space starts a CAMERA DRAG (phones overflow the box);
-        // the press handlers stamp the pointer/touch that owns it
-        if (inRect(x, y, T.map) && (T.panLim.x || T.panLim.y)) {
-          treeDrag = { x, y, sx: treePan.x, sy: treePan.y, id: null };
-        }
+        // Map drags are resolved by the pointer/touch gesture handlers so a
+        // drag may begin over a dense node without installing or selecting it.
         return;
       }
       for (let i = 0; i < G.upgradeChoices.length; i++) {
@@ -997,6 +1119,27 @@ function serveAngle() {
   return -Math.PI / 2 + Math.max(-0.45, Math.min(0.45, G.paddle.speed * 0.0004));
 }
 // launch stuck balls / fire the blaster — shared by click, Space and the FIRE
+// One heat funnel keeps basic and charged fire on the same warning language.
+// Crossing 70% and 90% is deterministic — no random misfire — so skilled
+// players can vent by rhythm before the two-second lockout lands.
+function addWeaponHeat(amount) {
+  const before = G.heat;
+  G.heat = Math.min(1, G.heat + amount);
+  if (before < 0.7 && G.heat >= 0.7) {
+    tone(420, 0.09, 'sawtooth', 0.045, 120);
+    haptic('warn');
+  }
+  if (before < 0.9 && G.heat >= 0.9) {
+    tone(250, 0.14, 'sawtooth', 0.06, -80);
+    haptic('warn');
+  }
+  if (G.heat >= 1 && G.overheat <= 0) {
+    G.overheat = OVERHEAT_DUR;
+    addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
+    noiseBurst(0.3, 0.09);
+  }
+}
+
 // button. `auto` marks held-button repeat fire (no denial beep spam).
 function fireAction(auto = false) {
   if (paused) { paused = false; return; }
@@ -1038,14 +1181,11 @@ function fireAction(auto = false) {
   G.blasterCD = cd;
   G.shotsFired++;
   G.muzzle = 0.12;
-  // heat: fire freely like a shooter — a long sustained stream (~15+ shots)
-  // before it overheats, and it cools fast, so the lockout is a rare "held it
-  // down forever" event rather than a constant governor. Paddle returns still
-  // vent it; a water partner's Torrent runs the barrel cooler still.
+  // Heat is TIME-normalised: a faster partner fires more shots, but each shot
+  // contributes proportionally less heat. On Adventure, cold uninterrupted
+  // basic fire reaches overheat in about seven seconds; tapping with pauses
+  // remains comfortably sustainable.
   const torrent = starterMod('heat', 1);
-  // SPACE JUNKIE runs much cooler — you're a Pokémon using its attack, not a
-  // cannon — and NEVER-MELT ICE stacks cool it further still
-  const modeCool = G.mode === 'junkie' ? 0.88 : 1; // junkie runs a bit cooler, not immune
   const masteryCool = Math.pow(0.94, G.stacks.ice || 0);
   // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
   // heat-limited well below the faster cadence and the capstone adds no DPS
@@ -1053,12 +1193,8 @@ function fireAction(auto = false) {
   // HYPERNOVA's upper stages run dangerously hot — the +30% sustain is real,
   // but stage three cooks the barrel (the plan's declared limiter)
   const novaHeat = G.novaStage ? [1, 1.1, 1.25, 1.5][G.novaStage] : 1;
-  G.heat = Math.min(1, G.heat + 0.12 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool * novaHeat);
-  if (G.heat >= 1) {
-    G.overheat = OVERHEAT_DUR;
-    addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
-    noiseBurst(0.3, 0.09);
-  }
+  const heatRate = G.mode === 'junkie' ? (preset().heatBuild || 0.42) : 0.4;
+  addWeaponHeat(heatRate * cd * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * masteryCool * novaHeat);
   // SPACE JUNKIE mode: the shot IS the pilot's attack — the SHAPE follows the
   // species, the color + type follow the current element (green fire, etc.)
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
@@ -1134,12 +1270,7 @@ function fireCharge(c) {
   const wmSpend = upgN('warmachine') ? G.railPressure : 0;
   const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0) * starterMod('heat', 1)
     * (1 - 0.45 * wmSpend);
-  G.heat = Math.min(1, G.heat + (0.30 + 0.30 * c) * heatMods);
-  if (G.heat >= 1) {
-    G.overheat = OVERHEAT_DUR;
-    addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
-    noiseBurst(0.3, 0.09);
-  }
+  addWeaponHeat((0.30 + 0.30 * c) * heatMods);
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
   // WAR MACHINE: the rail spend never resets the gatling's cadence — the two

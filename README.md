@@ -110,9 +110,13 @@ the repo: `test.html` (headless invariant suite), `package.json`
 The opening is STARFIGHTER-first. Page 1 gives STARFIGHTER the large featured
 campaign card and the primary **START STARFIGHTER** action; BREAKER and BLASTER
 remain available in a compact arcade rail. All three `drawModeCard` dioramas
-still run a looping mechanic demo: STARFIGHTER banks Rayquaza beneath an
-orbiting flock, BREAKER rallies a ball through a wall, and BLASTER winds a
-charge shot between volleys. With no hover, STARFIGHTER remains animated; a
+now lead with their literal game type and input recipe: **FLYING SHOOTER / YOU
+FLY + FIRE**, **BRICK BREAKER / BALL + PADDLE**, and **WALL SHOOTER / NO BALL**.
+STARFIGHTER no longer uses Rayquaza as an ambiguous mascot. It rotates actual
+partner choices inside a custom wing-and-thruster flight rig while the preview
+shows strafing, incoming enemy fire, basic attacks, and a piercing charge.
+BREAKER rallies a ball through a wall, and BLASTER winds a charge shot between
+volleys. With no hover, STARFIGHTER remains animated; a
 hovered arcade card takes focus. `reduceFlash` freezes previews. The dashboard
 strip below still shows the saved journey, research progress, and Daily status.
 
@@ -324,13 +328,16 @@ drain) mean a death leaves an honest Galaga gap, never a snap.
 
 ### Charge-gated shooter content (the charge shot always matters)
 - **SHELL ARMOR** (junkie, region 2+ elites; 3 tutors on Kanto 2/3): normal
-  bolts plink off; ONE charged shot cracks the shell. A bright persistent
+  bolts crack it in three deliberate hits; ONE charged shot breaks it outright.
+  A bright persistent
   banner teaches the charge until the player's first charged shot
   (`G.chargedEver`).
 - **ROCK TOMB barriers** (junkie, region 2+): drifting boulder Pokémon
-  (Geodude line by act) that absorb normal bolts — charged only. They never
+  (Geodude line by act) that take three normal hits or one charge. They never
   block a wave clear (crumble when the last real enemy falls), drop nothing.
-- Charged shots also punch THROUGH up to two enemy shots (+Interceptor).
+- Charged shots deal three interception damage and continue through three
+  ordinary threats by default (more with Interceptor); massive siege fire takes
+  three basic interceptions or one charged hit.
 
 ### THE GAUNTLET — every region's finale (`gen.gauntlet`, data.js)
 Three rounds, difficulty scaling: **Round 1** — the SENTINELS (Kanto: the
@@ -343,7 +350,7 @@ are OUT of the regular fire pool. In STARFIGHTER these are one-phase fights.
 The legendary lies `dormant` (parked at x=-2000, skipped everywhere).
 **Round 2** — `gauntletWake()`: the legendary descends with its wing guards
 and runs two phases. **Round 3** — `gauntletSummonMythic()`: the mythical
-(0.6× HP, three phases) uses a species-specific arena path and signature
+(0.82× legendary HP, three phases) uses a species-specific arena path and signature
 attack: Genesis Halo, Time Bloom, Doom Desire, Night Terror, Victory Burn,
 Diamond Storm, Spectral Combo, Jungle Lash, or Poison Puppet. Trial mode can
 jump straight to any round. Fire-by-rank everywhere:
@@ -386,8 +393,9 @@ aura, orbiting energy ring, silhouette shadow + rim light, its own gait), never
 a card. Phase count is encounter-authored (`br.phaseCount`): STARFIGHTER
 sentinels have one phase, legendaries two (50% split), and mythicals/secret
 Mew VMAX three (⅔/⅓ splits). Other game modes retain their three-phase boss
-structure. Each transition fires a
-dodgeable radial **shockwave** of shots + hit-stop, widens/quickens the patrol,
+structure. Each transition fires a dodgeable radial **shockwave** with one open
+escape spoke + hit-stop, protects the new phase behind a short 0.78s damage gate,
+widens/quickens the patrol,
 and adds spread fire; the final phase also summons a ring of bare
 minions (`br.addsCalled`) and halves ability cooldowns. Signature abilities are
 keyed by legendary id in `BOSS_ABILITIES` (teleport, gusts, sweeps, time-warp,
@@ -432,7 +440,9 @@ schema v3 with a never-throws v1/v2 migration (`migrateCheckpoint`,
 state.js). The constellation screen addresses all 50 nodes — locked
 fusions stay compact silhouettes until 2 ranks in both paths, connectors
 draw only for owned/offered/selected nodes, and every locked node states
-its exact unlock route. Advancing
+its exact unlock route. It opens at 115% zoom on desktop / 130% on touch;
+drag the map to pan, wheel or pinch around the pointer/midpoint to zoom, and
+use − / + / FIT / FOCUS for deterministic navigation. Advancing
 is `advancePath(key)`. The hand guarantees an offense option and a non-offense
 option while both groups remain, so damage never crowds survival/utility off
 the screen:
@@ -559,8 +569,11 @@ save best score or Pokédex catches (`G.trial` flag).
 ### Difficulty, progress safety, and cheats
 - **One journey curve** (`diff()`, config.js): smoothstep across the 9
   regions — ×0.78 opening, ~×1.1 middle, ×1.4 finale — on minion fire,
-  boss cadence, and shot speed. Finale stages ease minion fire ×1.35 (the
-  boss is the show).
+  legacy boss cadence, and shot speed. STARFIGHTER adds its own authored
+  cadence (1.80s → 0.88s ordinary; 2.55s → 1.84s boss on Adventure) and an
+  active threat budget (2.5 → 5.5): early regions can fire small sparks often,
+  while late regions spend the larger budget on a swarm OR a siege shot, never
+  an unbounded pile of both.
 - **Progress never wipes**: the region checkpoint saves from region 1 and
   SURVIVES a true game over — CONTINUE always works. A knockout still burns
   2 tree levels and retries the wave.
@@ -590,25 +603,31 @@ save best score or Pokédex catches (`G.trial` flag).
   (`G.blocksStatic`); the march (update.js) runs only on boss waves
 - **Blaster feel & HEAT:** cadence `G.blasterCD` and heat-per-shot in
   `fireAction` (input.js), passive cool in `tickEffects` (update.js),
-  `OVERHEAT_DUR` (state.js). Heat now vents SLOWER than sustained fire builds,
-  so holding the trigger really does overheat (~5s blaster, ~11s junkie), and a
+  `OVERHEAT_DUR` (state.js). Heat is time-normalised against real firing cadence:
+  Normal STARFIGHTER overheats after about 7.6s of uninterrupted basic fire,
+  and rapid-fire partners land in the same 5–10s band instead of bypassing it.
+  Coolant greatly extends that window, making its web route strategically live. A
   **charged shot dumps a big slug of heat** (~0.6 of the bar at full charge, in
   `fireCharge`) — chaining big shots overheats you.
 - **Difficulty:** `BRICK_HP_MUL` in `buildLevel` (state.js) — the single knob
   to make waves tankier/snappier (currently `1.35`). Note CLASSIC has no free
   blaster (see `blasterArmed`), so the ball carries early waves.
-- **Enemy warnings:** telegraphs are capped (≤3 concurrent, `update.js` enemy-
-  fire block) and drawn compact for non-boss shots (short stub, not a full
-  line) in `drawTelegraphs` (render.js). Danger line only shows for a
+- **Enemy warnings:** ordinary telegraphs are capped by both count and active
+  threat (`starThreatCap`); aimed/heavy attacks draw a line and massive attacks
+  get a long warning plus an oversized muzzle tell in `drawTelegraphs`
+  (render.js). Danger line only shows for a
   descending boxed wall (hidden on static waves).
 - **Typed enemy fire:** every enemy shot carries the firing Pokémon's `type`
-  and renders in that type's colour (`shotSprite` baked per colour). It has an
+  and renders in that type's colour. `TYPE_PROJECTILE_KIND` gives rank-and-file
+  attacks a type silhouette, while all 43 boss-only species have an explicit
+  `BOSS_PROJECTILE_KIND`; `enemyShotSprite` bakes each shape once. It has an
   effectiveness relationship to YOUR current type (`playerType`/`shotEffect`,
   state.js): a shot you resist shows a faint dashed ring and is **deflected —
-  no life lost**; a super-effective shot shows a pulsing red ring. Evolved
-  **elites** (`maxHp≥3`) fire a bigger, slower **HEAVY blast** — wider hit
-  envelope (splash), punches through your resist, and if super-effective takes
-  **an extra life**. All in the `G.enemyShots` hit block, update.js.
+  no life lost**; a super-effective shot shows a pulsing red ring. Explicit
+  elite rank can author **HEAVY** fire, but HP never silently promotes a shooter.
+  Micro / standard / heavy / massive classes separate art radius from the small,
+  honest collision core and cost one life per impact on Adventure. All in the
+  `G.enemyShots` hit block, update.js.
 - **Mega/barrier:** `MEGA_DUR`, `barrierCharges` (state.js)
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
 

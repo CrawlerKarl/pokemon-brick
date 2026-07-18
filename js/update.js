@@ -51,7 +51,7 @@ function tickEffects(dt) {
   } else {
     // vents on a pause — but slower than sustained fire builds, so holding the
     // trigger (or spamming the charge shot) really can cook the barrel
-    G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? 0.28 : 0.22));
+    G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? (preset().heatCool || 0.28) : 0.22));
   }
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
@@ -117,6 +117,196 @@ function modePower(p) {
   return swap[p.key] ? POWERS[swap[p.key]] : p;
 }
 
+// ---- ENEMY FIRE DIRECTOR -------------------------------------------------
+// Every spawned attack is an authored VOLLEY with a visual kind and a threat
+// class. This is the balance boundary between "a ton of little shots" and "one
+// huge shot": spectacle may change radically while the active danger remains
+// budgeted. The sequence id also stops micro swarms from feeding defensive
+// Fusion powers once per pellet.
+let ENEMY_VOLLEY_SEQ = 1;
+function nextEnemyVolley() {
+  ENEMY_VOLLEY_SEQ = (ENEMY_VOLLEY_SEQ + 1) % 1000000000;
+  return ENEMY_VOLLEY_SEQ;
+}
+function enemyShotClass(key) { return SHOT_CLASSES[key] || SHOT_CLASSES.standard; }
+function spawnEnemyShot(opts = {}) {
+  if (G.enemyShots.length >= 140) return null; // mobile-safe hard ceiling
+  const classKey = opts.classKey || (opts.heavy ? 'heavy' : 'standard');
+  const C = enemyShotClass(classKey);
+  const s = Object.assign({
+    x: 0, y: 0, vx: 0, vy: 0, age: 0,
+    classKey, kind: opts.kind || projectileKindFor(opts.species, opts.type),
+    visualR: C.visualR, hitR: C.hitR, r: C.visualR,
+    threat: C.threat, interceptHP: C.interceptHP, interceptMax: C.interceptHP,
+    tail: C.tail, heavy: !!C.heavy,
+    volleyId: opts.volleyId == null ? nextEnemyVolley() : opts.volleyId,
+  }, opts);
+  // Class safety fields win over legacy r/heavy values unless an authored
+  // pattern explicitly supplies the new visualR/hitR properties.
+  s.visualR = opts.visualR == null ? C.visualR : opts.visualR;
+  s.hitR = opts.hitR == null ? C.hitR : opts.hitR;
+  s.r = s.visualR;
+  s.threat = opts.threat == null ? C.threat : opts.threat;
+  s.interceptHP = opts.interceptHP == null ? C.interceptHP : opts.interceptHP;
+  s.interceptMax = s.interceptHP;
+  s.heavy = opts.heavy == null ? !!C.heavy : !!opts.heavy;
+  G.enemyShots.push(s);
+  if (classKey === 'massive') {
+    haptic('warn');
+    tone(105, 0.18, 'sawtooth', 0.045, 45);
+  }
+  return s;
+}
+function activeEnemyThreat() {
+  let n = 0;
+  for (const s of G.enemyShots) if (!s.dead) n += s.threat || 1;
+  for (const t of G.telegraphs) if (!t.boss) n += t.threat || 0;
+  return n;
+}
+
+function starEnemyPattern(src) {
+  const ri = regionIdx(G.level);
+  const rank = Math.max(0, src.attackRank == null ? (src.elite || 0) : src.attackRank);
+  const kind = projectileKindFor(src.poke.id, src.poke.t);
+  const roll = gameRand();
+  // Explicit elites own heavy fire. HP is intentionally absent from this
+  // decision: a tanky rank-and-file enemy remains a readable rank-and-file.
+  if (rank >= 3) return { classKey: 'heavy', kind, count: 3, spread: 0.28, aimed: true, speedMul: 0.68 };
+  if (rank >= 2) return { classKey: 'heavy', kind, count: 1, spread: 0, aimed: true, speedMul: 0.72 };
+  // The late game alternates swarm and siege instead of stacking both. One
+  // massive shot costs about the same as a twelve-pellet micro formation.
+  if (ri >= 7 && roll < 0.24) {
+    return { classKey: 'massive', kind, count: 1, spread: 0, aimed: ri >= 8, speedMul: 0.44,
+      warn: 0.9 };
+  }
+  if (ri >= 5 && roll < 0.68) {
+    return { classKey: 'micro', kind, count: Math.min(12, 4 + ri), spread: 0.13,
+      aimed: ri >= 6, speedMul: 0.72 };
+  }
+  if (ri >= 2) {
+    return { classKey: roll < 0.24 ? 'heavy' : 'standard', kind,
+      count: roll < 0.24 ? 1 : (ri >= 4 ? 3 : 2), spread: 0.18,
+      aimed: ri >= 3, speedMul: roll < 0.24 ? 0.62 : 0.9 };
+  }
+  return { classKey: 'micro', kind, count: ri === 0 ? 1 : 2, spread: 0.2,
+    aimed: false, speedMul: 0.72 };
+}
+function patternThreat(P) { return enemyShotClass(P.classKey).threat * P.count; }
+function spawnStarEnemyPattern(src, P, bx, by, d, volleyId) {
+  const base = P.aimed ? Math.atan2(shipY() - by, G.paddle.x - bx) : Math.PI / 2;
+  const sp = (225 + d.lv * 14) * d.shotSpeed * P.speedMul;
+  for (let i = 0; i < P.count; i++) {
+    const off = (i - (P.count - 1) / 2) * P.spread;
+    spawnEnemyShot({ x: bx, y: by, vx: Math.cos(base + off) * sp, vy: Math.sin(base + off) * sp,
+      type: src.poke.t, species: src.poke.id, kind: P.kind, classKey: P.classKey, volleyId,
+      wave: P.classKey === 'micro' && regionIdx(G.level) >= 4 ? 10 + regionIdx(G.level) * 2 : 0,
+      wavePhase: i * 0.8 });
+  }
+}
+
+function spawnBossAngles(br, bx, by, d, spec) {
+  if (spec.classKey === 'massive' && G.enemyShots.some(s => !s.dead && s.classKey === 'massive')) {
+    spec = Object.assign({}, spec, { classKey: 'micro', count: Math.min(3, spec.count || 1), speedMul: 0.82 });
+  }
+  const volleyId = nextEnemyVolley();
+  const aim = spec.base == null ? Math.atan2(shipY() - by, G.paddle.x - bx) : spec.base;
+  const count = spec.count || 1, spread = spec.spread || 0;
+  const sp = (spec.speed || (195 + d.lv * 9)) * d.shotSpeed * (spec.speedMul || 1);
+  for (let i = 0; i < count; i++) {
+    const a = aim + (i - (count - 1) / 2) * spread;
+    spawnEnemyShot({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      boss: true, type: br.poke.t, species: br.poke.id,
+      kind: spec.kind || projectileKindFor(br.poke.id, br.poke.t),
+      classKey: spec.classKey || 'standard', volleyId,
+      turn: spec.turn || 0, wave: spec.wave || 0, wavePhase: i * 0.9 });
+  }
+}
+
+// Regular boss fire is species-authored. Signature abilities still interrupt
+// this rhythm below, but the baseline volley now carries the Pokémon's visual
+// identity instead of falling back to one magenta spiked ball.
+function spawnBossFire(br, bx, by, d, tg) {
+  const id = br.poke.id, phase = br.phase || 1, last = bossLastStand(br);
+  if (br.secretBoss) {
+    spawnBossAngles(br, bx, by, d, phase >= 3
+      ? { kind: 'mirage', classKey: 'massive', count: 1, speedMul: 0.44, turn: 0.14 }
+      : { kind: 'mirage', classKey: 'standard', count: phase >= 2 ? 5 : 3, spread: 0.26, speedMul: 0.68 });
+    return;
+  }
+  if (tg.fan) {
+    spawnBossAngles(br, bx, by, d, { count: 5, spread: 0.24, classKey: 'standard' });
+    return;
+  }
+  switch (id) {
+    case 150: // Mewtwo: prisms frame one growing Psystrike core
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'prism', classKey: 'heavy', count: 1, speedMul: 0.68 }
+        : { kind: 'prism', classKey: 'micro', count: 3, spread: 0.2, speedMul: 1.05 }); break;
+    case 249: // Lugia: hollow Aeroblast rings
+      spawnBossAngles(br, bx, by, d, { kind: 'aeroring', classKey: phase >= 2 ? 'heavy' : 'standard',
+        count: phase >= 2 ? 2 : 1, spread: 0.42, speedMul: 0.62, wave: 18 }); break;
+    case 384: // Rayquaza: scale stream → emerald comet
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'comet', classKey: 'heavy', count: 1, speedMul: 0.74 }
+        : { kind: 'comet', classKey: 'micro', count: 5, spread: 0.11, speedMul: 1.08 }); break;
+    case 483: // Dialga: rotating clock hands and suspended crystals
+      spawnBossAngles(br, bx, by, d, { kind: 'time', classKey: phase >= 2 ? 'heavy' : 'standard',
+        count: phase >= 2 ? 3 : 2, spread: Math.PI * 2 / (phase >= 2 ? 3 : 2),
+        base: G.swayT * (phase >= 2 ? -0.62 : 0.55), speedMul: 0.55, turn: phase >= 2 ? -0.22 : 0.18 }); break;
+    case 644: // Zekrom: needle tell → huge plasma bolt
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'plasma', classKey: 'massive', count: 1, speedMul: 0.48 }
+        : { kind: 'needle', classKey: 'micro', count: 5, spread: 0.09, speedMul: 1.35 }); break;
+    case 717: // Yveltal: black feathers close around an Oblivion crescent
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'crescent', classKey: 'heavy', count: 3, spread: 0.34, speedMul: 0.72 }
+        : { kind: 'feather', classKey: 'micro', count: 5, spread: 0.18 }); break;
+    case 792: // Lunala: moon phases and an eclipse disc
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'eclipse', classKey: 'massive', count: 1, speedMul: 0.42, turn: 0.18 }
+        : { kind: 'crescent', classKey: 'standard', count: 3, spread: 0.3, speedMul: 0.75 }); break;
+    case 890: // Eternatus: toxic perimeter rain OR the cannon, never both
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'cannon', classKey: 'massive', count: 1, base: Math.PI / 2, speedMul: 0.48 }
+        : { kind: 'toxic', classKey: 'micro', count: 7, spread: 0.11, base: Math.PI / 2, speedMul: 0.86 }); break;
+    case 1007: // Koraidon: dash rubble → sun wheel
+      spawnBossAngles(br, bx, by, d, phase >= 2
+        ? { kind: 'sunwheel', classKey: 'massive', count: 1, speedMul: 0.46 }
+        : { kind: 'shock', classKey: 'standard', count: 3, spread: 0.25, speedMul: 0.78 }); break;
+    case 151: // Mew: playful bubbles that bend once
+      spawnBossAngles(br, bx, by, d, { kind: 'bubble', classKey: 'micro', count: last ? 7 : 5,
+        spread: 0.23, speedMul: 0.72, turn: last ? 0.24 : 0.12 }); break;
+    case 251: // Celebi: seed pods bloom through a slow spiral
+      spawnBossAngles(br, bx, by, d, { kind: 'seed', classKey: phase >= 3 ? 'heavy' : 'standard',
+        count: phase >= 3 ? 3 : 2, spread: 0.42, speedMul: 0.58, turn: 0.28 }); break;
+    case 385: // Jirachi: falling stars between Doom Desire lanes
+      spawnBossAngles(br, bx, by, d, { kind: 'star', classKey: 'micro', count: last ? 8 : 5,
+        spread: 0.12, speedMul: 0.9 }); break;
+    case 491: // Darkrai: sleep wisps curve toward your previous lane
+      spawnBossAngles(br, bx, by, d, { kind: 'wisp', classKey: phase >= 3 ? 'heavy' : 'standard',
+        count: phase >= 3 ? 3 : 2, spread: 0.32, speedMul: 0.62, turn: -0.2 }); break;
+    case 494: // Victini: V-shaped flame wake
+      spawnBossAngles(br, bx, by, d, { kind: 'ember', classKey: phase >= 3 ? 'heavy' : 'micro',
+        count: phase >= 3 ? 3 : 5, spread: 0.24, speedMul: 0.95 }); break;
+    case 719: // Diancie: large facets flanked by small shards
+      spawnBossAngles(br, bx, by, d, { kind: 'crystal', classKey: phase >= 3 ? 'heavy' : 'standard',
+        count: phase >= 3 ? 3 : 2, spread: 0.34, speedMul: 0.64 }); break;
+    case 802: // Marshadow: rhythmic punch combo
+      spawnBossAngles(br, bx, by, d, { kind: 'fist', classKey: last ? 'heavy' : 'standard',
+        count: last ? 1 : 4, spread: last ? 0 : 0.1, speedMul: last ? 0.7 : 1.25 }); break;
+    case 893: // Zarude: curved vine lashes
+      spawnBossAngles(br, bx, by, d, { kind: 'vine', classKey: phase >= 3 ? 'heavy' : 'standard',
+        count: phase >= 3 ? 3 : 2, spread: 0.44, speedMul: 0.62, turn: 0.22 }); break;
+    case 1025: // Pecharunt: one mochi with puppet droplets
+      spawnBossAngles(br, bx, by, d, phase >= 3
+        ? { kind: 'mochi', classKey: 'heavy', count: 1, speedMul: 0.56, wave: 18 }
+        : { kind: 'toxic', classKey: 'micro', count: 6, spread: 0.2, speedMul: 0.78 }); break;
+    default:
+      spawnBossAngles(br, bx, by, d, { classKey: last ? 'heavy' : 'standard',
+        count: last ? 3 : phase >= 2 ? 2 : 1, spread: 0.3, speedMul: last ? 0.72 : 0.9 });
+  }
+}
+
 function shieldGeneratorFor(br) {
   if (!br || br.behavior === 'shield') return null;
   return G.bricks.find(g => !g.dead && g.behavior === 'shield' &&
@@ -173,6 +363,7 @@ function starterStrikeTargets(source, count, dmg, element, color, label) {
 
 function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (!br || br.dead) return;
+  if (br.isBoss && br.phaseT > 0 && !meta.ignorePhaseGate) return;
   const generator = !meta.ignoreShield && shieldGeneratorFor(br);
   if (generator) {
     br.flash = 0.65; generator.flash = 0.8;
@@ -319,6 +510,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     const newPhase = Math.min(phaseCount, 1 + Math.floor((1 - fracLeft) * phaseCount));
     if (newPhase > br.phase) {
       br.phase = newPhase;
+      // The hit that ended one phase cannot spill straight through the next.
+      // This short gate protects boss choreography without creating a long
+      // invulnerable stall.
+      br.phaseT = Math.max(br.phaseT || 0, 0.78);
       const lastStand = newPhase === phaseCount;
       SFX.enrage();
       G.shake = 14; G.flashT = 0.18;
@@ -329,9 +524,16 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // shockwave ring — slow enough to weave through
       const nRing = lastStand ? 12 : 8;
       const spR = (170 + diff().lv * 10) * diff().shotSpeed;
+      const aimGap = Math.atan2(shipY() - by3, G.paddle.x - bx3);
+      const phaseVolley = nextEnemyVolley();
       for (let i = 0; i < nRing; i++) {
         const a = (i / nRing) * Math.PI * 2 + (lastStand ? 0.26 : 0);
-        G.enemyShots.push({ x: bx3, y: by3, vx: Math.cos(a) * spR, vy: Math.sin(a) * spR, boss: true, type: br.poke.t });
+        let gap = Math.abs(a - aimGap) % (Math.PI * 2);
+        if (gap > Math.PI) gap = Math.PI * 2 - gap;
+        if (gap < Math.PI / nRing * 0.72) continue; // one readable escape spoke
+        spawnEnemyShot({ x: bx3, y: by3, vx: Math.cos(a) * spR, vy: Math.sin(a) * spR,
+          boss: true, type: br.poke.t, species: br.poke.id,
+          kind: projectileKindFor(br.poke.id, br.poke.t), classKey: 'micro', volleyId: phaseVolley });
       }
       if (lastStand && !br.addsCalled) {
         br.addsCalled = true; // the last stand summons a guard ring
@@ -510,7 +712,9 @@ function fireballExplosion(x, y, tier) {
   for (const br of G.bricks) {
     if (br.dead || br.veil) continue; // veils shrug off explosions too
     const bx = br.bx + G.fx, by = br.by + G.fy;
-    if (Math.hypot(bx - x, by - y) < radius + br.w / 2) damageBrick(br, 1, bx, by, 'fire');
+    if (Math.hypot(bx - x, by - y) < radius + br.w / 2) {
+      damageBrick(br, br.isBoss ? 0.35 : 1, bx, by, 'fire', br.isBoss ? { noMega: true } : {});
+    }
   }
 }
 
@@ -528,7 +732,9 @@ function chargeSplash(x, y, element, dmg) {
   for (const br of G.bricks) {
     if (br.dead) continue;
     const bx = br.bx + G.fx, by = br.by + G.fy;
-    if (Math.hypot(bx - x, by - y) < radius + br.w / 2) damageBrick(br, dmg, bx, by, element);
+    if (Math.hypot(bx - x, by - y) < radius + br.w / 2) {
+      damageBrick(br, dmg * (br.isBoss ? 0.65 : 1), bx, by, element, br.isBoss ? { noMega: true } : {});
+    }
   }
   // SINGULARITY LENS: the detonation leaves a typed implosion that keeps
   // burning; EVENT HORIZON grows it into a gravity well that eats enemy fire
@@ -836,6 +1042,11 @@ function bossAbility(boss) {
     : boss.mythic ? (MYTHIC_ABILITIES[id] || { name: 'MYTHIC BLINK', cd: 5 })
       : BOSS_ABILITIES[id] || null;
   if (!ab) return;
+  // Signature attacks own the arena briefly. Pausing the baseline gun before
+  // and after the ability prevents two unrelated patterns from forming an
+  // accidental, unreadable wall.
+  boss.fireQuietT = Math.max(boss.fireQuietT || 0, 1.0);
+  G.bossShotCD = Math.max(G.bossShotCD, 1.35);
   const bx = boss.bx + G.fx, by = boss.by + G.fy;
   if (boss.secretBoss) {
     // A readable VMAX pattern: blink, then a seven-shot psychic halo with a
@@ -849,11 +1060,12 @@ function bossAbility(boss) {
     burst(nx, by, '#80d8ff', 34, 360, 0.75);
     const aim = Math.atan2(shipY() - by, G.paddle.x - nx);
     const sp = (185 + diff().lv * 9) * diff().shotSpeed;
+    const mirageVolley = nextEnemyVolley();
     for (let i = 0; i < 8; i++) {
       if (i === 4) continue; // open lane through the center of the fan
       const a = aim + (i - 4) * Math.PI * 2 / 8;
-      G.enemyShots.push({ x: nx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-        boss: true, type: 'psychic', r: 12 });
+      spawnEnemyShot({ x: nx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        boss: true, type: 'psychic', species: 151, kind: 'mirage', classKey: 'standard', volleyId: mirageVolley });
     }
     ringFx(nx, by, '#ffffff', 10, 170, 4, 0.55);
     tone(980, 0.2, 'sine', 0.07, -480);
@@ -864,14 +1076,18 @@ function bossAbility(boss) {
       const sp = (190 + diff().lv * 8) * diff().shotSpeed, rot = G.time * 0.7;
       for (let i = 0; i < 8; i++) if (i !== 5) {
         const a = rot + i * Math.PI / 4;
-        G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'psychic' });
+        spawnEnemyShot({ x: boss.bx + G.fx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          boss: true, type: 'psychic', species: 151, kind: 'bubble', classKey: 'standard', turn: 0.13 });
       }
       ringFx(boss.bx + G.fx, by, '#ff80ab', 8, 145, 4, 0.5); break;
     }
     case 251: { // Celebi: slows time, then plants a slow spiralling seed bloom
       G.timeWarpT = 2.4;
       const sp = 145 * diff().shotSpeed;
-      for (let i = 0; i < 5; i++) { const a = G.time + i * Math.PI * 2 / 5; G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'grass', r: 12 }); }
+      const seedVolley = nextEnemyVolley();
+      for (let i = 0; i < 5; i++) { const a = G.time + i * Math.PI * 2 / 5; spawnEnemyShot({ x: bx, y: by,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'grass', species: 251,
+        kind: 'seed', classKey: 'standard', volleyId: seedVolley, turn: 0.2 }); }
       ringFx(bx, by, '#9ccc65', 10, 180, 4, 0.7); break;
     }
     case 385: { // Jirachi: three readable falling-star lanes
@@ -888,7 +1104,10 @@ function bossAbility(boss) {
     case 494: { // Victini: a fast victory lap leaves a five-way flame wake
       boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.8, fast: true };
       const aim = Math.atan2(shipY() - by, G.paddle.x - bx), sp = 225 * diff().shotSpeed;
-      for (const off of [-0.5, -0.25, 0, 0.25, 0.5]) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(aim + off) * sp, vy: Math.sin(aim + off) * sp, boss: true, type: 'fire' });
+      const vVolley = nextEnemyVolley();
+      for (const off of [-0.5, -0.25, 0, 0.25, 0.5]) spawnEnemyShot({ x: bx, y: by,
+        vx: Math.cos(aim + off) * sp, vy: Math.sin(aim + off) * sp, boss: true, type: 'fire', species: 494,
+        kind: 'ember', classKey: 'standard', volleyId: vVolley });
       break;
     }
     case 719: { // Diancie: crystal facets close around the player's lane
@@ -903,13 +1122,19 @@ function bossAbility(boss) {
     case 893: { // Zarude: heavy vine fan from alternating arena flanks
       boss.hx = (boss.hx < W / 2 ? W * 0.74 : W * 0.26) - G.fx; boss.bx = boss.hx;
       const aim = Math.atan2(shipY() - by, G.paddle.x - (boss.bx + G.fx)), sp = 165 * diff().shotSpeed;
-      for (const off of [-0.7, -0.35, 0, 0.35, 0.7]) G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(aim + off) * sp, vy: Math.sin(aim + off) * sp, boss: true, type: 'grass', r: 13 });
+      const vineVolley = nextEnemyVolley();
+      for (const off of [-0.7, -0.35, 0, 0.35, 0.7]) spawnEnemyShot({ x: boss.bx + G.fx, y: by,
+        vx: Math.cos(aim + off) * sp, vy: Math.sin(aim + off) * sp, boss: true, type: 'grass', species: 893,
+        kind: 'vine', classKey: 'standard', volleyId: vineVolley, turn: 0.2 });
       break;
     }
     case 1025: { // Pecharunt: mirror-steps and hangs a crooked poison wheel
       boss.hx = Math.max(boss.w / 2, Math.min(W - boss.w / 2, W - G.paddle.x)) - G.fx; boss.bx = boss.hx;
       const sp = 180 * diff().shotSpeed;
-      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + (i % 2 ? 0.2 : -0.2); G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: 'poison', r: 12 }); }
+      const mochiVolley = nextEnemyVolley();
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + (i % 2 ? 0.2 : -0.2); spawnEnemyShot({
+        x: boss.bx + G.fx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true,
+        type: 'poison', species: 1025, kind: 'toxic', classKey: 'standard', volleyId: mochiVolley, wave: 16 }); }
       break;
     }
     case 150: { // Mewtwo: teleport — a 0.5s anticipation (guards compress,
@@ -965,7 +1190,8 @@ function bossAbility(boss) {
         const nR = 6, spR2 = (200 + diff().lv * 10) * diff().shotSpeed;
         for (let i2 = 0; i2 < nR; i2++) {
           const a2 = (i2 / nR) * Math.PI * 2 + gameRand() * 0.4;
-          G.enemyShots.push({ x: boss.bx + G.fx, y: by, vx: Math.cos(a2) * spR2, vy: Math.sin(a2) * spR2, boss: true, type: boss.poke.t });
+          spawnEnemyShot({ x: boss.bx + G.fx, y: by, vx: Math.cos(a2) * spR2, vy: Math.sin(a2) * spR2,
+            boss: true, type: boss.poke.t, species: boss.poke.id, classKey: 'standard' });
         }
         tone(920, 0.16, 'sine', 0.06, -420);
       }
@@ -1101,14 +1327,16 @@ function rollUpgradeChoices() {
 // strip the whole bank in one frame. Returns true if the hit was eaten.
 // (Shields used to burn at the FLOOR line, below the player — every shot they
 // "blocked" had already missed, so AEGIS did nothing in the shooter modes.)
-function absorbHit(x, y, shotType = null) {
+function absorbHit(x, y, shotType = null, volleyId = null) {
   if (G.shieldCharges <= 0) return false;
   G.shieldCharges--;
   G.invuln = 1.2;
   G.shieldFlash = 1; // render: the bubble flares where it ate the hit
   G.hurtHud = 2.2;   // flash the health readout around the player
   // MIRROR SPECTRUM: the absorbed shot's type joins the facet bank
-  if (upgN('mirror') && shotType && G.facets.length < 3) {
+  const facetVolley = volleyId == null ? nextEnemyVolley() : volleyId;
+  if (upgN('mirror') && shotType && G.facets.length < 3 && G.lastFacetVolley !== facetVolley) {
+    G.lastFacetVolley = facetVolley;
     G.facets.push(shotType);
     addFloater(G.paddle.x, y - 74, 'FACET STORED ' + G.facets.length + '/3', '#80cbc4', 11);
   }
@@ -1465,11 +1693,13 @@ function subAbility(br2) {
   const dd = diff();
   const sp4 = (230 + dd.lv * 14) * dd.shotSpeed;
   const aim = Math.atan2(shipY() - by2, G.paddle.x - bx2);
-  const push = (a3, m2, extra) => G.enemyShots.push(Object.assign(
-    { x: bx2, y: by2, vx: Math.cos(a3) * sp4 * m2, vy: Math.sin(a3) * sp4 * m2, type: t3 }, extra));
+  const volleyId = nextEnemyVolley();
+  const push = (a3, m2, extra = {}) => spawnEnemyShot(Object.assign(
+    { x: bx2, y: by2, vx: Math.cos(a3) * sp4 * m2, vy: Math.sin(a3) * sp4 * m2,
+      type: t3, species: br2.poke.id, kind: projectileKindFor(br2.poke.id, t3), classKey: 'standard', volleyId }, extra));
   switch (t3) {
     case 'ice': // a wide, slow wall of frost
-      for (const off of [-0.45, -0.15, 0.15, 0.45]) push(aim + off, 0.62, { heavy: true, r: 14 });
+      for (const off of [-0.45, -0.15, 0.15, 0.45]) push(aim + off, 0.62, { classKey: 'heavy' });
       break;
     case 'electric': // column lightning at your position (Zekrom's trick)
       G.columnStrikes.push({ x: G.paddle.x, w: 46, warn: 0.9, strike: 0.3, color: '#80d8ff' });
@@ -1477,7 +1707,8 @@ function subAbility(br2) {
       break;
     case 'fire': { // ember rain: a curtain of fireballs beneath its wings
       for (const k2 of [-1.5, -0.5, 0.5, 1.5]) {
-        G.enemyShots.push({ x: bx2 + k2 * 48, y: by2, vy: sp4 * 0.78, type: t3, r: 12 });
+        spawnEnemyShot({ x: bx2 + k2 * 48, y: by2, vy: sp4 * 0.78, type: t3,
+          species: br2.poke.id, kind: projectileKindFor(br2.poke.id, t3), classKey: 'standard', volleyId });
       }
       break;
     }
@@ -1485,10 +1716,10 @@ function subAbility(br2) {
       for (const off of [-0.18, 0, 0.18]) push(aim + off, 1.05);
       break;
     case 'rock': case 'ground': // two heavy, slow, splashing boulders
-      for (const off of [-0.14, 0.14]) push(aim + off, 0.55, { heavy: true, r: 17, splash: true });
+      for (const off of [-0.14, 0.14]) push(aim + off, 0.55, { classKey: 'heavy' });
       break;
     case 'steel': // one precise, very fast shot
-      push(aim, 1.6, { r: 12 });
+      push(aim, 1.6, { classKey: 'standard' });
       break;
     case 'psychic': case 'fairy': { // warp pulse: blink + a 4-shot ring
       burst(bx2, by2 - br2.h / 2, '#ec407a', 20, 260, 0.5);
@@ -1498,7 +1729,7 @@ function subAbility(br2) {
       break;
     }
     case 'grass': // spore burst: a slow five-shot bloom
-      for (let k2 = 0; k2 < 5; k2++) push((k2 / 5) * Math.PI * 2, 0.55, { r: 12 });
+      for (let k2 = 0; k2 < 5; k2++) push((k2 / 5) * Math.PI * 2, 0.55, { classKey: 'standard', turn: 0.18 });
       break;
     default: // dragon/fighting/others: a hard three-shot pulse
       for (const off of [-0.2, 0, 0.2]) push(aim + off, 1.2);
@@ -1726,7 +1957,10 @@ function gauntletSummonMythic(forceSecret = false) {
     return;
   }
   const [mid, mt2] = gen2.gauntlet.myth;
-  const mHp = Math.max(6, Math.round(gj.legendHp * 0.6));
+  // The final round used to be only 60% of the legendary and often vanished
+  // to one charged splash. STARFIGHTER's three authored mythical phases need
+  // enough runway to teach, transform and remix their signature pattern.
+  const mHp = Math.max(6, Math.round(gj.legendHp * (G.mode === 'junkie' ? 0.82 : 0.6)));
   G.bricks.push({
     bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
     w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
@@ -2990,15 +3224,22 @@ function update(dt) {
     // (Interceptor upgrade lets one bolt take out several shots)
     for (const s of G.enemyShots) {
       if (L.dead || s.dead) continue;
-      if (Math.abs(L.x - s.x) < 17 && Math.abs(L.y - s.y) < 26) {
-        s.dead = true;
+      const interceptR = s.hitR || 8;
+      if (Math.abs(L.x - s.x) < 10 + interceptR && Math.abs(L.y - s.y) < 16 + interceptR) {
+        const interceptDmg = L.charged ? 3 : 1;
+        s.interceptHP = Math.max(0, (s.interceptHP || 1) - interceptDmg);
+        const destroyed = s.interceptHP <= 0;
+        if (destroyed) s.dead = true;
         L.hits = (L.hits || 0) + 1;
         if (L.hits > (L.charged ? 2 + upgN('intercept') : upgN('intercept'))) L.dead = true;
         // BULWARK BATTERY: every interception adds a wall segment (fusion)
-        if (upgN('battery') && G.wallCD <= 0) G.wallSeg = Math.min(3, G.wallSeg + 1);
+        if (destroyed && upgN('battery') && G.wallCD <= 0) {
+          G.wallSeg = Math.min(3, G.wallSeg + 1);
+          G.wallCD = 0.32; // a micro volley cannot fill the battery instantly
+        }
         // HYPERNOVA CYCLE: during Mega, interceptions snap out an echo bolt —
         // echoes are marked and never count toward hit meters or more echoes
-        if (upgN('hypernova') && G.megaT > 0 && !L.echo && G.lasers.length < 40) {
+        if (destroyed && upgN('hypernova') && G.megaT > 0 && !L.echo && G.lasers.length < 40) {
           G.lasers.push({ x: s.x, y: s.y - 8, basic: true, echo: true, powerMul: 0.5,
             element: G.mode === 'junkie' ? attackElement() : null,
             shape: G.mode === 'junkie' ? pilotInfo().shape : null,
@@ -3006,12 +3247,13 @@ function update(dt) {
         }
         // a CANCELLATION mark, distinct from damage: ✕ + a crisp ring, so a
         // shot-down bolt never reads as an enemy hit landing
-        burst(s.x, s.y, '#ffab91', 8, 170, 0.4);
+        burst(s.x, s.y, destroyed ? '#ffab91' : '#ffd180', destroyed ? 8 : 5, 170, 0.4);
         ringFx(s.x, s.y, '#e0f7ff', 3, 20, 2, 0.22);
-        addFloater(s.x, s.y - 14, L.hits > 1 && upgN('intercept') ? '✕ INTERCEPTOR ×' + L.hits : '✕ INTERCEPTED',
+        addFloater(s.x, s.y - 14, !destroyed ? 'CRACK ' + (s.interceptMax - s.interceptHP) + '/' + s.interceptMax
+          : L.hits > 1 && upgN('intercept') ? '✕ INTERCEPTOR ×' + L.hits : '✕ INTERCEPTED',
           L.hits > 1 ? '#b3e5fc' : '#80d8ff', 11);
         tone(740, 0.08, 'square', 0.05, -300);
-        G.score += 25;
+        if (destroyed) G.score += 25;
       }
     }
     // manual blaster bolts can also snag falling pickups out of the air —
@@ -3032,17 +3274,33 @@ function update(dt) {
       // charged shots are fat, so they connect over a wider span
       const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0) + (L.heavy ? 6 : 0);
       if (Math.abs(L.x - bx) < xtol && Math.abs(L.y - by) < br.h / 2) {
-        // SHELL ARMOR / ROCK TOMB: normal bolts shatter harmlessly on the
-        // casing — only a CHARGED shot cracks through. One charged hit
-        // breaks shell armor for good; barriers take charged damage only.
+        // SHELL ARMOR / ROCK TOMB: charge is the fast answer, not the ONLY
+        // answer. Three accurate basic bolts crack the casing; one charged
+        // shot still does it immediately and keeps its satisfying shortcut.
         if ((br.shellArmor || br.barrier) && !L.charged) {
+          const hitKey = br.shellArmor ? 'shellHits' : 'barrierHits';
+          br[hitKey] = (br[hitKey] || 0) + 1;
           L.dead = true;
           burst(L.x, by + br.h / 2, '#b0bec5', 6, 130, 0.3);
           tone(1050, 0.05, 'square', 0.03, -260);
-          if ((G.chargeHintCD || 0) <= 0 && G.mode !== 'classic') {
+          if (br[hitKey] >= 3) {
+            if (br.shellArmor) {
+              br.shellArmor = false;
+              addFloater(bx, by - br.h / 2 - 12, 'ARMOR BROKEN!', '#ffd54f', 13);
+            } else {
+              damageBrick(br, 90, bx, by, L.element || null, { ignoreShield: true });
+              addFloater(bx, by - br.h / 2 - 12, 'ROCK TOMB BROKEN!', '#ffd54f', 13);
+            }
+            burst(bx, by, '#e0e0e0', 18, 240, 0.5);
+            ringFx(bx, by, '#b0bec5', 5, 50, 3, 0.4);
+            SFX.wall();
+          } else {
+            addFloater(bx, by - br.h / 2 - 10, 'ARMOR ' + br[hitKey] + '/3', '#b0bec5', 10);
+          }
+          if ((G.chargeHintCD || 0) <= 0 && G.mode !== 'classic' && br[hitKey] < 3) {
             G.chargeHintCD = 4;
             addFloater(bx, by - br.h / 2 - 12,
-              IS_TOUCH ? 'CHARGE IT! HOLD FIRE' : 'CHARGE IT! HOLD RIGHT-CLICK / SHIFT', '#4dd0e1', 12);
+              IS_TOUCH ? '3 HITS OR HOLD FIRE' : '3 HITS OR HOLD RIGHT-CLICK / SHIFT', '#4dd0e1', 12);
           }
           continue;
         }
@@ -3067,6 +3325,7 @@ function update(dt) {
         if (L.nova) dmg *= 2;
         if (L.calib) dmg *= 1.6; // CALIBRATED BARRAGE: primed volley
         if (L.wall) dmg *= 1.2;  // BULWARK BATTERY: fire through the wall lens
+        if (L.charged && br.isBoss) dmg *= 0.65; // charge clears crowds; bosses keep their phases
         if (L.prism && br.isBoss) dmg *= 0.5; // PRISMSTORM boss cap (≈1.25 volleys)
         if (L.lance && (br.armored || br.shellArmor)) dmg *= 2; // AEGIS LANCE breaks armor
         if (L.mega) dmg *= upgN('megaX') ? 1.4 : 1.25;
@@ -3287,11 +3546,14 @@ function update(dt) {
         if (boss.sweep.t <= 0) boss.sweep = null;
       }
       if (boss.phaseT > 0) boss.phaseT -= dt;
+      boss.fireQuietT = Math.max(0, (boss.fireQuietT || 0) - dt);
       G.bossShotCD -= dt * ts;
-      if (G.bossShotCD <= 0) {
-        G.bossShotCD = d.bossShotInt * (bossLastStand(boss) ? 0.5 : boss.phase === 2 ? 0.7 : 1)
-          * (boss.secretBoss ? 0.88 : boss.mythic ? 0.7 : 1);
-        G.telegraphs.push({ br: boss, boss: true, t: 0.55, max: 0.55 });
+      if (G.bossShotCD <= 0 && boss.fireQuietT <= 0) {
+        const bossBase = G.mode === 'junkie' ? d.starBossShotInt : d.bossShotInt;
+        G.bossShotCD = bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
+          * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1);
+        const warn = G.mode === 'junkie' ? 0.72 : 0.55;
+        G.telegraphs.push({ br: boss, boss: true, t: warn, max: warn });
       }
     }
     // the shooter modes lean into the fantasy: enemies fire from the first
@@ -3300,7 +3562,9 @@ function update(dt) {
     if (G.level >= 2 || blaster) {
       G.enemyShotCD -= dt * ts;
       if (G.enemyShotCD <= 0) {
-        G.enemyShotCD = d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
+        G.enemyShotCD = G.mode === 'junkie'
+          ? d.starShotInt * (0.85 + gameRand() * 0.3)
+          : d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
@@ -3310,7 +3574,16 @@ function update(dt) {
         const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
         if (alive.length && activeTel < (blaster ? 5 : 3)) {
           const shooter = alive[Math.floor(gameRand() * alive.length)];
-          G.telegraphs.push({ br: shooter, boss: false, t: 0.5, max: 0.5 });
+          if (G.mode === 'junkie') {
+            const pattern = starEnemyPattern(shooter);
+            const threat = patternThreat(pattern);
+            if (activeEnemyThreat() + threat <= d.starThreatCap + 0.01) {
+              const warn = pattern.warn || (pattern.classKey === 'micro' ? 0.4 : pattern.classKey === 'massive' ? 0.92 : 0.58);
+              G.telegraphs.push({ br: shooter, boss: false, pattern, threat, volleyId: nextEnemyVolley(), t: warn, max: warn });
+            }
+          } else {
+            G.telegraphs.push({ br: shooter, boss: false, t: 0.5, max: 0.5 });
+          }
         }
       }
     }
@@ -3321,46 +3594,34 @@ function update(dt) {
     if (tg.t <= 0 && !tg.br.dead) {
       const bx = tg.br.bx + G.fx, by = tg.br.by + G.fy + tg.br.h / 2;
       if (tg.boss) {
-        const base = Math.atan2(shipY() - by, G.paddle.x - bx);
-        const sp = (230 + d.lv * 12) * d.shotSpeed;
-        const bStyle = BOSS_STYLE[tg.br.poke.id];
-        const DOWN = Math.PI / 2;
-        // each arena fires differently: Dialga's clockwork hands SWEEP the
-        // arena; Eternatus rains bombs straight off the rim; everyone else
-        // aims at you (their signature ability carries the rest)
-        const angles = tg.fan ? [-0.5, -0.25, 0, 0.25, 0.5].map(a => base + a)
-          : bStyle === 'bastion'
-            ? (tg.br.phase >= 2
-              ? [G.swayT * 0.9, G.swayT * 0.9 + Math.PI * 2 / 3, G.swayT * 0.9 + Math.PI * 4 / 3]
-              : [G.swayT * 0.9, G.swayT * 0.9 + Math.PI])
-          : bStyle === 'perimeter'
-            ? (bossLastStand(tg.br) ? [DOWN - 0.32, DOWN, DOWN + 0.32]
-              : tg.br.phase === 2 ? [DOWN - 0.2, DOWN + 0.2] : [DOWN])
-          : bossLastStand(tg.br) ? [base - 0.6, base - 0.3, base, base + 0.3, base + 0.6]
-          : tg.br.phase === 2 ? [base - 0.35, base, base + 0.35] : [base];
-        for (const a of angles) G.enemyShots.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, boss: true, type: tg.br.poke.t });
+        spawnBossFire(tg.br, bx, by, d, tg);
       } else {
-        // FIRE BY RANK: the unevolved rank-and-file keep the classic straight
-        // bolt; evolved elites AIM at you with a heavy splash blast; the
-        // sub-legendary sentinels and apex elites sweep a three-shot fan
         const src = tg.br;
-        const eliteT = src.subBoss ? 3 : Math.max(src.elite || 0, src.maxHp >= 3 ? 2 : 0);
+        if (G.mode === 'junkie' && tg.pattern) {
+          spawnStarEnemyPattern(src, tg.pattern, bx, by, d, tg.volleyId);
+          SFX.enemyShot();
+          continue;
+        }
+        // Non-Starfighter modes keep their compact legacy grammar, but rank
+        // is explicit — maximum HP no longer grants surprise elite fire.
+        const eliteT = src.subBoss ? 3 : Math.max(src.attackRank || 0, src.elite || 0);
         const heavy = eliteT >= 2;
         const spd = (240 + d.lv * 18) * d.shotSpeed * (heavy ? 0.82 : 1);
         if (eliteT >= 3) {
           const base2 = Math.atan2(shipY() - by, G.paddle.x - bx);
+          const volleyId = nextEnemyVolley();
           for (const off of [-0.26, 0, 0.26]) {
-            G.enemyShots.push({ x: bx, y: by,
+            spawnEnemyShot({ x: bx, y: by,
               vx: Math.cos(base2 + off) * spd, vy: Math.sin(base2 + off) * spd,
-              type: src.poke.t, heavy: true, r: 15, splash: true });
+              type: src.poke.t, species: src.poke.id, classKey: 'heavy', volleyId });
           }
         } else if (eliteT === 2) {
           const base2 = Math.atan2(shipY() - by, G.paddle.x - bx);
-          G.enemyShots.push({ x: bx, y: by,
+          spawnEnemyShot({ x: bx, y: by,
             vx: Math.cos(base2) * spd, vy: Math.sin(base2) * spd,
-            type: src.poke.t, heavy: true, r: 15, splash: true });
+            type: src.poke.t, species: src.poke.id, classKey: 'heavy' });
         } else {
-          G.enemyShots.push({ x: bx, y: by, vy: spd, type: src.poke.t, r: 10 });
+          spawnEnemyShot({ x: bx, y: by, vy: spd, type: src.poke.t, species: src.poke.id, classKey: 'standard' });
         }
       }
       SFX.enemyShot();
@@ -3390,25 +3651,41 @@ function update(dt) {
   }
   G.columnStrikes = G.columnStrikes.filter(cs => cs.warn > 0 || cs.strike > 0);
   for (const s of G.enemyShots) {
+    s.age = (s.age || 0) + dt * ts;
+    if (s.turn) {
+      const a = s.turn * dt * ts, ca = Math.cos(a), sa = Math.sin(a);
+      const vx = s.vx || 0, vy = s.vy || 0;
+      s.vx = vx * ca - vy * sa; s.vy = vx * sa + vy * ca;
+    }
     s.y += (s.vy || 0) * ts * dt;
     if (s.vx != null) s.x += s.vx * ts * dt;
     else s.x += Math.sin(s.y * 0.03) * 30 * dt;
+    if (s.wave) s.x += Math.sin(s.age * 5 + (s.wavePhase || 0)) * s.wave * dt;
+    if (s.kind === 'mochi' && (s.x < 24 || s.x > W - 24)) s.vx = -s.vx;
     // in SPACE JUNKIE the player is a compact mon, not a wide paddle — the
     // hit zone is a small box around the ship, wherever it's flying. BLASTER
     // dodges for a living, so upgrades never widen its hurtbox (base width).
     const jk = G.mode === 'junkie';
     const py = shipY();
-    // heavy elite blasts have SPLASH — a wider hit envelope you can't quite dodge
-    const spl = s.heavy ? (s.r || 12) * 0.7 : 0;
-    const hitW = (jk ? 26 : (G.mode === 'classic' ? paddleW() : G.paddle.w) / 2 + 6) + spl;
-    const hitH = (jk ? 24 : G.paddle.h) + spl;
+    // Visual scale and collision scale are independent. The ship has a small
+    // core hurtbox; even a screen-filling shot never inherits its full art
+    // radius as invisible splash.
+    const hitR = s.hitR || (s.heavy ? 14 : 8);
+    const hitW = (jk ? 13 : (G.mode === 'classic' ? paddleW() / 2 : G.paddle.w / 2) + 4) + hitR;
+    const hitH = (jk ? 12 : G.paddle.h / 2 + 4) + hitR;
     // BULWARK BATTERY: the hex wall floats ahead of the pilot and eats
     // ordinary shots crossing it, one segment each
     if (!s.dead && upgN('battery') && G.wallSeg > 0 && !s.boss && (s.vy || 0) > 0) {
       const wy = py - 84;
       if (Math.abs(s.x - G.paddle.x) < 66 && s.y > wy - 10 && s.y < wy + 14) {
         s.dead = true;
-        G.wallSeg--;
+        const groupedMicro = s.classKey === 'micro' && G.wallVolleyId === s.volleyId && G.wallVolleyCount < 4;
+        if (groupedMicro) G.wallVolleyCount++;
+        else {
+          G.wallSeg--;
+          G.wallVolleyId = s.volleyId;
+          G.wallVolleyCount = 1;
+        }
         ringFx(s.x, wy, '#a5d6a7', 4, 30, 2, 0.3);
         tone(640, 0.07, 'square', 0.04, -140);
         continue;
@@ -3436,7 +3713,9 @@ function update(dt) {
         ringFx(s.x, py, pc, 4, 26, 2, 0.3);
         tone(300, 0.06, 'sine', 0.04);
         // MIRROR SPECTRUM: the deflected shot's TYPE is captured as a facet
-        if (upgN('mirror') && s.type && G.facets.length < 3) {
+        const facetVolley = s.volleyId == null ? nextEnemyVolley() : s.volleyId;
+        if (upgN('mirror') && s.type && G.facets.length < 3 && G.lastFacetVolley !== facetVolley) {
+          G.lastFacetVolley = facetVolley;
           G.facets.push(s.type);
           addFloater(G.paddle.x, py - 58, 'FACET STORED ' + G.facets.length + '/3', '#80cbc4', 11);
         }
@@ -3450,18 +3729,17 @@ function update(dt) {
         ringFx(s.x, py, bc, 8, (s.r || 14) * 3, 4, 0.4);
         G.shake = Math.min(G.shake + 8, 16);
       }
-      if (absorbHit(s.x, py, s.type)) continue;
+      if (absorbHit(s.x, py, s.type, s.volleyId)) continue;
       G.invuln = 2;
       const weak = eff === 1;
-      // super-effective HEAVY blasts really hurt — they take an extra life
-      // (guarded so they never turn a last life into a double knockout)
-      if (weak && s.heavy && G.lives > 1) { G.lives--; G.hurtHud = 2.4; }
-      addFloater(G.paddle.x, py - 50, weak ? (s.heavy ? 'WEAK! −2' : 'WEAK!') : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
+      // Adventure difficulty comes from pattern pressure, not surprise
+      // double-life spikes. Super-effective fire is louder, never two hits.
+      addFloater(G.paddle.x, py - 50, weak ? 'WEAK!' : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
       burst(G.paddle.x, py, weak ? '#ffab40' : '#ff5252', weak ? 40 : 30, weak ? 380 : 320);
       loseLife((s.type || 'ENEMY').toUpperCase() + (s.heavy ? ' HEAVY ATTACK' : ' ATTACK'));
       return;
     }
-    if (s.y > H + 20) s.dead = true;
+    if (s.y > H + 80 || s.y < -120 || s.x < -120 || s.x > W + 120 || s.age > 9) s.dead = true;
   }
   G.enemyShots = G.enemyShots.filter(s => !s.dead);
 

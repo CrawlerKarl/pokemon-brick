@@ -209,6 +209,104 @@ window.requestAnimationFrame = function () { return 0; };
     return shapes.length + ' shapes × 3 tiers rendered clean (' + drawn + ' draws)';
   });
 
+  test('STARFIGHTER projectile grammar: threat, silhouettes, collision, interception', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+    resetRun(1, true, { seed: 'projectile-grammar' });
+    G.state = 'play'; G.lives = G.livesMax = 4; G.invuln = 99;
+    const early = diff();
+    const tank = { maxHp: 99, elite: 0, poke: { id: 4, t: 'fire' } };
+    const ep = starEnemyPattern(tank);
+    assert(ep.classKey === 'micro', 'Kanto tank inherited heavy fire from HP (' + ep.classKey + ')');
+    const elite = starEnemyPattern({ maxHp: 2, elite: 2, poke: { id: 5, t: 'fire' } });
+    assert(elite.classKey === 'heavy' && elite.count === 1, 'explicit elite lost its heavy profile');
+    G.level = 25;
+    const late = diff();
+    assert(late.starShotInt < early.starShotInt && late.starThreatCap > early.starThreatCap,
+      'journey fire curve does not trade cadence for a larger late threat budget');
+    assert(Object.keys(BOSS_PROJECTILE_KIND).length === BOSS_ONLY_IDS.size &&
+      [...BOSS_ONLY_IDS].every(id => BOSS_PROJECTILE_KIND[id]),
+      'every boss-only species needs an explicit projectile silhouette');
+    const finaleBosses = GENS.flatMap(gen => [
+      { id: gen.boss.id, t: gen.boss.t, phaseCount: 2 },
+      { id: gen.gauntlet.myth[0], t: gen.gauntlet.myth[1], phaseCount: 3 },
+    ]);
+    for (const spec of finaleBosses) {
+      G.enemyShots = [];
+      const br = { poke: { id: spec.id, t: spec.t }, phase: spec.phaseCount,
+        phaseCount: spec.phaseCount, mythic: spec.phaseCount === 3 };
+      spawnBossFire(br, 500, 160, diff(), {});
+      assert(G.enemyShots.length && G.enemyShots.every(s => s.boss && s.species === spec.id && s.kind),
+        'boss ' + spec.id + ' did not emit its authored final-phase fire');
+    }
+    for (const kind of new Set(Object.values(BOSS_PROJECTILE_KIND).concat(Object.values(TYPE_PROJECTILE_KIND)))) {
+      for (const cls of Object.keys(SHOT_CLASSES)) enemyShotSprite(kind, '#80d8ff', SHOT_CLASSES[cls].visualR);
+    }
+    G.level = 1; G.enemyShots = []; G.lasers = []; G.invuln = 99;
+    const siege = spawnEnemyShot({ x: 300, y: 300, vx: 0, vy: 0, type: 'rock', species: 377, classKey: 'massive' });
+    assert(siege.visualR >= 40 && siege.hitR <= 24 && siege.visualR > siege.hitR * 1.8,
+      'massive art and hit radius are not independent');
+    for (let hit = 0; hit < 3; hit++) {
+      G.lasers = [{ x: 300, y: 315, basic: true }];
+      paused = false; G.freeze = 0; update(1 / 60);
+      if (hit < 2) assert(!siege.dead, 'massive shot broke after only ' + (hit + 1) + ' basic hit(s)');
+    }
+    assert(siege.dead, 'three basic hits did not break the massive shot');
+    // A super-effective heavy hit is still exactly one life on Adventure.
+    G.enemyShots = []; G.lasers = []; G.invuln = 0; G.shieldCharges = 0; G.lives = 4;
+    mouseX = G.paddle.x; lastMouseY = G.shipYv; // keep the simulated pilot still during the impact frame
+    spawnEnemyShot({ x: G.paddle.x, y: shipY() - 2, vx: 0, vy: 100, type: 'water', classKey: 'heavy' });
+    update(1 / 60);
+    assert(G.lives === 3, 'heavy super-effective fire removed more than one life (4 → ' + G.lives + ')');
+    assert(ERR.length === e0, 'projectile grammar threw: ' + ERR.slice(e0).join(' | '));
+    return BOSS_ONLY_IDS.size + ' boss silhouettes · HP/rank separated · massive shot 3 basics · Adventure hit = 1 life';
+  });
+
+  test('STARFIGHTER heat: time-normalised Adventure overheat and useful cooling', async () => {
+    const e0 = ERR.length;
+    const holdTime = (starter, coolant) => {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = starter;
+      resetRun(1, true, { seed: 'heat-' + starter + '-' + coolant });
+      G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999;
+      for (const b of G.bricks) { b.hp = b.maxHp = 9999; b.shellArmor = false; }
+      if (coolant) G.upg.coolant = 1;
+      let frames = 0;
+      while (G.overheat <= 0 && frames < 2400) {
+        fireAction(true);
+        G.lasers = []; G.enemyShots = []; G.telegraphs = [];
+        G.enemyShotCD = 999; G.bossShotCD = 999;
+        paused = false; G.freeze = 0; update(1 / 60);
+        frames++;
+      }
+      return frames / 60;
+    };
+    const base = holdTime('none', false);
+    const fast = holdTime('electric', false);
+    const cool = holdTime('none', true);
+    assert(base >= 6.5 && base <= 8.8, 'Adventure base overheat landed at ' + base.toFixed(2) + 's');
+    assert(Math.abs(fast - base) <= 1.2, 'fast partner changed overheat time too much (' + fast.toFixed(2) + ' vs ' + base.toFixed(2) + ')');
+    assert(cool >= 20, 'Coolant is not materially useful (' + cool.toFixed(2) + 's)');
+    assert(ERR.length === e0, 'heat simulation threw: ' + ERR.slice(e0).join(' | '));
+    return 'Adventure ' + base.toFixed(1) + 's · fast partner ' + fast.toFixed(1) + 's · Coolant ' + cool.toFixed(1) + 's';
+  });
+
+  test('upgrade web camera: zoomed start, anchored zoom, fit range', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    assert(treeZoom >= 1.14, 'web did not start zoomed in (' + treeZoom + ')');
+    treePan.x = 0; treePan.y = 0; treeZoom = 1;
+    const a = upgradeTreeLayout(), n0 = a.node(0, 3);
+    const mx = a.map.x + a.map.w / 2, my = a.map.y + a.map.h / 2;
+    setTreeZoomAt(mx, my, 1.5);
+    const b = upgradeTreeLayout(), n1 = b.node(0, 3);
+    const d0 = Math.hypot(n0.cx - mx, n0.cy - my), d1 = Math.hypot(n1.cx - mx, n1.cy - my);
+    assert(Math.abs(d1 / d0 - 1.5) < 0.04, 'camera zoom did not scale around its anchor');
+    setTreeZoomAt(mx, my, 99); assert(treeZoom === 1.85, 'maximum zoom clamp failed');
+    setTreeZoomAt(mx, my, 0.01); assert(treeZoom === 0.65, 'fit/minimum zoom clamp failed');
+    resetTreeCamera();
+    return 'default ' + Math.round(treeZoom * 100) + '% · anchored scale · 65–185% clamp';
+  });
+
   // 1c) THE NINEFOLD DAWN: stage 27 must END a real campaign (never silently
   // build stage 28), record completion durably, keep the checkpoint, and
   // offer TIME SPIRAL as the explicit New Game+ path. Trials keep the loop.
@@ -1202,6 +1300,7 @@ window.requestAnimationFrame = function () { return 0; };
     const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
     damageBrick(myth, myth.maxHp * 0.35, myth.bx, myth.by, null);
     assert(myth.phase === 2 && !bossLastStand(myth), 'mythical phase 2 incorrectly became its last stand');
+    myth.phaseT = 0; // isolate the threshold math from the new transition damage gate
     damageBrick(myth, myth.maxHp * 0.34, myth.bx, myth.by, null);
     assert(myth.phase === 3 && bossLastStand(myth), 'mythical did not reach its third-phase last stand');
     return '27 unique tier entrances; 1/2/3 phase ladder; Trial launches Mew VMAX through MAX RIFT';
@@ -1459,12 +1558,13 @@ window.requestAnimationFrame = function () { return 0; };
   // 6) menu + upgrade layout fit common viewports (fake W/H, pure geometry)
   // — both menu pages, three draft cards, and both draft actions
   test('menu fit across viewports', async () => {
-    const w0 = W, h0 = H, step0 = setupStep;
+    const w0 = W, h0 = H, step0 = setupStep, zoom0 = treeZoom;
     const bad = [];
     let count = 0;
     try {
       for (const [w, h] of [[310, 670], [375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
+        treeZoom = defaultTreeZoom(); treePan.x = 0; treePan.y = 0;
         setupStep = 'pilot'; const P = setupLayout();
         setupStep = 'difficulty'; const D = setupLayout();
         const L = menuLayout(), U = upgradeLayout(), T = upgradeTreeLayout(), A = advLayout();
@@ -1475,6 +1575,8 @@ window.requestAnimationFrame = function () { return 0; };
           advPanel: { x: A.px, y: A.py, w: A.pw, h: A.ph },
           reroll: U.reroll, confirm: U.confirm, fullTree: U.tree,
           constellation: T.panel, constellationDetail: T.detail,
+          constellationZoomOut: T.zoomOut, constellationZoomIn: T.zoomIn,
+          constellationFit: T.fit, constellationFocus: T.focus,
           constellationReroll: T.reroll, constellationInstall: T.confirm };
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = P.starter(i);
@@ -1484,22 +1586,24 @@ window.requestAnimationFrame = function () { return 0; };
         // constellation nodes may OVERFLOW small viewports by design (the
         // compact chart enforces a big minimum scale and pans instead) — the
         // guarantee is that the camera can bring every node inside the map box
-        treePan.x = 0; treePan.y = 0;
-        const TP = upgradeTreeLayout();
-        const mcx = TP.map.x + TP.map.w / 2, mcy = TP.map.y + TP.map.h / 2;
-        const reach = (name, n) => {
-          if (Math.abs(n.cx - mcx) > TP.map.w / 2 + TP.panLim.x + 2 ||
-              Math.abs(n.cy - mcy) > TP.map.h / 2 + TP.panLim.y + 2) {
-            bad.push(w + '×' + h + ' ' + name + ' unreachable by pan');
+        for (const zoom of [0.65, defaultTreeZoom(), 1.85]) {
+          treeZoom = zoom; treePan.x = 0; treePan.y = 0;
+          const TP = upgradeTreeLayout();
+          const mcx = TP.map.x + TP.map.w / 2, mcy = TP.map.y + TP.map.h / 2;
+          const reach = (name, n) => {
+            if (Math.abs(n.cx - mcx) > TP.map.w / 2 + TP.panLim.x + 2 ||
+                Math.abs(n.cy - mcy) > TP.map.h / 2 + TP.panLim.y + 2) {
+              bad.push(w + '×' + h + ' @' + zoom + ' ' + name + ' unreachable by pan');
+            }
+          };
+          for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+            for (let ti = 0; ti < 4; ti++) reach('constellation(' + pi + ',' + ti + ')', TP.node(pi, ti));
           }
-        };
-        for (let pi = 0; pi < PATH_KEYS.length; pi++) {
-          for (let ti = 0; ti < 4; ti++) reach('constellation(' + pi + ',' + ti + ')', TP.node(pi, ti));
+          for (let fi = 0; fi < WEB_FUSIONS.length; fi++) reach('fusion(' + fi + ')', TP.fusionNode(fi));
+          for (let ai = 0; ai < WEB_APEXES.length; ai++) reach('apex(' + ai + ')', TP.apexNode(ai));
+          for (let bi = 0; bi < WEB_BRIDGES.length; bi++) reach('bridge(' + bi + ')', TP.bridgeNode(bi));
+          for (let si = 0; si < WEB_SATELLITES.length; si++) reach('satellite(' + si + ')', TP.satNode(si));
         }
-        for (let fi = 0; fi < WEB_FUSIONS.length; fi++) reach('fusion(' + fi + ')', TP.fusionNode(fi));
-        for (let ai = 0; ai < WEB_APEXES.length; ai++) reach('apex(' + ai + ')', TP.apexNode(ai));
-        for (let bi = 0; bi < WEB_BRIDGES.length; bi++) reach('bridge(' + bi + ')', TP.bridgeNode(bi));
-        for (let si = 0; si < WEB_SATELLITES.length; si++) reach('satellite(' + si + ')', TP.satNode(si));
         count = Object.keys(rects).length;
         for (const [name, r] of Object.entries(rects)) {
           if (!(r.x >= -2 && r.y >= -2 && r.x + r.w <= w + 2 && r.y + r.h <= h + 2)) {
@@ -1508,7 +1612,7 @@ window.requestAnimationFrame = function () { return 0; };
         }
       }
     } finally {
-      W = w0; H = h0; setupStep = step0;
+      W = w0; H = h0; setupStep = step0; treeZoom = zoom0;
       resize(); // belt and braces: recompute from the real viewport
     }
     assert(bad.length === 0, 'geometry off-screen: ' + bad.join(' ; '));
@@ -1521,6 +1625,13 @@ window.requestAnimationFrame = function () { return 0; };
     try {
       assert(MODES[0].key === 'junkie' && /FEATURED/.test(MODES[0].desc),
         'STARFIGHTER is not the featured first mode');
+      assert(!Object.values(MODE_MASCOTS).includes(384) && menuStarfighterPilot(0).id !== 384,
+        'Rayquaza still owns the STARFIGHTER title-card identity');
+      assert(MODES.every(m => m.mechanic && m.lines.length === 2) &&
+        /PILOT|DODGE/.test(MODES[0].lines.join(' ')) &&
+        /BALL|PADDLE/.test(MODES[1].mechanic + ' ' + MODES[1].lines.join(' ')) &&
+        /NO BALL|DIRECT/.test(MODES[2].mechanic + ' ' + MODES[2].lines.join(' ')),
+        'mode cards do not explain their distinct core interactions');
       const L = menuLayout(), hero = L.card(0), side = L.card(1);
       assert(hero.w * hero.h > side.w * side.h * 1.45,
         'STARFIGHTER card is not materially larger than an arcade alternative');
@@ -1538,7 +1649,7 @@ window.requestAnimationFrame = function () { return 0; };
       const D = setupLayout(), hardIdx = Object.keys(PRESETS).indexOf('hard'), hr = D.chip(hardIdx);
       onPress(hr.x + hr.w / 2, hr.y + hr.h / 2);
       assert(SETTINGS.preset === 'hard', 'challenge selection did not update the preset');
-      return 'featured hero + primary CTA; all 18 partners visible; separate challenge step works';
+      return 'clear fly/bounce/blast identities · Pokémon-pilot hero · all 18 partners · two-step setup';
     } finally {
       SETTINGS.mode = old.mode; SETTINGS.starter = old.starter; SETTINGS.preset = old.preset;
       G.state = old.state; menuPage = old.menuPage; setupStep = old.setupStep;

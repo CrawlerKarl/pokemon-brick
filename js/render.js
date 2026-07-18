@@ -345,6 +345,102 @@ function shotSprite(color, r, spikes) {
   fxCache[key] = c;
   return c;
 }
+
+// Typed/species projectile silhouettes. Everything expensive is baked once
+// per (kind, colour, size bucket); the hot loop below remains one drawImage per
+// shot. Shapes, not colour alone, make boss fire readable and accessible.
+function enemyShotSprite(kind, color, radius) {
+  const r = Math.max(4, Math.round(radius));
+  const key = 'enemy_' + kind + '_' + color + '_' + r;
+  if (fxCache[key]) return fxCache[key];
+  const pad = Math.max(12, Math.ceil(r * 0.7));
+  const size = Math.ceil(r * 3.4 + pad * 2);
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const q = c.getContext('2d'), x = size / 2, y = size / 2;
+  const inner = mixHex(color, '#071022', 0.52);
+  const halo = q.createRadialGradient(x, y, r * 0.2, x, y, r * 1.65);
+  halo.addColorStop(0, color + '66'); halo.addColorStop(1, color + '00');
+  q.fillStyle = halo; q.fillRect(0, 0, size, size);
+  const fill = q.createRadialGradient(x - r * 0.32, y - r * 0.36, 1, x, y, r * 1.3);
+  fill.addColorStop(0, '#ffffff'); fill.addColorStop(0.42, color); fill.addColorStop(1, inner);
+  q.fillStyle = fill; q.strokeStyle = 'rgba(5,8,20,0.9)'; q.lineWidth = Math.max(1.5, r * 0.12);
+  q.lineJoin = 'round'; q.lineCap = 'round';
+  const poly = (n, rr = r, rot = -Math.PI / 2, squash = 1) => {
+    q.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = rot + i * Math.PI * 2 / n;
+      q[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr * squash);
+    }
+    q.closePath();
+  };
+  const filled = () => { q.fill(); q.stroke(); };
+  switch (kind) {
+    case 'needle': case 'stinger': case 'lance': case 'cannon':
+      q.beginPath(); q.moveTo(x, y - r * 1.55); q.lineTo(x + r * 0.42, y + r * 0.65);
+      q.lineTo(x, y + r * 1.08); q.lineTo(x - r * 0.42, y + r * 0.65); q.closePath(); filled();
+      q.strokeStyle = '#ffffffaa'; q.lineWidth = Math.max(1, r * 0.08);
+      q.beginPath(); q.moveTo(x, y - r); q.lineTo(x, y + r * 0.62); q.stroke(); break;
+    case 'ember': case 'comet':
+      q.beginPath(); q.moveTo(x, y - r * 1.35);
+      q.bezierCurveTo(x + r, y - r * 0.35, x + r * 0.75, y + r * 0.75, x, y + r * 1.1);
+      q.bezierCurveTo(x - r * 0.75, y + r * 0.75, x - r, y - r * 0.35, x, y - r * 1.35); q.closePath(); filled();
+      break;
+    case 'droplet': case 'seed':
+      q.beginPath(); q.moveTo(x, y - r * 1.35); q.bezierCurveTo(x + r, y, x + r * 0.75, y + r, x, y + r);
+      q.bezierCurveTo(x - r * 0.75, y + r, x - r, y, x, y - r * 1.35); q.closePath(); filled(); break;
+    case 'leaf': case 'tablet':
+      q.beginPath(); q.moveTo(x, y - r * 1.25); q.quadraticCurveTo(x + r, y - r * 0.2, x, y + r * 1.25);
+      q.quadraticCurveTo(x - r, y - r * 0.2, x, y - r * 1.25); q.closePath(); filled();
+      q.strokeStyle = '#ffffff99'; q.lineWidth = Math.max(1, r * 0.08); q.beginPath(); q.moveTo(x, y - r); q.lineTo(x, y + r); q.stroke(); break;
+    case 'crystal': case 'time': case 'prism': case 'mirage':
+      poly(kind === 'prism' ? 3 : 4, r * (kind === 'time' ? 1.18 : 1.05), -Math.PI / 2, kind === 'time' ? 1.28 : 1); filled();
+      q.strokeStyle = '#ffffffaa'; q.lineWidth = Math.max(1, r * 0.07);
+      q.beginPath(); q.moveTo(x, y - r * 0.7); q.lineTo(x, y + r * 0.7); q.stroke(); break;
+    case 'boulder': case 'snowball':
+      poly(7, r * 1.08, -0.4, 0.92); filled();
+      q.fillStyle = '#ffffff55'; q.beginPath(); q.arc(x - r * 0.25, y - r * 0.18, r * 0.22, 0, Math.PI * 2); q.fill(); break;
+    case 'feather': case 'crescent':
+      q.beginPath(); q.arc(x, y, r * 1.08, -Math.PI * 0.74, Math.PI * 0.74);
+      q.quadraticCurveTo(x - r * 0.12, y, x, y - r * 1.08); q.closePath(); filled(); break;
+    case 'wisp':
+      q.beginPath(); q.moveTo(x, y - r * 1.25); q.bezierCurveTo(x + r, y - r * 0.35, x + r * 0.55, y + r, x, y + r * 0.75);
+      q.bezierCurveTo(x - r * 0.8, y + r * 0.35, x - r * 0.25, y - r * 0.2, x, y - r * 1.25); q.closePath(); filled(); break;
+    case 'fist':
+      poly(6, r, -Math.PI / 2, 0.9); filled();
+      q.fillStyle = '#ffffff66'; for (let i = -1; i <= 1; i++) { q.beginPath(); q.arc(x + i * r * 0.34, y - r * 0.36, r * 0.2, 0, Math.PI * 2); q.fill(); } break;
+    case 'star': case 'sunwheel':
+      q.beginPath();
+      const pts = kind === 'sunwheel' ? 16 : 10;
+      for (let i = 0; i < pts; i++) { const a = -Math.PI / 2 + i * Math.PI * 2 / pts; const rr = i % 2 ? r * 0.52 : r * 1.2;
+        q[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+      q.closePath(); filled(); break;
+    case 'hex': case 'plasma':
+      poly(6, r * 1.12, 0); filled();
+      q.strokeStyle = '#ffffff99'; q.beginPath(); q.arc(x, y, r * 0.48, 0, Math.PI * 2); q.stroke(); break;
+    case 'aeroring': case 'ring': case 'eclipse':
+      q.beginPath(); q.arc(x, y, r * 1.12, 0, Math.PI * 2); q.fill(); q.stroke();
+      q.globalCompositeOperation = 'destination-out'; q.beginPath(); q.arc(x, y, r * (kind === 'eclipse' ? 0.42 : 0.62), 0, Math.PI * 2); q.fill();
+      q.globalCompositeOperation = 'source-over'; q.strokeStyle = '#ffffffaa'; q.beginPath(); q.arc(x, y, r * 0.62, 0, Math.PI * 2); q.stroke(); break;
+    case 'shock':
+      q.beginPath(); q.arc(x, y + r * 0.35, r * 1.15, Math.PI * 1.12, Math.PI * 1.88); q.lineWidth = r * 0.55; q.strokeStyle = color; q.stroke();
+      q.lineWidth = Math.max(1.5, r * 0.1); q.strokeStyle = '#ffffffaa'; q.stroke(); break;
+    case 'vine': case 'ribbon':
+      q.beginPath(); q.moveTo(x, y - r * 1.25); q.bezierCurveTo(x + r, y - r * 0.45, x - r, y + r * 0.35, x, y + r * 1.25);
+      q.lineWidth = Math.max(3, r * 0.48); q.strokeStyle = color; q.stroke(); q.lineWidth = Math.max(1, r * 0.1); q.strokeStyle = '#ffffff99'; q.stroke(); break;
+    case 'toxic': case 'bubble': case 'mochi':
+      q.beginPath(); q.arc(x, y, r * 1.05, 0, Math.PI * 2); filled();
+      q.fillStyle = '#ffffff88'; q.beginPath(); q.arc(x - r * 0.32, y - r * 0.32, r * 0.2, 0, Math.PI * 2); q.fill();
+      if (kind !== 'bubble') { q.fillStyle = inner; q.beginPath(); q.arc(x + r * 0.25, y + r * 0.2, r * 0.18, 0, Math.PI * 2); q.fill(); } break;
+    default:
+      q.beginPath(); q.arc(x, y, r, 0, Math.PI * 2); filled();
+  }
+  fxCache[key] = c;
+  return c;
+}
+const SPINNING_ENEMY_SHOT = Object.freeze({
+  pellet: 1, bubble: 1, toxic: 1, mochi: 1, star: 1, sunwheel: 1,
+  boulder: 1, snowball: 1, hex: 1, plasma: 1, aeroring: 1, ring: 1, eclipse: 1, time: 1,
+});
 function auraSprite(col) {
   const key = 'aura' + col;
   if (fxCache[key]) return fxCache[key];
@@ -2075,18 +2171,23 @@ function drawTelegraphs() {
     if (tg.br.dead) continue;
     const bx = tg.br.bx + G.fx, by = tg.br.by + G.fy + tg.br.h / 2;
     const prog = 1 - tg.t / tg.max;
+    const P = tg.pattern || null;
+    const massive = P && P.classKey === 'massive';
+    const aimed = tg.boss || (P && P.aimed);
+    const shotCol = TYPE_COLORS[tg.br.poke.t] || (tg.boss ? '#b388ff' : '#ff5252');
     ctx.save();
     // BOSS shots are aimed and lethal → draw the full trajectory line. Regular
     // shots just drop straight down, so a short stub + a charging muzzle glow
     // is warning enough and keeps the board from filling with lines.
-    if (tg.boss) {
+    if (aimed || massive) {
       ctx.globalAlpha = 0.25 + prog * 0.45;
-      ctx.setLineDash([6, 9]);
+      ctx.setLineDash(massive ? [12, 10] : [6, 9]);
       ctx.lineDashOffset = -G.time * 70;
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#e1bee7';
-      const ang = Math.atan2(PADDLE_Y() - by, G.paddle.x - bx);
-      const len = Math.hypot(PADDLE_Y() - by, G.paddle.x - bx);
+      ctx.lineWidth = massive ? 5 : 2;
+      ctx.strokeStyle = shotCol;
+      const ty = shipY(), tx = P && !P.aimed ? bx : G.paddle.x;
+      const ang = Math.atan2(ty - by, tx - bx);
+      const len = Math.hypot(ty - by, tx - bx);
       ctx.beginPath(); ctx.moveTo(bx, by);
       ctx.lineTo(bx + Math.cos(ang) * len, by + Math.sin(ang) * len);
       ctx.stroke();
@@ -2094,13 +2195,18 @@ function drawTelegraphs() {
     } else {
       ctx.globalAlpha = 0.3 + prog * 0.45;
       ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ff8a80';
+      ctx.strokeStyle = shotCol;
       ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + 26); ctx.stroke();
     }
     // charging glow at the muzzle
     ctx.globalAlpha = 0.5 + prog * 0.5;
-    ctx.fillStyle = tg.boss ? '#b388ff' : '#ff5252';
-    ctx.beginPath(); ctx.arc(bx, by, 3 + prog * (tg.boss ? 7 : 4), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = shotCol;
+    const muzzleR = massive ? 8 + prog * 12 : 3 + prog * (tg.boss ? 7 : 4);
+    ctx.beginPath(); ctx.arc(bx, by, muzzleR, 0, Math.PI * 2); ctx.fill();
+    if (massive) {
+      ctx.globalAlpha = 0.45 + prog * 0.35; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(bx, by, muzzleR + 7 + prog * 8, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
   }
   for (const cs of G.columnStrikes) {
@@ -2692,23 +2798,24 @@ function drawProjectiles() {
     ctx.beginPath(); ctx.arc(0, 14, 5, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  // enemy fire: spinning spiked hazards — deliberately NOT ball-shaped so
-  // incoming shots read instantly as danger, never confused with your ball
-  // enemy shots: pre-baked sprites (halo, star, outline, pupil all baked in)
-  // — a Last-Stand shockwave of 30 shots costs 30 drawImages, not 60 gradient
-  // allocations + 30 shadowBlur stalls, which was stuttering phones
+  // Enemy fire: cached type/species silhouettes. Size communicates threat,
+  // shape communicates identity, and the dark outline keeps all of them
+  // distinct from the player's bolt and ball.
   for (const s of G.enemyShots) {
-    const r = s.r || (s.boss ? 13 : 10);
+    const r = s.visualR || s.r || (s.boss ? 13 : 10);
     const spin = G.time * (s.boss ? 4 : 6) + s.x * 0.05;
-    const col = s.boss ? '#ff5cf0' : s.type ? TYPE_COLORS[s.type] : '#ff5252';
+    const col = s.type ? TYPE_COLORS[s.type] : s.boss ? '#ff5cf0' : '#ff5252';
+    const kind = s.kind || projectileKindFor(s.species, s.type);
     // short motion tail shows travel direction (plain alpha stroke, no gradient)
     const sp = Math.hypot(s.vx || 0, s.vy || 0) || 1;
     const ux = (s.vx || 0) / sp, uy = (s.vy || 1) / sp;
     ctx.save();
-    ctx.globalAlpha = 0.38;
+    ctx.globalAlpha = s.classKey === 'micro' ? 0.28 : 0.38;
     ctx.strokeStyle = col;
-    ctx.lineWidth = r * 0.9; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(s.x - ux * 6, s.y - uy * 6); ctx.lineTo(s.x - ux * (s.heavy ? 30 : 24), s.y - uy * (s.heavy ? 30 : 24)); ctx.stroke();
+    ctx.lineWidth = Math.min(13, Math.max(2, r * 0.34)); ctx.lineCap = 'round';
+    const tail = s.tail || (s.heavy ? 34 : 24);
+    ctx.beginPath(); ctx.moveTo(s.x - ux * Math.min(8, r * 0.3), s.y - uy * Math.min(8, r * 0.3));
+    ctx.lineTo(s.x - ux * tail, s.y - uy * tail); ctx.stroke();
     ctx.globalAlpha = 1;
     // effectiveness telegraph vs YOUR current type: a bright pulsing ring when
     // this attack is super-effective on you, a faint dashed ring when you resist
@@ -2719,9 +2826,17 @@ function drawProjectiles() {
       else { ctx.strokeStyle = 'rgba(180,200,215,0.5)'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 4]); }
       ctx.stroke(); ctx.setLineDash([]);
     }
+    // A heavy/massive shot visibly cracks as basics wear down its intercept
+    // strength. The art tells the player that individual fire is working.
+    if ((s.interceptMax || 1) > 1 && s.interceptHP < s.interceptMax) {
+      ctx.beginPath(); ctx.arc(s.x, s.y, r + 3, -Math.PI / 2,
+        -Math.PI / 2 + Math.PI * 2 * Math.max(0, s.interceptHP) / s.interceptMax);
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+    }
     ctx.translate(s.x, s.y);
-    ctx.rotate(spin);
-    const img = shotSprite(col, r, s.boss ? 8 : 6);
+    const heading = Math.atan2(s.vy || 1, s.vx || 0) + Math.PI / 2;
+    ctx.rotate(SPINNING_ENEMY_SHOT[kind] ? spin : heading + Math.sin(spin) * 0.05);
+    const img = enemyShotSprite(kind, col, r);
     ctx.drawImage(img, -img.width / 2, -img.height / 2);
     ctx.restore();
   }
@@ -3901,10 +4016,10 @@ function drawMenu() {
     ctx.fillText('◓ ' + SKIN_EDITION, W / 2, py + 0.5);
   }
   const maxW = W * 0.92;
-  // STARFIGHTER is the front door; the two brick modes remain clearly
-  // available as alternate arcade games rather than competing co-headliners.
-  if (!L.short) fitText(W < 560 ? 'FULL-FLIGHT POKÉMON COMBAT'
-    : 'STARFIGHTER IS THE MAIN EVENT · TWO ARCADE MODES INCLUDED',
+  // Lead with the actual verbs. The first screen should explain the three
+  // different games before asking the player to recognise their names.
+  if (!L.short) fitText(W < 560 ? 'FLY · BOUNCE · BLAST'
+    : 'THREE DIFFERENT GAMES · FLY, BOUNCE, OR BLAST',
     L.tagY, 12 * Math.max(0.85, L.s), '650', '#e8d7ff', maxW, "Verdana, system-ui, sans-serif");
   {
     const q = L.quick, hovQ = inRect(mouseX, lastMouseY, q);
@@ -3922,7 +4037,7 @@ function drawMenu() {
     if (!L.short) {
       ctx.font = bodyFont(9.5, 700);
       ctx.fillStyle = '#381048';
-      ctx.fillText('FEATURED · FULL 27-STAGE CAMPAIGN', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
+      ctx.fillText('POKÉMON FLIGHT SHOOTER · 27-STAGE CAMPAIGN', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
     }
     ctx.restore();
   }
@@ -3935,7 +4050,7 @@ function drawMenu() {
     ctx.fillStyle = hovD ? 'rgba(128,216,255,0.3)' : 'rgba(128,216,255,0.14)'; ctx.fill();
     ctx.shadowBlur = 0; ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = '#e0f7ff';
-    ctx.fillText('★ DAILY · ' + dailyShortDate(), d.x + d.w / 2, d.y + d.h * (L.short ? 0.5 : 0.36), d.w - 10);
+    ctx.fillText('★ DAILY BREAKER · ' + dailyShortDate(), d.x + d.w / 2, d.y + d.h * (L.short ? 0.5 : 0.36), d.w - 10);
     if (!L.short) {
       ctx.font = bodyFont(9.5, 700); ctx.fillStyle = '#80d8ff';
       ctx.fillText(best ? '✓ DONE · BEST ' + best + (streak ? ' · STREAK ' + streak : '')
@@ -4022,13 +4137,72 @@ function drawMenu() {
   if (advOpen) drawAdvanced();
   if (trialOpen) drawTrial();
 }
-// a mode card as a pseudo-3D diorama: extruded slab, its own sky, a
-// perspective floor grid, a BIG breathing mascot — and a LIVE DEMO of the
-// mechanic playing on loop, so each button shows you what you'll be doing.
-// Mascots are skin-side: Geodude holds the wall, Blastoise brings the
-// cannons, Rayquaza flies the starfighter. Menu-only, so the per-frame
-// gradients here are fine (never copy this into a hot loop).
-const MODE_MASCOTS = { classic: 74, blaster: 9, junkie: 384 };
+// A mode card is a playable idea, not a mascot poster. BREAKER and BLASTER
+// keep recognizable arcade mascots; STARFIGHTER builds a custom flight rig
+// around one of the actual partner choices so the first glance says
+// "I pilot a Pokémon and dodge while shooting." Menu-only gradients are fine
+// here (never copy these allocations into a combat hot loop).
+const MODE_MASCOTS = { classic: 74, blaster: 9 };
+const MENU_PILOT_ROTATION = [25, 4, 7, 1, 137];
+function menuStarfighterPilot(t) {
+  const chosen = STARTER_MON[SETTINGS.starter];
+  if (chosen) return { id: chosen.ids[0], name: chosen.names[0].toUpperCase(), chosen: true };
+  const i = SETTINGS.reduceFlash ? 0 : Math.floor(t / 3.6) % MENU_PILOT_ROTATION.length;
+  const id = MENU_PILOT_ROTATION[i];
+  return { id, name: (NAMES[id] || 'POKÉMON').toUpperCase(), chosen: false };
+}
+function drawMenuStarfighterRig(cx, cy, size, t, accent, hov) {
+  const pilot = menuStarfighterPilot(t);
+  const bank = Math.cos(t * 0.72) * 0.11;
+  const thrust = 0.72 + 0.28 * Math.sin(t * 14);
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate(bank);
+  // Shield/flight halo: establishes a compact, player-owned craft silhouette.
+  ctx.strokeStyle = accent + (hov ? 'cc' : '88'); ctx.lineWidth = Math.max(1.5, size * 0.012);
+  ctx.shadowColor = accent; ctx.shadowBlur = hov ? 18 : 9;
+  ctx.beginPath(); ctx.ellipse(0, 0, size * 0.5, size * 0.38, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // Twin wings and engine pods surround, never cover, the Pokémon sprite.
+  const wing = side => {
+    ctx.beginPath();
+    ctx.moveTo(side * size * 0.11, -size * 0.06);
+    ctx.lineTo(side * size * 0.53, size * 0.07);
+    ctx.lineTo(side * size * 0.27, size * 0.2);
+    ctx.lineTo(side * size * 0.08, size * 0.13);
+    ctx.closePath();
+    const wg = ctx.createLinearGradient(0, -size * 0.1, side * size * 0.5, size * 0.18);
+    wg.addColorStop(0, '#f4e6ff'); wg.addColorStop(0.18, accent); wg.addColorStop(1, '#291342');
+    ctx.fillStyle = wg; ctx.fill(); ctx.strokeStyle = '#f3e5f5aa'; ctx.lineWidth = 1; ctx.stroke();
+    roundRect(side * size * 0.34 - size * 0.055, size * 0.06, size * 0.11, size * 0.19, size * 0.04);
+    ctx.fillStyle = '#0b1122'; ctx.fill(); ctx.strokeStyle = accent; ctx.stroke();
+    const eg = ctx.createLinearGradient(0, size * 0.18, 0, size * (0.45 + thrust * 0.08));
+    eg.addColorStop(0, '#ffffff'); eg.addColorStop(0.28, '#80d8ff'); eg.addColorStop(1, accent + '00');
+    ctx.fillStyle = eg; ctx.beginPath();
+    ctx.moveTo(side * size * 0.31, size * 0.2); ctx.lineTo(side * size * 0.37, size * (0.48 + thrust * 0.08));
+    ctx.lineTo(side * size * 0.43, size * 0.2); ctx.closePath(); ctx.fill();
+  };
+  wing(-1); wing(1);
+  // Central engine makes the direction of travel unambiguous.
+  const cg = ctx.createLinearGradient(0, size * 0.17, 0, size * (0.57 + thrust * 0.08));
+  cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.25, '#d1c4e9'); cg.addColorStop(1, accent + '00');
+  ctx.fillStyle = cg; ctx.beginPath();
+  ctx.moveTo(-size * 0.055, size * 0.18); ctx.lineTo(0, size * (0.58 + thrust * 0.08));
+  ctx.lineTo(size * 0.055, size * 0.18); ctx.closePath(); ctx.fill();
+  const img = getSprite(pilot.id), ps = size * 0.64;
+  if (img.complete && img.naturalWidth) {
+    const sil = getSilhouette(pilot.id, '#02040b');
+    if (sil) { ctx.globalAlpha = 0.55; ctx.drawImage(sil, -ps / 2 + 4, -ps / 2 + 7, ps, ps); ctx.globalAlpha = 1; }
+    ctx.drawImage(img, -ps / 2, -ps / 2, ps, ps);
+  } else drawGlyph(ctx, 'star', 0, 0, ps * 0.22, '#ffffff');
+  // Cockpit reticle says this character is the controlled player avatar.
+  ctx.strokeStyle = '#ffffffbb'; ctx.lineWidth = Math.max(1, size * 0.009);
+  ctx.beginPath(); ctx.arc(0, 0, size * 0.2, -0.35, Math.PI + 0.35); ctx.stroke();
+  for (const side of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(side * size * 0.21, 0); ctx.lineTo(side * size * 0.29, 0); ctx.stroke();
+  }
+  ctx.restore();
+  return pilot;
+}
 function drawModeCard(m, cg, L, active = false) {
   const hov = inRect(mouseX, lastMouseY, cg);
   const junk = m.key === 'junkie';
@@ -4050,28 +4224,49 @@ function drawModeCard(m, cg, L, active = false) {
   else { g.addColorStop(0, '#0a1a30'); g.addColorStop(0.55, '#173a52'); g.addColorStop(1, '#1d5a46'); }
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
-  // perspective floor grid — the cheap 3D read
+  // A flight tunnel for STARFIGHTER; a grounded arcade floor for the two wall
+  // games. Sharing one floor was pretty but made the flying game read like a
+  // mascot standing in another brick-breaker arena.
   const horizon = y + h * 0.68, vpx = x + w / 2;
   ctx.strokeStyle = junk ? 'rgba(171,71,188,0.35)'
     : m.key === 'blaster' ? 'rgba(77,208,225,0.3)' : 'rgba(102,187,106,0.32)';
   ctx.lineWidth = 1;
-  for (let i = -5; i <= 5; i++) {
-    ctx.beginPath();
-    ctx.moveTo(vpx + i * w * 0.022, horizon);
-    ctx.lineTo(vpx + i * w * 0.24, y + h);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 5; i++) {
-    const tt = i / 4.2, gy = horizon + (y + h - horizon) * tt * tt;
-    ctx.globalAlpha = 0.55 - tt * 0.35;
-    ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
+  if (junk) {
+    const tunnelY = y + h * 0.3;
+    for (let i = -7; i <= 7; i++) {
+      ctx.globalAlpha = 0.25 + 0.3 * (1 - Math.abs(i) / 8);
+      ctx.beginPath(); ctx.moveTo(vpx + i * w * 0.008, tunnelY);
+      ctx.lineTo(vpx + i * w * 0.11, y + h * 0.82); ctx.stroke();
+    }
+    for (let i = 1; i <= 4; i++) {
+      const rr = i / 4;
+      ctx.globalAlpha = 0.34 - rr * 0.16;
+      ctx.beginPath(); ctx.ellipse(vpx, tunnelY, w * 0.08 + w * 0.48 * rr,
+        h * 0.035 + h * 0.39 * rr, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else {
+    for (let i = -5; i <= 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(vpx + i * w * 0.022, horizon);
+      ctx.lineTo(vpx + i * w * 0.24, y + h);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 5; i++) {
+      const tt = i / 4.2, gy = horizon + (y + h - horizon) * tt * tt;
+      ctx.globalAlpha = 0.55 - tt * 0.35;
+      ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
+    }
   }
   ctx.globalAlpha = 1;
   // glowing horizon line
   ctx.strokeStyle = junk ? 'rgba(213,134,255,0.55)'
     : m.key === 'blaster' ? 'rgba(128,222,234,0.5)' : 'rgba(126,224,138,0.5)';
   ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.moveTo(x, horizon); ctx.lineTo(x + w, horizon); ctx.stroke();
+  if (junk) {
+    ctx.beginPath(); ctx.ellipse(vpx, y + h * 0.3, w * 0.09, h * 0.055, 0, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(x, horizon); ctx.lineTo(x + w, horizon); ctx.stroke();
+  }
   const bandH = L.short || h < 165 ? Math.max(40, h * 0.24) : Math.max(52, h * 0.27);
   if (junk) {
     // twinkling starfield + a distant ringed planet
@@ -4146,83 +4341,94 @@ function drawModeCard(m, cg, L, active = false) {
       ctx.fillRect(bx2 + 2, by2 + 2, bw2 - 4, bh2 * 0.3);
     }
   }
-  // THE MASCOT — big, breathing, grounded by a floor shadow (in STARFIGHTER
-  // it IS the ship: banking with its strafe, riding an exhaust plume)
-  const ms = Math.min(w, h) * (junk ? 0.6 : 0.5);
+  // The wall games retain a large character anchor. STARFIGHTER uses an
+  // actual partner inside a purpose-built flight rig and shows both incoming
+  // and outgoing fire, turning the diorama into a one-glance control lesson.
+  const ms = Math.min(w, h) * (junk ? 0.39 : 0.5);
   const bob = Math.sin(t * (junk ? 1.3 : 2.1) + (junk ? 1 : 0)) * h * 0.016;
-  const mx = x + w / 2 + (junk ? Math.sin(t * 0.7) * w * 0.09 : 0);
-  const my = y + h * (junk ? 0.46 : 0.44) + bob;
+  const mx = x + w / 2 + (junk ? Math.sin(t * 0.72) * w * 0.14 : 0);
+  const my = y + h * (junk ? 0.49 : 0.44) + bob;
   if (!junk) {
     ctx.fillStyle = 'rgba(0,0,0,0.42)';
     ctx.beginPath();
     ctx.ellipse(mx, horizon + h * 0.05, Math.max(10, ms * 0.32 - bob * 2.5), ms * 0.075, 0, 0, Math.PI * 2);
     ctx.fill();
-  }
-  const img = getSprite(MODE_MASCOTS[m.key]);
-  if (img.complete && img.naturalWidth) {
-    ctx.save();
-    if (junk) { ctx.translate(mx, my); ctx.rotate(Math.cos(t * 0.7) * 0.09); ctx.translate(-mx, -my); }
-    const sil = getSilhouette(MODE_MASCOTS[m.key], '#04060e');
-    if (sil) { ctx.globalAlpha = 0.5; ctx.drawImage(sil, mx - ms / 2 + ms * 0.05, my - ms / 2 + ms * 0.07, ms, ms); ctx.globalAlpha = 1; }
-    if (hov) {
-      const rim = getSilhouette(MODE_MASCOTS[m.key], m.accent);
-      if (rim) { ctx.globalAlpha = 0.5; ctx.drawImage(rim, mx - ms / 2 - 2, my - ms / 2 - 2, ms + 4, ms + 4); ctx.globalAlpha = 1; }
+    const img = getSprite(MODE_MASCOTS[m.key]);
+    if (img.complete && img.naturalWidth) {
+      ctx.save();
+      const sil = getSilhouette(MODE_MASCOTS[m.key], '#04060e');
+      if (sil) { ctx.globalAlpha = 0.5; ctx.drawImage(sil, mx - ms / 2 + ms * 0.05, my - ms / 2 + ms * 0.07, ms, ms); ctx.globalAlpha = 1; }
+      if (hov) {
+        const rim = getSilhouette(MODE_MASCOTS[m.key], m.accent);
+        if (rim) { ctx.globalAlpha = 0.5; ctx.drawImage(rim, mx - ms / 2 - 2, my - ms / 2 - 2, ms + 4, ms + 4); ctx.globalAlpha = 1; }
+      }
+      ctx.drawImage(img, mx - ms / 2, my - ms / 2, ms, ms);
+      ctx.restore();
     }
-    ctx.drawImage(img, mx - ms / 2, my - ms / 2, ms, ms);
-    ctx.restore();
   }
   if (junk) {
-    // LIVE DEMO — the flock orbits high while the ship strafes and fires;
-    // a rider flares whenever a bolt reaches the ring
-    const ringCy = y + h * 0.17, rx = w * 0.3, ry = h * 0.075;
-    ctx.save();
-    ctx.translate(mx, my);
-    ctx.rotate(Math.cos(t * 0.7) * 0.09);
-    const fl = 0.7 + 0.3 * Math.sin(t * 13); // exhaust flicker — slim jet, not a cone
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#ce93d8';
-    ctx.beginPath();
-    ctx.moveTo(-ms * 0.045, ms * 0.44);
-    ctx.lineTo(0, ms * (0.56 + 0.1 * fl));
-    ctx.lineTo(ms * 0.045, ms * 0.44);
-    ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#f3e5f5';
-    ctx.beginPath();
-    ctx.moveTo(-ms * 0.02, ms * 0.44);
-    ctx.lineTo(0, ms * (0.5 + 0.07 * fl));
-    ctx.lineTo(ms * 0.02, ms * 0.44);
-    ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.restore();
-    for (let k = 0; k < 2; k++) { // typed bolts rising into the flock
-      const u = (t * 1.2 + k * 0.5) % 1;
-      const bx = mx + (vpx - mx) * u, by = my - ms * 0.32 + (ringCy - (my - ms * 0.32)) * u;
-      ctx.fillStyle = '#e1bee7';
-      ctx.shadowColor = m.accent; ctx.shadowBlur = 8;
-      roundRect(bx - 2, by - 7, 4, 14, 2); ctx.fill();
-      ctx.shadowBlur = 0;
-      if (u > 0.88) { // the hit — a rider flares
-        const fi = Math.floor(t * 1.2 + k * 0.5) % 7;
-        const a = t * 0.85 + fi * Math.PI * 2 / 7;
-        const fx = vpx + Math.cos(a) * rx, fy = ringCy + Math.sin(a) * ry;
-        const s2 = 5 + 7 * (u - 0.88) / 0.12;
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.globalAlpha = 1 - (u - 0.88) / 0.12 * 0.6;
-        ctx.beginPath();
-        ctx.moveTo(fx - s2, fy); ctx.lineTo(fx + s2, fy);
-        ctx.moveTo(fx, fy - s2); ctx.lineTo(fx, fy + s2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+    const enemyY = y + h * 0.17, enemyIds = [41, 16, 10, 19, 92];
+    const erx = Math.min(w * 0.31, 260), es = Math.max(15, Math.min(32, h * 0.075, w * 0.052));
+    // A real Pokémon squad occupies the danger end of the flight lane.
+    for (let i = 0; i < enemyIds.length; i++) {
+      const a = Math.PI + (i / (enemyIds.length - 1)) * Math.PI;
+      const ex = vpx + Math.cos(a) * erx, ey = enemyY + Math.sin(a) * h * 0.055 + Math.sin(t * 2 + i) * 2;
+      const ei = getSprite(enemyIds[i]);
+      ctx.save(); ctx.globalAlpha = 0.72 + 0.18 * Math.sin(t * 1.8 + i);
+      if (ei.complete && ei.naturalWidth) ctx.drawImage(ei, ex - es / 2, ey - es / 2, es, es);
+      else { ctx.fillStyle = i % 2 ? '#ff8a80' : '#ce93d8'; ctx.beginPath(); ctx.arc(ex, ey, es * 0.22, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
+    // Incoming red fire occupies side lanes; its aim trails the moving pilot,
+    // visually explaining why movement is survival.
+    for (let i = 0; i < 3; i++) {
+      const u = (t * 0.42 + i * 0.34) % 1;
+      const side = i === 1 ? 1 : -1;
+      const sx3 = vpx + side * erx * (0.42 + i * 0.13);
+      const tx3 = mx + side * w * (i === 1 ? -0.08 : 0.12);
+      const ex = sx3 + (tx3 - sx3) * u, ey = enemyY + es * 0.5 + (my - enemyY) * u;
+      ctx.fillStyle = i === 1 ? '#ffd180' : '#ff8a80'; ctx.shadowColor = '#ff5252'; ctx.shadowBlur = 9;
+      ctx.beginPath(); ctx.arc(ex, ey, i === 1 ? 4.5 : 2.8, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      if (i === 1 && u < 0.34) {
+        ctx.globalAlpha = 0.35; ctx.setLineDash([5, 7]); ctx.strokeStyle = '#ff8a80';
+        ctx.beginPath(); ctx.moveTo(sx3, enemyY); ctx.lineTo(tx3, my); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
     }
-    for (let i = 0; i < 7; i++) { // the flock — tight riders on one shared ring
-      const a = t * 0.85 + i * Math.PI * 2 / 7;
-      const fx = vpx + Math.cos(a) * rx, fy = ringCy + Math.sin(a) * ry + Math.sin(t * 2 + i) * 2;
-      const s2 = (3.2 + 0.9 * Math.sin(a)) * Math.min(1, w / 340);
-      ctx.fillStyle = i % 2 ? '#ce93d8' : '#b39ddb';
-      ctx.beginPath();
-      ctx.moveTo(fx, fy - s2 * 1.4); ctx.lineTo(fx + s2, fy); ctx.lineTo(fx, fy + s2 * 1.4); ctx.lineTo(fx - s2, fy);
-      ctx.closePath(); ctx.fill();
+    // Twin basic attacks and a periodic wide charged lance travel FROM the
+    // player toward the squad. The source/target relationship is unmistakable.
+    for (let k = 0; k < 2; k++) {
+      const u = (t * 1.15 + k * 0.52) % 1;
+      const bx4 = mx + (k ? 7 : -7) * (1 - u), by4 = my - ms * 0.24 + (enemyY - my + ms * 0.24) * u;
+      ctx.fillStyle = '#f3e5f5'; ctx.shadowColor = m.accent; ctx.shadowBlur = 10;
+      roundRect(bx4 - 2.5, by4 - 9, 5, 18, 2.5); ctx.fill(); ctx.shadowBlur = 0;
+      if (u > 0.9) {
+        const q = (u - 0.9) / 0.1; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 1 - q;
+        ctx.beginPath(); ctx.arc(bx4, by4, 5 + q * 15, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+    }
+    const chargeCycle = (t % 4.4) / 4.4;
+    if (chargeCycle > 0.64 && chargeCycle < 0.84) {
+      const u = (chargeCycle - 0.64) / 0.2;
+      const cy4 = my - ms * 0.28 + (enemyY - my + ms * 0.28) * u;
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#d780ff'; ctx.shadowBlur = 22;
+      roundRect(mx - 6, cy4 - 18, 12, 36, 6); ctx.fill(); ctx.shadowBlur = 0;
+    }
+    // Dodge chevrons follow the strafe, while the rig itself contains the
+    // selected (or rotating example) partner.
+    ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 5); ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 2;
+    for (const side of [-1, 1]) {
+      const ax = mx + side * ms * 0.64;
+      ctx.beginPath(); ctx.moveTo(ax - side * 8, my - 7); ctx.lineTo(ax, my); ctx.lineTo(ax - side * 8, my + 7); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const pilot = drawMenuStarfighterRig(mx, my, ms, t, m.accent, hov);
+    if (h >= 175) {
+      ctx.font = `800 ${Math.max(7.5, Math.min(9, w / 65))}px Orbitron, sans-serif`;
+      const pilotText = 'YOU PILOT ' + pilot.name;
+      const pw3 = Math.min(w - 26, ctx.measureText(pilotText).width + 18);
+      roundRect(mx - pw3 / 2, my + ms * 0.43, pw3, 18, 9);
+      ctx.fillStyle = 'rgba(8,10,26,0.82)'; ctx.fill(); ctx.strokeStyle = '#e1bee788'; ctx.stroke();
+      ctx.fillStyle = '#f3e5f5'; ctx.textAlign = 'center'; ctx.fillText(pilotText, mx, my + ms * 0.43 + 9.5, pw3 - 8);
     }
   } else if (ballDemo) {
     // the paddle/turret at the bottom of the diorama
@@ -4280,13 +4486,24 @@ function drawModeCard(m, cg, L, active = false) {
   // corner chip — what KIND of game this is, at a glance
   {
     ctx.font = '800 9px Orbitron, sans-serif';
-    const dw = ctx.measureText(m.desc).width + 16;
+    const showMechanic = w >= 330 && h >= 135;
+    ctx.font = '800 7.5px Orbitron, sans-serif';
+    const mw = showMechanic ? Math.min(w * 0.36, ctx.measureText(m.mechanic).width + 16) : 0;
+    ctx.font = '800 9px Orbitron, sans-serif';
+    const dw = Math.min(w - 20 - (showMechanic ? mw + 7 : 0), ctx.measureText(m.desc).width + 16);
     roundRect(x + 10, y + 10, dw, 18, 9);
     ctx.fillStyle = m.accent + '26'; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = m.accent + '88'; ctx.stroke();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = m.accent;
-    ctx.fillText(m.desc, x + 10 + dw / 2, y + 19.5);
+    ctx.fillText(m.desc, x + 10 + dw / 2, y + 19.5, dw - 8);
+    if (showMechanic) {
+      roundRect(x + w - 10 - mw, y + 10, mw, 18, 9);
+      ctx.fillStyle = 'rgba(5,9,22,0.74)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.stroke();
+      ctx.font = '800 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#f4f7fb';
+      ctx.fillText(m.mechanic, x + w - 10 - mw / 2, y + 19.5, mw - 8);
+    }
   }
   // label band along the bottom
   const bg2 = ctx.createLinearGradient(0, y + h - bandH, 0, y + h);
@@ -4306,8 +4523,8 @@ function drawModeCard(m, cg, L, active = false) {
     ctx.fillText(m.lines[0], x + w / 2, y + h - bandH * 0.36, w - 24);
     ctx.fillText(m.lines[1], x + w / 2, y + h - bandH * 0.15, w - 24);
   } else {
-    const compactCopy = m.key === 'classic' ? 'BALL FIRST · BLASTER LATER'
-      : m.key === 'blaster' ? 'SHOOT · HOLD TO CHARGE' : 'FLY · DODGE · FIRE';
+    const compactCopy = m.key === 'classic' ? 'BOUNCE BALL · MOVE PADDLE'
+      : m.key === 'blaster' ? 'NO BALL · SHOOT THE WALL' : 'FLY + DODGE · HOLD TO CHARGE';
     ctx.font = bodyFont(Math.max(11.5, Math.min(12.5, w / 27)), 700);
     ctx.fillText(compactCopy, x + w / 2, y + h - bandH * 0.22, w - 24);
   }
@@ -5329,6 +5546,7 @@ function drawFullUpgradeTree() {
   ctx.restore();
   ctx.restore();
 
+  drawTreeCameraControls(T);
   drawTreeDetail(T);
   const cb = T.close;
   roundRect(cb.x, cb.y, cb.w, cb.h, 9);
@@ -5337,6 +5555,26 @@ function drawFullUpgradeTree() {
   ctx.font = '900 16px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#cfd8dc';
   ctx.fillText('×', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
+  ctx.restore();
+}
+
+function drawTreeCameraControls(T) {
+  const controls = [[T.zoomOut, '−'], [T.zoomIn, '+'], [T.fit, 'FIT'], [T.focus, 'FOCUS']];
+  ctx.save();
+  for (const [b, label] of controls) {
+    const hov = inRect(mouseX, lastMouseY, b);
+    roundRect(b.x, b.y, b.w, b.h, 8);
+    ctx.fillStyle = hov ? 'rgba(128,216,255,0.24)' : 'rgba(4,9,25,0.86)'; ctx.fill();
+    ctx.strokeStyle = hov ? '#b3e5fc' : 'rgba(128,216,255,0.48)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `800 ${label.length > 1 ? 7.5 : 15}px Orbitron, sans-serif`;
+    ctx.fillStyle = '#e3f2fd'; ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + (label === '−' ? -1 : 0));
+  }
+  const last = T.focus;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '700 7.5px Orbitron, sans-serif';
+  ctx.fillStyle = 'rgba(179,229,252,0.75)';
+  ctx.fillText(Math.round(treeZoom * 100) + '% · DRAG · PINCH', last.x + last.w + 8, last.y + last.h / 2,
+    Math.max(0, T.map.x + T.map.w - (last.x + last.w + 14)));
   ctx.restore();
 }
 

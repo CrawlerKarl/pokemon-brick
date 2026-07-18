@@ -1309,6 +1309,56 @@ const BOSS_STYLE = {
   890: 'perimeter',  // Eternatus: rides the top rim end to end, raining bombs
   1007: 'charge',    // Koraidon: tears back and forth at full sprint
 };
+
+// ============================================================
+//  ENEMY PROJECTILE LANGUAGE
+// ============================================================
+// Size, collision and interception are deliberately independent. A TITAN
+// shot may fill a large part of the sky without owning an equally enormous
+// invisible hitbox, and a charged player bolt can still cancel it in one hit.
+// `threat` is consumed by Starfighter's attack director; a swarm and a single
+// siege shot can therefore create very different spectacle at similar danger.
+const SHOT_CLASSES = Object.freeze({
+  micro:    { visualR: 6,  hitR: 3.5, threat: 0.25, interceptHP: 1, tail: 14 },
+  standard: { visualR: 11, hitR: 7.5, threat: 1.0,  interceptHP: 1, tail: 24 },
+  heavy:    { visualR: 24, hitR: 14,  threat: 2.5,  interceptHP: 2, tail: 34, heavy: true },
+  massive:  { visualR: 46, hitR: 22,  threat: 4.5,  interceptHP: 3, tail: 48, heavy: true },
+});
+
+// Ordinary enemies inherit a readable silhouette from their type. Boss-only
+// species override it below so their attacks can be recognised before the
+// nameplate is read. These keys are renderer-native procedural sprites — no
+// network assets and no per-frame gradient allocation.
+const TYPE_PROJECTILE_KIND = Object.freeze({
+  normal: 'pellet', fire: 'ember', water: 'droplet', electric: 'needle', grass: 'leaf',
+  ice: 'crystal', fighting: 'fist', poison: 'toxic', ground: 'boulder', flying: 'feather',
+  psychic: 'prism', bug: 'stinger', rock: 'boulder', ghost: 'wisp', dragon: 'comet',
+  dark: 'crescent', steel: 'lance', fairy: 'star',
+});
+
+const BOSS_PROJECTILE_KIND = Object.freeze({
+  // Kanto — birds / Mewtwo / Mew
+  144: 'crystal', 145: 'needle', 146: 'ember', 150: 'prism', 151: 'bubble',
+  // Johto — beasts / Lugia / Celebi
+  243: 'needle', 244: 'ember', 245: 'droplet', 249: 'aeroring', 251: 'seed',
+  // Hoenn — Regis / Rayquaza / Jirachi
+  377: 'boulder', 378: 'crystal', 379: 'lance', 384: 'comet', 385: 'star',
+  // Sinnoh — lake trio / Dialga / Darkrai
+  480: 'ring', 481: 'ribbon', 482: 'prism', 483: 'time', 491: 'wisp',
+  // Unova — swords / Zekrom / Victini
+  638: 'lance', 639: 'boulder', 640: 'leaf', 644: 'needle', 494: 'ember',
+  // Kalos
+  718: 'hex', 717: 'feather', 719: 'crystal',
+  // Alola — Tapus / Lunala / Marshadow
+  785: 'needle', 786: 'ring', 787: 'seed', 792: 'crescent', 802: 'fist',
+  // Galar — new Regis / Glastrier / Eternatus / Zarude
+  894: 'needle', 895: 'comet', 896: 'snowball', 890: 'toxic', 893: 'vine',
+  // Paldea — treasures / Koraidon / Pecharunt
+  1001: 'tablet', 1002: 'crystal', 1003: 'shock', 1007: 'sunwheel', 1025: 'mochi',
+});
+function projectileKindFor(id, type) {
+  return BOSS_PROJECTILE_KIND[id] || TYPE_PROJECTILE_KIND[type] || 'pellet';
+}
 // SPACE JUNKIE gauntlets are authored as 27 distinct arrival beats: one
 // sentinel formation, one legendary entrance, and one mythical entrance per
 // region. The keys are read by update.js for motion and render.js for the

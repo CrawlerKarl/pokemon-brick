@@ -221,6 +221,7 @@ const G = {
   freeze: 0, dramaticT: 0, bossIntro: 0,
   laserCD: 0, blasterCD: 0, missileCD: 0, invuln: 0, seCD: 0,
   enemyShotCD: 6, bossShotCD: 4,
+  lastFacetVolley: -1, wallVolleyId: -1, wallVolleyCount: 0,
   time: 0,
   adapt: 1, deathsThisWave: 0,
   mega: 0, megaT: 0,
@@ -1264,6 +1265,7 @@ function spawnReinforcement() {
 }
 
 function resetRun(startLevel = 1, trial = false, opts = {}) {
+  if (typeof resetTreeCamera === 'function') resetTreeCamera();
   setRunSeed(opts.seed == null ? null : opts.seed);
   const p = preset();
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
@@ -1280,7 +1282,8 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.matrixCharge = 0; G.prismN = 0; G.prismReady = false;
   G.novaStage = 0; G.novaN = 0; G.novaT = 0;
   G.wallSeg = 0; G.wallCD = 0; G.cataCD = 0; G.lanceT = 0; G.cometSeeds = 0;
-  G.facets = []; G.chorusTypes = []; G.chorusUsed = false;
+  G.facets = []; G.lastFacetVolley = -1; G.wallVolleyId = -1; G.wallVolleyCount = 0;
+  G.chorusTypes = []; G.chorusUsed = false;
   G.syncMeter = 0; G.squadT = 0; G.squadCD = 0; G.railPressure = 0;
   G.celT = false; G.celS = false; G.celE = false; G.regenLockT = 0;
   G.webSeen = {}; G.lastOfferKeys = [];

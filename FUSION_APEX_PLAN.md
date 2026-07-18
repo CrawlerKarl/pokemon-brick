@@ -9,9 +9,10 @@
 > connectors, fusion halo + apex ring), readiness hardware, and the seeded
 > acquisition-rate suite are all live. DEFERRED (per this plan): Blackstar
 > Bastion + Victory Armada (later expansion after balance data), route
-> tracking's pity-guarantee, the discovery codex, per-phase boss target
-> authoring (§encounter balance is tuning guidance, enforced only through
-> the shipped limiters), and live selection-/win-rate telemetry.
+> tracking's pity-guarantee, the discovery codex, and live selection-/win-rate
+> telemetry. Per-phase boss protection and species-authored projectile patterns
+> shipped in the second balance pass; the remaining encounter targets require
+> telemetry rather than more blind multipliers.
 > **Execution adjustments:** War Machine adds NO new control (the touch
 > FIRE-pad contract is inviolable) — the fold is a pressure flow: basic hits
 > bank Rail Pressure, a charge spends it (much cooler, cadence never
@@ -22,6 +23,11 @@
 > (unfocused discovery lands measurably LATER than a focused chase — a full
 > 27-pick journey usually completes some recipe, which the 2-slot cap is
 > designed to absorb).
+> **Second balance pass:** enemy swarms now share a `volleyId`, so visual
+> pellet count never farms Fusion resources. Bulwark spends one segment for up
+> to four micro pellets from the same volley, Mirror stores at most one facet
+> from it, and Battery interception has a 0.32s build gate. The map now opens
+> zoomed in and supports drag / wheel / pinch plus FIT and FOCUS controls.
 
 ## The three levels
 
@@ -77,6 +83,9 @@ Cross-web (no bridge; same deep recipe):
 - Proc source metadata: primed lanes/echoes/reflections excluded from hit
   meters; meteors can't call meteors; `meta.noMega` on fusion area damage;
   ward healing never charges the guardian pulse.
+- Enemy-pattern metadata: every authored swarm shares one `volleyId`; Bulwark
+  and Mirror group micro pellets so a bigger visual pattern does not multiply
+  defense charges or reflected facets.
 - Knockout regression SIMULATES each removal (`webBuildLegal`) — a burn
   can never break a recipe; grandfathered-illegal saves burn freely.
 - Map: locked Fusions stay compact silhouettes until 2 ranks in both
