@@ -358,8 +358,8 @@ function enemyShotSprite(kind, color, radius) {
   const c = document.createElement('canvas'); c.width = c.height = size;
   const q = c.getContext('2d'), x = size / 2, y = size / 2;
   const inner = mixHex(color, '#071022', 0.52);
-  const halo = q.createRadialGradient(x, y, r * 0.2, x, y, r * 1.65);
-  halo.addColorStop(0, color + '66'); halo.addColorStop(1, color + '00');
+  const halo = q.createRadialGradient(x, y, r * 0.15, x, y, r * 1.72);
+  halo.addColorStop(0, '#ffffff55'); halo.addColorStop(0.34, color + '77'); halo.addColorStop(1, color + '00');
   q.fillStyle = halo; q.fillRect(0, 0, size, size);
   const fill = q.createRadialGradient(x - r * 0.32, y - r * 0.36, 1, x, y, r * 1.3);
   fill.addColorStop(0, '#ffffff'); fill.addColorStop(0.42, color); fill.addColorStop(1, inner);
@@ -373,13 +373,34 @@ function enemyShotSprite(kind, color, radius) {
     }
     q.closePath();
   };
-  const filled = () => { q.fill(); q.stroke(); };
+  const filled = () => {
+    // A near-black silhouette and a pale rim survive both bright clouds and
+    // dark space. This is baked once, so the extra strokes cost nothing in
+    // the projectile hot loop.
+    q.save(); q.strokeStyle = 'rgba(2,5,15,0.96)'; q.lineWidth = Math.max(3, r * 0.34); q.stroke(); q.restore();
+    q.fill();
+    q.save(); q.strokeStyle = 'rgba(255,255,255,0.72)'; q.lineWidth = Math.max(1.15, r * 0.1); q.stroke(); q.restore();
+  };
   switch (kind) {
     case 'needle': case 'stinger': case 'lance': case 'cannon':
-      q.beginPath(); q.moveTo(x, y - r * 1.55); q.lineTo(x + r * 0.42, y + r * 0.65);
-      q.lineTo(x, y + r * 1.08); q.lineTo(x - r * 0.42, y + r * 0.65); q.closePath(); filled();
-      q.strokeStyle = '#ffffffaa'; q.lineWidth = Math.max(1, r * 0.08);
-      q.beginPath(); q.moveTo(x, y - r); q.lineTo(x, y + r * 0.62); q.stroke(); break;
+      {
+        const half = kind === 'stinger' ? 0.66 : kind === 'needle' ? 0.56 : 0.48;
+        q.beginPath(); q.moveTo(x, y - r * 1.62); q.lineTo(x + r * half, y + r * 0.56);
+        q.lineTo(x, y + r * 1.12); q.lineTo(x - r * half, y + r * 0.56); q.closePath(); filled();
+        // Caterpie-family stingers carry two unmistakable side barbs; metal
+        // lances use a cross-guard. Both remain directional at micro size.
+        q.strokeStyle = '#ffffffdd'; q.lineWidth = Math.max(1.5, r * 0.12);
+        q.beginPath(); q.moveTo(x, y - r * 1.18); q.lineTo(x, y + r * 0.72); q.stroke();
+        if (kind === 'stinger') {
+          q.strokeStyle = 'rgba(2,5,15,0.95)'; q.lineWidth = Math.max(3, r * 0.28);
+          q.beginPath(); q.moveTo(x, y + r * 0.14); q.lineTo(x + r * 0.78, y + r * 0.48);
+          q.moveTo(x, y + r * 0.14); q.lineTo(x - r * 0.78, y + r * 0.48); q.stroke();
+          q.strokeStyle = '#ffffffcc'; q.lineWidth = Math.max(1.3, r * 0.1); q.stroke();
+        } else if (kind === 'lance' || kind === 'cannon') {
+          q.beginPath(); q.moveTo(x - r * 0.66, y + r * 0.48); q.lineTo(x + r * 0.66, y + r * 0.48); q.stroke();
+        }
+        break;
+      }
     case 'ember': case 'comet':
       q.beginPath(); q.moveTo(x, y - r * 1.35);
       q.bezierCurveTo(x + r, y - r * 0.35, x + r * 0.75, y + r * 0.75, x, y + r * 1.1);
@@ -440,6 +461,12 @@ function enemyShotSprite(kind, color, radius) {
 const SPINNING_ENEMY_SHOT = Object.freeze({
   pellet: 1, bubble: 1, toxic: 1, mochi: 1, star: 1, sunwheel: 1,
   boulder: 1, snowball: 1, hex: 1, plasma: 1, aeroring: 1, ring: 1, eclipse: 1, time: 1,
+});
+// Thin silhouettes receive render-only magnification. Their hit radii and
+// threat budget remain untouched, so readability never makes a dodge harsher.
+const ENEMY_SHOT_DRAW_SCALE = Object.freeze({
+  needle: 1.28, stinger: 1.34, lance: 1.12, cannon: 1.12,
+  feather: 1.14, crescent: 1.12, vine: 1.14, ribbon: 1.14,
 });
 function auraSprite(col) {
   const key = 'aura' + col;
@@ -2810,12 +2837,25 @@ function drawProjectiles() {
     const sp = Math.hypot(s.vx || 0, s.vy || 0) || 1;
     const ux = (s.vx || 0) / sp, uy = (s.vy || 1) / sp;
     ctx.save();
-    ctx.globalAlpha = s.classKey === 'micro' ? 0.28 : 0.38;
-    ctx.strokeStyle = col;
-    ctx.lineWidth = Math.min(13, Math.max(2, r * 0.34)); ctx.lineCap = 'round';
     const tail = s.tail || (s.heavy ? 34 : 24);
+    const tailStartX = s.x - ux * Math.min(8, r * 0.3), tailStartY = s.y - uy * Math.min(8, r * 0.3);
+    // Dark under-tracer + bright element tracer: small needles remain visible
+    // over pale route skies, saturated boss arenas, and the player’s own FX.
+    ctx.globalAlpha = s.classKey === 'micro' ? 0.58 : 0.42;
+    ctx.strokeStyle = 'rgba(2,5,15,0.96)';
+    ctx.lineWidth = Math.min(16, Math.max(5, r * 0.34 + 3)); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tailStartX, tailStartY);
+    ctx.lineTo(s.x - ux * tail, s.y - uy * tail); ctx.stroke();
+    ctx.globalAlpha = s.classKey === 'micro' ? 0.82 : 0.5;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = Math.min(13, Math.max(s.classKey === 'micro' ? 2.8 : 2, r * 0.34));
     ctx.beginPath(); ctx.moveTo(s.x - ux * Math.min(8, r * 0.3), s.y - uy * Math.min(8, r * 0.3));
     ctx.lineTo(s.x - ux * tail, s.y - uy * tail); ctx.stroke();
+    if (s.classKey === 'micro') {
+      ctx.globalAlpha = 0.68; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.15;
+      ctx.beginPath(); ctx.moveTo(tailStartX, tailStartY);
+      ctx.lineTo(s.x - ux * tail * 0.64, s.y - uy * tail * 0.64); ctx.stroke();
+    }
     ctx.globalAlpha = 1;
     // effectiveness telegraph vs YOUR current type: a bright pulsing ring when
     // this attack is super-effective on you, a faint dashed ring when you resist
@@ -2837,7 +2877,9 @@ function drawProjectiles() {
     const heading = Math.atan2(s.vy || 1, s.vx || 0) + Math.PI / 2;
     ctx.rotate(SPINNING_ENEMY_SHOT[kind] ? spin : heading + Math.sin(spin) * 0.05);
     const img = enemyShotSprite(kind, col, r);
-    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    const drawScale = ENEMY_SHOT_DRAW_SCALE[kind] || 1;
+    ctx.drawImage(img, -img.width * drawScale / 2, -img.height * drawScale / 2,
+      img.width * drawScale, img.height * drawScale);
     ctx.restore();
   }
 }
@@ -3994,12 +4036,74 @@ function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, san
   ctx.fillStyle = color;
   ctx.fillText(text, W / 2, y, maxW);
 }
+// The title is the start of a journey, not a dim pause screen. A painted route
+// crosses nine colourful regions behind the mode cards while a warm morning
+// sky and drifting leaves keep the hub buoyant even before audio is enabled.
+function drawMenuAdventureBackdrop(L) {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#69c9f5'); sky.addColorStop(0.48, '#bce9ef'); sky.addColorStop(0.76, '#ffe7a8'); sky.addColorStop(1, '#85c96d');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  const sunX = W * 0.82, sunY = Math.max(42, H * 0.14), sunR = Math.min(W, H) * 0.11;
+  const sun = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, sunR * 2.8);
+  sun.addColorStop(0, 'rgba(255,255,238,0.98)'); sun.addColorStop(0.28, 'rgba(255,231,132,0.72)'); sun.addColorStop(1, 'rgba(255,231,132,0)');
+  ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H * 0.55);
+  // Slow cloud banks: deterministic positions, gentle parallax, no flicker.
+  ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.76)';
+  for (let i = 0; i < 7; i++) {
+    const drift = SETTINGS.reduceFlash ? 0 : (G.time * (5 + i % 3)) % (W + 220);
+    const cx = ((i * 193 + 36 + drift) % (W + 220)) - 110;
+    const cy = 62 + (i % 3) * 54, sc = 0.65 + (i % 4) * 0.16;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 54 * sc, 15 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx - 31 * sc, cy + 3, 33 * sc, 12 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + 29 * sc, cy + 4, 38 * sc, 12 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx - 8 * sc, cy - 10 * sc, 25 * sc, 20 * sc, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  // Distant ridges and a winding cream route bind the nine-region campaign
+  // into one continuous horizon.
+  const ridgeY = H * 0.57;
+  ctx.fillStyle = '#6bb27d'; ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W + 80; x += 80) ctx.lineTo(x, ridgeY - 30 - 32 * Math.sin(x * 0.014 + 0.8));
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#3d8c65'; ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W + 70; x += 70) ctx.lineTo(x, ridgeY + 26 - 24 * Math.sin(x * 0.019 + 2.1));
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,244,196,0.78)'; ctx.lineWidth = Math.max(5, W * 0.008); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-30, H * 0.75);
+  ctx.bezierCurveTo(W * 0.25, H * 0.55, W * 0.48, H * 0.85, W * 0.69, H * 0.66);
+  ctx.bezierCurveTo(W * 0.82, H * 0.56, W * 0.91, H * 0.7, W + 30, H * 0.6); ctx.stroke();
+  // Region trail markers remain mostly in the side gutters behind cards.
+  for (let i = 0; i < 9; i++) {
+    const u = i / 8, x = 18 + u * (W - 36), y = H * (0.7 - 0.055 * Math.sin(u * Math.PI * 3));
+    ctx.fillStyle = 'rgba(13,55,58,0.82)'; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = GENS[i].accent; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // A few wind-carried leaves make the scene feel alive without obscuring UI.
+  ctx.save();
+  for (let i = 0; i < 12; i++) {
+    const t = SETTINGS.reduceFlash ? i * 0.08 : (G.time * (0.035 + (i % 4) * 0.006) + i * 0.087) % 1;
+    const x = -30 + t * (W + 60), y = 28 + ((i * 71) % Math.max(80, H * 0.72)) + Math.sin(G.time * 1.4 + i) * 10;
+    ctx.translate(x, y); ctx.rotate(t * Math.PI * 5 + i);
+    ctx.fillStyle = i % 3 ? 'rgba(55,138,82,0.52)' : 'rgba(255,199,88,0.62)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 6, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(-(t * Math.PI * 5 + i)); ctx.translate(-x, -y);
+  }
+  ctx.restore();
+  // Soft glass veil immediately behind the brand keeps it readable over sky.
+  const hw = Math.min(W * 0.9, 760), hh = L.short ? 62 : 86;
+  roundRect(W / 2 - hw / 2, Math.max(5, L.titleY - L.titleSize * 0.72), hw, hh, 24);
+  ctx.fillStyle = 'rgba(16,74,92,0.48)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+}
 function drawMenu() {
   if (menuPage === 'setup') { drawSetup(); return; }
-  dim(0.55);
   const L = menuLayout();
+  drawMenuAdventureBackdrop(L);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title(GAME_TITLE, L.titleY, L.titleSize, '#ffd54f');
+  ctx.save(); ctx.shadowColor = 'rgba(6,38,55,0.7)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+  title(GAME_TITLE, L.titleY, L.titleSize, '#fff2a8'); ctx.restore();
   // the SKIN is an edition stamp under the brand — swap SKIN_EDITION
   // (config.js) to re-theme without touching the game's name
   {
@@ -4010,9 +4114,9 @@ function drawMenu() {
     const tw = ctx.measureText('◓ ' + SKIN_EDITION).width + 26;
     const th = Math.max(16, L.titleSize * 0.44);
     roundRect(W / 2 - tw / 2, py - th / 2, tw, th, th / 2);
-    ctx.fillStyle = 'rgba(255,213,79,0.09)'; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,213,79,0.45)'; ctx.stroke();
-    ctx.fillStyle = '#ffe082';
+    ctx.fillStyle = 'rgba(9,61,75,0.68)'; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,242,168,0.7)'; ctx.stroke();
+    ctx.fillStyle = '#fff2a8';
     ctx.fillText('◓ ' + SKIN_EDITION, W / 2, py + 0.5);
   }
   const maxW = W * 0.92;
@@ -4020,23 +4124,23 @@ function drawMenu() {
   // different games before asking the player to recognise their names.
   if (!L.short) fitText(W < 560 ? 'FLY · BOUNCE · BLAST'
     : 'THREE DIFFERENT GAMES · FLY, BOUNCE, OR BLAST',
-    L.tagY, 12 * Math.max(0.85, L.s), '650', '#e8d7ff', maxW, "Verdana, system-ui, sans-serif");
+    L.tagY, 12 * Math.max(0.85, L.s), '700', '#f7ffff', maxW, "Verdana, system-ui, sans-serif");
   {
     const q = L.quick, hovQ = inRect(mouseX, lastMouseY, q);
     ctx.save();
-    ctx.shadowColor = '#c06cff'; ctx.shadowBlur = hovQ ? 26 : 14;
+    ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = hovQ ? 26 : 14;
     roundRect(q.x, q.y, q.w, q.h, 12);
     const qg = ctx.createLinearGradient(0, q.y, 0, q.y + q.h);
-    qg.addColorStop(0, hovQ ? '#efc8ff' : '#d79aff');
-    qg.addColorStop(1, hovQ ? '#bd65f4' : '#8e3fbd');
+    qg.addColorStop(0, hovQ ? '#fff4a8' : '#ffe27a');
+    qg.addColorStop(1, hovQ ? '#ffbd45' : '#f3a93c');
     ctx.fillStyle = qg; ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#16051f';
+    ctx.fillStyle = '#173c3b';
     ctx.font = `900 ${L.short ? 11 : 14}px Orbitron, sans-serif`;
     ctx.fillText('▶ START STARFIGHTER', q.x + q.w / 2, q.y + q.h * (L.short ? 0.5 : 0.38));
     if (!L.short) {
       ctx.font = bodyFont(9.5, 700);
-      ctx.fillStyle = '#381048';
+      ctx.fillStyle = '#315540';
       ctx.fillText('POKÉMON FLIGHT SHOOTER · 27-STAGE CAMPAIGN', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
     }
     ctx.restore();
@@ -4047,9 +4151,9 @@ function drawMenu() {
     ctx.save();
     ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = hovD ? 20 : 8;
     roundRect(d.x, d.y, d.w, d.h, 12);
-    ctx.fillStyle = hovD ? 'rgba(128,216,255,0.3)' : 'rgba(128,216,255,0.14)'; ctx.fill();
+    ctx.fillStyle = hovD ? 'rgba(8,69,92,0.92)' : 'rgba(8,58,80,0.8)'; ctx.fill();
     ctx.shadowBlur = 0; ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = '#e0f7ff';
+    ctx.font = `900 ${L.short ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = '#f4fdff';
     ctx.fillText('★ DAILY BREAKER · ' + dailyShortDate(), d.x + d.w / 2, d.y + d.h * (L.short ? 0.5 : 0.36), d.w - 10);
     if (!L.short) {
       ctx.font = bodyFont(9.5, 700); ctx.fillStyle = '#80d8ff';
@@ -4101,7 +4205,7 @@ function drawMenu() {
       { icon: 'star', label: 'DAILY · ' + dailyShortDate(), value: daily, color: '#b39ddb' },
     ];
     roundRect(p.x, p.y, p.w, p.h, 12);
-    ctx.fillStyle = 'rgba(8,13,31,0.78)'; ctx.fill();
+    ctx.fillStyle = 'rgba(8,48,65,0.84)'; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.stroke();
     const cw = p.w / cells.length;
     cells.forEach((cell, i) => {
@@ -4130,8 +4234,12 @@ function drawMenu() {
     [db, '◓ POKÉDEX ' + DEX.size + '/' + dexTotal(), '#90a4ae'],
     [L.adv, '⚙ SETTINGS', '#78909c'],
   ]) {
+    const hov = inRect(mouseX, lastMouseY, g);
+    roundRect(g.x + 3, g.y + 3, g.w - 6, g.h - 6, Math.max(8, (g.h - 6) / 2));
+    ctx.fillStyle = hov ? 'rgba(10,63,78,0.88)' : 'rgba(9,51,65,0.7)'; ctx.fill();
+    ctx.strokeStyle = hov ? '#fff2a8' : 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1; ctx.stroke();
     ctx.font = rowFont;
-    ctx.fillStyle = inRect(mouseX, lastMouseY, g) ? '#ffd54f' : colBase;
+    ctx.fillStyle = hov ? '#fff2a8' : mixHex(colBase, '#ffffff', 0.58);
     ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2, g.w - 6);
   }
   if (advOpen) drawAdvanced();
@@ -4219,16 +4327,16 @@ function drawModeCard(m, cg, L, active = false) {
   ctx.clip();
   // sky — each game is its own world
   const g = ctx.createLinearGradient(0, y, 0, y + h);
-  if (junk) { g.addColorStop(0, '#0b0620'); g.addColorStop(0.55, '#241143'); g.addColorStop(1, '#3a1d5e'); }
-  else if (m.key === 'blaster') { g.addColorStop(0, '#041018'); g.addColorStop(0.55, '#0a2c3c'); g.addColorStop(1, '#0e4652'); }
-  else { g.addColorStop(0, '#0a1a30'); g.addColorStop(0.55, '#173a52'); g.addColorStop(1, '#1d5a46'); }
+  if (junk) { g.addColorStop(0, '#263e8f'); g.addColorStop(0.53, '#6d56ae'); g.addColorStop(1, '#d08287'); }
+  else if (m.key === 'blaster') { g.addColorStop(0, '#0c5470'); g.addColorStop(0.55, '#168a92'); g.addColorStop(1, '#55b99e'); }
+  else { g.addColorStop(0, '#3678a8'); g.addColorStop(0.55, '#4f9e89'); g.addColorStop(1, '#83bd68'); }
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
   // A flight tunnel for STARFIGHTER; a grounded arcade floor for the two wall
   // games. Sharing one floor was pretty but made the flying game read like a
   // mascot standing in another brick-breaker arena.
   const horizon = y + h * 0.68, vpx = x + w / 2;
-  ctx.strokeStyle = junk ? 'rgba(171,71,188,0.35)'
+  ctx.strokeStyle = junk ? 'rgba(236,207,255,0.42)'
     : m.key === 'blaster' ? 'rgba(77,208,225,0.3)' : 'rgba(102,187,106,0.32)';
   ctx.lineWidth = 1;
   if (junk) {
@@ -4259,7 +4367,7 @@ function drawModeCard(m, cg, L, active = false) {
   }
   ctx.globalAlpha = 1;
   // glowing horizon line
-  ctx.strokeStyle = junk ? 'rgba(213,134,255,0.55)'
+  ctx.strokeStyle = junk ? 'rgba(255,226,180,0.7)'
     : m.key === 'blaster' ? 'rgba(128,222,234,0.5)' : 'rgba(126,224,138,0.5)';
   ctx.lineWidth = 1.6;
   if (junk) {
@@ -4277,9 +4385,9 @@ function drawModeCard(m, cg, L, active = false) {
       ctx.fillRect(sx2, sy2, 2, 2);
     }
     const px2 = x + w * 0.84, py2 = y + h * 0.14, pr = Math.min(w, h) * 0.06;
-    ctx.fillStyle = 'rgba(120,80,200,0.8)';
+    ctx.fillStyle = 'rgba(255,190,135,0.82)';
     ctx.beginPath(); ctx.arc(px2, py2, pr, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(213,134,255,0.6)'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255,240,205,0.72)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.ellipse(px2, py2, pr * 1.7, pr * 0.5, -0.3, 0, Math.PI * 2); ctx.stroke();
   }
   // walled modes share the brick arch the demos play against
@@ -5139,6 +5247,15 @@ function constellationHex(x, y, r, rot = Math.PI / 6) {
   ctx.closePath();
 }
 
+// One state language is shared by every kind of constellation node. Only an
+// OFFER is luminous/clickable now; owned nodes are steady, reachable nodes are
+// deliberately muted, and locked nodes recede. Selection is an inspection
+// ring and never promotes an unavailable node into looking installable.
+function treeNodeVisualState(owned, offered, reachable) {
+  return offered ? 'offered' : owned ? 'owned' : reachable ? 'reachable' : 'locked';
+}
+const TREE_NODE_ALPHA = Object.freeze({ offered: 1, owned: 0.78, reachable: 0.42, locked: 0.2 });
+
 // The constellation is both atlas and choice surface. It deliberately maps
 // the current 24 save-compatible tiers before the later branching graph adds
 // more nodes, so the visual redesign can ship without changing balance.
@@ -5184,9 +5301,9 @@ function drawFullUpgradeTree() {
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
   ctx.font = `700 ${T.compact ? 9 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
   const buildLine = T.compact
-    ? 'BUILD ' + ownedN + '/50 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
+    ? 'BUILD ' + ownedN + '/50 · ' + activeN + ' PATHS · ONLY OPTION TAGS INSTALL'
     : 'BUILD ' + ownedN + '/50 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
-      ' · THREE GLOWING NODES ARE THIS STAGE’S OFFERS';
+      ' · ONLY THE THREE WHITE OPTION TAGS CAN BE INSTALLED THIS STAGE';
   ctx.fillText(buildLine, p.x + p.w / 2, p.y + (T.compact ? 37 : 45), p.w - 96);
 
   if (!treeSel.kind) treeSel.kind = 'tier';
@@ -5314,6 +5431,31 @@ function drawFullUpgradeTree() {
       rank > 0, choiceIndexForSel({ kind: 'sat', si }) >= 0);
   }
 
+  const inspectionRing = (n, selected, offered) => {
+    if (!selected || offered) return;
+    ctx.save(); ctx.setLineDash([3, 4]); ctx.lineDashOffset = -G.time * 7;
+    ctx.strokeStyle = 'rgba(207,216,220,0.68)'; ctx.lineWidth = 1.25;
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  };
+  // A literal OPTION tag replaces the ambiguous numbered dot. Tags sit on
+  // the centre-facing side so capstone/fusion labels remain unobstructed.
+  const offerFlag = (n, offer, inward = false) => {
+    const fw = Math.max(40, Math.min(54, n.r * 2.75)), fh = Math.max(13, Math.min(17, n.r * 0.8));
+    const a = Number.isFinite(n.a) ? n.a : -Math.PI / 2;
+    const dir = inward ? -1 : 1;
+    const fcX = n.cx + Math.cos(a) * dir * (n.r + fw * 0.42);
+    const fcY = n.cy + Math.sin(a) * dir * (n.r + fh * 0.68);
+    ctx.save(); ctx.shadowColor = '#ffffff'; ctx.shadowBlur = SETTINGS.reduceFlash ? 8 : 12;
+    roundRect(fcX - fw / 2, fcY - fh / 2, fw, fh, fh / 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(7,16,34,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = `900 ${Math.max(6.5, Math.min(8, n.r * 0.42))}px Orbitron, sans-serif`;
+    ctx.fillStyle = '#071022'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('OPTION ' + (offer + 1), fcX, fcY + 0.5, fw - 6);
+    ctx.restore();
+  };
+
   // Nodes use shape + icon + connector state, never color alone. Only the
   // three offers pulse, keeping a full late-run map calm and scannable.
   for (let pi = 0; pi < PATH_KEYS.length; pi++) {
@@ -5325,35 +5467,28 @@ function drawFullUpgradeTree() {
       const offer = choiceIndexForTreeNode(pi, ti);
       const offered = offer >= 0;
       const chosen = offered && draftSel === offer;
+      const state = treeNodeVisualState(owned, offered, next);
       const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + offer * 1.7);
       ctx.save();
-      if (sel || offered) { ctx.shadowColor = offered ? '#ffffff' : P.color; ctx.shadowBlur = offered ? 14 + pulse * 10 : 15; }
+      if (offered) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 14 + pulse * 10; }
       constellationHex(n.cx, n.cy, n.r + (ti === 3 ? 2 : 0));
       ctx.fillStyle = chosen ? mixHex(P.color, '#ffffff', 0.22) : owned ? mixHex(P.color, '#071022', 0.55)
-        : offered ? mixHex(P.color, '#071022', 0.72) : next ? 'rgba(18,28,52,0.94)' : 'rgba(9,14,28,0.9)';
+        : offered ? mixHex(P.color, '#071022', 0.72) : next ? 'rgba(16,24,43,0.76)' : 'rgba(5,9,19,0.78)';
       ctx.fill();
-      ctx.lineWidth = chosen ? 3 : offered ? 2.4 : sel ? 2.2 : owned ? 1.8 : 1;
-      ctx.strokeStyle = chosen || sel ? '#fff' : offered || owned ? P.color : next ? P.color + 'aa' : 'rgba(255,255,255,0.14)';
+      ctx.lineWidth = chosen ? 3 : offered ? 2.4 : owned ? 1.8 : next ? 1.2 : 1;
+      ctx.strokeStyle = chosen ? '#fff' : offered || owned ? P.color : next ? P.color + '62' : 'rgba(255,255,255,0.08)';
       ctx.stroke();
       ctx.shadowBlur = 0;
       const iconR = Math.max(6, n.r * 0.72);
-      const badge = iconBadge(tier.icon, P.color, Math.round(iconR), (owned || next || sel || offered) ? 'lit' : 'dim');
-      ctx.globalAlpha = owned || next || sel || offered ? 1 : 0.52;
+      const badge = iconBadge(tier.icon, P.color, Math.round(iconR), offered ? 'lit' : 'dim');
+      ctx.globalAlpha = TREE_NODE_ALPHA[state];
       ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
       ctx.globalAlpha = 1;
       if (owned) {
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.68, n.cy + n.r * 0.65, 3.2, 0, Math.PI * 2); ctx.fill();
       }
-      if (offered) {
-        // capstone offers tuck their number chip on the CENTRE side of the
-        // node — outward it printed over the spoke's constellation label
-        const hx = ti === 3 ? n.cx - Math.cos(n.a) * n.r * 1.18 - n.r * 0.2 : n.cx - n.r * 0.82;
-        const hy = ti === 3 ? n.cy - Math.sin(n.a) * n.r * 1.18 : n.cy - n.r * 0.86;
-        ctx.beginPath(); ctx.arc(hx, hy, Math.max(7, n.r * 0.52), 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff'; ctx.fill();
-        ctx.font = `900 ${Math.max(7, n.r * 0.58)}px Orbitron, sans-serif`;
-        ctx.fillStyle = '#071022'; ctx.fillText(String(offer + 1), hx, hy + 0.5);
-      }
+      inspectionRing(n, sel, offered);
+      if (offered) offerFlag(n, offer, ti === 3);
       ctx.restore();
     }
     // constellation identity stays outside the busy node field
@@ -5369,41 +5504,35 @@ function drawFullUpgradeTree() {
 
   // ---- WEB nodes: bridges (two-tone), superskills (double-hex crowns) and
   // mastery satellites (ranked pips). Same state language: only offers pulse.
-  const offerChip = (n, offer) => {
-    const hx = n.cx - n.r * 0.9, hy = n.cy - n.r * 0.95;
-    ctx.beginPath(); ctx.arc(hx, hy, Math.max(7, n.r * 0.52), 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff'; ctx.fill();
-    ctx.font = `900 ${Math.max(7, n.r * 0.58)}px Orbitron, sans-serif`;
-    ctx.fillStyle = '#071022'; ctx.fillText(String(offer + 1), hx, hy + 0.5);
-  };
   for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
     const b = WEB_BRIDGES[bi], n = T.bridgeNode(bi);
     const owned = !!upgN(b.key), eligible = bridgeEligible(b);
     const sel = treeSel.kind === 'bridge' && treeSel.bi === bi;
     const offer = choiceIndexForSel({ kind: 'bridge', bi });
     const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const state = treeNodeVisualState(owned, offered, eligible);
     const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + bi * 1.3);
     const cA = PATHS[b.paths[0]].color, cB = PATHS[b.paths[1]].color;
     ctx.save();
-    if (sel || offered) { ctx.shadowColor = offered ? '#ffffff' : b.color; ctx.shadowBlur = offered ? 14 + pulse * 10 : 15; }
+    if (offered) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 14 + pulse * 10; }
     constellationHex(n.cx, n.cy, n.r, 0); // flat-top: bridges read differently
     ctx.fillStyle = chosen ? mixHex(b.color, '#ffffff', 0.22) : owned ? mixHex(b.color, '#071022', 0.5)
       : offered ? mixHex(b.color, '#071022', 0.72) : 'rgba(9,14,28,0.9)';
     ctx.fill();
     // TWO-TONE border: a solid half in each wedge's color, never color-alone
-    ctx.lineWidth = chosen || sel ? 2.6 : owned || offered ? 2 : eligible ? 1.6 : 1;
-    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cA : 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = chosen ? 2.6 : owned || offered ? 2 : eligible ? 1.2 : 1;
+    ctx.strokeStyle = chosen ? '#fff' : owned || offered ? cA : eligible ? cA + '62' : 'rgba(255,255,255,0.08)';
     ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
-    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cB : 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = chosen ? '#fff' : owned || offered ? cB : eligible ? cB + '62' : 'rgba(255,255,255,0.1)';
     ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
     ctx.shadowBlur = 0;
-    const lit = owned || offered || eligible || sel;
-    const badge = iconBadge(b.icon, b.color, Math.max(6, Math.round(n.r * 0.66)), lit ? 'lit' : 'dim');
-    ctx.globalAlpha = lit ? 1 : 0.45;
+    const badge = iconBadge(b.icon, b.color, Math.max(6, Math.round(n.r * 0.66)), offered ? 'lit' : 'dim');
+    ctx.globalAlpha = TREE_NODE_ALPHA[state];
     ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
     ctx.globalAlpha = 1;
     if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.7, n.cy + n.r * 0.66, 2.8, 0, Math.PI * 2); ctx.fill(); }
-    if (offered) offerChip(n, offer);
+    inspectionRing(n, sel, offered);
+    if (offered) offerFlag(n, offer);
     ctx.restore();
   }
   // FUSION nodes: compact SILHOUETTES until the player holds two ranks in
@@ -5415,6 +5544,7 @@ function drawFullUpgradeTree() {
     const sel = treeSel.kind === 'fusion' && treeSel.fi === fi;
     const offer = choiceIndexForSel({ kind: 'fusion', fi });
     const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const state = treeNodeVisualState(owned, offered, eligible);
     const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + fi * 0.9);
     ctx.save();
     if (!visible && !sel) { // locked silhouette: a small quiet marker
@@ -5425,7 +5555,7 @@ function drawFullUpgradeTree() {
       ctx.restore();
       continue;
     }
-    if (sel || offered || owned) { ctx.shadowColor = offered ? '#ffffff' : f.color; ctx.shadowBlur = offered ? 15 + pulse * 10 : owned ? 13 : 15; }
+    if (offered) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 15 + pulse * 10; }
     constellationHex(n.cx, n.cy, n.r + 1.5, Math.PI / 6);
     ctx.fillStyle = chosen ? mixHex(f.color, '#ffffff', 0.25) : owned ? mixHex(f.color, '#071022', 0.45)
       : offered ? mixHex(f.color, '#071022', 0.7) : 'rgba(9,14,28,0.92)';
@@ -5433,24 +5563,24 @@ function drawFullUpgradeTree() {
     // two-tone rim: each half in one of its path colors (never color alone —
     // the double hex is the fusion SHAPE)
     const cA = PATHS[f.paths[0]].color, cB = PATHS[f.paths[1]].color;
-    ctx.lineWidth = chosen || sel ? 2.6 : owned || offered ? 2.2 : eligible ? 1.7 : 1;
-    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cA : 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = chosen ? 2.6 : owned || offered ? 2.2 : eligible ? 1.2 : 1;
+    ctx.strokeStyle = chosen ? '#fff' : owned || offered ? cA : eligible ? cA + '62' : 'rgba(255,255,255,0.08)';
     ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
-    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cB : 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = chosen ? '#fff' : owned || offered ? cB : eligible ? cB + '62' : 'rgba(255,255,255,0.1)';
     ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
     constellationHex(n.cx, n.cy, n.r + 1.5, 0);
     ctx.strokeStyle = owned || offered ? f.color : 'rgba(255,255,255,0.2)';
-    ctx.globalAlpha = owned || offered || eligible || sel ? 0.8 : 0.3;
+    ctx.globalAlpha = offered ? 0.9 : owned ? 0.7 : eligible ? 0.3 : 0.16;
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
-    const lit = owned || offered || eligible || sel;
-    const badge = iconBadge(f.icon, f.color, Math.max(7, Math.round(n.r * 0.62)), lit ? 'lit' : 'dim');
-    ctx.globalAlpha = lit ? 1 : 0.45;
+    const badge = iconBadge(f.icon, f.color, Math.max(7, Math.round(n.r * 0.62)), offered ? 'lit' : 'dim');
+    ctx.globalAlpha = TREE_NODE_ALPHA[state];
     ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
     ctx.globalAlpha = 1;
     if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.72, n.cy + n.r * 0.68, 3, 0, Math.PI * 2); ctx.fill(); }
-    if (offered) offerChip(n, offer);
+    inspectionRing(n, sel, offered);
+    if (offered) offerFlag(n, offer, true);
     ctx.restore();
   }
   // APEX nodes hold the outermost ring — triple-ring crowns, dim until two
@@ -5462,31 +5592,32 @@ function drawFullUpgradeTree() {
     const sel = treeSel.kind === 'apex' && treeSel.ai === ai;
     const offer = choiceIndexForSel({ kind: 'apex', ai });
     const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const state = treeNodeVisualState(owned, offered, eligible || near);
     const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.2 + ai * 2.4);
     ctx.save();
-    if (sel || offered || owned) { ctx.shadowColor = offered ? '#ffffff' : x.color; ctx.shadowBlur = offered ? 16 + pulse * 10 : 14; }
+    if (offered) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 16 + pulse * 10; }
     constellationHex(n.cx, n.cy, n.r + 2, Math.PI / 6);
     ctx.fillStyle = chosen ? mixHex(x.color, '#ffffff', 0.25) : owned ? mixHex(x.color, '#071022', 0.4)
       : offered ? mixHex(x.color, '#071022', 0.68) : 'rgba(9,14,28,0.94)';
     ctx.fill();
-    ctx.lineWidth = chosen || sel ? 2.8 : owned || offered ? 2.4 : eligible || near ? 1.8 : 1;
-    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered ? x.color : eligible || near ? x.color + 'aa' : 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = chosen ? 2.8 : owned || offered ? 2.4 : eligible || near ? 1.2 : 1;
+    ctx.strokeStyle = chosen ? '#fff' : owned || offered ? x.color : eligible || near ? x.color + '62' : 'rgba(255,255,255,0.08)';
     ctx.stroke();
     constellationHex(n.cx, n.cy, n.r + 2, 0);
-    ctx.globalAlpha = owned || offered || near || sel ? 0.8 : 0.25;
+    ctx.globalAlpha = offered ? 0.85 : owned ? 0.68 : near ? 0.26 : 0.12;
     ctx.stroke();
     ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 6, 0, Math.PI * 2);
-    ctx.globalAlpha = owned || offered ? 0.6 : near || sel ? 0.3 : 0.12;
+    ctx.globalAlpha = owned || offered ? 0.6 : near ? 0.2 : 0.08;
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
-    const lit = owned || offered || eligible || near || sel;
-    const badge = iconBadge(x.icon, x.color, Math.max(8, Math.round(n.r * 0.58)), lit ? 'lit' : 'dim');
-    ctx.globalAlpha = lit ? 1 : 0.4;
+    const badge = iconBadge(x.icon, x.color, Math.max(8, Math.round(n.r * 0.58)), offered ? 'lit' : 'dim');
+    ctx.globalAlpha = TREE_NODE_ALPHA[state];
     ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
     ctx.globalAlpha = 1;
     if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.74, n.cy + n.r * 0.7, 3.2, 0, Math.PI * 2); ctx.fill(); }
-    if (offered) offerChip(n, offer);
+    inspectionRing(n, sel, offered);
+    if (offered) offerFlag(n, offer, true);
     ctx.restore();
   }
   for (let si = 0; si < WEB_SATELLITES.length; si++) {
@@ -5497,20 +5628,20 @@ function drawFullUpgradeTree() {
     const sel = treeSel.kind === 'sat' && treeSel.si === si;
     const offer = choiceIndexForSel({ kind: 'sat', si });
     const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const state = treeNodeVisualState(rank > 0, offered, unlocked);
     const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + si * 2.1);
     ctx.save();
-    if (sel || offered) { ctx.shadowColor = offered ? '#ffffff' : item.color; ctx.shadowBlur = offered ? 12 + pulse * 8 : 12; }
+    if (offered) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 12 + pulse * 8; }
     ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r, 0, Math.PI * 2); // circles = repeatable
     ctx.fillStyle = chosen ? mixHex(item.color, '#ffffff', 0.22) : rank ? mixHex(item.color, '#071022', 0.5)
       : offered ? mixHex(item.color, '#071022', 0.72) : 'rgba(9,14,28,0.9)';
     ctx.fill();
-    ctx.lineWidth = chosen || sel ? 2.2 : rank || offered ? 1.8 : unlocked ? 1.4 : 1;
-    ctx.strokeStyle = chosen || sel ? '#fff' : rank || offered ? item.color : unlocked ? item.color + 'aa' : 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = chosen ? 2.2 : rank || offered ? 1.8 : unlocked ? 1.1 : 1;
+    ctx.strokeStyle = chosen ? '#fff' : rank || offered ? item.color : unlocked ? item.color + '62' : 'rgba(255,255,255,0.08)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    const lit = rank || offered || unlocked || sel;
-    const badge = iconBadge(item.icon, item.color, Math.max(5, Math.round(n.r * 0.62)), lit ? 'lit' : 'dim');
-    ctx.globalAlpha = lit ? 1 : 0.45;
+    const badge = iconBadge(item.icon, item.color, Math.max(5, Math.round(n.r * 0.62)), offered ? 'lit' : 'dim');
+    ctx.globalAlpha = TREE_NODE_ALPHA[state];
     ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
     ctx.globalAlpha = 1;
     if (rank > 0) { // the rank readout IS the ∞-stack record
@@ -5518,7 +5649,8 @@ function drawFullUpgradeTree() {
       ctx.fillStyle = '#fff';
       ctx.fillText('×' + rank, n.cx, n.cy + n.r + 8);
     }
-    if (offered) offerChip(n, offer);
+    inspectionRing(n, sel, offered);
+    if (offered) offerFlag(n, offer, true);
     ctx.restore();
   }
 
@@ -5598,7 +5730,7 @@ function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
   ctx.shadowBlur = 0;
   ctx.lineWidth = canCF ? 2 : 1.2; ctx.strokeStyle = canCF ? '#ffffff' : 'rgba(255,255,255,0.15)'; ctx.stroke();
   ctx.font = `900 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
-  ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OFFER ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS NODE' : 'CHOOSE A GLOWING NODE',
+  ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OPTION ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS OPTION' : 'CHOOSE AN OPTION TAG',
     cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
 }
 
@@ -5667,9 +5799,12 @@ function drawTreeDetailWeb(T) {
   ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
   ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? color : color + '88'; ctx.stroke();
   const iconSize = T.sideDetail ? 44 : T.compact ? 40 : 38;
-  const lit = status !== 'LOCKED';
-  const db = iconBadge(icon, color, Math.round(iconSize / 2), lit ? 'lit' : 'dim');
+  const detailState = offered ? 'offered' : /^OWNED|ONLINE/.test(status) || status.includes('APEX ONLINE') || status.includes('FUSION ONLINE')
+    ? 'owned' : status === 'LOCKED' ? 'locked' : 'reachable';
+  const db = iconBadge(icon, color, Math.round(iconSize / 2), offered ? 'lit' : 'dim');
+  ctx.globalAlpha = detailState === 'offered' ? 1 : detailState === 'owned' ? 0.84 : detailState === 'reachable' ? 0.6 : 0.42;
   ctx.drawImage(db, d.x + pad, d.y + pad, iconSize, iconSize);
+  ctx.globalAlpha = 1;
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = color;
   ctx.fillText(heading, d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
@@ -5731,8 +5866,11 @@ function drawTreeDetail(T) {
   ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? P.color : P.color + '88'; ctx.stroke();
 
   const iconSize = T.sideDetail ? 44 : T.compact ? 40 : 38;
-  const db = iconBadge(tier.icon, P.color, Math.round(iconSize / 2), owned || offered || next ? 'lit' : 'dim');
+  const detailState = treeNodeVisualState(owned, offered, next);
+  const db = iconBadge(tier.icon, P.color, Math.round(iconSize / 2), offered ? 'lit' : 'dim');
+  ctx.globalAlpha = detailState === 'offered' ? 1 : detailState === 'owned' ? 0.84 : 0.58;
   ctx.drawImage(db, d.x + pad, d.y + pad, iconSize, iconSize);
+  ctx.globalAlpha = 1;
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
   ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
@@ -5777,16 +5915,22 @@ function drawTreeDetail(T) {
         const cx2 = d.x + pad + tt * (cellW + gap2);
         const ownedT = tt < pathLvl(pk), isSel = tt === ti;
         const offT = choiceIndexForTreeNode(treeSel.pi, tt) >= 0;
+        const reachT = tt === pathLvl(pk);
+        const stripState = treeNodeVisualState(ownedT, offT, reachT);
         ctx.save();
         if (offT) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 8; }
         roundRect(cx2, stripY, cellW, cellH, 9);
-        ctx.fillStyle = ownedT ? mixHex(P.color, '#071022', 0.6) : 'rgba(255,255,255,0.05)'; ctx.fill();
-        ctx.lineWidth = isSel ? 2.2 : 1.2;
-        ctx.strokeStyle = isSel ? '#ffffff' : ownedT || offT ? P.color : 'rgba(255,255,255,0.16)';
+        ctx.fillStyle = ownedT ? mixHex(P.color, '#071022', 0.6) : offT ? mixHex(P.color, '#071022', 0.72) : 'rgba(255,255,255,0.035)'; ctx.fill();
+        ctx.lineWidth = offT ? 2.2 : ownedT ? 1.3 : 1;
+        ctx.strokeStyle = offT ? '#ffffff' : ownedT ? P.color : reachT ? P.color + '62' : 'rgba(255,255,255,0.09)';
         ctx.stroke();
+        if (isSel && !offT) {
+          ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(207,216,220,0.62)'; ctx.lineWidth = 1.2;
+          roundRect(cx2 + 3, stripY + 3, cellW - 6, cellH - 6, 7); ctx.stroke(); ctx.setLineDash([]);
+        }
         ctx.shadowBlur = 0;
-        const badge2 = iconBadge(P.tiers[tt].icon, P.color, 9, (ownedT || offT || isSel) ? 'lit' : 'dim');
-        ctx.globalAlpha = ownedT || offT || isSel ? 1 : 0.5;
+        const badge2 = iconBadge(P.tiers[tt].icon, P.color, 9, offT ? 'lit' : 'dim');
+        ctx.globalAlpha = TREE_NODE_ALPHA[stripState];
         ctx.drawImage(badge2, cx2 + cellW / 2 - badge2.width / 2, stripY + 16 - badge2.height / 2);
         ctx.globalAlpha = 1;
         ctx.textAlign = 'center';

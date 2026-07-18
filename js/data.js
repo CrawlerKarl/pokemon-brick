@@ -1319,7 +1319,9 @@ const BOSS_STYLE = {
 // `threat` is consumed by Starfighter's attack director; a swarm and a single
 // siege shot can therefore create very different spectacle at similar danger.
 const SHOT_CLASSES = Object.freeze({
-  micro:    { visualR: 6,  hitR: 3.5, threat: 0.25, interceptHP: 1, tail: 14 },
+  // Small stays small in danger/collision terms, but eight visible pixels plus
+  // a long tracer keeps a Caterpie stinger readable against every biome.
+  micro:    { visualR: 8,  hitR: 3.5, threat: 0.25, interceptHP: 1, tail: 22 },
   standard: { visualR: 11, hitR: 7.5, threat: 1.0,  interceptHP: 1, tail: 24 },
   heavy:    { visualR: 24, hitR: 14,  threat: 2.5,  interceptHP: 2, tail: 34, heavy: true },
   massive:  { visualR: 46, hitR: 22,  threat: 4.5,  interceptHP: 3, tail: 48, heavy: true },

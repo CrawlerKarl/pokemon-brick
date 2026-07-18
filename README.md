@@ -90,7 +90,7 @@ sometimes doesn't fire — trigger manually with
 | --- | --- |
 | `setup.js` | Canvas, `resize()` (with a no-op guard — see Gotchas), DPR, safe-area, `IS_TOUCH` |
 | `config.js` | `PRESETS` (difficulty), `SETTINGS`, `diff()` (the one difficulty curve), menu/advanced/trial **layout geometry** |
-| `audio.js` | SFX synth (`tone`/`noiseBurst`), per-region chiptune with chord progression + echo bus (`musicTick`) |
+| `audio.js` | SFX synth plus the original 18-arrangement adventure score: nine region exploration identities and nine separately authored boss arrangements (`ADVENTURE_MUSIC`, `buildMusicPattern`, `musicTick`) |
 | `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`BRICK_BEHAVIORS`** + region order, **`PATHS`** (skill tree) + `JUNKIE_ITEMS`/`STACK_ITEMS`, **`STARTER_MON`**, **`GENS`** (region/roster/boss data) + **`HABITAT_PACKS`/`TYPE_CLUSTERS`** (wave ecology), `NAMES`, sprite loading, `drawGlyph` (all vector icons) |
 | `scenery.js` | Per-region prerendered backgrounds (`drawScene[...]` — iconic towns), starfield, ambient weather |
 | `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
@@ -109,8 +109,12 @@ the repo: `test.html` (headless invariant suite), `package.json`
 ## Game modes (`SETTINGS.mode`, picked on the title screen)
 The opening is STARFIGHTER-first. Page 1 gives STARFIGHTER the large featured
 campaign card and the primary **START STARFIGHTER** action; BREAKER and BLASTER
-remain available in a compact arcade rail. All three `drawModeCard` dioramas
-now lead with their literal game type and input recipe: **FLYING SHOOTER / YOU
+remain available in a compact arcade rail. The three `drawModeCard` dioramas
+sit on a bright morning adventure map with clouds, rolling regional ridges, a
+winding nine-node route, and drifting leaves (`drawMenuAdventureBackdrop`) —
+the title no longer reads as a dark pause screen. The STARFIGHTER diorama uses
+a luminous sunset flight corridor while retaining strong projectile contrast.
+All three cards lead with their literal game type and input recipe: **FLYING SHOOTER / YOU
 FLY + FIRE**, **BRICK BREAKER / BALL + PADDLE**, and **WALL SHOOTER / NO BALL**.
 STARFIGHTER no longer uses Rayquaza as an ambiguous mascot. It rotates actual
 partner choices inside a custom wing-and-thruster flight rig while the preview
@@ -478,12 +482,14 @@ The draft cards lead with the upgrade NAME and a big high-contrast description
 (what it does) — the readable thing — over path/tier/pips; capstones glow.
 Card/tree/announce text is **mode-aware** (`tierDesc`, data.js — optional
 `sdesc` per tier), so a shooter-mode player never reads about paddles or balls.
-**FULL TREE** (`T` on desktop) opens a **tap-to-inspect** grid where **paths
-are rows and tiers build LEFT→RIGHT** (connector rails brighten up to the owned
-tier). Every node tile carries its name + description; tapping one lights it up
-(brighter, bolder) and fills a detail panel across the bottom (`treeSel`,
-input.js; `drawTreeDetail`, render.js). Node rects come from `upgradeTreeLayout`
-so render and hit-testing can't drift. Upgrade **symbols are glossy faux-3D
+**FULL TREE** (`T` on desktop) opens a zoomable, draggable **tap-to-inspect
+constellation**. Only the three live choices carry bright white `OPTION 1/2/3`
+tags; owned nodes are steady, reachable-but-not-offered nodes are muted, locked
+nodes recede, and inspecting an unavailable node adds a dashed ring without
+making it appear installable (`treeNodeVisualState`, render.js). The detail
+panel always spells out `AVAILABLE`, `REACHABLE · NOT OFFERED`, or the exact
+lock recipe. Node rects come from `upgradeTreeLayout` so render and hit-testing
+can't drift. Upgrade **symbols are glossy faux-3D
 badges** (`iconBadge`/`blitBadge`, render.js — baked per colour/size) used in
 the tree and draft cards. A **HUD build strip** shows owned paths, every
 non-junkie tier adds a colored hardware socket to the paddle, and Junkie racks
@@ -626,8 +632,22 @@ save best score or Pokédex catches (`G.trial` flag).
   no life lost**; a super-effective shot shows a pulsing red ring. Explicit
   elite rank can author **HEAVY** fire, but HP never silently promotes a shooter.
   Micro / standard / heavy / massive classes separate art radius from the small,
-  honest collision core and cost one life per impact on Adventure. All in the
+  honest collision core and cost one life per impact on Adventure. Micro fire
+  uses a dark under-tracer, white hot core, and render-only scaling for thin
+  silhouettes (especially `stinger`/`needle`) so early shots remain visible
+  without enlarging their hitboxes. All in the
   `G.enemyShots` hit block, update.js.
+
+### Music direction (`ADVENTURE_MUSIC`, audio.js)
+
+The soundtrack is an original creature-adventure score built entirely from the
+Web Audio synth. Every region changes scale, tempo, progression, motif, rhythm,
+bass/drum grammar, instrument voice, and echo colour; most exploration routes
+lean bright/major, while Sinnoh and a few other routes use adventurous modal
+colour. Entering any sentinel, legendary, mythic, or gauntlet fight switches to
+that region's separately authored faster boss theme. Boss phases and Mega add a
+small intensity layer without replacing the region's identity. No third-party
+recordings or copyrighted game melodies ship with the project.
 - **Mega/barrier:** `MEGA_DUR`, `barrierCharges` (state.js)
 - **Reinforcement flights:** `G.reinforce` (state.js), `spawnReinforcement`
 

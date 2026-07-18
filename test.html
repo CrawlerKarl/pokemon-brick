@@ -242,6 +242,10 @@ window.requestAnimationFrame = function () { return 0; };
     for (const kind of new Set(Object.values(BOSS_PROJECTILE_KIND).concat(Object.values(TYPE_PROJECTILE_KIND)))) {
       for (const cls of Object.keys(SHOT_CLASSES)) enemyShotSprite(kind, '#80d8ff', SHOT_CLASSES[cls].visualR);
     }
+    assert(SHOT_CLASSES.micro.visualR >= 8 && SHOT_CLASSES.micro.hitR <= 3.5 &&
+      SHOT_CLASSES.micro.tail >= 20, 'micro fire is not visually readable while retaining a forgiving hitbox');
+    assert(ENEMY_SHOT_DRAW_SCALE.stinger >= 1.25 && ENEMY_SHOT_DRAW_SCALE.needle >= 1.2,
+      'thin stinger/needle silhouettes lost their render-only readability scale');
     G.level = 1; G.enemyShots = []; G.lasers = []; G.invuln = 99;
     const siege = spawnEnemyShot({ x: 300, y: 300, vx: 0, vy: 0, type: 'rock', species: 377, classKey: 'massive' });
     assert(siege.visualR >= 40 && siege.hitR <= 24 && siege.visualR > siege.hitR * 1.8,
@@ -290,6 +294,29 @@ window.requestAnimationFrame = function () { return 0; };
     return 'Adventure ' + base.toFixed(1) + 's · fast partner ' + fast.toFixed(1) + 's · Coolant ' + cool.toFixed(1) + 's';
   });
 
+  test('soundtrack: nine original route identities and nine distinct boss arrangements', async () => {
+    assert(ADVENTURE_MUSIC.length === 9, 'expected nine regional music identities');
+    const routeSignatures = new Set(), bossSignatures = new Set();
+    let brightScales = 0;
+    for (let i = 0; i < ADVENTURE_MUSIC.length; i++) {
+      const route = buildMusicPattern(i, false), boss = buildMusicPattern(i, true);
+      assert(route.cfg.title && boss.cfg.title && route.cfg.title !== boss.cfg.title,
+        route.cfg.region + ' route/boss titles are not distinct');
+      assert(boss.cfg.bpm > route.cfg.bpm, route.cfg.region + ' boss arrangement is not more urgent');
+      assert(route.melody.filter(n => n != null).length >= 40 && boss.melody.filter(n => n != null).length >= 64,
+        route.cfg.region + ' pattern is too sparse to carry a theme');
+      assert(route.cfg.voice !== boss.cfg.voice || route.cfg.motif.join(',') !== boss.cfg.motif.join(','),
+        route.cfg.region + ' boss reuses the route identity unchanged');
+      if (route.cfg.scale.includes(4)) brightScales++;
+      routeSignatures.add([route.cfg.bpm, route.cfg.voice, route.cfg.scale, route.cfg.motif, route.cfg.rhythm].join('|'));
+      bossSignatures.add([boss.cfg.bpm, boss.cfg.voice, boss.cfg.scale, boss.cfg.motif, boss.cfg.rhythm].join('|'));
+    }
+    assert(routeSignatures.size === 9 && bossSignatures.size === 9,
+      'regional themes are not musically unique');
+    assert(brightScales >= 7, 'exploration score does not lean happy/major enough (' + brightScales + '/9 bright scales)');
+    return '9 route themes + 9 boss arrangements · ' + brightScales + '/9 bright scales · unique motifs/voices/rhythms';
+  });
+
   test('upgrade web camera: zoomed start, anchored zoom, fit range', async () => {
     SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
     resetRun(1, true);
@@ -304,7 +331,13 @@ window.requestAnimationFrame = function () { return 0; };
     setTreeZoomAt(mx, my, 99); assert(treeZoom === 1.85, 'maximum zoom clamp failed');
     setTreeZoomAt(mx, my, 0.01); assert(treeZoom === 0.65, 'fit/minimum zoom clamp failed');
     resetTreeCamera();
-    return 'default ' + Math.round(treeZoom * 100) + '% · anchored scale · 65–185% clamp';
+    assert(treeNodeVisualState(false, true, false) === 'offered' &&
+      treeNodeVisualState(true, false, true) === 'owned' &&
+      treeNodeVisualState(false, false, true) === 'reachable' &&
+      treeNodeVisualState(false, false, false) === 'locked', 'upgrade-web visual state precedence changed');
+    assert(TREE_NODE_ALPHA.offered > TREE_NODE_ALPHA.owned && TREE_NODE_ALPHA.owned > TREE_NODE_ALPHA.reachable &&
+      TREE_NODE_ALPHA.reachable > TREE_NODE_ALPHA.locked, 'unavailable nodes are not progressively dimmer');
+    return 'default ' + Math.round(treeZoom * 100) + '% · anchored scale · 65–185% clamp · offers-only luminance';
   });
 
   // 1c) THE NINEFOLD DAWN: stage 27 must END a real campaign (never silently

@@ -37,6 +37,8 @@ NEVER rename a key:
 **The title screen is a return-player dashboard, not just a mode picker.**
 `menuLayout()` reserves a progression strip for journey/checkpoint, Pokédex
 research, and dated Daily best/completion/streak state. All three mode cards
+sit over `drawMenuAdventureBackdrop` (bright route sky, hills, nine journey
+markers, moving clouds/leaves); do not restore the old full-screen dark dimmer.
 remain visible, but only the hovered card (or one rotating focus card on
 touch/idle) animates; `reduceFlash` freezes them. Setup calls the opt-out
 **NO PARTNER**, shows starting HP + pressure on difficulty cards, and pages an
@@ -99,6 +101,21 @@ phone — flag anything only verifiable there.
   resist. Every landed projectile costs exactly ONE life on Adventure — type
   advantage changes feedback, never surprise damage. Boss projectile kinds are
   keyed by species in `BOSS_PROJECTILE_KIND`; typeless legacy shots stay neutral.
+- **Thin enemy fire must stay visible without dishonest collision.** Micro shots
+  keep an 8px art radius, 3.5px collision core, long dark/bright tracer, and
+  render-only multipliers in `ENEMY_SHOT_DRAW_SCALE`. Caterpie-family `stinger`
+  and electric `needle` silhouettes must retain their white spine and outline.
+  Never grow `hitR` merely to match visibility art.
+- **Upgrade-web luminance means installability.** Only nodes in the current
+  three-choice draft use a lit badge, white halo, and literal `OPTION N` tag.
+  Owned nodes are steady, reachable nodes muted, locked nodes very dim; tapping
+  an unavailable node may add the dashed inspection ring but must not brighten
+  its fill/icon. Keep all node types routed through `treeNodeVisualState` and
+  preserve the strict `TREE_NODE_ALPHA` ordering.
+- **Music is original and scene-authored.** `ADVENTURE_MUSIC` contains nine
+  exploration identities and nine boss overrides. A regional change must vary
+  more than pitch: preserve unique scale/motif/rhythm/voice signatures, and do
+  not add ripped recordings or recognisable melodies from commercial games.
 - **Classic is brick-only; Blaster may mix a STATIC wall with flyers.** Classic
   must never create free flyers, dives, or attack reinforcements. Where Blaster
   has both populations, flyers NEVER overlap the wall.
