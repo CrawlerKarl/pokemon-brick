@@ -59,14 +59,18 @@ function drawBackground() {
     drawRiftBackground();
     return;
   }
-  const genIdx = G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level);
-  buildBackground(genIdx);
+  const onMenu = G.state === 'menu' || G.state === 'dex';
+  const genIdx = onMenu ? 0 : regionIdx(G.level);
+  // the SCENE DIRECTOR keys the sky by region AND stage — arrival daylight,
+  // challenge weather, legendary transformation. The title keeps Kanto's
+  // legendary night so the brand look survives.
+  buildBackground(genIdx, onMenu ? 2 : stageIdx(G.level));
   ctx.drawImage(bgSky, 0, 0, W, H);
   const par = (G.paddle.x - W / 2) / (W / 2); // parallax from paddle position
-  for (const s of stars) {
-    // slow, gentle twinkle — fast flicker on the title screen reads as glitching
+  if (SCENE_DARK > 0.05) for (const s of stars) {
+    // stars only shine as dark as the scene allows — never at noon
     const tw = 0.75 + 0.25 * Math.sin(G.time * 1.2 + s.tw);
-    ctx.globalAlpha = s.z * tw * 0.75;
+    ctx.globalAlpha = s.z * tw * 0.75 * SCENE_DARK;
     ctx.fillStyle = '#cfd8ff';
     ctx.fillRect(s.x - par * s.z * 14, s.y, s.z * 2.2, s.z * 2.2);
   }

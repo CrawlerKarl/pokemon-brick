@@ -3,37 +3,107 @@
 //  REGION BACKGROUNDS (prerendered per gen)
 // ============================================================
 let bgSky = null, bgScenery = null, bgGen = -1;
+// how dark the current sky is (0 bright day … 1 true night) — the starfield
+// and other night-only dressing read this so stars never shine at noon
+let SCENE_DARK = 1;
 function sRand(seed) {
   return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 }
-function buildBackground(genIdx) {
-  if (bgGen === genIdx && bgSky) return;
-  bgGen = genIdx;
+// ---- THE SCENE DIRECTOR (WORLD_BOSS_FINALE_PLAN §4-5, sky slice). Night is
+// now a special event, not the default: every region tells a three-beat
+// environmental story — Arrival (broad, inviting, usually daylight),
+// Challenge (weather/light intensifies), Legendary (the boss transforms the
+// sky). Each entry: sky [zenith, mid, horizon], celestial body, darkness.
+const SCENE_SKIES = [
+  [ { sky: ['#9fc4e8', '#ffd0a0', '#ffe9c0'], cel: 'sunrise', dark: 0 },     // Kanto — Pallet Sunrise
+    { sky: ['#7fb2df', '#9fb4c4', '#c8ccc9'], cel: 'noon', dark: 0 },        // Route Stormfront
+    { sky: ['#1a2450', '#33306b', '#5a3f6e'], cel: 'moon', dark: 0.8 } ],    // Cerulean Psychic Break
+  [ { sky: ['#a8c8e8', '#e8c9a0', '#f4e0b8'], cel: 'sunrise', dark: 0 },     // Johto — Autumn Morning
+    { sky: ['#3d3358', '#7a4a63', '#c96f4a'], cel: 'sunset', dark: 0.25 },   // Lantern Dusk
+    { sky: ['#141b3d', '#243057', '#3c4a72'], cel: 'moon', dark: 0.9 } ],    // Sacred Tempest
+  [ { sky: ['#3fa9e8', '#7fc9ef', '#c9ecf7'], cel: 'noon', dark: 0 },        // Hoenn — Tropical Noon
+    { sky: ['#4a5f78', '#5d7186', '#8195a3'], cel: 'none', dark: 0.15 },     // Monsoon Basin
+    { sky: ['#7fb8e8', '#ffd9a0', '#f0f4f7'], cel: 'noon', dark: 0 } ],      // Sky Pillar (above the storm)
+  [ { sky: ['#bcd8ef', '#dce9f4', '#f0f6fa'], cel: 'noon', dark: 0 },        // Sinnoh — Cold Mountain Morning
+    { sky: ['#9fb2c4', '#c3cedb', '#e8edf2'], cel: 'none', dark: 0.05 },     // Coronet Whiteout
+    { sky: ['#1a1440', '#3d2f68', '#7a5a9e'], cel: 'moon', dark: 0.85 } ],   // Spear Pillar Time Fracture
+  [ { sky: ['#5fb0e8', '#90cbef', '#cfe9f7'], cel: 'noon', dark: 0 },        // Unova — Castelia Day
+    { sky: ['#4a3468', '#b85a7a', '#ff9d5c'], cel: 'sunset', dark: 0.2 },    // Neon Rush Hour
+    { sky: ['#05070f', '#0a0f1e', '#141a2e'], cel: 'none', dark: 1 } ],      // City Blackout
+  [ { sky: ['#c9d4f0', '#f4c9d4', '#ffe4d0'], cel: 'sunrise', dark: 0 },     // Kalos — Lumiose Rose Dawn
+    { sky: ['#2d3a6e', '#4a5a9e', '#8a7ab8'], cel: 'none', dark: 0.5 },      // Festival Blue Hour
+    { sky: ['#3d1020', '#571626', '#7a1e2e'], cel: 'eclipse', dark: 0.6 } ], // Black Sun
+  [ { sky: ['#2f9fe8', '#6fc4ef', '#b8e8f7'], cel: 'noon', dark: 0 },        // Alola — Island Day
+    { sky: ['#5a2d4a', '#c4523d', '#ff9d4a'], cel: 'sunset', dark: 0.15 },   // Fire Festival Sunset
+    { sky: ['#0d1333', '#1e2a57', '#3d4a7a'], cel: 'bigmoon', dark: 1 } ],   // Lunar Rite
+  [ { sky: ['#8fa8bc', '#b0c3d1', '#d5dfe6'], cel: 'none', dark: 0.05 },     // Galar — Overcast League Day
+    { sky: ['#2d3550', '#40507a', '#5a6f9e'], cel: 'none', dark: 0.35 },     // Floodlight Cup
+    { sky: ['#2e0d16', '#571626', '#8a2432'], cel: 'eclipse', dark: 0.7 } ], // Darkest Day
+  [ { sky: ['#7fb8e8', '#ffce8a', '#ffe9c0'], cel: 'sunrise', dark: 0 },     // Paldea — Mesagoza Golden Morning
+    { sky: ['#3f9fe8', '#8fc9ef', '#e8d9b0'], cel: 'noon', dark: 0 },        // Treasure-Road Noon
+    { sky: ['#4a3d8a', '#8a5ab8', '#ffb88a'], cel: 'sunrise', dark: 0.45 } ],// Temporal Garden dawn
+];
+function buildBackground(genIdx, stage = 2) {
+  const key = genIdx * 3 + stage;
+  if (bgGen === key && bgSky) return;
+  bgGen = key;
   const g = GENS[genIdx];
+  const scene = (SCENE_SKIES[genIdx] && SCENE_SKIES[genIdx][stage]) || { sky: g.sky, cel: 'moon', dark: 1 };
+  SCENE_DARK = scene.dark;
   bgSky = document.createElement('canvas'); bgSky.width = W; bgSky.height = H;
   const sc = bgSky.getContext('2d');
   const grad = sc.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, g.sky[0]); grad.addColorStop(0.55, g.sky[1]); grad.addColorStop(1, g.sky[2]);
+  grad.addColorStop(0, scene.sky[0]); grad.addColorStop(0.55, scene.sky[1]); grad.addColorStop(1, scene.sky[2]);
   sc.fillStyle = grad; sc.fillRect(0, 0, W, H);
   const rg = sc.createRadialGradient(W / 2, H * 0.95, 0, W / 2, H * 0.95, W * 0.6);
   rg.addColorStop(0, g.accent + '22'); rg.addColorStop(1, 'rgba(0,0,0,0)');
   sc.fillStyle = rg; sc.fillRect(0, 0, W, H);
-  // a moon, drifting position per region
-  const mx = W * (0.16 + ((genIdx * 0.23) % 0.68)), my = H * (0.1 + (genIdx % 3) * 0.05), mr = 26 + (genIdx % 3) * 9;
-  const mg = sc.createRadialGradient(mx, my, mr * 0.3, mx, my, mr * 2.6);
-  mg.addColorStop(0, 'rgba(232,234,246,0.16)'); mg.addColorStop(1, 'rgba(0,0,0,0)');
-  sc.fillStyle = mg; sc.fillRect(mx - mr * 3, my - mr * 3, mr * 6, mr * 6);
-  sc.fillStyle = 'rgba(225,228,245,0.34)';
-  sc.beginPath(); sc.arc(mx, my, mr, 0, Math.PI * 2); sc.fill();
-  sc.fillStyle = 'rgba(140,150,185,0.25)';
-  for (const [cx2, cy2, cr] of [[-0.3, -0.2, 0.22], [0.25, 0.15, 0.16], [-0.05, 0.35, 0.12]]) {
-    sc.beginPath(); sc.arc(mx + cx2 * mr, my + cy2 * mr, cr * mr, 0, Math.PI * 2); sc.fill();
+  // ---- the celestial body sells the time of day at a glance ----
+  const cx = W * (0.16 + ((genIdx * 0.23) % 0.68));
+  if (scene.cel === 'moon' || scene.cel === 'bigmoon') {
+    const my = H * (0.1 + (genIdx % 3) * 0.05), mr = (26 + (genIdx % 3) * 9) * (scene.cel === 'bigmoon' ? 2.4 : 1);
+    const mx2 = scene.cel === 'bigmoon' ? W * 0.5 : cx;
+    const mg = sc.createRadialGradient(mx2, my, mr * 0.3, mx2, my, mr * 2.6);
+    mg.addColorStop(0, 'rgba(232,234,246,0.16)'); mg.addColorStop(1, 'rgba(0,0,0,0)');
+    sc.fillStyle = mg; sc.fillRect(mx2 - mr * 3, my - mr * 3, mr * 6, mr * 6);
+    sc.fillStyle = scene.cel === 'bigmoon' ? 'rgba(235,238,250,0.5)' : 'rgba(225,228,245,0.34)';
+    sc.beginPath(); sc.arc(mx2, my, mr, 0, Math.PI * 2); sc.fill();
+    sc.fillStyle = 'rgba(140,150,185,0.25)';
+    for (const [cx2, cy2, cr] of [[-0.3, -0.2, 0.22], [0.25, 0.15, 0.16], [-0.05, 0.35, 0.12]]) {
+      sc.beginPath(); sc.arc(mx2 + cx2 * mr, my + cy2 * mr, cr * mr, 0, Math.PI * 2); sc.fill();
+    }
+  } else if (scene.cel === 'sunrise' || scene.cel === 'sunset' || scene.cel === 'noon') {
+    const low = scene.cel !== 'noon';
+    const sy = low ? H * 0.58 : H * 0.14, sr = low ? 34 : 22;
+    const warm = scene.cel === 'sunset' ? '#ffb36b' : '#fff3c4';
+    const sg = sc.createRadialGradient(cx, sy, 2, cx, sy, sr * 5);
+    sg.addColorStop(0, 'rgba(255,244,214,0.55)'); sg.addColorStop(1, 'rgba(255,244,214,0)');
+    sc.fillStyle = sg; sc.fillRect(cx - sr * 5, sy - sr * 5, sr * 10, sr * 10);
+    sc.fillStyle = warm;
+    sc.beginPath(); sc.arc(cx, sy, sr, 0, Math.PI * 2); sc.fill();
+  } else if (scene.cel === 'eclipse') {
+    const sy = H * 0.18, sr = 34;
+    const eg = sc.createRadialGradient(cx, sy, sr * 0.8, cx, sy, sr * 3);
+    eg.addColorStop(0, 'rgba(255,120,80,0.5)'); eg.addColorStop(1, 'rgba(255,120,80,0)');
+    sc.fillStyle = eg; sc.fillRect(cx - sr * 3, sy - sr * 3, sr * 6, sr * 6);
+    sc.fillStyle = 'rgba(10,6,10,0.96)';
+    sc.beginPath(); sc.arc(cx, sy, sr, 0, Math.PI * 2); sc.fill();
+    sc.strokeStyle = 'rgba(255,170,110,0.9)'; sc.lineWidth = 2.5;
+    sc.beginPath(); sc.arc(cx, sy, sr, 0, Math.PI * 2); sc.stroke();
   }
 
   bgScenery = document.createElement('canvas'); bgScenery.width = W; bgScenery.height = H;
   const c = bgScenery.getContext('2d');
   const rnd = sRand(genIdx * 1337 + 7);
   drawScene[g.scene](c, rnd, g);
+  // daylight scenes ground the silhouettes with atmospheric haze instead of
+  // letting night-tuned art float on a bright sky
+  if (scene.dark < 0.4) {
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = 'rgba(255,240,215,' + (0.16 * (1 - scene.dark)).toFixed(3) + ')';
+    c.fillRect(0, 0, W, H);
+    c.globalCompositeOperation = 'source-over';
+  }
 }
 function silhouetteBase(c, color, baseY) {
   c.fillStyle = color;
