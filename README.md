@@ -97,12 +97,17 @@ sometimes doesn't fire — trigger manually with
 | `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
 | `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ tiered boss phases), `bossAbility`, `loseLife` (knockout), rally/barrier, level-clear |
 | `render.js` | All drawing: bricks + free-flyers (gait animation), bosses (`drawBossMon`), paddle / junkie pilot rig, HUD, menus, Pokédex, draft screen; **FX sprite caches + `drawBloom`/`drawAtmosphere`** (see Graphics & performance) |
+| `dev.js` | **Dev tooling (local-only, inert in normal play):** deterministic URL/console launches (`?dev&level=&seed=&upg=…`, `window.DEV`), build grants, the balance report + F9 dashboard overlay (see Verifying) |
 | `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop; a bootstrap guard retries until the viewport + vignette exist) |
 
-`index.html` is the shell (canvas + the 10 script tags + local font). Also in
-the repo: `test.html` (headless invariant suite), `package.json`
-(`check`/`verify-assets`/`serve` scripts), `tools/` (`fetch-sprites.js`,
-`verify-assets.js`), `assets/fonts/` (vendored Orbitron).
+`index.html` is the shell (canvas + the 11 script tags + local font). Also in
+the repo: `test.html` (headless invariant suite), `gallery.html` (dev
+projectile-readability gallery — every shot class/type/boss silhouette over
+bright AND dark backdrops with honest hitR overlays, drawn by the game's own
+renderer), `package.json` (`check`/`verify-assets`/`serve` scripts), `tools/`
+(`fetch-sprites.js`, `verify-assets.js`), `assets/fonts/` (vendored Orbitron),
+`docs/` (`FULL_GAME_ROADMAP.md` + `IMPLEMENTATION_LOG.md` — the campaign
+roadmap and per-round log).
 
 ---
 
@@ -731,11 +736,32 @@ synthetic `TouchEvent`s test mobile paths.
 **Automated invariants:** open `http://localhost:8741/test.html` — a
 self-contained suite (startup, per-mode smoke, wall/flyer non-overlap,
 density budget, roster/sprite coverage, menu fit, storage-corruption
-recovery) that drives the sim headless and reports PASS/FAIL
-(`window.TEST_RESULTS` for automation). `npm run check` syntax-checks all
-modules; `npm run verify-assets` cross-checks rosters vs NAMES vs sprite
-files (tools/verify-assets.js). Run these after any invariant-adjacent
-change.
+recovery, the balance-instrumentation ledger, the boss phase harness, and
+seeded dev-launch reproducibility) that drives the sim headless and reports
+PASS/FAIL (`window.TEST_RESULTS` for automation). Keep the suite tab
+FOREGROUNDED — background-tab timer throttling makes it crawl.
+`npm run check` syntax-checks all modules; `npm run verify-assets`
+cross-checks rosters vs NAMES vs sprite files (tools/verify-assets.js). Run
+these after any invariant-adjacent change.
+
+**Balance instrumentation (Milestone 0, js/dev.js + the stats layer in
+state.js).** Every run keeps one compact record per wave attempt on
+`G.runStats.levels` (time, kills, damage in BY PROJECTILE FAMILY, normal vs
+charge damage out, charge uses + wasted charges, overheats + weapons-locked
+seconds, absorbs/deflects, Mega uses, draft picks, boss phase durations,
+knockouts). All LOCAL-ONLY — nothing is transmitted. Surfaces:
+- `window.DEV.report()` / `DEV.download()` — the full JSON balance report
+  (also says why the run ended); `DEV.help()` lists everything.
+- **F9** (or `DEV.panel()`) — live dashboard overlay; `?dev` adds a corner
+  badge that toggles it on touch.
+- **Deterministic launches:** `?dev&level=14&mode=junkie&diff=normal&seed=S`
+  (or `region=5&stage=3&round=2`, `upg=arsenal:3,aegis:2`, `starter=fire`,
+  `real=1` for a non-trial run) — same seed, same wave, every time. Console:
+  `DEV.launch({...})`, `DEV.boss(region, round)`, `DEV.grant('arsenal:3')`.
+- **`gallery.html`** — the projectile readability audit: all shot classes ×
+  type kinds × 43 boss silhouettes × 17 player bolt shapes over bright/dark
+  halves, with dashed-red honest collision cores. Check it after ANY
+  projectile art change.
 
 ---
 
@@ -748,8 +774,8 @@ here is started; the game is stable and shippable as-is.
 
 **Gameplay depth**
 - Build synergy tags on draft cards ("Ball / Blaster / Defense / Catch").
-- Local balance telemetry (time/wave, deaths, damage source, picks, abandon
-  point) — even a dev-only summary would make tuning far easier.
+- ~~Local balance telemetry~~ — SHIPPED (Milestone 0): per-level stats layer
+  + `DEV.report()` + F9 dashboard + seeded dev launches; see Verifying.
 
 **Visual / UX**
 - Colorblind-friendly type palette (flyers convey type by aura color alone;

@@ -47,6 +47,7 @@ function tickEffects(dt) {
   // blaster heat cools slowly on its own, faster once fully overheated
   if (G.overheat > 0) {
     G.overheat -= dt;
+    statsCoolTick(dt); // balance report: seconds of weapons-locked downtime
     if (G.overheat <= 0) { G.overheat = 0; G.heat = 0.3; }
   } else {
     // vents on a pause — but slower than sustained fire builds, so holding the
@@ -455,6 +456,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
     } else if (element === G.ballElement) G.resistStreak = 0;
   }
+  statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
   br.hp -= dmg;
   if (dmg < 90 && G.secretUpg.echo && !meta.secretEcho) {
     G.secretHit = (G.secretHit || 0) + 1;
@@ -498,6 +500,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   }
   const col = TYPE_COLORS[br.poke.t];
   if (br.isBoss && br.hp > 0) {
+    if (br.phaseClockT == null) br.phaseClockT = G.time; // phase timing starts on engagement
     SFX.bossHit();
     // meta.noMega: fusion/apex area damage can never rebuild the meter it
     // spent (Cataclysm's declared guard) or quietly farm the boss for Mega
@@ -509,6 +512,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     const fracLeft = Math.max(0, br.hp / br.maxHp);
     const newPhase = Math.min(phaseCount, 1 + Math.floor((1 - fracLeft) * phaseCount));
     if (newPhase > br.phase) {
+      statsBossPhaseMark(br, br.phase);
       br.phase = newPhase;
       // The hit that ended one phase cannot spill straight through the next.
       // This short gate protects boss choreography without creating a long
@@ -574,6 +578,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   }
   if (br.hp <= 0) {
     br.dead = true;
+    statsKill();
+    if (br.isBoss) statsBossPhaseMark(br, br.phase); // close the final phase clock
     if (G.runStats) {
       G.runStats.bricksBroken++;
       if (br.isBoss) G.runStats.bossesDefeated++;
@@ -733,7 +739,8 @@ function chargeSplash(x, y, element, dmg) {
     if (br.dead) continue;
     const bx = br.bx + G.fx, by = br.by + G.fy;
     if (Math.hypot(bx - x, by - y) < radius + br.w / 2) {
-      damageBrick(br, dmg * (br.isBoss ? 0.65 : 1), bx, by, element, br.isBoss ? { noMega: true } : {});
+      damageBrick(br, dmg * (br.isBoss ? 0.65 : 1), bx, by, element,
+        br.isBoss ? { noMega: true, source: 'splash' } : { source: 'splash' });
     }
   }
   // SINGULARITY LENS: the detonation leaves a typed implosion that keeps
@@ -1307,8 +1314,11 @@ function rollUpgradeChoices() {
   // mastery satellites fill EMPTY slots only — capped home wedges first, so
   // the late run always has a useful pick without burying authored content
   if (choices.length < 3) {
-    const sats = WEB_SATELLITES.map(sat => ({ sat, item: stackItem(sat.stackKey) }))
-      .sort((a, b) => (pathLvl(b.sat.path) >= 4 ? 1 : 0) - (pathLvl(a.sat.path) >= 4 ? 1 : 0) + gameRand() - 0.5);
+    // one seeded draw per satellite, THEN sort by the precomputed key —
+    // gameRand() inside a comparator consumes an engine-defined number of
+    // draws and desyncs seeded runs across browsers
+    const sats = WEB_SATELLITES.map(sat => ({ sat, item: stackItem(sat.stackKey), r: gameRand() }))
+      .sort((a, b) => ((pathLvl(b.sat.path) >= 4 ? 1 : 0) - (pathLvl(a.sat.path) >= 4 ? 1 : 0)) || (a.r - b.r));
     for (const { item } of sats) if (choices.length < 3) choices.push({ stack: item });
   }
   // pity + reroll memory: every eligible node not in this hand ages a draft
@@ -1330,6 +1340,7 @@ function rollUpgradeChoices() {
 function absorbHit(x, y, shotType = null, volleyId = null) {
   if (G.shieldCharges <= 0) return false;
   G.shieldCharges--;
+  statsAbsorb();
   G.invuln = 1.2;
   G.shieldFlash = 1; // render: the bubble flares where it ate the hit
   G.hurtHud = 2.2;   // flash the health readout around the player
@@ -1605,7 +1616,9 @@ function finalizeRun() {
   };
 }
 
-function loseLife(cause = 'MISSED BALL') {
+// shot: the enemy-shot object that landed (when one did) — carries the
+// kind/class/type/species family data the balance report attributes hits to
+function loseLife(cause = 'MISSED BALL', shot = null) {
   const dodge = starterMod('dodge', 0);
   if (dodge && gameRand() < dodge) {
     G.invuln = Math.max(G.invuln, 1.1);
@@ -1633,6 +1646,7 @@ function loseLife(cause = 'MISSED BALL') {
   }
   G.lastDamageCause = cause;
   if (G.runStats) G.runStats.damageTaken++;
+  statsDamageIn(cause, shot);
   haptic('damage');
   ringFx(G.paddle.x, shipY(), '#ff5252', 8, 90, 4, 0.5);
   G.lives--;
@@ -1650,6 +1664,7 @@ function loseLife(cause = 'MISSED BALL') {
     // superskill's recipe), refill lives, and retry this wave — the run only
     // truly ends once there's nothing left to burn.
     if (totalBuildLevels() > 0) {
+      statsKnockout(); // mark the failed attempt before the retry record opens
       const lost = [];
       for (let i = 0; i < 2 && totalBuildLevels() > 0; i++) {
         const leaves = webRegressibleLeaves();
@@ -1897,6 +1912,18 @@ function updateGauntletEntrance(dt) {
 }
 
 // ---- gauntlet round transitions — used by the controller AND trial jumps
+// Jump a freshly built legendary stage straight to a later gauntlet round:
+// 1 = the legendary, 2 = the mythical, 3 = the Kanto Mew VMAX secret.
+// Shared by the trial picker, the dev launcher, and the boss test harness.
+function jumpToGauntletRound(round) {
+  if (!(round > 0) || !G.gauntlet) return;
+  for (const b of G.bricks) if (b.subBoss) b.dead = true;
+  gauntletWake();
+  if (round >= 2) {
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    gauntletSummonMythic(round === 3);
+  }
+}
 function gauntletWake() {
   const gj = G.gauntlet;
   if (!gj) return;
@@ -2160,7 +2187,7 @@ function update(dt) {
   }
 
   tickEffects(dt);
-  if (G.state === 'play') G.playT += dt;
+  if (G.state === 'play') { G.playT += dt; statsPlayTick(dt); }
   // ---- shooter modes (BLASTER / SPACE JUNKIE): hold FIRE to build a heavy
   // shot, release to fire. While a hold is pending or charging, normal fire
   // pauses so no stray bolt leaks out before the charged shot.
@@ -3154,7 +3181,7 @@ function update(dt) {
           // with brief contact i-frames so a surviving block isn't melted
           // frame-by-frame as the ball ghosts through it
           if (br.flash <= 0.5) {
-            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 4.2 : 3), b.x, b.y, G.ballElement);
+            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 4.2 : 3), b.x, b.y, G.ballElement, { source: 'ball' });
             if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
             awardRally(b, b.x, b.y);
           }
@@ -3188,7 +3215,7 @@ function update(dt) {
             if (upgN('prismstorm') && ++G.prismN >= 12) { G.prismN = 0; G.prismReady = true; }
             if (upgN('warmachine')) G.railPressure = Math.min(1, G.railPressure + 0.03);
           }
-          damageBrick(br, dmg, b.x, b.y, G.ballElement);
+          damageBrick(br, dmg, b.x, b.y, G.ballElement, { source: 'ball' });
           if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
           awardRally(b, b.x, b.y);
         }
@@ -3330,7 +3357,8 @@ function update(dt) {
         if (L.lance && (br.armored || br.shellArmor)) dmg *= 2; // AEGIS LANCE breaks armor
         if (L.mega) dmg *= upgN('megaX') ? 1.4 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
-        damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
+        damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'),
+          { source: L.charged ? 'charge' : L.basic ? 'bolt' : 'other' });
         // MOMENTUM: in the shooter modes there are no paddle returns, so
         // blaster hits carry the whole tier — twice the classic trickle
         if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + (G.mode !== 'classic' ? 0.004 : 0.002));
@@ -3354,7 +3382,12 @@ function update(dt) {
         }
       }
     }
-    if (L.y < 40) L.dead = true;
+    if (L.y < 40) {
+      // a charged shot that leaves the top having damaged nothing and
+      // intercepted nothing was WASTED — the report tracks the ratio
+      if (L.charged && !(L.bhits > 0) && !(L.hits > 0)) statsChargeWasted();
+      L.dead = true;
+    }
   }
   G.lasers = G.lasers.filter(L => !L.dead);
 
@@ -3708,6 +3741,7 @@ function update(dt) {
       // blasts punch through your resist (that's what makes elites scary).
       if (eff === -1 && !s.heavy) {
         s.dead = true; G.invuln = 0.55;
+        statsDeflect();
         addFloater(G.paddle.x, py - 42, 'RESISTED', pc, 12);
         burst(s.x, py, pc, 10, 150, 0.4);
         ringFx(s.x, py, pc, 4, 26, 2, 0.3);
@@ -3736,7 +3770,7 @@ function update(dt) {
       // double-life spikes. Super-effective fire is louder, never two hits.
       addFloater(G.paddle.x, py - 50, weak ? 'WEAK!' : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
       burst(G.paddle.x, py, weak ? '#ffab40' : '#ff5252', weak ? 40 : 30, weak ? 380 : 320);
-      loseLife((s.type || 'ENEMY').toUpperCase() + (s.heavy ? ' HEAVY ATTACK' : ' ATTACK'));
+      loseLife((s.type || 'ENEMY').toUpperCase() + (s.heavy ? ' HEAVY ATTACK' : ' ATTACK'), s);
       return;
     }
     if (s.y > H + 80 || s.y < -120 || s.x < -120 || s.x > W + 120 || s.age > 9) s.dead = true;
@@ -3802,11 +3836,13 @@ function update(dt) {
     // final beat. Trials and dailies keep their existing flow.
     if (G.level === 27 && !G.trial && !G.daily) {
       G.score += Math.round((300 + 2 * 250) * (G.fx_score ? 2 : 1));
+      statsEndLevel();
       beginEnding();
       return;
     }
     const clearedStage = stageIdx(G.level);
     const secretVictory = !!(G.secret.vmax && clearedStage === 2);
+    statsEndLevel();
     G.level++;
     G.state = 'upgrade'; G.stateT = 0;
     G.clearedStage = clearedStage;

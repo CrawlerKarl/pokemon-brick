@@ -301,6 +301,81 @@ function setCombatNotice(text, color, duration = 1.15) {
 }
 function bossPhaseCount(br) { return Math.max(1, br?.phaseCount || 3); }
 function bossLastStand(br) { return (br?.phase || 1) >= bossPhaseCount(br); }
+// ============================================================
+//  BALANCE INSTRUMENTATION (Milestone 0) — one compact record per wave
+//  ATTEMPT, kept on G.runStats.levels and read by js/dev.js reports.
+//  LOCAL-ONLY: nothing is transmitted anywhere. Helpers are no-ops when a
+//  run has no stats object (menus, tests that poke systems directly), and
+//  each is a single guarded push/increment — nothing here allocates in a
+//  per-frame hot loop (statsPlayTick mutates one number).
+// ============================================================
+const SESSION_STATS = { restarts: 0, quits: 0 }; // survives resetRun
+function statsCur() { return G.runStats ? G.runStats.cur : null; }
+function statsBeginLevel(lv) {
+  if (!G.runStats || !G.runStats.levels) return; // tolerate legacy-shaped stats
+
+  const L = {
+    lv, region: regionIdx(lv) + 1, stage: stageIdx(lv) + 1,
+    t: 0, cleared: false, kills: 0, knockout: false,
+    dmgInBy: {}, hits: [], absorbs: 0, deflects: 0,
+    shotsN: 0, shotsC: 0, chargeHits: 0, chargeWasted: 0,
+    dmgN: 0, dmgC: 0, dmgBall: 0, dmgSplash: 0, dmgOther: 0,
+    overheats: 0, coolT: 0, megas: 0, rerolls: 0,
+    upgrades: [], bossPhases: {},
+  };
+  G.runStats.levels.push(L);
+  if (G.runStats.levels.length > 220) G.runStats.levels.shift(); // marathon cap
+  G.runStats.cur = L;
+}
+// the family key answers "WHAT is hitting the player" at tuning granularity:
+// e.g. "boss:prism/micro", "stinger/micro", "beam", "danger line"
+function statsShotFamily(s) {
+  if (!s) return null;
+  return (s.boss ? 'boss:' : '') + (s.kind || 'shot') + '/' + (s.classKey || 'standard');
+}
+function statsDamageIn(cause, s) {
+  const L = statsCur(); if (!L) return;
+  const fam = statsShotFamily(s) || String(cause || 'unknown').toLowerCase();
+  L.dmgInBy[fam] = (L.dmgInBy[fam] || 0) + 1;
+  if (L.hits.length < 40) L.hits.push({
+    t: +L.t.toFixed(1), cause, kind: s?.kind, cls: s?.classKey,
+    type: s?.type, species: s?.species, boss: !!s?.boss,
+  });
+}
+function statsAbsorb() { const L = statsCur(); if (L) L.absorbs++; }
+function statsDeflect() { const L = statsCur(); if (L) L.deflects++; }
+function statsShotFired(charged) { const L = statsCur(); if (L) { if (charged) L.shotsC++; else L.shotsN++; } }
+function statsChargeWasted() { const L = statsCur(); if (L) L.chargeWasted++; }
+function statsDmgOut(source, dmg) {
+  const L = statsCur(); if (!L) return;
+  if (source === 'bolt') L.dmgN += dmg;
+  else if (source === 'charge') { L.dmgC += dmg; L.chargeHits++; }
+  else if (source === 'ball') L.dmgBall += dmg;
+  else if (source === 'splash') L.dmgSplash += dmg;
+  else L.dmgOther += dmg;
+}
+function statsKill() { const L = statsCur(); if (L) L.kills++; }
+function statsOverheat() { const L = statsCur(); if (L) L.overheats++; }
+function statsCoolTick(dt) { const L = statsCur(); if (L) L.coolT += dt; }
+function statsMega() { const L = statsCur(); if (L) L.megas++; }
+function statsReroll() { const L = statsCur(); if (L) L.rerolls++; }
+function statsUpgradePick(key) { const L = statsCur(); if (L) L.upgrades.push(key); }
+function statsPlayTick(dt) { const L = statsCur(); if (L) L.t += dt; }
+function statsEndLevel() { const L = statsCur(); if (L) L.cleared = true; }
+function statsKnockout() {
+  if (!G.runStats) return;
+  G.runStats.knockouts = (G.runStats.knockouts || 0) + 1;
+  const L = statsCur(); if (L) L.knockout = true;
+}
+// boss phase durations: the clock starts on the first damaging hit of each
+// phase window (br.phaseClockT) — engagement time, not entrance ceremony
+function statsBossPhaseMark(br, endedPhase) {
+  const L = statsCur(); if (!L || br.phaseClockT == null) return;
+  const name = (br.poke && (br.poke.n || br.poke.id)) || 'BOSS';
+  const key = name + ' P' + endedPhase;
+  L.bossPhases[key] = +((L.bossPhases[key] || 0) + (G.time - br.phaseClockT)).toFixed(1);
+  br.phaseClockT = G.time;
+}
 let dexScroll = 0, dexDragY = null, dexDragStart = 0;
 // FLOOR = bottom of the playable area, above any phone home-indicator;
 // on touch screens the paddle rides higher so fingers don't cover it
@@ -808,6 +883,7 @@ function buildLevel(lvl) {
   G.deathsThisWave = 0;
   G.dangerWarned = false;
   G.heat = 0; G.overheat = 0;
+  statsBeginLevel(lvl); // one balance record per wave ATTEMPT (retries too)
   G.highGroundDone = false; G.waveFirstKill = false; G.elementOrbCD = 9;
   // motionTier drives the boss guard-ring shimmer (mt>=1, regions 3+).
   G.motionTier = Math.min(3, Math.floor(regionsIn / 2) + (stage === 1 ? 1 : 0));
@@ -1306,7 +1382,8 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
   G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
-  G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0 };
+  G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0,
+    knockouts: 0, levels: [], cur: null };
   G.runSummary = null; G.lastDamageCause = 'MISSED BALL'; G.shareToast = 0; G.uiTouchPulse = null;
   // trial runs are a sandbox: best score and Pokédex catches don't persist
   G.trial = trial;

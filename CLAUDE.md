@@ -9,10 +9,12 @@ invariants you must not regress.
 9 Pokémon regions (3 stages each: ARRIVAL → CHALLENGE → LEGENDARY). The brand
 is skin-agnostic: `GAME_TITLE` + `SKIN_EDITION` (config.js) split the engine
 name from the current theme ("POKÉMON EDITION"), so future modes add cards and
-future skins swap strings/art without touching mechanics. 10 JS modules in
+future skins swap strings/art without touching mechanics. 11 JS modules in
 `js/`, loaded in order (later reference earlier) via `<script>` tags in
-`index.html`. No build step / deps / framework. `G` (state.js) is the
-god-object holding all runtime state.
+`index.html` (dev.js is dev-only tooling, loaded second-to-last). No build
+step / deps / framework. `G` (state.js) is the god-object holding all
+runtime state. The campaign roadmap lives in `docs/FULL_GAME_ROADMAP.md`
+(+ `docs/IMPLEMENTATION_LOG.md`) — consult it before starting a round.
 
 **Three game modes** (`SETTINGS.mode` / `G.mode`, chosen on the title screen).
 UI labels are presentation-only (BREAKER / BLASTER / STARFIGHTER); the internal
@@ -66,8 +68,26 @@ real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
-- **Automated invariants:** open `/test.html` (drives the sim headless, 41
-  checks, sets `window.TEST_RESULTS`). Keep it green. Two overlap invariants:
+- **Dev launches are the fast path to any content** (js/dev.js):
+  `?dev&level=14&mode=junkie&diff=normal&seed=S` (or `region=&stage=&round=`,
+  `upg=arsenal:3,vshred`) opens a seeded trial run directly; console
+  `DEV.launch/boss/grant/report/download`, F9 = live balance dashboard.
+  Same seed → identical wave (all sim randomness routes through `gameRand()`;
+  keep it that way — NEVER call `gameRand()` inside a sort comparator, and
+  keep cosmetic effects on `Math.random()` so they don't desync seeds).
+- **Balance stats are part of the game contract now:** the `stats*` helpers
+  (state.js) record per-wave-attempt combat ledgers into `G.runStats.levels`
+  (damage in by projectile family via `loseLife(cause, shot)`, damage out by
+  `meta.source` on `damageBrick`, charge waste at the laser cull, overheat
+  downtime, boss phase durations via `br.phaseClockT`). When adding a new
+  damage path or weapon, wire it into the ledger (`meta.source`, and pass the
+  shot object to `loseLife`) — the test suite asserts the ledger works.
+- **`gallery.html`** renders every projectile through the real renderer over
+  bright/dark backdrops with honest hitR overlays — check it after any
+  projectile art change (readability is a design invariant).
+- **Automated invariants:** open `/test.html` (drives the sim headless, 48
+  checks, sets `window.TEST_RESULTS`; keep the tab FRONTED — background
+  timer throttling makes it crawl). Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
   sprites is not a blob, and chasing a literal 0 across random patterns is a

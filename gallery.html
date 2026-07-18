@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wavebreaker — projectile gallery</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e1c; color: #cfe8ff; font: 13px/1.5 Menlo, monospace; padding: 14px 16px 60px; }
+  h1 { font-size: 17px; margin: 0 0 4px; color: #fff; }
+  p  { margin: 2px 0 10px; color: #8fa8c8; max-width: 900px; }
+  b.k { color: #ffd54f; }
+  canvas { display: block; }
+  #game { position: absolute; left: -9999px; top: 0; } /* the game's own canvas, parked off-screen */
+  #safe-probe, #safe-probe-t, #safe-probe-l, #safe-probe-r { position: fixed; width: 0; height: 0; visibility: hidden; }
+</style>
+</head>
+<body>
+<h1>PROJECTILE GALLERY <span style="color:#5c7">— dev readability audit</span></h1>
+<p>Every projectile drawn by <b class="k">the game's own renderer</b> (drawProjectiles / drawTypedBolt)
+over a bright route sky and a dark night arena. Overlays:
+<b class="k" style="color:#ff5252">dashed red</b> = honest collision core (hitR) ·
+<b class="k" style="color:#9ad">dotted blue</b> = art radius (visualR).
+If a shape is hard to read here, it is unreadable in combat — fix the art, never the hitbox.</p>
+<div id="sections"></div>
+
+<canvas id="game"></canvas>
+<div id="safe-probe"></div><div id="safe-probe-t"></div><div id="safe-probe-l"></div><div id="safe-probe-r"></div>
+
+<script>
+'use strict';
+// same shims as test.html: capture errors, neuter the rAF game loop —
+// this page drives the renderer directly.
+window.__ERRORS = [];
+window.addEventListener('error', e => window.__ERRORS.push(e.message));
+window.__realRAF = window.requestAnimationFrame.bind(window);
+window.requestAnimationFrame = function () { return 0; };
+</script>
+<!-- same scripts, same order as index.html (main.js included but its loop is inert) -->
+<script src="js/setup.js"></script>
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/data.js"></script>
+<script src="js/scenery.js"></script>
+<script src="js/state.js"></script>
+<script src="js/input.js"></script>
+<script src="js/update.js"></script>
+<script src="js/render.js"></script>
+<script src="js/dev.js"></script>
+<script src="js/main.js"></script>
+
+<script>
+'use strict';
+(function () {
+  // the game canvas stays parked off-screen at a real size so render code that
+  // reads W/H behaves; each gallery strip is its OWN canvas we composite into.
+  const BRIGHT = ['#aee2ff', '#8fc9f0'];   // route-sky band
+  const DARK = ['#05060f', '#101a33'];     // night-arena band
+  const CELL = 92, LABEL = 34;
+  G.time = 1.234; // fixed clock: deterministic sprites, no animation needed
+
+  // every (id → type) the game can fire with, straight from the data tables
+  const bossTypes = {};
+  for (const g of GENS) {
+    bossTypes[g.boss.id] = g.boss.t;
+    for (const [id, t] of g.gauntlet.subs) bossTypes[id] = t;
+    const [mid, mt] = g.gauntlet.myth; bossTypes[mid] = mt;
+  }
+
+  function makeStrip(title, note, cols, rows, colHead) {
+    const holder = document.getElementById('sections');
+    const h = document.createElement('h1'); h.textContent = title; h.style.marginTop = '26px';
+    holder.appendChild(h);
+    if (note) { const p = document.createElement('p'); p.textContent = note; holder.appendChild(p); }
+    const c = document.createElement('canvas');
+    c.width = 150 + cols * CELL; c.height = 24 + rows * (CELL + LABEL);
+    holder.appendChild(c);
+    const g = c.getContext('2d');
+    g.font = 'bold 11px Menlo, monospace'; g.fillStyle = '#8fa8c8';
+    colHead.forEach((t, i) => g.fillText(t, 150 + i * CELL + 8, 15));
+    return { c, g };
+  }
+  // one split-background cell: top half bright sky, bottom half dark arena
+  function cellBg(g, x, y) {
+    let gr = g.createLinearGradient(x, y, x, y + CELL / 2);
+    gr.addColorStop(0, BRIGHT[0]); gr.addColorStop(1, BRIGHT[1]);
+    g.fillStyle = gr; g.fillRect(x, y, CELL - 4, CELL / 2);
+    gr = g.createLinearGradient(x, y + CELL / 2, x, y + CELL);
+    gr.addColorStop(0, DARK[1]); gr.addColorStop(1, DARK[0]);
+    g.fillStyle = gr; g.fillRect(x, y + CELL / 2, CELL - 4, CELL / 2);
+  }
+  function overlayRadii(g, x, y, visualR, hitR, drawScale) {
+    for (const cy of [y + CELL * 0.25, y + CELL * 0.75]) {
+      const cx = x + (CELL - 4) / 2;
+      g.beginPath(); g.arc(cx, cy, visualR * (drawScale || 1), 0, Math.PI * 2);
+      g.setLineDash([2, 3]); g.strokeStyle = 'rgba(120,170,255,0.55)'; g.lineWidth = 1; g.stroke();
+      g.beginPath(); g.arc(cx, cy, hitR, 0, Math.PI * 2);
+      g.setLineDash([4, 3]); g.strokeStyle = 'rgba(255,60,60,0.9)'; g.lineWidth = 1.4; g.stroke();
+      g.setLineDash([]);
+    }
+  }
+  // render a batch of synthetic enemy shots through the game's REAL renderer
+  // onto the game canvas, then blit the region into the strip canvas
+  function renderShots(shots, w, h) {
+    canvas.width = w; canvas.height = h; // raw pixels; gallery ignores DPR
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    G.lasers = []; G.missiles = []; G.enemyShots = shots; G.balls = [];
+    drawProjectiles();
+    G.enemyShots = [];
+    return canvas;
+  }
+  function shotFor(kind, type, clsKey, x, y, species) {
+    const cls = SHOT_CLASSES[clsKey];
+    return { x, y, vx: 0, vy: 90, kind, type, species, classKey: clsKey,
+      visualR: cls.visualR, hitR: cls.hitR, r: cls.visualR, tail: cls.tail,
+      heavy: !!cls.heavy, interceptHP: cls.interceptHP, interceptMax: cls.interceptHP,
+      boss: !!species, age: 0 };
+  }
+  const CLASS_COLS = ['micro', 'standard', 'heavy', 'massive'];
+
+  function shotSection(title, note, rows) { // rows: [{label, kind, type, species}]
+    const strip = makeStrip(title, note, CLASS_COLS.length, rows.length,
+      CLASS_COLS.map(k => k.toUpperCase()));
+    const g = strip.g;
+    rows.forEach((row, ri) => {
+      const y = 24 + ri * (CELL + LABEL);
+      g.fillStyle = '#cfe8ff'; g.font = 'bold 11px Menlo, monospace';
+      g.fillText(row.label, 4, y + CELL / 2);
+      g.fillStyle = '#7288a8'; g.font = '10px Menlo, monospace';
+      g.fillText(row.kind, 4, y + CELL / 2 + 13);
+      CLASS_COLS.forEach((clsKey, ci) => {
+        const x = 150 + ci * CELL;
+        cellBg(g, x, y);
+        const cls = SHOT_CLASSES[clsKey];
+        // draw the shot twice (bright half, dark half) via the real renderer
+        const w = CELL - 4, h = CELL;
+        const shots = [
+          shotFor(row.kind, row.type, clsKey, w / 2, CELL * 0.25, row.species),
+          shotFor(row.kind, row.type, clsKey, w / 2, CELL * 0.75, row.species),
+        ];
+        g.drawImage(renderShots(shots, w, h), x, y);
+        overlayRadii(g, x, y, cls.visualR, cls.hitR, ENEMY_SHOT_DRAW_SCALE[row.kind] || 1);
+      });
+      g.fillStyle = '#55708f'; g.font = '9px Menlo, monospace';
+      const cls = SHOT_CLASSES.standard;
+      g.fillText('hitR ' + CLASS_COLS.map(k => SHOT_CLASSES[k].hitR).join('/'), 4, y + CELL / 2 + 26);
+    });
+  }
+
+  // ---- section 1: the 18 rank-and-file TYPE shots
+  shotSection('TYPE SHOTS — rank-and-file fire',
+    'Ordinary enemies inherit these silhouettes from their type (TYPE_PROJECTILE_KIND). ' +
+    'Micro is the early-region workhorse — it must stay readable on BOTH halves of every cell.',
+    Object.keys(TYPE_PROJECTILE_KIND).map(t => ({
+      label: t.toUpperCase(), kind: TYPE_PROJECTILE_KIND[t], type: t,
+    })));
+
+  // ---- section 2: every boss-only species override
+  shotSection('BOSS SHOTS — all ' + Object.keys(BOSS_PROJECTILE_KIND).length + ' authored species silhouettes',
+    'Bosses fire micro phase-rings through massive siege shots. Each must be recognisable before the nameplate is read.',
+    Object.keys(BOSS_PROJECTILE_KIND).map(id => ({
+      label: (NAMES[id] || ('#' + id)).toUpperCase(),
+      kind: BOSS_PROJECTILE_KIND[id], type: bossTypes[id] || 'psychic', species: +id,
+    })));
+
+  // ---- section 3: player typed bolts (17 shapes × 3 partner tiers)
+  (function playerBolts() {
+    const shapes = [
+      ['flame', 'fire'], ['draco', 'dragon'], ['fist', 'fighting'], ['aqua', 'water'],
+      ['shard', 'ice'], ['gear', 'steel'], ['leaf', 'grass'], ['sting', 'bug'],
+      ['venom', 'poison'], ['quake', 'ground'], ['gale', 'flying'], ['pixel', 'normal'],
+      ['psy', 'psychic'], ['star', 'fairy'], ['wisp', 'ghost'], ['claw', 'dark'], ['volt', 'electric'],
+    ];
+    const strip = makeStrip('PLAYER BOLTS — 17 signature shapes × partner tiers I/II/III',
+      'drawTypedBolt: the shape follows the pilot species, the colour follows the live element. ' +
+      'Tiers II/III scale up and add a flourish — they must read as "stronger", never as enemy fire.',
+      3, shapes.length, ['TIER I', 'TIER II', 'TIER III']);
+    const g = strip.g;
+    shapes.forEach(([shape, type], ri) => {
+      const y = 24 + ri * (CELL + LABEL);
+      g.fillStyle = '#cfe8ff'; g.font = 'bold 11px Menlo, monospace';
+      g.fillText(type.toUpperCase(), 4, y + CELL / 2);
+      g.fillStyle = '#7288a8'; g.font = '10px Menlo, monospace';
+      g.fillText(shape, 4, y + CELL / 2 + 13);
+      for (let tier = 1; tier <= 3; tier++) {
+        const x = 150 + (tier - 1) * CELL;
+        cellBg(g, x, y);
+        const w = CELL - 4;
+        canvas.width = w; canvas.height = CELL;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, CELL);
+        drawTypedBolt({ x: w / 2, y: CELL * 0.22, element: type, tier, shape });
+        drawTypedBolt({ x: w / 2, y: CELL * 0.72, element: type, tier, shape });
+        g.drawImage(canvas, x, y);
+      }
+    });
+  })();
+
+  // ---- coverage check: any renderer kind not shown above gets a MISC row
+  const shown = new Set([
+    ...Object.values(TYPE_PROJECTILE_KIND), ...Object.values(BOSS_PROJECTILE_KIND)]);
+  const extras = ['pellet', 'cannon', 'plasma', 'eclipse', 'mirage'].filter(k => !shown.has(k));
+  if (extras.length) shotSection('MISC KINDS — renderer shapes outside the type/boss tables',
+    'Special-case silhouettes (secret fights, elite cannon fire…).',
+    extras.map(k => ({ label: k.toUpperCase(), kind: k, type: 'psychic' })));
+
+  const err = document.createElement('p');
+  err.style.marginTop = '18px';
+  err.textContent = window.__ERRORS.length ? ('ERRORS: ' + window.__ERRORS.join(' | ')) : 'Rendered clean — no errors.';
+  err.style.color = window.__ERRORS.length ? '#ff5252' : '#5c7';
+  document.getElementById('sections').appendChild(err);
+  window.GALLERY_DONE = true;
+})();
+</script>
+</body>
+</html>

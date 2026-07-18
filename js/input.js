@@ -409,6 +409,7 @@ function togglePause() {
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
   if (G.state !== 'play' && G.state !== 'serve' && !paused) return;
+  SESSION_STATS.quits++;
   if (!G.trial && !G.cheated && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
   paused = false;
   G.state = 'menu';
@@ -759,6 +760,7 @@ function pickUpgrade(i) {
   if (!c) return;
   draftSel = null;
   if (c.secret) {
+    statsUpgradePick('secret:' + (c.secret.key || c.secret.name)); // before buildLevel opens the next record
     applySecretUpgrade(c.secret);
     beginUpgradeInstallFx(c.secret.icon, c.secret.color, c.secret.name, 'secret', 3);
     G.secret.lastReward = c.secret;
@@ -783,6 +785,7 @@ function pickUpgrade(i) {
   if (c.web) {
     const kind = c.webKind || 'bridge';
     const big = kind === 'fusion' || kind === 'apex';
+    statsUpgradePick(c.web.key);
     G.upg[c.web.key] = 1;
     beginUpgradeInstallFx(c.web.icon, c.web.color, c.web.name, kind, 3, big);
     G.upgradeChoices = null;
@@ -803,6 +806,7 @@ function pickUpgrade(i) {
   }
   // late-run mastery STACK pick (literal held item in SPACE JUNKIE)
   if (c.stack) {
+    statsUpgradePick('stack:' + c.stack.key);
     G.stacks[c.stack.key] = (G.stacks[c.stack.key] || 0) + 1;
     beginUpgradeInstallFx(c.stack.icon, c.stack.color, c.stack.name, 'mastery', Math.min(3, G.stacks[c.stack.key] - 1));
     G.upgradeChoices = null;
@@ -817,6 +821,7 @@ function pickUpgrade(i) {
     return;
   }
   const junkieName = junkieTierName(c.pathKey, c.tierIdx);
+  statsUpgradePick(c.pathKey + ':' + (c.tierIdx + 1));
   const tier = advancePath(c.pathKey);
   beginUpgradeInstallFx(tier.icon, c.path.color, junkieName, c.pathKey, c.tierIdx);
   G.upgradeChoices = null;
@@ -861,6 +866,7 @@ function applyCheat(i) {
 
 function rerollDraft() {
   G.rerolled = true;
+  statsReroll();
   draftSel = null; // fresh hand, fresh inspection
   rollUpgradeChoices();
   if (upgradeTreeOpen) syncTreeSelectionToDraft();
@@ -878,6 +884,7 @@ function advanceCeremony() {
   else if (!c.evo) c.t = doneAt;
 }
 function retryFromSummary() {
+  SESSION_STATS.restarts++;
   if (G.daily) startDailyRun();
   else resetRun(G.runStartLevel || 1, !!G.trial);
 }
@@ -891,14 +898,7 @@ function startTrialSelection() {
   // Legendary-stage trials can skip directly to any finale tier. Kanto's
   // fourth STARFIGHTER tile forces the Rift encounter without changing the
   // player's persistent key or rewards.
-  if (trialSel.stage === 2 && trialSel.round > 0 && G.gauntlet) {
-    for (const b of G.bricks) if (b.subBoss) b.dead = true;
-    gauntletWake();
-    if (trialSel.round >= 2) {
-      for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
-      gauntletSummonMythic(trialSel.round === 3);
-    }
-  }
+  if (trialSel.stage === 2) jumpToGauntletRound(trialSel.round);
 }
 async function shareDailyResult() {
   const text = dailyShareText();
@@ -1135,6 +1135,7 @@ function addWeaponHeat(amount) {
   }
   if (G.heat >= 1 && G.overheat <= 0) {
     G.overheat = OVERHEAT_DUR;
+    statsOverheat();
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
     noiseBurst(0.3, 0.09);
   }
@@ -1180,6 +1181,7 @@ function fireAction(auto = false) {
   }
   G.blasterCD = cd;
   G.shotsFired++;
+  statsShotFired(false);
   G.muzzle = 0.12;
   // Heat is TIME-normalised: a faster partner fires more shots, but each shot
   // contributes proportionally less heat. On Adventure, cold uninterrupted
@@ -1243,6 +1245,7 @@ function fireAction(auto = false) {
 function fireCharge(c) {
   if (G.state !== 'play') return;
   G.chargedEver = true; // the charge tutor banner retires once you've done it
+  statsShotFired(true);
   // AEGIS LANCE: while shielded, a full charge SPENDS one real shield and the
   // bolt becomes the lance — unstoppable, armor-breaking (fusion)
   let lanceShot = false;
@@ -1315,6 +1318,7 @@ function primaryAction() {
 function tryMega() {
   if (G.state !== 'play' || G.megaT > 0 || G.mega < 1) return;
   G.megaT = megaDur(); G.mega = 0;
+  statsMega();
   // AURORA DRIVE: Mega opens with a typed nova against the nearest enemies
   if (upgN('aurora')) {
     const el = attackElement();

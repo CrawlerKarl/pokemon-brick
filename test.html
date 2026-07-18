@@ -68,6 +68,7 @@ window.requestAnimationFrame = function () { return 0; };
 <script src="js/input.js"></script>
 <script src="js/update.js"></script>
 <script src="js/render.js"></script>
+<script src="js/dev.js"></script>
 <script src="js/main.js"></script>
 
 <script>
@@ -1910,6 +1911,146 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.secretUpg.lens && G.secretUpg.echo,
       'Rift Lens or Echo Relay could not be equipped as secret-only upgrades');
     return 'fixed 3-choice bonus draft; Heart, Lens, and Relay effects equip; ordinary draft follows';
+  });
+
+  test('M0 balance instrumentation records the combat ledger', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(1, true, { seed: 'stats-ledger' });
+      paused = false; G.freeze = 0;
+      const rs = G.runStats;
+      assert(rs && rs.levels.length === 1 && rs.cur === rs.levels[0] && rs.cur.lv === 1,
+        'resetRun did not open a per-level stats record');
+      // shots: one normal, one charged
+      G.blasterCD = 0; G.overheat = 0; fireAction();
+      assert(rs.cur.shotsN === 1, 'normal shot was not counted');
+      fireCharge(1);
+      assert(rs.cur.shotsC === 1, 'charged shot was not counted');
+      // damage out, by source; kill counting
+      const br = G.bricks.find(b => !b.dead && !b.barrier);
+      damageBrick(br, 0.5, br.bx, br.by, null, { source: 'bolt' });
+      assert(rs.cur.dmgN > 0, 'bolt damage was not attributed');
+      damageBrick(br, 99, br.bx, br.by, null, { source: 'charge' });
+      assert(rs.cur.dmgC > 0 && rs.cur.chargeHits === 1 && rs.cur.kills === 1,
+        'charge damage / kill were not attributed');
+      // wasted charge: a charged bolt that exits the top having hit nothing
+      G.lasers = [{ charged: true, basic: true, x: -500, y: 45, r: 10, power: 2, pierce: 3 }];
+      update(1 / 60);
+      assert(rs.cur.chargeWasted === 1, 'wasted charged shot was not detected');
+      // overheat + cooling downtime
+      addWeaponHeat(2);
+      assert(rs.cur.overheats === 1 && G.overheat > 0, 'overheat was not counted');
+      update(1 / 60);
+      assert(rs.cur.coolT > 0, 'cooling downtime was not accumulated');
+      // damage in, attributed to the projectile family; absorb + deflect
+      G.lives = 3;
+      loseLife('BUG ATTACK', { kind: 'stinger', classKey: 'micro', type: 'bug', species: 10 });
+      assert(rs.cur.dmgInBy['stinger/micro'] === 1 && rs.cur.hits[0].species === 10,
+        'hit was not attributed to its projectile family');
+      G.shieldCharges = 1; absorbHit(W / 2, 300);
+      assert(rs.cur.absorbs === 1, 'shield absorb was not counted');
+      // Mega + reroll + draft pick land on the CLEARED level record
+      G.mega = 1; G.megaT = 0; G.state = 'play'; tryMega();
+      assert(rs.cur.megas === 1, 'mega activation was not counted');
+      G.state = 'upgrade';
+      G.upgradeChoices = [{ pathKey: 'arsenal', tierIdx: 0, path: PATHS.arsenal }];
+      const cleared = rs.cur;
+      pickUpgrade(0);
+      assert(cleared.upgrades.includes('arsenal:1'), 'draft pick was not recorded');
+      assert(rs.levels.length === 2 && rs.cur !== cleared,
+        'buildLevel after the pick did not open a fresh record');
+      // the dev report aggregates the same ledger
+      const rep = devRunReport();
+      assert(rep.totals.shotsNormal >= 1 && rep.totals.chargeWasted === 1 &&
+        rep.totals.hitsByFamily['stinger/micro'] === 1 && rep.upgrades.length === 1,
+        'devRunReport did not aggregate the ledger');
+      return 'shots, damage by source, waste, heat downtime, hit families, absorbs, picks — all recorded per level';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('boss phase harness: rounds, phase math, gates, timing', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(3, true, { seed: 'boss-harness' });
+      paused = false; G.freeze = 0;
+      assert(G.gauntlet && G.gauntlet.phase === 0, 'legendary stage did not open on gauntlet round 1');
+      assert(G.bricks.filter(b => b.subBoss && !b.dead).length === 3, 'sentinel trio missing');
+      assert(G.bricks.some(b => b.isBoss && b.dormant), 'legendary is not parked dormant');
+      // jump helper (shared with trial + dev launch): straight to round 2
+      jumpToGauntletRound(1);
+      assert(G.gauntlet.phase === 1 && G.bricks.every(b => !b.subBoss || b.dead),
+        'jumpToGauntletRound(1) did not wake the legendary');
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && !boss.dormant && bossPhaseCount(boss) === 2,
+        'STARFIGHTER legendary is not a two-phase fight');
+      // phase clock starts on engagement; transition records the duration
+      damageBrick(boss, 0.5, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      G.time += 3.2;
+      const shotsBefore = G.enemyShots.length;
+      damageBrick(boss, boss.maxHp * 0.55, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(boss.phase === 2, '50% damage did not trigger the phase-two transition');
+      const phaseKey = Object.keys(statsCur().bossPhases).find(k => k.includes('P1'));
+      assert(phaseKey && statsCur().bossPhases[phaseKey] >= 3, 'phase 1 duration was not timed');
+      // phase 2 of 2 IS the last stand → a 12-spoke shockwave of boss micro
+      // fire. The escape guarantee is a clear cone around the player's
+      // direction: any spoke inside it is skipped at spawn, so NO shot may
+      // fly within the cone (whether or not a skip happened to trigger).
+      const ringShots = G.enemyShots.slice(shotsBefore);
+      assert(ringShots.length > 0 && ringShots.length <= 12 &&
+        ringShots.every(s => s.boss && s.classKey === 'micro'),
+        'phase shockwave did not fire as a boss micro ring');
+      const aim = Math.atan2(shipY() - (boss.by + G.fy), G.paddle.x - (boss.bx + G.fx));
+      const cone = Math.PI / 12 * 0.72;
+      assert(ringShots.every(s => {
+        let d = Math.abs(Math.atan2(s.vy, s.vx) - aim) % (Math.PI * 2);
+        if (d > Math.PI) d = Math.PI * 2 - d;
+        return d >= cone * 0.98;
+      }), 'a shockwave shot flies inside the escape cone');
+      assert(boss.addsCalled, 'the two-phase legendary last stand did not summon its guard ring');
+      // the 0.78s damage gate protects the fresh phase
+      const hpGate = boss.hp;
+      damageBrick(boss, 5, boss.bx, boss.by, null);
+      assert(boss.hp === hpGate && boss.phaseT > 0, 'phase damage gate did not hold');
+      damageBrick(boss, 9999, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(boss.dead, 'legendary did not fall to lethal damage');
+      // round 3: the mythical is a three-phase fight with a last-stand summon
+      gauntletSummonMythic();
+      const myth = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(myth && G.gauntlet.phase === 2 && bossPhaseCount(myth) === 3,
+        'mythical round did not spawn a three-phase boss');
+      damageBrick(myth, myth.maxHp * 0.75, myth.bx, myth.by, null, { ignorePhaseGate: true });
+      assert(myth.phase === 3 && myth.addsCalled, 'last stand did not summon its guard ring');
+      return 'round jumps, 2/3-phase math, timed phases, shockwave + escape spoke, damage gate, last-stand adds';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('dev launch reproduces waves from a seed and grants builds', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      const sig = () => JSON.stringify(G.bricks.map(b =>
+        [b.poke.id, b.hp, Math.round(b.hx), Math.round(b.hy), b.flight ? b.flight.kind : '']));
+      devLaunch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'REPRO-1' });
+      assert(G.level === 5 && G.mode === 'junkie' && G.trial === true && G.runSeed === 'REPRO-1',
+        'devLaunch did not open the requested stage as a seeded trial');
+      const a = sig();
+      devLaunch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'REPRO-1' });
+      assert(sig() === a, 'the same seed did not rebuild an identical wave');
+      devLaunch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'REPRO-2' });
+      assert(sig() !== a, 'a different seed produced the identical wave');
+      // boss shortcut: straight into the mythical round of region 1
+      devLaunch({ region: 1, stage: 3, round: 2, mode: 'junkie', diff: 'normal', seed: 'BOSSJUMP' });
+      assert(G.level === 3 && G.gauntlet && G.gauntlet.phase === 2 &&
+        G.bricks.some(b => b.isBoss && !b.dead && bossPhaseCount(b) === 3),
+        'devLaunch round jump did not reach the mythical');
+      // explicit build grants, both via API and the upg= param
+      devLaunch({ level: 1, mode: 'junkie', diff: 'normal', seed: 'BUILD', upg: 'arsenal:2,aegis:1' });
+      assert(pathLvl('arsenal') === 2 && pathLvl('aegis') === 1, 'upg= grant did not apply path ranks');
+      devGrantBuild('impact:4,orb:2');
+      assert(pathLvl('impact') === 4 && G.stacks.orb === 2, 'devGrantBuild did not apply paths + stacks');
+      return 'same seed → identical wave; round jumps, path/stack grants, trial-by-default all work';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
   // ---- runner -------------------------------------------------------------
