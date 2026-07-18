@@ -1,5 +1,20 @@
 # STARFIGHTER Upgrade Web Redesign
 
+> **Implementation status (2026-07-17).** SHIPPED: the constellation choice
+> surface over the existing 24 save-compatible tiers (six spokes × four
+> rings, offers/owned/reachable/locked states, detail panel with PATH
+> PROGRESS strip, install FX, keyboard/touch/mouse, responsive at desktop /
+> 390×844 / 844×390, capstone chips tucked centre-side); the complete §9
+> tell layer — every tier has persistent rig hardware plus a proc tell
+> (OMNI LENS pierce, AMPLIFY multiplier, SUPER SHIELD regrow, ✕ intercept
+> cancellation, live SURGE ring, COOLANT teal heat band, HYPER cycler ring,
+> FORTUNE drop blessing, ATTUNED pickup notice) or a documented continuous-
+> passive rationale (bulwark/wide/blaze/megaX); build-biased offer scoring;
+> wing hardpoint dock. REMAINING (deliberately deferred): §4 hex-web
+> topology, §6 Form II bridge synergies, §7 superskills, §8 in-web mastery,
+> §10 full offer algorithm, route tracking, save-schema migration — see
+> `HEXWEB_SUPERSKILLS_HANDOFF.md` for the ready-to-run implementation brief.
+
 ## Executive recommendation
 
 Replace the current card-first, six-row linear skill tree with a **full-screen hex constellation that is both the map and the choice interface**. After every cleared stage, three reachable nodes on the constellation glow as the current offers. The player inspects and installs one directly on the map. The existing icon, upgrade name, description, tier comparison, and synergy copy move into a persistent detail panel; they are no longer separated from the tree.
