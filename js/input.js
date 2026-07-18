@@ -447,8 +447,11 @@ function queueSecretRewardNotice() {
     reward.desc, 3, 'SECRET UPGRADE · ONLY FOUND BEYOND THE KANTO RIFT');
   G.secret.lastReward = null;
 }
-function beginUpgradeInstallFx(icon, color, name, pathKey = null, tierIdx = 0) {
-  G.upgradeFx = { icon, color, name, pathKey, tierIdx, t: 2.4, max: 2.4 };
+function beginUpgradeInstallFx(icon, color, name, pathKey = null, tierIdx = 0, big = false) {
+  // `big` = a superskill acquisition — the same install language, held longer
+  // and drawn larger (drawUpgradeInstallFx reads the flag)
+  const dur = big ? 3.4 : 2.4;
+  G.upgradeFx = { icon, color, name, pathKey, tierIdx, t: dur, max: dur, big };
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
@@ -472,6 +475,27 @@ function pickUpgrade(i) {
       serve();
       queueSecretRewardNotice();
     }
+    return;
+  }
+  // WEB node pick: a Form II bridge synergy or a Final Form superskill.
+  // Effects all read upgN(key) at use time, so installing is just ownership.
+  if (c.web) {
+    const isSuper = c.webKind === 'super';
+    G.upg[c.web.key] = 1;
+    beginUpgradeInstallFx(c.web.icon, c.web.color, c.web.name, isSuper ? 'super' : 'bridge', 3, isSuper);
+    G.upgradeChoices = null;
+    upgradeTreeOpen = false;
+    SFX.power();
+    buildLevel(G.level);
+    serve();
+    if (G.justEvolved) { G.justEvolved = false; return; }
+    setAnnounce(c.web.icon, c.web.color,
+      isSuper ? '★ ' + c.web.name + ' ★' : c.web.name,
+      webNodeDesc(c.web), isSuper ? 3.4 : 2.6,
+      isSuper ? 'SUPERSKILL ONLINE — YOUR RIG HAS TRANSFORMED'
+        : 'BRIDGE SYNERGY ONLINE · ' + PATHS[c.web.paths[0]].name + ' × ' + PATHS[c.web.paths[1]].name);
+    queueSecretRewardNotice();
+    if (isSuper) SFX.mega();
     return;
   }
   // late-run mastery STACK pick (literal held item in SPACE JUNKIE)

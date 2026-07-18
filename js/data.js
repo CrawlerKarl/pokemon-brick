@@ -702,6 +702,164 @@ const SECRET_UPGRADES = [
   { key: 'echo', name: 'ECHO RELAY', icon: 'electric', color: '#d780ff',
     desc: 'EVERY 7TH DAMAGE HIT CHAINS TO TWO OTHER TARGETS' },
 ];
+// ============================================================
+//  THE UPGRADE WEB — bridges, superskills, mastery satellites
+//  The 24 authored tiers above stay the save-stable ANCHOR nodes; everything
+//  here is ADDITIVE (new G.upg keys only, never renamed). Bridges live between
+//  ADJACENT constellation wedges, superskills cap each spoke, and the three
+//  mastery stacks dock as satellites on their home wedge. Evolution ("Form")
+//  gates read the pilot's ACTUAL tier: G.starterLvl (NO PARTNER's training
+//  drone advances on the same act boundaries; Pikachu waits for Raichu).
+// ============================================================
+// Wedge display order for the constellation map. Chosen so that every bridge
+// connects two ADJACENT wedges (the bridge cycle arsenal–impact–prism–surge–
+// aegis–bond is a Hamiltonian cycle through the six paths). PATH_KEYS order
+// is untouched — this is presentation + adjacency data only.
+const WEB_SPOKE_ORDER = ['arsenal', 'impact', 'prism', 'surge', 'aegis', 'bond'];
+// FORM II bridge synergies: each connects the two wedges it sits between,
+// costs one stage-clear pick, requires at least one owned node on EACH side,
+// and is a real two-system mechanic — never a free shortcut. `desc` is the
+// classic (ball-first) adapter; `sdesc` is the shooter-mode behaviour.
+const WEB_BRIDGES = [
+  { key: 'calibrated', name: 'CALIBRATED BARRAGE', icon: 'target', color: '#ffcc80', paths: ['arsenal', 'impact'],
+    desc: 'EVERY 4TH PADDLE RETURN PRIMES THE BALL — NEXT HIT +60%',
+    sdesc: 'A SPENT CHARGED SHOT PRIMES YOUR NEXT 3 VOLLEYS — +60% DAMAGE',
+    visual: 'TWIN CALIBRATION RAILS BRIDGE THE MUZZLE HARDWARE',
+    proc: 'PRIMED SHOTS RUN WHITE-HOT · "CALIBRATED!" FLASH' },
+  { key: 'singularity', name: 'SINGULARITY LENS', icon: 'warp', color: '#b388ff', paths: ['impact', 'prism'],
+    desc: 'EVERY 5TH BRICK BROKEN IMPLODES — TYPED SPLASH DAMAGE AROUND IT',
+    sdesc: 'CHARGED DETONATIONS LEAVE A TYPED IMPLOSION THAT KEEPS BURNING',
+    visual: 'A DARK PRISM ORB SEATS INSIDE THE HEAVY BORE',
+    proc: 'AN IMPLODING ELEMENT-COLORED VORTEX RING AT THE BLAST' },
+  { key: 'aurora', name: 'AURORA DRIVE', icon: 'psychic', color: '#69f0ae', paths: ['prism', 'surge'],
+    desc: 'SUPER-EFFECTIVE HITS CHARGE +1.5% MEGA · MEGA OPENS WITH A TYPED NOVA',
+    visual: 'AN AURORA RIBBON ARCS BETWEEN LENS AND POWER RING',
+    proc: 'GOLD MOTES STREAM TO THE CORE ON EVERY SUPER-EFFECTIVE HIT' },
+  { key: 'reactive', name: 'REACTIVE OVERDRIVE', icon: 'electric', color: '#dce775', paths: ['surge', 'aegis'],
+    desc: 'A SHIELD ABSORB CHARGES +15% MEGA · ENTERING MEGA REGROWS 1 SHIELD',
+    visual: 'GREEN-GOLD FEED LINES LINK THE SHIELD ARC TO THE CORE',
+    proc: 'A GOLD SURGE RUNS THE FEED LINES WHEN EITHER SIDE TRIGGERS' },
+  { key: 'rescue', name: 'RESCUE CIRCUIT', icon: 'heart', color: '#ff8a80', paths: ['aegis', 'bond'],
+    desc: 'MAX POTIONS ALSO RESTORE +1 SHIELD · EVERY 8 PICKUPS GROW +1 SHIELD',
+    visual: 'A PINK-GREEN LIFELINE COILS AROUND THE SHIELD SOCKET',
+    proc: 'A SHIELD PIP LIGHTS WITH A HEARTBEAT RING ON RESCUE' },
+  { key: 'salvage', name: 'SALVAGE DRONES', icon: 'magnet', color: '#ea80fc', paths: ['bond', 'arsenal'],
+    desc: 'EVERY 3 PICKUPS: DRONES INTERCEPT THE NEXT ENEMY SHOT (STORES 2)',
+    sdesc: 'EVERY 3 PICKUPS OR CATCHES: DRONES FIRE A SEEKING COUNTER-VOLLEY',
+    visual: 'TWO SMALL SALVAGE DRONES DOCK OFF THE MAGNET VANES',
+    proc: 'DRONE BOLTS TRAIL CYAN-PINK · INTERCEPTS FLASH A HEX' },
+];
+// FINAL-FORM superskills: one per constellation, gated on that path's CAPSTONE
+// plus its bridge, unlocked only at Form III. Rule-changing, visibly
+// transformative, and removable cleanly (effects all read upgN at use time).
+const WEB_SUPERS = [
+  { key: 'meteor', name: 'METEOR MATRIX', icon: 'multi', color: '#40c4ff', path: 'arsenal', bridge: 'calibrated',
+    desc: 'MEGA EVOLUTION CALLS A METEOR RAIN — 6 TYPED STRIKES ACROSS THE WAVE',
+    sdesc: 'EVERY FULL CHARGED SHOT CALLS A METEOR RAIN — 6 TYPED STRIKES',
+    visual: 'DEPLOYED SIDE RACKS FLANK THE MUZZLES, MOTES ORBITING',
+    proc: 'ELEMENT-COLORED METEORS STREAK DOWN ONTO TARGETS' },
+  { key: 'horizon', name: 'EVENT HORIZON', icon: 'warp', color: '#ff7043', path: 'impact', bridge: 'singularity',
+    desc: 'YOUR IMPLOSIONS BECOME GRAVITY WELLS — WIDER, LONGER, AND THEY EAT ENEMY FIRE',
+    visual: 'THE SINGULARITY ORB GROWS A BRIGHT ACCRETION RIM',
+    proc: 'A DARK WELL LINGERS AT THE BLAST, ERASING ENEMY SHOTS' },
+  { key: 'ascension', name: 'ELEMENTAL ASCENSION', icon: 'star', color: '#18ffff', path: 'prism', bridge: 'aurora',
+    desc: 'DURING MEGA YOUR ELEMENT RETUNES EVERY 1.5s TO COUNTER THE WAVE',
+    visual: 'A RAINBOW LENS HALO CROWNS THE OMNI LENS',
+    proc: 'THE LIVE TYPE GLYPH SWAPS WITH A PRISM FLASH EACH RETUNE' },
+  { key: 'immortal', name: 'IMMORTAL REACTOR', icon: 'mega', color: '#ffea00', path: 'surge', bridge: 'reactive',
+    desc: 'ONCE PER WAVE: A LETHAL HIT DRAINS YOUR MEGA METER (25%+) INSTEAD OF A LIFE',
+    visual: 'A GOLD-GREEN ARMORED REACTOR SHELL RINGS THE CORE',
+    proc: 'THE SHELL CRACKS, FLARES, AND A COUNTERBURST CLEARS ENEMY FIRE' },
+  { key: 'guardian', name: 'GUARDIAN ANGEL', icon: 'fairy', color: '#b9f6ca', path: 'aegis', bridge: 'rescue',
+    desc: 'POTIONS, CATCHES + SHIELD SAVES CHARGE A GUARDIAN PULSE — AT FULL: CLEAR ENEMY FIRE, HEAL +1 HP',
+    visual: 'A COMPANION SIGIL WITH PINK-GREEN PULSE WINGS RIDES BEHIND YOU',
+    proc: 'THE SIGIL FLARES AND A WING-SHAPED PULSE SWEEPS THE SCREEN' },
+  { key: 'acewing', name: 'ACE INTERCEPTOR WING', icon: 'flying', color: '#ff80ab', path: 'bond', bridge: 'salvage',
+    desc: 'TWO PERMANENT WINGMATES INTERCEPT ENEMY FIRE ON PATROL',
+    sdesc: 'TWO PERMANENT WINGMATES FIRE SEEKING BOLTS + INTERCEPT ENEMY FIRE',
+    visual: 'TWO FORMATION LIGHTS HOLD STATION OFF YOUR WINGS',
+    proc: 'WINGMATE BOLTS TRAIL YOUR ELEMENT COLOR AT LOWER BRIGHTNESS' },
+];
+// Mastery satellites: the SAME forever-stacking items (G.stacks keys are
+// storage-stable) docked onto their home wedge as revisitable web nodes.
+// Offered once the wedge's path caps — never crowding out an authored node.
+const WEB_SATELLITES = [
+  { stackKey: 'orb', path: 'impact' },   // LIFE ORB — damage mastery
+  { stackKey: 'ice', path: 'arsenal' },  // NEVER-MELT ICE — cooling mastery
+  { stackKey: 'bell', path: 'bond' },    // SOOTHE BELL — fortune mastery
+];
+const WEB_BRIDGE_KEYS = WEB_BRIDGES.map(b => b.key);
+const WEB_SUPER_KEYS = WEB_SUPERS.map(s => s.key);
+function webBridge(key) { return WEB_BRIDGES.find(b => b.key === key) || null; }
+function webSuper(key) { return WEB_SUPERS.find(s => s.key === key) || null; }
+function superForPath(pk) { return WEB_SUPERS.find(s => s.path === pk) || null; }
+function satelliteForPath(pk) { return WEB_SATELLITES.find(s => s.path === pk) || null; }
+function stackItem(stackKey) { return STACK_ITEMS.find(s => s.key === stackKey) || null; }
+// the pilot's evolution Form (1–3) — the web's ring gate. NO PARTNER's drone
+// and every starter line advance G.starterLvl on the journey's act boundaries
+// (Pikachu at its real region-5 Raichu evolution), so this is always live.
+function webForm() { return Math.max(1, Math.min(3, G.starterLvl || 1)); }
+function webNodeDesc(node) { return (G.mode !== 'classic' && node.sdesc) ? node.sdesc : node.desc; }
+function bridgeEligible(b) {
+  return !upgN(b.key) && webForm() >= 2 && pathLvl(b.paths[0]) >= 1 && pathLvl(b.paths[1]) >= 1;
+}
+function superEligible(s) {
+  return !upgN(s.key) && webForm() >= 3 && upgN(s.bridge) && pathLvl(s.path) >= 4;
+}
+// exact lock reasons for the detail panel — the player should never need a
+// guide to see why a node is unavailable
+function webLockReason(node, kind) {
+  const reasons = [];
+  if (kind === 'bridge') {
+    if (webForm() < 2) reasons.push('REQUIRES FORM II (PARTNER EVOLUTION · REGION 4)');
+    for (const pk of node.paths) if (pathLvl(pk) < 1) reasons.push('REQUIRES ANY ' + PATHS[pk].name + ' NODE');
+  } else if (kind === 'super') {
+    if (webForm() < 3) reasons.push('REQUIRES FINAL FORM (REGION 7)');
+    if (!upgN(node.bridge)) reasons.push('REQUIRES BRIDGE: ' + webBridge(node.bridge).name);
+    if (pathLvl(node.path) < 4) reasons.push('REQUIRES THE ' + PATHS[node.path].name + ' CAPSTONE');
+  } else if (kind === 'sat') {
+    if (pathLvl(node.path) < 4) reasons.push('UNLOCKS WHEN ' + PATHS[node.path].name + ' IS MASTERED (4/4)');
+  }
+  return reasons;
+}
+function ownedWebNodeCount() {
+  return WEB_BRIDGE_KEYS.reduce((a, k) => a + (upgN(k) ? 1 : 0), 0)
+    + WEB_SUPER_KEYS.reduce((a, k) => a + (upgN(k) ? 1 : 0), 0);
+}
+// total burnable build (knockouts consume this; game over only when it's 0)
+function totalBuildLevels() { return totalPathLevels() + ownedWebNodeCount(); }
+// ---- knockout regression, graph-aware: only LEAVES may burn, so a removal
+// can never orphan an owned bridge (needs one node each side) or superskill
+// (needs its bridge + its path capstone). Supers burn first by construction:
+// they are always leaves; a bridge or capstone under an owned super is not.
+function webRegressibleLeaves() {
+  const leaves = [];
+  for (const k of WEB_SUPER_KEYS) if (upgN(k)) leaves.push({ kind: 'super', key: k });
+  for (const b of WEB_BRIDGES) {
+    if (!upgN(b.key)) continue;
+    const locked = WEB_SUPERS.some(s => upgN(s.key) && s.bridge === b.key);
+    if (!locked) leaves.push({ kind: 'bridge', key: b.key });
+  }
+  for (const pk of PATH_KEYS) {
+    const lvl = pathLvl(pk);
+    if (!lvl) continue;
+    const sup = superForPath(pk);
+    if (lvl >= 4 && sup && upgN(sup.key)) continue;          // capstone pinned by its super
+    if (lvl === 1 && WEB_BRIDGES.some(b => upgN(b.key) && b.paths.includes(pk))) continue; // last node pinned by a bridge
+    leaves.push({ kind: 'tier', pathKey: pk });
+  }
+  return leaves;
+}
+function regressWebLeaf(leaf) {
+  if (leaf.kind === 'tier') {
+    const t = regressPath(leaf.pathKey);
+    return t ? t.name : null;
+  }
+  delete G.upg[leaf.key];
+  const def = leaf.kind === 'super' ? webSuper(leaf.key) : webBridge(leaf.key);
+  return def ? def.name : null;
+}
+
 function upgN(k) { return G.upg[k] || 0; }
 function pathLvl(p) { return (G.path && G.path[p]) || 0; }
 function totalPathLevels() { return PATH_KEYS.reduce((a, k) => a + pathLvl(k), 0); }

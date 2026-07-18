@@ -77,11 +77,56 @@ function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 // ---- REGION CHECKPOINTS: 27 stages is a long arcade run, so the run is
 // saved at every region's doorstep. CONTINUE on the title screen resumes it;
 // knockouts and true game-over retain the latest checkpoint. Trial runs never save.
-let RUN_CKPT = (v => (v && typeof v === 'object' && (v.v === 1 || v.v === 2) && v.lvl >= 4) ? v : null)(loadStore('pkbrk-run', 'null'));
+// Checkpoint schema v3 (the upgrade-web era). v1 and v2 checkpoints remain
+// accepted forever: migrateCheckpoint normalizes ANY prior version into v3
+// and must NEVER throw — a malformed save that slipped past loadStore cannot
+// be allowed to brick startup. The 24 legacy tier keys re-derive from path
+// levels (the single source of truth); additive web keys (bridges /
+// superskills) carry over verbatim. GRANDFATHER RULE: a web node whose
+// prerequisites are missing is KEPT — never erase a player's run.
+function migrateCheckpoint(c) {
+  try {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+    if (!(c.v >= 1 && c.v <= 3) || !(+c.lvl >= 4)) return null;
+    const path = {};
+    for (const k of PATH_KEYS) {
+      const n = Math.max(0, Math.min(4, Math.floor(+((c.path || {})[k]) || 0)));
+      if (n) path[k] = n;
+    }
+    const upg = {};
+    for (const k of Object.keys(path)) for (let t = 0; t < path[k]; t++) upg[PATHS[k].tiers[t].key] = 1;
+    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) if (c.upg && typeof c.upg === 'object' && c.upg[k]) upg[k] = 1;
+    const stacks = { orb: 0, ice: 0, bell: 0 };
+    for (const k of Object.keys(stacks)) stacks[k] = Math.max(0, Math.floor(+((c.stacks && typeof c.stacks === 'object' ? c.stacks : {})[k]) || 0));
+    const lives = Math.max(1, Math.floor(+c.lives) || 1);
+    return {
+      v: 3, lvl: Math.floor(+c.lvl), score: Math.max(0, Math.floor(+c.score) || 0),
+      lives, livesMax: Math.max(lives, Math.floor(+c.livesMax) || 0),
+      mode: typeof c.mode === 'string' ? c.mode : 'junkie',
+      starter: typeof c.starter === 'string' ? c.starter : null,
+      starterLvl: Math.max(1, Math.min(3, Math.floor(+c.starterLvl) || 1)),
+      path, upg, stacks,
+      catchBonus: Math.max(0, +c.catchBonus || 0), caughtRun: Math.max(0, Math.floor(+c.caughtRun) || 0),
+      adapt: +c.adapt > 0 ? +c.adapt : 1, mega: Math.max(0, Math.min(1, +c.mega || 0)),
+      secret: {
+        shards: Array.from({ length: 3 }, (_, i) => !!(c.secret && c.secret.shards && c.secret.shards[i])),
+        offered: Array.from({ length: 3 }, (_, i) => !!(c.secret && c.secret.offered && c.secret.offered[i])),
+        completed: !!(c.secret && c.secret.completed),
+      },
+      secretUpg: {
+        heart: !!(c.secretUpg && c.secretUpg.heart),
+        lens: !!(c.secretUpg && c.secretUpg.lens),
+        echo: !!(c.secretUpg && c.secretUpg.echo),
+      },
+      preset: typeof c.preset === 'string' ? c.preset : SETTINGS.preset,
+    };
+  } catch (e) { return null; }
+}
+let RUN_CKPT = migrateCheckpoint(loadStore('pkbrk-run', 'null'));
 function saveCheckpoint() {
   if (G.daily) return;
   RUN_CKPT = {
-    v: 2, lvl: G.level, score: G.score, lives: G.lives, livesMax: G.livesMax, mode: G.mode,
+    v: 3, lvl: G.level, score: G.score, lives: G.lives, livesMax: G.livesMax, mode: G.mode,
     starter: G.starter, starterLvl: G.starterLvl,
     path: { ...G.path }, upg: { ...G.upg }, stacks: { ...G.stacks },
     catchBonus: G.catchBonus, caughtRun: G.caughtRun, adapt: G.adapt,
@@ -139,6 +184,7 @@ function resumeRun() {
   G.catchBonus = c.catchBonus || 0; G.caughtRun = c.caughtRun || 0;
   G.adapt = c.adapt || 1; G.mega = Math.max(G.mega, c.mega || 0);
   G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
+  G.lastDraftForm = webForm(); // resume never fakes a fresh-evolution draft
   if (c.secret) {
     G.secret.shards = Array.from({ length: 3 }, (_, i) => !!c.secret.shards?.[i]);
     G.secret.offered = Array.from({ length: 3 }, (_, i) => !!c.secret.offered?.[i] || !!c.secret.shards?.[i]);
@@ -214,6 +260,17 @@ const G = {
   // blaster heat: firing builds it, paddle returns vent it, 100% = overheat
   heat: 0, overheat: 0,
   upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
+  // ---- upgrade-web runtime (bridges / superskills / offer memory) ----
+  calibReturns: 0, calibShots: 0, // CALIBRATED BARRAGE: classic return count / primed volleys left
+  lensKills: 0, vortexes: [],     // SINGULARITY LENS + EVENT HORIZON gravity wells
+  salvageCount: 0, salvageStored: 0, // SALVAGE DRONES pickup meter + classic stored intercepts
+  reactiveCD: 0,                  // REACTIVE OVERDRIVE shield-regrow cooldown
+  reactorUsed: false,             // IMMORTAL REACTOR: once per wave
+  guardCharge: 0,                 // GUARDIAN ANGEL pulse meter (0..6 events)
+  wingCD: 0,                      // ACE INTERCEPTOR WING patrol cadence
+  ascendT: 0,                     // ELEMENTAL ASCENSION retune clock during Mega
+  webSeen: {}, lastOfferKeys: [], // offer pity counters + reroll anti-repeat
+  lastDraftForm: 1,               // detects a fresh evolution between drafts
   secret: freshSecretState(),
   secretUpg: { heart: false, lens: false, echo: false }, secretHit: 0,
   shieldRegenT: 10,
@@ -1117,6 +1174,8 @@ function buildLevel(lvl) {
     }
   }
   if (junkie && pilotInfo().id > 0) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
+  // per-wave web state: the reactor re-arms, lingering wells clear
+  G.reactorUsed = false; G.vortexes = [];
   // arriving at a region's doorstep checkpoints the run (post-draft state —
   // buildLevel runs after every pick, and after knockout tree burns too)
   if (!G.trial && stage === 0) saveCheckpoint();
@@ -1189,6 +1248,10 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.shieldFlash = 0; G.surgeFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
+  G.calibReturns = 0; G.calibShots = 0; G.lensKills = 0; G.vortexes = [];
+  G.salvageCount = 0; G.salvageStored = 0; G.reactiveCD = 0; G.reactorUsed = false;
+  G.guardCharge = 0; G.wingCD = 0; G.ascendT = 0; G.webSeen = {}; G.lastOfferKeys = [];
+  G.lastDraftForm = 1; // re-baselined below once starterLvl is known
   G.secret = freshSecretState();
   G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
@@ -1200,6 +1263,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   // into the journey this run begins
   G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
   G.starterLvl = starterStage(startLevel, G.starter);
+  G.lastDraftForm = webForm(); // a deep start is not a "fresh evolution"
   G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
   G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
@@ -1224,13 +1288,22 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   if (bonusHp) { G.lives += bonusHp; G.livesMax += bonusHp; }
   G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + starterMod('shieldStart', 0));
   G.mega = Math.max(G.mega, starterMod('megaStart', 0));
-  // starting deep? bank the skill-tree advances you'd have earned on the way
+  // starting deep? bank the skill-tree advances you'd have earned on the way.
+  // The grant walks the WEB legally (paths, then any eligible bridge or
+  // superskill at the right Form) so a trial jump lands on a connected build,
+  // never a sprinkle of orphaned nodes. Exactly one gameRand() per level keeps
+  // seeded runs deterministic.
   let granted = 0;
   if (startLevel > 1) {
     for (let i = 1; i < startLevel; i++) {
-      const eligible = PATH_KEYS.filter(k => pathLvl(k) < 4);
+      const eligible = [
+        ...PATH_KEYS.filter(k => pathLvl(k) < 4).map(k => ({ path: k })),
+        ...WEB_BRIDGES.filter(bridgeEligible).map(b => ({ web: b.key })),
+        ...WEB_SUPERS.filter(superEligible).map(s => ({ web: s.key })),
+      ];
       if (!eligible.length) break;
-      advancePath(eligible[Math.floor(gameRand() * eligible.length)]);
+      const pick = eligible[Math.floor(gameRand() * eligible.length)];
+      if (pick.path) advancePath(pick.path); else G.upg[pick.web] = 1;
       granted++;
     }
   }

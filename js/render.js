@@ -2941,14 +2941,23 @@ function drawUpgradeInstallFx() {
   ctx.save();
   ctx.globalAlpha = fade * (SETTINGS.reduceFlash ? 0.78 : 1);
   ctx.globalCompositeOperation = SETTINGS.reduceFlash ? 'source-over' : 'lighter';
+  // a superskill acquisition (fx.big) speaks the same install language,
+  // drawn half again as large with a counter-rotating outer frame
+  const scale = fx.big ? 1.55 : 1;
   const by = y - 92 * (1 - settle);
-  const br = 13 - settle * 3;
+  const br = (13 - settle * 3) * scale;
   blitBadge(fx.icon || 'star', x, by, br, col, 'lit');
   if (settle > 0.35) {
     const lock = Math.min(1, (settle - 0.35) / 0.65);
-    const rr = 18 + lock * 34 + p * 8;
+    const rr = (18 + lock * 34 + p * 8) * scale;
     ctx.strokeStyle = col; ctx.lineWidth = 3 - p * 1.2;
     constellationHex(x, y, rr, Math.PI / 6 + p * (SETTINGS.reduceFlash ? 0.08 : 0.32)); ctx.stroke();
+    if (fx.big) {
+      ctx.globalAlpha *= 0.7;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6;
+      constellationHex(x, y, rr + 9, -p * (SETTINGS.reduceFlash ? 0.06 : 0.5)); ctx.stroke();
+      ctx.globalAlpha /= 0.7;
+    }
     const segs = Math.max(1, Math.min(4, (fx.tierIdx | 0) + 1));
     for (let i = 0; i < segs; i++) {
       const a = -Math.PI / 2 + i * Math.PI * 2 / segs;
@@ -5387,6 +5396,11 @@ function drawOverlays() {
         ctx.font = '800 11px Orbitron, sans-serif';
         ctx.fillStyle = selC.stack.color;
         ctx.fillText('∞ ' + selC.stack.name + ' — STACKS FOREVER · ×' + owned0 + ' → ×' + (owned0 + 1), W / 2, headerY, W * 0.94);
+      } else if (selC.web) {
+        ctx.font = '800 11px Orbitron, sans-serif';
+        ctx.fillStyle = selC.web.color;
+        ctx.fillText((selC.webKind === 'super' ? '★ SUPERSKILL · ' : 'FORM II BRIDGE · ') + selC.synergy,
+          W / 2, headerY, W * 0.94);
       } else {
         const P = selC.path, lvlSel = pathLvl(selC.pathKey);
         const chainW = Math.min(W * 0.92, 640);
@@ -5454,6 +5468,72 @@ function drawOverlays() {
             ctx.fillText(sel ? (IS_TOUCH ? '✓ SELECTED — TAP CONFIRM' : '✓ SELECTED — ENTER CONFIRMS')
               : (IS_TOUCH ? 'TAP TO INSPECT' : 'INSPECT: CLICK OR PRESS ' + (i + 1)),
               r.x + r.w / 2, r.y + r.h - 16, r.w - 16);
+          }
+          ctx.restore();
+          continue;
+        }
+        // WEB card: a Form II bridge synergy (two-tone border) or a Final
+        // Form superskill (starred, brighter). Copy is mode-aware.
+        if (c.web) {
+          const wcol = c.web.color, isSuper = c.webKind === 'super';
+          const sel = draftSel === i;
+          const hovW = sel || inRect(mouseX, lastMouseY, r);
+          const head = isSuper ? '★ SUPERSKILL · FINAL FORM' : 'BRIDGE SYNERGY · FORM II';
+          ctx.save();
+          ctx.globalAlpha = a * (draftSel != null && !sel ? 0.55 : 1);
+          if (hovW || isSuper) { ctx.shadowColor = sel ? '#ffffff' : wcol; ctx.shadowBlur = sel ? 28 : 24; }
+          roundRect(r.x, r.y, r.w, r.h, 14);
+          ctx.fillStyle = hovW ? 'rgba(24,20,52,0.97)' : 'rgba(12,10,32,0.94)'; ctx.fill();
+          ctx.lineWidth = sel ? 3 : hovW || isSuper ? 2.5 : 1.7;
+          ctx.strokeStyle = sel ? '#ffffff'
+            : isSuper ? wcol : PATHS[c.web.paths[0]].color;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          if (!isSuper && !sel) { // two-tone: the second wedge's color dashes over
+            ctx.setLineDash([9, 9]);
+            ctx.strokeStyle = PATHS[c.web.paths[1]].color;
+            roundRect(r.x, r.y, r.w, r.h, 14); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          drawDraftCardEnergy(r, wcol, hovW || isSuper, sel, i);
+          const desc = webNodeDesc(c.web);
+          if (L.stacked) {
+            drawDraftBadge(c.web.icon, r.x + 35, r.y + r.h / 2, 18, wcol, true, i);
+            ctx.textAlign = 'left';
+            ctx.font = '900 9px Orbitron, sans-serif'; ctx.fillStyle = wcol;
+            ctx.fillText(head, r.x + 66, r.y + 15, r.w - 76);
+            ctx.font = '900 14px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
+            ctx.fillText(c.web.name, r.x + 66, r.y + 34, r.w - 76);
+            ctx.font = bodyFont(10, 600); ctx.fillStyle = '#e0e7f0';
+            wrapText(desc, r.w - 84).slice(0, 3).forEach((l, li) => ctx.fillText(l, r.x + 66, r.y + 52 + li * 12, r.w - 78));
+          } else if (L.short) {
+            ctx.textAlign = 'center';
+            ctx.font = '900 8px Orbitron, sans-serif'; ctx.fillStyle = wcol;
+            ctx.fillText(head, r.x + r.w / 2, r.y + 12, r.w - 10);
+            drawDraftBadge(c.web.icon, r.x + r.w / 2, r.y + 39, 14, wcol, true, i);
+            ctx.font = '900 11px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
+            ctx.fillText(c.web.name, r.x + r.w / 2, r.y + 64, r.w - 10);
+            ctx.font = bodyFont(8, 600); ctx.fillStyle = '#dfe6ee';
+            wrapText(desc, r.w - 14).slice(0, 2).forEach((l, li) => ctx.fillText(l, r.x + r.w / 2, r.y + 82 + li * 11, r.w - 12));
+            ctx.font = '700 7.5px Orbitron, sans-serif'; ctx.fillStyle = sel ? '#a5d6a7' : '#546e7a';
+            ctx.fillText(sel ? '✓ SELECTED' : (IS_TOUCH ? 'TAP' : 'PRESS ' + (i + 1)), r.x + r.w / 2, r.y + r.h - 8);
+          } else {
+            ctx.textAlign = 'center';
+            ctx.font = '900 9.5px Orbitron, sans-serif'; ctx.fillStyle = wcol;
+            ctx.fillText(head, r.x + r.w / 2, r.y + 20, r.w - 16);
+            ctx.font = '700 9px Orbitron, sans-serif'; ctx.fillStyle = '#90a4ae';
+            ctx.fillText((c.tags || []).join(' × '), r.x + r.w / 2, r.y + 38, r.w - 16);
+            drawDraftBadge(c.web.icon, r.x + r.w / 2, r.y + 72, 22, wcol, true, i);
+            ctx.font = `900 ${c.web.name.length > 16 ? 13 : 15}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+            ctx.fillText(c.web.name, r.x + r.w / 2, r.y + 112, r.w - 18);
+            ctx.font = bodyFont(10.5, 600); ctx.fillStyle = '#e8eef6';
+            wrapText(desc, r.w - 28).slice(0, 4).forEach((l, li) =>
+              ctx.fillText(l, r.x + r.w / 2, r.y + 136 + li * 15, r.w - 20));
+            ctx.font = '700 9px Orbitron, sans-serif'; ctx.fillStyle = wcol;
+            ctx.fillText(c.comparison || '', r.x + r.w / 2, r.y + r.h - 38, r.w - 16);
+            ctx.font = '700 10px Orbitron, sans-serif'; ctx.fillStyle = sel ? '#a5d6a7' : '#546e7a';
+            ctx.fillText(sel ? (IS_TOUCH ? '✓ SELECTED — TAP CONFIRM' : '✓ SELECTED — ENTER CONFIRMS')
+              : (IS_TOUCH ? 'TAP TO INSPECT' : 'INSPECT: CLICK OR PRESS ' + (i + 1)), r.x + r.w / 2, r.y + r.h - 16, r.w - 14);
           }
           ctx.restore();
           continue;

@@ -327,6 +327,253 @@ window.requestAnimationFrame = function () { return 0; };
     return '6×4 tree; every tier has a visual tell; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−20% cooldown';
   });
 
+  // 2w) THE UPGRADE WEB — graph integrity: adjacency, unique keys, complete
+  // copy/visual contracts, and the Form II / Final Form eligibility gates.
+  test('upgrade web: graph integrity + eligibility gates', async () => {
+    assert(WEB_SPOKE_ORDER.length === 6 && PATH_KEYS.every(k => WEB_SPOKE_ORDER.includes(k)),
+      'WEB_SPOKE_ORDER must be a permutation of PATH_KEYS');
+    assert(WEB_BRIDGES.length === 6 && WEB_SUPERS.length === 6 && WEB_SATELLITES.length === 3,
+      'expected 6 bridges, 6 superskills, 3 satellites');
+    const spokeIdx = k => WEB_SPOKE_ORDER.indexOf(k);
+    for (const b of WEB_BRIDGES) {
+      const d = Math.abs(spokeIdx(b.paths[0]) - spokeIdx(b.paths[1]));
+      assert(d === 1 || d === 5, 'bridge ' + b.key + ' does not connect adjacent wedges');
+      assert(b.name && b.icon && b.desc && b.visual && b.proc,
+        'bridge ' + b.key + ' is missing copy/visual contract fields');
+    }
+    for (const pk of PATH_KEYS) {
+      assert(WEB_BRIDGES.filter(b => b.paths.includes(pk)).length === 2,
+        pk + ' must touch exactly 2 bridges');
+    }
+    const superPaths = new Set(WEB_SUPERS.map(s => s.path));
+    assert(superPaths.size === 6 && PATH_KEYS.every(k => superPaths.has(k)),
+      'each path needs exactly one superskill');
+    for (const s of WEB_SUPERS) {
+      const br = webBridge(s.bridge);
+      assert(br && br.paths.includes(s.path), 'super ' + s.key + ' must ride a bridge touching its path');
+      assert(s.name && s.icon && s.desc && s.visual && s.proc,
+        'super ' + s.key + ' is missing copy/visual contract fields');
+    }
+    for (const sat of WEB_SATELLITES) {
+      assert(stackItem(sat.stackKey) && PATHS[sat.path], 'satellite ' + sat.stackKey + ' has bad references');
+    }
+    const allKeys = [
+      ...PATH_KEYS.flatMap(k => PATHS[k].tiers.map(t => t.key)),
+      ...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS,
+      ...STACK_ITEMS.map(s => s.key), ...SECRET_UPGRADES.map(s => s.key),
+    ];
+    assert(new Set(allKeys).size === allKeys.length, 'duplicate upgrade keys across the web');
+    // eligibility gates walk: Form I → no bridges; Form II + a node each side
+    // → bridge; Form III + capstone + bridge → super. Every super reachable.
+    SETTINGS.mode = 'blaster';
+    resetRun(1, true);
+    assert(WEB_BRIDGES.every(b => !bridgeEligible(b)), 'a bridge was eligible at Form I with no nodes');
+    for (const s of WEB_SUPERS) {
+      G.path = {}; G.upg = {}; G.starterLvl = 1;
+      const br = webBridge(s.bridge);
+      G.starterLvl = 2;
+      assert(!bridgeEligible(br), s.bridge + ' eligible with empty paths');
+      advancePath(br.paths[0]);
+      assert(!bridgeEligible(br), s.bridge + ' eligible with one side empty');
+      advancePath(br.paths[1]);
+      assert(bridgeEligible(br), s.bridge + ' not eligible with Form II + a node each side');
+      G.upg[br.key] = 1;
+      while (pathLvl(s.path) < 4) advancePath(s.path);
+      assert(!superEligible(s), s.key + ' eligible before Final Form');
+      G.starterLvl = 3;
+      assert(superEligible(s), s.key + ' not eligible at Final Form + capstone + bridge');
+      assert(webLockReason(s, 'super').length === 0 ||
+        !superEligible(s), s.key + ' lock reasons disagree with eligibility');
+    }
+    G.starterLvl = 1; G.path = {}; G.upg = {};
+    const reasons = webLockReason(WEB_SUPERS[0], 'super');
+    assert(reasons.length === 3, 'a fully locked super should list 3 unmet requirements, got ' + reasons.length);
+    return '6 bridges adjacent · 6 supers (1/path) reachable · unique keys · gates + lock reasons correct';
+  });
+
+  // 2w-i) OFFER ALGORITHM invariants: legal hands under fuzz, superskill
+  // priority, post-evolution guarantee, reroll anti-repeat, satellites last.
+  test('upgrade web: offer algorithm invariants', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'junkie';
+    resetRun(1, true);
+    const freshWeb = form => {
+      G.path = {}; G.upg = {}; G.webSeen = {}; G.lastOfferKeys = []; G.rerolled = false;
+      G.starterLvl = form; G.lastDraftForm = form;
+    };
+    // fuzz 60 random builds — every dealt hand must be legal
+    for (let iter = 0; iter < 60; iter++) {
+      freshWeb(1 + Math.floor(Math.random() * 3));
+      const n = Math.floor(Math.random() * 22);
+      for (let i = 0; i < n; i++) {
+        const opts = [
+          ...PATH_KEYS.filter(k => pathLvl(k) < 4).map(k => () => advancePath(k)),
+          ...WEB_BRIDGES.filter(bridgeEligible).map(b => () => { G.upg[b.key] = 1; }),
+          ...WEB_SUPERS.filter(superEligible).map(s => () => { G.upg[s.key] = 1; }),
+        ];
+        if (!opts.length) break;
+        opts[Math.floor(Math.random() * opts.length)]();
+      }
+      G.lives = 1 + Math.floor(Math.random() * 4); G.livesMax = Math.max(G.lives, 4);
+      rollUpgradeChoices();
+      const cs = G.upgradeChoices || [];
+      assert(cs.length === 3, 'iter ' + iter + ': hand size ' + cs.length);
+      const authoredEligible = PATH_KEYS.filter(k => pathLvl(k) < 4).length +
+        WEB_BRIDGES.filter(bridgeEligible).length + WEB_SUPERS.filter(superEligible).length;
+      for (const c of cs) {
+        if (c.pathKey) {
+          assert(pathLvl(c.pathKey) < 4 && c.tierIdx === pathLvl(c.pathKey),
+            'iter ' + iter + ': illegal continuation ' + c.pathKey + '@' + c.tierIdx);
+        } else if (c.web) {
+          assert(c.webKind === 'super' ? superEligible(c.web) : bridgeEligible(c.web),
+            'iter ' + iter + ': ineligible web node ' + c.web.key + ' offered');
+        } else assert(c.stack, 'iter ' + iter + ': unknown choice shape');
+      }
+      const pks = cs.filter(c => c.pathKey).map(c => c.pathKey);
+      assert(new Set(pks).size === pks.length, 'iter ' + iter + ': duplicate path in hand');
+      const nStacks = cs.filter(c => c.stack).length;
+      assert(3 - nStacks === Math.min(3, authoredEligible),
+        'iter ' + iter + ': a satellite crowded out an authored node (' + nStacks + ' stacks, ' + authoredEligible + ' eligible)');
+    }
+    // superskill priority: an eligible super always takes the Explore slot
+    freshWeb(3);
+    for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
+    G.upg.calibrated = 1;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.some(c => c.web && c.web.key === 'meteor'),
+      'an eligible superskill was not offered');
+    // post-evolution guarantee: reaching Form II surfaces a newly unlocked bridge
+    freshWeb(1);
+    advancePath('arsenal'); advancePath('impact');
+    G.starterLvl = 2; // evolution happened since the last draft
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.some(c => c.web && c.webKind === 'bridge'),
+      'the first post-evolution draft did not surface a bridge');
+    // reroll anti-repeat: a fresh-run reroll re-deals at most the one node the
+    // offense/non-offense guard can force back
+    freshWeb(1);
+    rollUpgradeChoices();
+    const first = (G.upgradeChoices || []).map(c => c.pathKey).filter(Boolean);
+    G.rerolled = true;
+    rollUpgradeChoices();
+    const second = (G.upgradeChoices || []).map(c => c.pathKey).filter(Boolean);
+    const overlap = first.filter(k => second.includes(k));
+    assert(overlap.length <= 1, 'reroll re-dealt ' + overlap.length + ' of the rejected hand (' + overlap.join(',') + ')');
+    // low health forces a legal rescue option
+    freshWeb(1);
+    G.lives = 1; G.livesMax = 5;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.some(c => c.path && ['defense', 'utility'].includes(c.path.family)),
+      'low health did not force a defense/utility offer');
+    // exhausted web: hand becomes exactly the three mastery satellites
+    freshWeb(3);
+    for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
+    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) G.upg[k] = 1;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.length === 3 && G.upgradeChoices.every(c => c.stack),
+      'a completed web should offer the three satellites');
+    assert(ERR.length === e0, 'errors during offer tests: ' + ERR.slice(e0).join(' | '));
+    return '60 fuzzed hands legal · super priority · evolution guarantee · reroll fresh · rescue forced · satellites last';
+  });
+
+  // 2w-ii) knockout burns LEAVES only — a removal can never orphan an owned
+  // bridge (needs a node each side) or a superskill (bridge + capstone).
+  test('upgrade web: knockout regression burns leaves only', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'blaster';
+    resetRun(1, true);
+    G.starterLvl = 3;
+    for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
+    advancePath('prism'); advancePath('aegis'); advancePath('surge'); advancePath('bond');
+    G.upg.calibrated = 1; G.upg.singularity = 1; G.upg.meteor = 1;
+    const legal = () => {
+      for (const b of WEB_BRIDGES) {
+        if (upgN(b.key) && b.paths.some(pk => pathLvl(pk) < 1)) return b.key + ' orphaned';
+      }
+      for (const s of WEB_SUPERS) {
+        if (upgN(s.key) && (!upgN(s.bridge) || pathLvl(s.path) < 4)) return s.key + ' orphaned';
+      }
+      return null;
+    };
+    // the super is the only leaf above its own recipe: hyper (arsenal cap)
+    // and calibrated must be pinned while meteor is owned
+    const leaves0 = webRegressibleLeaves();
+    assert(leaves0.some(l => l.kind === 'super' && l.key === 'meteor'), 'owned super is not a leaf');
+    assert(!leaves0.some(l => l.kind === 'bridge' && l.key === 'calibrated'),
+      'a bridge under an owned super was offered as a leaf');
+    assert(!leaves0.some(l => l.kind === 'tier' && l.pathKey === 'arsenal'),
+      'a capstone pinned by an owned super was offered as a leaf');
+    let guard = 0;
+    while (totalBuildLevels() > 0 && guard++ < 40) {
+      G.lives = 1; G.state = 'play';
+      loseLife('WEB REGRESSION TEST');
+      const broken = legal();
+      assert(!broken, 'knockout left an illegal build: ' + broken);
+      if (G.state === 'gameover') break;
+    }
+    assert(totalBuildLevels() === 0 || G.state === 'gameover',
+      'the web never burned down (left ' + totalBuildLevels() + ')');
+    G.lives = 1; G.state = 'play';
+    if (G.state !== 'gameover') loseLife('WEB REGRESSION TEST');
+    assert(G.state === 'gameover', 'empty web knockout should be a true game over');
+    assert(ERR.length === e0, 'errors during web regression: ' + ERR.slice(e0).join(' | '));
+    return 'rich build burned to 0 across ' + guard + ' knockouts — every intermediate state legal';
+  });
+
+  // 2w-iii) checkpoint migration: v1/v2 accepted, normalized v3 out, lossless
+  // tier mapping, grandfathered web keys, and hostile shapes never throw.
+  test('checkpoint migration: v1/v2 → v3 round-trip', async () => {
+    const v2 = {
+      v: 2, lvl: 13, score: 51234, lives: 3, livesMax: 5, mode: 'junkie',
+      starter: 'fire', starterLvl: 2,
+      path: { arsenal: 4, impact: 2, prism: 1, aegis: 3, surge: 2, bond: 4 },
+      upg: { coolant: 1, intercept: 1, twin: 1, hyper: 1, heavy: 1, demo: 1, attune: 1,
+        guard: 1, bulwark: 1, wide: 1, momentum: 1, rally: 1, magnetize: 1, bond: 1, fortune: 1, revive: 1 },
+      stacks: { orb: 2, ice: 0, bell: 1 },
+      catchBonus: 0.12, caughtRun: 7, adapt: 0.9, mega: 0.4,
+      secret: { shards: [true, true, false], offered: [true, true, true], completed: false },
+      secretUpg: { heart: true, lens: false, echo: false },
+      preset: 'normal',
+    };
+    const m = migrateCheckpoint(v2);
+    assert(m && m.v === 3, 'v2 did not migrate to v3');
+    assert(m.lvl === 13 && m.score === 51234 && m.lives === 3 && m.livesMax === 5 &&
+      m.mode === 'junkie' && m.starter === 'fire' && m.starterLvl === 2 && m.preset === 'normal',
+      'v2 scalar state was not preserved');
+    for (const [k, n] of Object.entries(v2.path)) assert(m.path[k] === n, 'path ' + k + ' lost in migration');
+    // the 24 owned tiers land on exactly the right anchor nodes
+    for (const pk of PATH_KEYS) for (let t = 0; t < 4; t++) {
+      const want = t < v2.path[pk] ? 1 : undefined;
+      assert(m.upg[PATHS[pk].tiers[t].key] === want,
+        pk + ' tier ' + (t + 1) + ' mapped wrong (' + m.upg[PATHS[pk].tiers[t].key] + ' vs ' + want + ')');
+    }
+    assert(m.stacks.orb === 2 && m.stacks.ice === 0 && m.stacks.bell === 1, 'stacks lost in migration');
+    assert(m.secret.shards[0] && m.secret.shards[1] && !m.secret.shards[2] && m.secretUpg.heart,
+      'secret state lost in migration');
+    const m2 = migrateCheckpoint(m);
+    assert(JSON.stringify(m2) === JSON.stringify(m), 'migration is not idempotent on v3');
+    // grandfather rule: a web node with missing prerequisites survives
+    const grand = migrateCheckpoint({ v: 2, lvl: 10, lives: 2, upg: { meteor: 1, calibrated: 1 } });
+    assert(grand && grand.upg.meteor === 1 && grand.upg.calibrated === 1,
+      'grandfathered web nodes were erased');
+    // v1 minimal accepted with sane defaults
+    const v1 = migrateCheckpoint({ v: 1, lvl: 4, score: 100, lives: 2, mode: 'classic',
+      path: { arsenal: 2 }, upg: { coolant: 1, intercept: 1 } });
+    assert(v1 && v1.v === 3 && v1.path.arsenal === 2 && v1.upg.intercept === 1 &&
+      v1.livesMax >= v1.lives && v1.stacks.orb === 0 && v1.adapt === 1,
+      'v1 checkpoint did not normalize cleanly');
+    // hostile shapes: reject or normalize, never throw, never brick startup
+    for (const bad of [null, 7, 'x', [], {}, { v: 9, lvl: 9 }, { v: 2 }, { v: 2, lvl: 'x' },
+      { v: 2, lvl: 2 }, { v: 2, lvl: 9, path: 'lol', upg: 7, stacks: [1, 2], secret: 3 }]) {
+      let out = null, threw = false;
+      try { out = migrateCheckpoint(bad); } catch (e) { threw = true; }
+      assert(!threw, 'migrateCheckpoint threw on ' + JSON.stringify(bad));
+      if (out) assert(out.v === 3 && typeof out.path === 'object' && typeof out.upg === 'object',
+        'hostile shape produced a malformed checkpoint');
+    }
+    return 'v2 lossless → v3 · idempotent · grandfathered web keys kept · v1 + 10 hostile shapes safe';
+  });
+
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
   // the player, and an unshielded hit still costs a life. (Shields used to
   // trigger only at the floor line BELOW the player — dead in these modes.)

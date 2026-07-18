@@ -901,46 +901,111 @@ function bossAbility(boss) {
   addFloater(boss.bx + G.fx, by - boss.h / 2 - 44, ab.name + '!', TYPE_COLORS[boss.poke.t], 16);
 }
 
-// Deal (or re-deal) the between-wave draft. While both groups remain, every
-// hand contains at least one offense path and one non-offense path; the third
-// slot stays wild. Empty slots become small forever-stacking mastery items so
-// the last third of a long journey never has dead reward screens.
+// Deal (or re-deal) the between-wave draft on the UPGRADE WEB. The hand
+// follows a COMMIT / ADAPT / EXPLORE shape:
+//  • COMMIT — continue the most-invested eligible path (build bias).
+//  • ADAPT — survival/utility, force-weighted at low health.
+//  • EXPLORE — an eligible SUPERSKILL takes the slot with priority, then a
+//    Form II bridge, then an uninvested constellation.
+// Guarantees: offense + non-offense while both groups remain; a fresh
+// evolution surfaces a newly unlocked ring node; a reroll never re-deals the
+// hand it replaced (when alternatives exist); reachable nodes unseen for 4+
+// drafts gain pity weight; mastery satellites only fill EMPTY slots — never
+// crowding out an authored node — capped-wedge satellites first.
 function rollUpgradeChoices() {
-  const pool = PATH_KEYS.filter(k => pathLvl(k) < 4);
+  const rerolledFrom = G.rerolled ? (G.lastOfferKeys || []) : [];
+  const bridges = WEB_BRIDGES.filter(bridgeEligible);
+  const supers = WEB_SUPERS.filter(superEligible);
   const needDefense = G.lives < Math.max(2, Math.ceil((G.livesMax || preset().lives) * 0.6));
-  const scored = pool.map(k => ({ k, score:
-    pathLvl(k) * 4 + gameRand() * 2 +
+  const seen = G.webSeen || (G.webSeen = {});
+  const pity = key => Math.min(3, Math.max(0, (seen[key] || 0) - 3));
+  const avoid = key => rerolledFrom.includes(key) ? 9 : 0;
+  const contKey = k => 'path:' + k + ':' + pathLvl(k);
+  const scoreCont = k =>
+    pathLvl(k) * 4 + gameRand() * 2 + pity(contKey(k)) - avoid(contKey(k)) +
     (needDefense && ['defense', 'utility'].includes(PATHS[k].family) ? 5 : 0) +
-    (G.mode === 'classic' && PATHS[k].family === 'offense' && pathLvl(k) === 2 ? 4 : 0) }));
-  scored.sort((a, b) => b.score - a.score);
-  pool.splice(0, pool.length, ...scored.map(x => x.k));
-  const picked = [];
-  const take = familyTest => {
-    const idx = pool.findIndex(k => familyTest(PATHS[k].family));
-    if (idx >= 0) picked.push(pool.splice(idx, 1)[0]);
+    (G.mode === 'classic' && PATHS[k].family === 'offense' && pathLvl(k) === 2 ? 4 : 0);
+  const rankedCont = PATH_KEYS.filter(k => pathLvl(k) < 4)
+    .map(k => ({ k, s: scoreCont(k) })).sort((a, b) => b.s - a.s).map(x => x.k);
+  const picked = [], webPicked = [], used = new Set();
+  const takeCont = pred => {
+    const k = rankedCont.find(kk => !used.has(kk) && (!pred || pred(kk)));
+    if (!k) return false;
+    used.add(k); picked.push(k); return true;
   };
-  take(f => f === 'offense');
-  take(f => f !== 'offense');
-  // Continue a build the player has already invested in before surfacing a
-  // disconnected option. The offense/non-offense guard above keeps variety.
-  while (picked.length < 3 && pool.length) picked.push(pool.shift());
-  for (let i = picked.length - 1; i > 0; i--) {
-    const j = Math.floor(gameRand() * (i + 1));
-    [picked[i], picked[j]] = [picked[j], picked[i]];
+  // EXPLORE — supers outrank bridges outrank fresh constellations. A fresh
+  // evolution (Form II/III just reached) hard-guarantees the new ring here.
+  const freshForm = webForm() > (G.lastDraftForm || 1);
+  if (supers.length) {
+    const s = supers.map(d => ({ d, s: 8 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
+      .sort((a, b) => b.s - a.s)[0].d;
+    webPicked.push({ def: s, kind: 'super' });
+  } else if (bridges.length && (freshForm || !rankedCont.length || gameRand() < 0.75)) {
+    const b = bridges.map(d => ({ d, s: 6 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
+      .sort((a, b) => b.s - a.s)[0].d;
+    webPicked.push({ def: b, kind: 'bridge' });
+  } else {
+    takeCont(k => pathLvl(k) === 0) || takeCont();
   }
-  const choices = picked.map(k => {
-    const tierIdx = pathLvl(k);
-    return { pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[tierIdx], tierIdx,
-      tags: tierTags(k, tierIdx), synergy: tierSynergy(k, tierIdx), comparison: tierComparison(k, tierIdx) };
-  });
-  if (choices.length < 3) {
-    const si = STACK_ITEMS.slice();
-    for (let i = si.length - 1; i > 0; i--) {
-      const j = Math.floor(gameRand() * (i + 1));
-      [si[i], si[j]] = [si[j], si[i]];
+  // COMMIT — deepen an invested route; ADAPT — survival/utility, but only
+  // FORCED when health is low (otherwise the top-ranked option keeps reroll
+  // hands honestly fresh — scoring already leans defensive at low health)
+  takeCont(k => pathLvl(k) >= 1) || takeCont();
+  if (needDefense) takeCont(k => ['defense', 'utility'].includes(PATHS[k].family)) || takeCont();
+  else takeCont();
+  // offense/non-offense guard while both groups remain among continuations
+  for (const wantOffense of [true, false]) {
+    const has = picked.some(k => (PATHS[k].family === 'offense') === wantOffense);
+    const avail = rankedCont.some(k => !used.has(k) && (PATHS[k].family === 'offense') === wantOffense);
+    if (!has && avail) {
+      if (picked.length + webPicked.length >= 3 && picked.length) { used.delete(picked[picked.length - 1]); picked.pop(); }
+      takeCont(k => (PATHS[k].family === 'offense') === wantOffense);
     }
-    while (choices.length < 3 && si.length) choices.push({ stack: si.pop() });
   }
+  // top up: remaining continuations, then any remaining authored web nodes
+  while (picked.length + webPicked.length < 3) {
+    if (takeCont()) continue;
+    const s2 = supers.find(s => !webPicked.some(w => w.def.key === s.key));
+    const b2 = bridges.find(b => !webPicked.some(w => w.def.key === b.key));
+    if (s2) webPicked.push({ def: s2, kind: 'super' });
+    else if (b2) webPicked.push({ def: b2, kind: 'bridge' });
+    else break;
+  }
+  const choices = [
+    ...picked.map(k => {
+      const tierIdx = pathLvl(k);
+      return { pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[tierIdx], tierIdx,
+        tags: tierTags(k, tierIdx), synergy: tierSynergy(k, tierIdx), comparison: tierComparison(k, tierIdx) };
+    }),
+    ...webPicked.map(w => ({
+      web: w.def, webKind: w.kind,
+      tags: w.kind === 'super' ? ['SUPERSKILL', 'FINAL FORM']
+        : [PATHS[w.def.paths[0]].name, PATHS[w.def.paths[1]].name],
+      synergy: w.kind === 'super'
+        ? 'RECIPE: ' + webBridge(w.def.bridge).name + ' + THE ' + PATHS[w.def.path].name + ' CAPSTONE'
+        : 'BRIDGES ' + PATHS[w.def.paths[0]].name + ' AND ' + PATHS[w.def.paths[1]].name,
+      comparison: w.kind === 'super' ? '★ RULE CHANGE · FINAL FORM' : 'NEW SYSTEM · FORM II BRIDGE',
+    })),
+  ];
+  for (let i = choices.length - 1; i > 0; i--) {
+    const j = Math.floor(gameRand() * (i + 1));
+    [choices[i], choices[j]] = [choices[j], choices[i]];
+  }
+  // mastery satellites fill EMPTY slots only — capped home wedges first, so
+  // the late run always has a useful pick without burying authored content
+  if (choices.length < 3) {
+    const sats = WEB_SATELLITES.map(sat => ({ sat, item: stackItem(sat.stackKey) }))
+      .sort((a, b) => (pathLvl(b.sat.path) >= 4 ? 1 : 0) - (pathLvl(a.sat.path) >= 4 ? 1 : 0) + gameRand() - 0.5);
+    for (const { item } of sats) if (choices.length < 3) choices.push({ stack: item });
+  }
+  // pity + reroll memory: every eligible node not in this hand ages a draft
+  const handKeys = choices.map(c => c.pathKey ? contKey(c.pathKey) : c.web ? c.web.key : 'stack:' + c.stack.key);
+  for (const key of [
+    ...rankedCont.map(contKey),
+    ...bridges.map(b => b.key), ...supers.map(s => s.key),
+  ]) seen[key] = handKeys.includes(key) ? 0 : (seen[key] || 0) + 1;
+  G.lastOfferKeys = handKeys;
+  G.lastDraftForm = webForm();
   G.upgradeChoices = choices.length ? choices : null;
 }
 
@@ -1007,15 +1072,17 @@ function loseLife(cause = 'MISSED BALL') {
   G.shake = 16; G.flashT = 0.35;
   G.fx_fire = G.fx_laser = G.fx_draco = null;
   if (G.lives <= 0) {
-    // KNOCKOUT: the skill tree absorbs the defeat. Burn two tree levels,
-    // refill lives, and retry this wave — the run only truly ends once
-    // there's no tree left to burn.
-    if (totalPathLevels() > 0) {
+    // KNOCKOUT: the build absorbs the defeat. Burn two web LEAVES (nodes with
+    // no owned dependents — a removal can never orphan a bridge or a
+    // superskill's recipe), refill lives, and retry this wave — the run only
+    // truly ends once there's nothing left to burn.
+    if (totalBuildLevels() > 0) {
       const lost = [];
-      for (let i = 0; i < 2 && totalPathLevels() > 0; i++) {
-        const owned = PATH_KEYS.filter(k => pathLvl(k) > 0);
-        const t = regressPath(owned[Math.floor(gameRand() * owned.length)]);
-        if (t) lost.push(t.name);
+      for (let i = 0; i < 2 && totalBuildLevels() > 0; i++) {
+        const leaves = webRegressibleLeaves();
+        if (!leaves.length) break;
+        const name = regressWebLeaf(leaves[Math.floor(gameRand() * leaves.length)]);
+        if (name) lost.push(name);
       }
       G.lives = preset().lives + starterMod('bonusHp', 0);
       G.livesMax = Math.max(G.livesMax, G.lives);
