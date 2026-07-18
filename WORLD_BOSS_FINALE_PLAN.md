@@ -12,7 +12,12 @@
 > no white flash), lets taps advance beats / veterans skip to dawn, and ends
 > in the explicit **TIME SPIRAL** (old level-28 loop) vs **TITLE** choice.
 > Trials/dailies keep the classic loop. Suite test: `campaign completion
-> branch` (test.html). NOT yet built: §5 scene director, §6 boss director +
+> branch` (test.html). ALSO BUILT: the §5 scene-director SKY slice —
+> `SCENE_SKIES` (scenery.js) authors all 27 region×stage skies (daylight
+> arc, celestial bodies incl. big moon + eclipse, star gating via
+> `SCENE_DARK`, daylight silhouette haze; cache keyed region+stage; title
+> keeps Kanto legendary night). NOT yet built: §5 landmark/weather variants,
+> mid-fight omens + telegraph subdual, region postcards; §6 boss director +
 > encounter scripts, region postcards, Theater/Boss Rush, music layers, dawn
 > title treatment — beat-sheet niceties still simplified (no final-shot
 > interaction in beat 2, no act-emblem merge, no hold-to-skip [tap-to-skip
