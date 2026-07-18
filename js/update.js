@@ -56,6 +56,30 @@ function tickEffects(dt) {
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
   G.reactiveCD = Math.max(0, (G.reactiveCD || 0) - dt); // REACTIVE OVERDRIVE regrow clock
+  // ---- FUSION / APEX clocks ----
+  G.wallCD = Math.max(0, (G.wallCD || 0) - dt);         // BULWARK rebuild floor
+  G.cataCD = Math.max(0, (G.cataCD || 0) - dt);         // CATACLYSM cooldown
+  G.regenLockT = Math.max(0, (G.regenLockT || 0) - dt); // IMMORTAL regen stall
+  G.lanceT = Math.max(0, (G.lanceT || 0) - dt);         // classic lance window
+  if (G.novaStage || G.novaT > 0) {                     // HYPERNOVA stream break
+    G.novaT -= dt;
+    if (G.novaT <= 0 || G.megaT <= 0) { G.novaT = 0; G.novaStage = 0; G.novaN = 0; }
+  }
+  if (upgN('warmachine')) G.railPressure = Math.max(0, G.railPressure - dt * 0.02);
+  // VICTORY FORMATION: while the squadron flies, wingmates attack every second
+  if (G.squadT > 0 && G.state === 'play') {
+    G.squadT -= dt;
+    G.squadCD -= dt;
+    if (G.squadCD <= 0) {
+      G.squadCD = 1;
+      const el = attackElement();
+      for (const dir of [-1, 1]) {
+        G.missiles.push({ x: G.paddle.x + dir * 42, y: shipY() + 4,
+          vx: dir * 170, vy: -250, tier: 1, drone: true, element: el });
+      }
+      tone(700, 0.05, 'sine', 0.03, 140);
+    }
+  }
   // ELEMENTAL ASCENSION (superskill): during Mega the live element retunes
   // every 1.5s to counter the most common enemy type on screen. The retune is
   // a normal timed override, so Mega's end lets it lapse back naturally.
@@ -284,7 +308,9 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   const col = TYPE_COLORS[br.poke.t];
   if (br.isBoss && br.hp > 0) {
     SFX.bossHit();
-    G.mega = Math.min(1, G.mega + 0.004);
+    // meta.noMega: fusion/apex area damage can never rebuild the meter it
+    // spent (Cataclysm's declared guard) or quietly farm the boss for Mega
+    if (!meta.noMega) G.mega = Math.min(1, G.mega + 0.004);
     // Phase count belongs to the encounter tier. STARFIGHTER legendaries
     // split at 50% (two phases), mythicals split at ⅔/⅓ (three), and the
     // sentinels never enter this boss-only transition path.
@@ -766,6 +792,8 @@ function collectPickup(pu) {
     // PRISM SCALE proc: the extended clock is announced AT the pickup — the
     // tier stops being an invisible multiplier on a timer nobody reads
     if (upgN('attune')) addFloater(pu.x, pu.y - 22, 'ATTUNED · +50% DURATION', '#4dd0e1', 11);
+    chorusRecord(pu.p.t);   // BESTIARY CHORUS learns the orb's type
+    celestialSector('t');   // CELESTIAL GUARDIAN: a type event
     const strong = (EFFECTIVE[pu.p.t] || []).slice(0, 3).join(', ').toUpperCase();
     setAnnounce(pu.p.t, TYPE_COLORS[pu.p.t], pu.p.t.toUpperCase() + ' BALL',
       strong ? '2× vs ' + strong : 'ELEMENT CHANGED', 1.8);
@@ -780,6 +808,7 @@ function collectPickup(pu) {
       G.catchBonus += 0.06 * upgN('bond');
       addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
     }
+    chorusRecord(attackElement()); // BESTIARY CHORUS learns your live type
     const nm = (NAMES[pu.dexId] || 'POKÉMON').toUpperCase();
     const research = isNew ? dexRewardAt(DEX.size) : null;
     if (research) {
@@ -959,7 +988,8 @@ function bossAbility(boss) {
 function rollUpgradeChoices() {
   const rerolledFrom = G.rerolled ? (G.lastOfferKeys || []) : [];
   const bridges = WEB_BRIDGES.filter(bridgeEligible);
-  const supers = WEB_SUPERS.filter(superEligible);
+  const fusions = WEB_FUSIONS.filter(fusionEligible);
+  const apexes = WEB_APEXES.filter(apexEligible);
   const needDefense = G.lives < Math.max(2, Math.ceil((G.livesMax || preset().lives) * 0.6));
   const seen = G.webSeen || (G.webSeen = {});
   const pity = key => Math.min(3, Math.max(0, (seen[key] || 0) - 3));
@@ -977,13 +1007,18 @@ function rollUpgradeChoices() {
     if (!k) return false;
     used.add(k); picked.push(k); return true;
   };
-  // EXPLORE — supers outrank bridges outrank fresh constellations. A fresh
+  // EXPLORE — apexes outrank fusions outrank bridges outrank fresh
+  // constellations, and ONLY ONE fusion/apex may sit in a hand. A fresh
   // evolution (Form II/III just reached) hard-guarantees the new ring here.
   const freshForm = webForm() > (G.lastDraftForm || 1);
-  if (supers.length) {
-    const s = supers.map(d => ({ d, s: 8 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
+  if (apexes.length) {
+    const x = apexes.map(d => ({ d, s: 10 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
       .sort((a, b) => b.s - a.s)[0].d;
-    webPicked.push({ def: s, kind: 'super' });
+    webPicked.push({ def: x, kind: 'apex' });
+  } else if (fusions.length) {
+    const f = fusions.map(d => ({ d, s: 8 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
+      .sort((a, b) => b.s - a.s)[0].d;
+    webPicked.push({ def: f, kind: 'fusion' });
   } else if (bridges.length && (freshForm || !rankedCont.length || gameRand() < 0.75)) {
     const b = bridges.map(d => ({ d, s: 6 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
       .sort((a, b) => b.s - a.s)[0].d;
@@ -1006,13 +1041,15 @@ function rollUpgradeChoices() {
       takeCont(k => (PATHS[k].family === 'offense') === wantOffense);
     }
   }
-  // top up: remaining continuations, then any remaining authored web nodes
+  // top up: remaining continuations, then bridges — never a SECOND fusion or
+  // apex in the same hand (the plan's one-per-hand rule)
   while (picked.length + webPicked.length < 3) {
     if (takeCont()) continue;
-    const s2 = supers.find(s => !webPicked.some(w => w.def.key === s.key));
     const b2 = bridges.find(b => !webPicked.some(w => w.def.key === b.key));
-    if (s2) webPicked.push({ def: s2, kind: 'super' });
-    else if (b2) webPicked.push({ def: b2, kind: 'bridge' });
+    if (b2) { webPicked.push({ def: b2, kind: 'bridge' }); continue; }
+    const hasBig = webPicked.some(w => w.kind === 'fusion' || w.kind === 'apex');
+    const f2 = !hasBig && (apexes[0] || fusions[0]);
+    if (f2) webPicked.push({ def: f2, kind: apexes[0] ? 'apex' : 'fusion' });
     else break;
   }
   const choices = [
@@ -1023,12 +1060,18 @@ function rollUpgradeChoices() {
     }),
     ...webPicked.map(w => ({
       web: w.def, webKind: w.kind,
-      tags: w.kind === 'super' ? ['SUPERSKILL', 'FINAL FORM']
-        : [PATHS[w.def.paths[0]].name, PATHS[w.def.paths[1]].name],
-      synergy: w.kind === 'super'
-        ? 'RECIPE: ' + webBridge(w.def.bridge).name + ' + THE ' + PATHS[w.def.path].name + ' CAPSTONE'
-        : 'BRIDGES ' + PATHS[w.def.paths[0]].name + ' AND ' + PATHS[w.def.paths[1]].name,
-      comparison: w.kind === 'super' ? '★ RULE CHANGE · FINAL FORM' : 'NEW SYSTEM · FORM II BRIDGE',
+      tags: w.kind === 'apex' ? ['APEX', ...w.def.paths.map(pk => PATHS[pk].name)]
+        : w.kind === 'fusion' ? ['FUSION', ...w.def.paths.map(pk => PATHS[pk].name)]
+          : [PATHS[w.def.paths[0]].name, PATHS[w.def.paths[1]].name],
+      synergy: w.kind === 'apex'
+        ? 'APEX: TWO OF ITS FUSIONS INSTALLED + NINE RANKS ACROSS ' + w.def.paths.map(pk => PATHS[pk].name).join(' / ')
+        : w.kind === 'fusion'
+          ? 'FUSION: ' + w.def.paths.map(pk => PATHS[pk].name).join(' × ') +
+            (w.def.bridge ? ' · VIA ' + webBridge(w.def.bridge).name : ' · CROSS-WEB') +
+            ' · SLOT ' + (fusionsOwnedCount() + 1) + '/2'
+          : 'BRIDGES ' + PATHS[w.def.paths[0]].name + ' AND ' + PATHS[w.def.paths[1]].name,
+      comparison: w.kind === 'apex' ? '★★ APEX TRANSFORMATION · STAGE 24+'
+        : w.kind === 'fusion' ? '★ RULE CHANGE · FUSION POWER' : 'NEW SYSTEM · FORM II BRIDGE',
     })),
   ];
   for (let i = choices.length - 1; i > 0; i--) {
@@ -1046,7 +1089,7 @@ function rollUpgradeChoices() {
   const handKeys = choices.map(c => c.pathKey ? contKey(c.pathKey) : c.web ? c.web.key : 'stack:' + c.stack.key);
   for (const key of [
     ...rankedCont.map(contKey),
-    ...bridges.map(b => b.key), ...supers.map(s => s.key),
+    ...bridges.map(b => b.key), ...fusions.map(f => f.key), ...apexes.map(x => x.key),
   ]) seen[key] = handKeys.includes(key) ? 0 : (seen[key] || 0) + 1;
   G.lastOfferKeys = handKeys;
   G.lastDraftForm = webForm();
@@ -1058,12 +1101,18 @@ function rollUpgradeChoices() {
 // strip the whole bank in one frame. Returns true if the hit was eaten.
 // (Shields used to burn at the FLOOR line, below the player — every shot they
 // "blocked" had already missed, so AEGIS did nothing in the shooter modes.)
-function absorbHit(x, y) {
+function absorbHit(x, y, shotType = null) {
   if (G.shieldCharges <= 0) return false;
   G.shieldCharges--;
   G.invuln = 1.2;
   G.shieldFlash = 1; // render: the bubble flares where it ate the hit
   G.hurtHud = 2.2;   // flash the health readout around the player
+  // MIRROR SPECTRUM: the absorbed shot's type joins the facet bank
+  if (upgN('mirror') && shotType && G.facets.length < 3) {
+    G.facets.push(shotType);
+    addFloater(G.paddle.x, y - 74, 'FACET STORED ' + G.facets.length + '/3', '#80cbc4', 11);
+  }
+  celestialSector('s'); // CELESTIAL GUARDIAN: shield events fill a sector
   addFloater(G.paddle.x, y - 46, 'SHIELD!', '#66bb6a', 15);
   burst(x, y, '#66bb6a', 18, 240, 0.5);
   ringFx(G.paddle.x, y, '#a5d6a7', 6, 64, 3, 0.4);
@@ -1095,6 +1144,14 @@ function webPickupProcs() {
     G.salvageCount = 0;
     launchSalvageDrones();
   }
+  // COMET SHEPHERD banks seeds; VICTORY FORMATION banks sync; the CELESTIAL
+  // ward counts every collection as a bond event
+  if (upgN('shepherd') && G.cometSeeds < 3) {
+    G.cometSeeds++;
+    addFloater(G.paddle.x, shipY() - 22, 'SEED ' + G.cometSeeds + '/3', '#ffab91', 10);
+  }
+  if (upgN('formation') && G.syncMeter < 8) G.syncMeter++;
+  celestialSector('e');
 }
 function launchSalvageDrones() {
   if (G.mode === 'classic') {
@@ -1114,13 +1171,15 @@ function launchSalvageDrones() {
   addFloater(G.paddle.x, shipY() - 46, 'SALVAGE VOLLEY!', '#ea80fc', 12);
   SFX.missile();
 }
-// GUARDIAN ANGEL (superskill): potions, catches, and shield saves each add a
-// charge; at six the guardian pulse sweeps the sky clear and heals one life.
+// GUARDIAN ANGEL (fusion): potions, catches, and shield saves each add a
+// charge; at eight the guardian pulse sweeps the sky clear and heals one
+// life — AT MOST ONCE PER WAVE (the plan's recovery limiter).
 function webGuardianCharge() {
-  if (!upgN('guardian')) return;
+  if (!upgN('guardian') || G.guardPulsedWave) return;
   G.guardCharge = (G.guardCharge || 0) + 1;
-  if (G.guardCharge >= 6) {
+  if (G.guardCharge >= 8) {
     G.guardCharge = 0;
+    G.guardPulsedWave = true;
     for (const s of G.enemyShots) if (!s.boss) s.dead = true;
     if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; }
     ringFx(G.paddle.x, shipY(), '#b9f6ca', 12, 230, 6, 0.7);
@@ -1129,14 +1188,171 @@ function webGuardianCharge() {
     addFloater(G.paddle.x, shipY() - 70, 'GUARDIAN ANGEL!', '#b9f6ca', 16);
     SFX.mega();
   } else {
-    addFloater(G.paddle.x, shipY() - 30, 'GUARDIAN ' + G.guardCharge + '/6', '#b9f6ca', 10);
+    addFloater(G.paddle.x, shipY() - 30, 'GUARDIAN ' + G.guardCharge + '/8', '#b9f6ca', 10);
   }
 }
-// METEOR MATRIX (superskill): a delayed rain of six typed strikes across the
-// living wave — shooter modes call it on a full charge, classic on Mega.
+// METEOR MATRIX (fusion): a delayed rain of six typed strikes across the
+// living wave. GATED on a full matrix built from lined-up hits — the rain is
+// a build achievement, never a free rider on every charge.
 function beginMeteorRain() {
   G.meteorRain = { n: 6, t: 0.15, element: attackElement() };
   addFloater(G.paddle.x, shipY() - 74, 'METEOR MATRIX!', '#40c4ff', 14);
+}
+// the wave's most useful attacking elements: up to n types that are super-
+// effective against the most common living enemy types (ascension,
+// prismstorm, chorus and the celestial ward all tune with this)
+function counterElements(n = 1) {
+  const counts = {};
+  for (const br of G.bricks) if (!br.dead && !br.dormant && !br.barrier) counts[br.poke.t] = (counts[br.poke.t] || 0) + 1;
+  const doms = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, n);
+  const out = [];
+  for (const dom of doms) {
+    const counter = Object.keys(TYPE_COLORS).find(t => (EFFECTIVE[t] || []).includes(dom));
+    if (counter && !out.includes(counter)) out.push(counter);
+  }
+  return out;
+}
+// ---- FUSION charge releases: shared by fireCharge (shooter modes, real
+// charge strength c) and Mega activation (classic adapter, c = 1). Each is
+// gated on its own banked resource, so nothing here fires "every charge".
+function fusionChargeReleases(c) {
+  if (upgN('meteor') && c >= 0.75 && G.matrixCharge >= 1) {
+    G.matrixCharge = 0;
+    beginMeteorRain();
+  }
+  if (upgN('cataclysm') && c >= 0.9 && G.megaT <= 0 && G.mega >= 0.5 && G.cataCD <= 0) cataclysmNova();
+  if (upgN('shepherd') && c >= 0.75 && G.cometSeeds > 0) releaseComets();
+  if (upgN('mirror') && c >= 0.5 && G.facets.length) releaseFacets();
+  if (upgN('battery') && c >= 0.75 && G.wallSeg >= 3) releaseBatteryBeam();
+}
+function classicFusionReleases() {
+  // AEGIS LANCE (classic): Mega + a spent shield turns the BALL into the
+  // lance for the whole window — the ball stays THE weapon
+  if (upgN('lance') && G.shieldCharges > 0) {
+    G.shieldCharges--;
+    G.lanceT = megaDur();
+    addFloater(G.paddle.x, shipY() - 72, 'AEGIS LANCE!', '#d4e157', 14);
+    SFX.shield();
+  }
+  fusionChargeReleases(1);
+}
+// CATACLYSM CORE: consume 50% banked Mega for a screen-sweeping typed nova.
+// Its own damage can never rebuild the meter it spent (meta.noMega), and
+// bosses only lose a sliver of their current health — never a phase.
+function cataclysmNova() {
+  G.mega = Math.max(0, G.mega - 0.5);
+  G.cataCD = 20;
+  const el = attackElement();
+  const col = TYPE_COLORS[el] || '#ffab40';
+  for (const br of G.bricks) {
+    if (br.dead || br.dormant || br.barrier) continue;
+    const bx = br.bx + G.fx, by = br.by + G.fy;
+    const dmg = br.isBoss ? Math.min(2.5, br.maxHp * 0.03) : 2.5;
+    damageBrick(br, dmg, bx, by, el, { noMega: true });
+  }
+  for (const s of G.enemyShots) if (!s.boss) s.dead = true;
+  G.freeze = Math.max(G.freeze, 0.1);
+  G.shake = Math.min(G.shake + 9, 15);
+  ringFx(G.paddle.x, shipY(), col, 14, Math.max(W, H) * 0.75, 7, 0.9);
+  ringFx(G.paddle.x, shipY(), '#fff3e0', 8, Math.max(W, H) * 0.5, 5, 0.7);
+  addFloater(G.paddle.x, shipY() - 80, 'CATACLYSM CORE!', '#ffab40', 17);
+  SFX.mega();
+  noiseBurst(0.35, 0.12);
+}
+// COMET SHEPHERD: the banked seeds peel away as typed homing comets — full
+// damage to fodder, softly against elites and bosses (their limiter)
+function releaseComets() {
+  const el = attackElement();
+  for (let i = 0; i < G.cometSeeds; i++) {
+    G.missiles.push({ x: G.paddle.x + (i - 1) * 20, y: shipY() - 6,
+      vx: (i - 1) * 190, vy: -230, tier: 1, drone: true, comet: true, element: el });
+  }
+  addFloater(G.paddle.x, shipY() - 58, 'COMET SHEPHERD ×' + G.cometSeeds, '#ffab91', 13);
+  G.cometSeeds = 0;
+  SFX.missile();
+}
+// MIRROR SPECTRUM: fire the captured shot types back as a typed fan.
+// Outgoing reflections are OUR lasers — they can never re-charge the mirror.
+function releaseFacets() {
+  const n = G.facets.length;
+  for (let i = 0; i < n; i++) {
+    G.lasers.push({ x: G.paddle.x + (i - (n - 1) / 2) * 26, y: shipY() - 14,
+      basic: true, facet: true, powerMul: 1.5, element: G.facets[i],
+      shape: G.mode === 'junkie' ? pilotInfo().shape : null,
+      tier: G.mode === 'junkie' ? G.starterLvl : 1 });
+  }
+  addFloater(G.paddle.x, shipY() - 58, 'MIRROR SPECTRUM ×' + n, '#80cbc4', 13);
+  G.facets = [];
+  SFX.laser();
+}
+// BULWARK BATTERY: a full wall folds into a horizontal rail and fires one
+// piercing counterbeam; the wall needs a 12s floor before it can rebuild
+function releaseBatteryBeam() {
+  G.wallSeg = 0;
+  G.wallCD = 12;
+  G.lasers.push({ x: G.paddle.x, y: shipY() - 20, basic: true, charged: true, beam: true,
+    power: 4, pierce: 99, r: 24,
+    element: G.mode === 'junkie' ? attackElement() : null,
+    shape: G.mode === 'junkie' ? pilotInfo().shape : null,
+    tier: G.mode === 'junkie' ? G.starterLvl : 1 });
+  addFloater(G.paddle.x, shipY() - 58, 'BULWARK COUNTERBEAM!', '#a5d6a7', 13);
+  ringFx(G.paddle.x, shipY() - 40, '#a5d6a7', 6, 70, 4, 0.4);
+  SFX.laser();
+  tone(140, 0.2, 'sawtooth', 0.07, 90);
+}
+// BESTIARY CHORUS: recording three DIFFERENT types answers with one
+// favorable-type companion strike on the strongest targets — once per wave
+function chorusRecord(t) {
+  if (!upgN('chorus') || G.chorusUsed || !t) return;
+  if (!G.chorusTypes.includes(t)) G.chorusTypes.push(t);
+  if (G.chorusTypes.length < 3) return;
+  G.chorusUsed = true;
+  G.chorusTypes = [];
+  const el = counterElements(1)[0] || attackElement();
+  const col = TYPE_COLORS[el] || '#f48fb1';
+  const targets = G.bricks.filter(b => !b.dead && !b.dormant && !b.barrier)
+    .sort((a, b) => b.hp - a.hp).slice(0, 3);
+  for (const br of targets) {
+    const bx = br.bx + G.fx, by = br.by + G.fy;
+    ringFx(bx, by, col, 5, 46, 3, 0.35);
+    sparkle(bx, by, 4, false);
+    damageBrick(br, 2, bx, by, el);
+  }
+  addFloater(G.paddle.x, shipY() - 66, 'BESTIARY CHORUS!', '#f48fb1', 14);
+  SFX.gotcha();
+}
+// CELESTIAL GUARDIAN (apex): three halo sectors — type (T), shield (S) and
+// bond (E) events. All three full → a typed ward: clears ordinary fire,
+// cracks armor, restores ONE shield or ONE HP (never both), opens a short
+// favorable-type window. Ward healing never recharges the guardian pulse.
+function celestialSector(k) {
+  if (!upgN('celestial')) return;
+  if (k === 't') G.celT = true;
+  else if (k === 's') G.celS = true;
+  else G.celE = true;
+  if (!(G.celT && G.celS && G.celE)) return;
+  G.celT = G.celS = G.celE = false;
+  const el = counterElements(1)[0] || attackElement();
+  const col = TYPE_COLORS[el] || '#b388ff';
+  for (const s of G.enemyShots) if (!s.boss) s.dead = true;
+  for (const br of G.bricks) {
+    if (br.dead) continue;
+    if (br.shellArmor) {
+      br.shellArmor = false;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 10, 'SHELL CRACKED!', '#ffd54f', 11);
+    } else if (br.armored) {
+      damageBrick(br, 1, br.bx + G.fx, br.by + G.fy, el, { noMega: true });
+    }
+  }
+  if (G.shieldCharges < shieldCap()) G.shieldCharges++;
+  else if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; }
+  G.ballElement = el;
+  G.ballElementT = Math.max(G.ballElementT, 4);
+  G.resistStreak = 0;
+  ringFx(G.paddle.x, shipY(), col, 12, 240, 6, 0.75);
+  ringFx(G.paddle.x, shipY(), '#e1bee7', 8, 170, 4, 0.6);
+  addFloater(G.paddle.x, shipY() - 80, 'CELESTIAL GUARDIAN!', '#b388ff', 16);
+  SFX.mega();
 }
 
 function favoriteRunPath() {
@@ -1176,6 +1392,7 @@ function loseLife(cause = 'MISSED BALL') {
   if (upgN('immortal') && !G.reactorUsed && G.megaT <= 0 && G.mega >= 0.25 && G.state === 'play') {
     G.reactorUsed = true;
     G.mega = 0;
+    G.regenLockT = 6; // limiter: shield regrowth stalls after the save
     G.invuln = Math.max(G.invuln, 1.6);
     for (const s of G.enemyShots) if (!s.boss) s.dead = true;
     ringFx(G.paddle.x, shipY(), '#ffea00', 10, 190, 6, 0.6);
@@ -1738,8 +1955,9 @@ function update(dt) {
   const touchChargeIntent = touchFirePendingId !== null || chargeTouchId !== null;
   if (fireHeld && !charging && G.state === 'play') fireAction(true); // preserve desktop/CLASSIC held fire
   else if (autoFiring && !charging && !chargedThisFrame && !touchChargeIntent && G.state === 'play') fireAction(true);
-  // SUPER SHIELD capstone: a floor-shield charge regrows on a timer
-  if (G.state === 'play' && upgN('aegisX')) {
+  // SUPER SHIELD capstone: a floor-shield charge regrows on a timer.
+  // IMMORTAL REACTOR's counterburst stalls regrowth briefly (its limiter).
+  if (G.state === 'play' && upgN('aegisX') && G.regenLockT <= 0) {
     if (G.shieldCharges < shieldCap()) {
       G.shieldRegenT -= dt;
       if (G.shieldRegenT <= 0) {
@@ -2726,6 +2944,15 @@ function update(dt) {
               dmg *= 1.6;
               burst(b.x, b.y, '#ffcc80', 10, 190, 0.4);
             }
+            // AEGIS LANCE (classic): the spent shield rides the BALL
+            if (G.lanceT > 0) {
+              dmg *= (br.armored || br.shellArmor) ? 2.5 : 1.5;
+              burst(b.x, b.y, '#d4e157', 8, 170, 0.35);
+            }
+            // classic fusion meters build from BALL hits — the ball-first rule
+            if (upgN('meteor')) G.matrixCharge = Math.min(1, G.matrixCharge + 0.03);
+            if (upgN('prismstorm') && ++G.prismN >= 12) { G.prismN = 0; G.prismReady = true; }
+            if (upgN('warmachine')) G.railPressure = Math.min(1, G.railPressure + 0.03);
           }
           damageBrick(br, dmg, b.x, b.y, G.ballElement);
           if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
@@ -2767,6 +2994,16 @@ function update(dt) {
         s.dead = true;
         L.hits = (L.hits || 0) + 1;
         if (L.hits > (L.charged ? 2 + upgN('intercept') : upgN('intercept'))) L.dead = true;
+        // BULWARK BATTERY: every interception adds a wall segment (fusion)
+        if (upgN('battery') && G.wallCD <= 0) G.wallSeg = Math.min(3, G.wallSeg + 1);
+        // HYPERNOVA CYCLE: during Mega, interceptions snap out an echo bolt —
+        // echoes are marked and never count toward hit meters or more echoes
+        if (upgN('hypernova') && G.megaT > 0 && !L.echo && G.lasers.length < 40) {
+          G.lasers.push({ x: s.x, y: s.y - 8, basic: true, echo: true, powerMul: 0.5,
+            element: G.mode === 'junkie' ? attackElement() : null,
+            shape: G.mode === 'junkie' ? pilotInfo().shape : null,
+            tier: G.mode === 'junkie' ? G.starterLvl : 1 });
+        }
         // a CANCELLATION mark, distinct from damage: ✕ + a crisp ring, so a
         // shot-down bolt never reads as an enemy hit landing
         burst(s.x, s.y, '#ffab91', 8, 170, 0.4);
@@ -2829,12 +3066,26 @@ function update(dt) {
         if (L.heavy) dmg *= 1.15;
         if (L.nova) dmg *= 2;
         if (L.calib) dmg *= 1.6; // CALIBRATED BARRAGE: primed volley
+        if (L.wall) dmg *= 1.2;  // BULWARK BATTERY: fire through the wall lens
+        if (L.prism && br.isBoss) dmg *= 0.5; // PRISMSTORM boss cap (≈1.25 volleys)
+        if (L.lance && (br.armored || br.shellArmor)) dmg *= 2; // AEGIS LANCE breaks armor
         if (L.mega) dmg *= upgN('megaX') ? 1.4 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
         // MOMENTUM: in the shooter modes there are no paddle returns, so
         // blaster hits carry the whole tier — twice the classic trickle
         if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + (G.mode !== 'classic' ? 0.004 : 0.002));
+        // FUSION hit meters: only ORDINARY basic volleys line up — primed
+        // lanes, echoes and reflections are excluded so no proc feeds itself
+        if (L.basic && !L.charged && !L.prism && !L.echo && !L.facet) {
+          if (upgN('meteor')) G.matrixCharge = Math.min(1, G.matrixCharge + 0.045);
+          if (upgN('prismstorm') && ++G.prismN >= 12) {
+            G.prismN = 0;
+            if (!G.prismReady) addFloater(G.paddle.x, shipY() - 50, 'PRISMSTORM PRIMED', '#64ffda', 11);
+            G.prismReady = true;
+          }
+          if (upgN('warmachine')) G.railPressure = Math.min(1, G.railPressure + 0.04);
+        }
         if (L.explosive) fireballExplosion(L.x, L.y, 1);
         // SPLASH CHARGE (IMPACT): a spent charged shot detonates for AoE — the
         // typed blast supersedes the old flame-only detonation
@@ -2901,7 +3152,12 @@ function update(dt) {
       const bx = br.bx + G.fx, by = br.by + G.fy;
       if (Math.abs(m.x - bx) < br.w / 2 + 6 && Math.abs(m.y - by) < br.h / 2 + 6) {
         m.dead = true;
-        if (m.drone) { // reduced payload, typed like your attack — you stay the star
+        if (m.comet) { // COMET SHEPHERD: full vs fodder, soft vs elites/bosses
+          const soft = br.isBoss || (br.elite || 0) >= 2 || br.maxHp >= 3;
+          damageBrick(br, 2 * (soft ? 0.35 : 1), m.x, m.y, m.element || null, { noMega: true });
+          ringFx(m.x, m.y, '#ffab91', 5, 34, 3, 0.35);
+          sparkle(m.x, m.y, 3, false);
+        } else if (m.drone) { // reduced payload, typed like your attack — you stay the star
           damageBrick(br, 1, m.x, m.y, m.element || null);
           ringFx(m.x, m.y, '#ea80fc', 4, 28, 2, 0.3);
         } else {
@@ -2925,7 +3181,17 @@ function update(dt) {
       for (const br of G.bricks) {
         if (br.dead) continue;
         const bx = br.bx + G.fx, by = br.by + G.fy;
-        if (Math.hypot(bx - v.x, by - v.y) < v.r + br.w / 2) damageBrick(br, v.dmg, bx, by, v.element);
+        if (Math.hypot(bx - v.x, by - v.y) >= v.r + br.w / 2) continue;
+        if (v.horizon) {
+          // EVENT HORIZON limiter: each target burns ONCE per well, and the
+          // well is grouping/control — bosses shrug off most of it
+          if (!v.hit) v.hit = [];
+          if (v.hit.includes(br)) continue;
+          v.hit.push(br);
+          damageBrick(br, 1.2 * (br.isBoss ? 0.25 : 1), bx, by, v.element, { noMega: true });
+        } else {
+          damageBrick(br, v.dmg, bx, by, v.element);
+        }
       }
     }
     if (v.horizon) {
@@ -3136,6 +3402,18 @@ function update(dt) {
     const spl = s.heavy ? (s.r || 12) * 0.7 : 0;
     const hitW = (jk ? 26 : (G.mode === 'classic' ? paddleW() : G.paddle.w) / 2 + 6) + spl;
     const hitH = (jk ? 24 : G.paddle.h) + spl;
+    // BULWARK BATTERY: the hex wall floats ahead of the pilot and eats
+    // ordinary shots crossing it, one segment each
+    if (!s.dead && upgN('battery') && G.wallSeg > 0 && !s.boss && (s.vy || 0) > 0) {
+      const wy = py - 84;
+      if (Math.abs(s.x - G.paddle.x) < 66 && s.y > wy - 10 && s.y < wy + 14) {
+        s.dead = true;
+        G.wallSeg--;
+        ringFx(s.x, wy, '#a5d6a7', 4, 30, 2, 0.3);
+        tone(640, 0.07, 'square', 0.04, -140);
+        continue;
+      }
+    }
     if (!s.dead && G.invuln <= 0 && s.y > py - hitH && s.y < py + hitH &&
         Math.abs(s.x - G.paddle.x) < hitW) {
       // SALVAGE DRONES (classic): a stored drone intercepts the shot short of you
@@ -3157,6 +3435,11 @@ function update(dt) {
         burst(s.x, py, pc, 10, 150, 0.4);
         ringFx(s.x, py, pc, 4, 26, 2, 0.3);
         tone(300, 0.06, 'sine', 0.04);
+        // MIRROR SPECTRUM: the deflected shot's TYPE is captured as a facet
+        if (upgN('mirror') && s.type && G.facets.length < 3) {
+          G.facets.push(s.type);
+          addFloater(G.paddle.x, py - 58, 'FACET STORED ' + G.facets.length + '/3', '#80cbc4', 11);
+        }
         continue;
       }
       s.dead = true;
@@ -3167,7 +3450,7 @@ function update(dt) {
         ringFx(s.x, py, bc, 8, (s.r || 14) * 3, 4, 0.4);
         G.shake = Math.min(G.shake + 8, 16);
       }
-      if (absorbHit(s.x, py)) continue;
+      if (absorbHit(s.x, py, s.type)) continue;
       G.invuln = 2;
       const weak = eff === 1;
       // super-effective HEAVY blasts really hurt — they take an extra life

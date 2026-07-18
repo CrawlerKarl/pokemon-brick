@@ -95,7 +95,7 @@ function migrateCheckpoint(c) {
     }
     const upg = {};
     for (const k of Object.keys(path)) for (let t = 0; t < path[k]; t++) upg[PATHS[k].tiers[t].key] = 1;
-    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) if (c.upg && typeof c.upg === 'object' && c.upg[k]) upg[k] = 1;
+    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_FUSION_KEYS, ...WEB_APEX_KEYS]) if (c.upg && typeof c.upg === 'object' && c.upg[k]) upg[k] = 1;
     const stacks = { orb: 0, ice: 0, bell: 0 };
     for (const k of Object.keys(stacks)) stacks[k] = Math.max(0, Math.floor(+((c.stacks && typeof c.stacks === 'object' ? c.stacks : {})[k]) || 0));
     const lives = Math.max(1, Math.floor(+c.lives) || 1);
@@ -267,8 +267,23 @@ const G = {
   rescueN: 0,                     // RESCUE CIRCUIT pickup counter (8 → +1 shield)
   reactiveCD: 0,                  // REACTIVE OVERDRIVE shield-regrow cooldown
   reactorUsed: false,             // IMMORTAL REACTOR: once per wave
-  guardCharge: 0,                 // GUARDIAN ANGEL pulse meter (0..6 events)
+  guardCharge: 0,                 // GUARDIAN ANGEL pulse meter (0..8 events)
+  guardPulsedWave: false,         // GUARDIAN ANGEL: at most one pulse per wave
   meteorRain: null,               // METEOR MATRIX: an active six-strike rain
+  matrixCharge: 0,                // METEOR MATRIX: lined-up hits fill the racks
+  // ---- cross-web FUSION meters (FUSION_APEX_PLAN.md) ----
+  prismN: 0, prismReady: false,   // PRISMSTORM ARRAY: 12-hit lens counter
+  novaStage: 0, novaN: 0, novaT: 0, // HYPERNOVA CYCLE: Mega stream stages
+  wallSeg: 0, wallCD: 0,          // BULWARK BATTERY: hex wall + rebuild floor
+  cataCD: 0,                      // CATACLYSM CORE cooldown
+  lanceT: 0,                      // AEGIS LANCE (classic): lance window timer
+  cometSeeds: 0,                  // COMET SHEPHERD: banked seeds (max 3)
+  facets: [],                     // MIRROR SPECTRUM: captured shot types (max 3)
+  chorusTypes: [], chorusUsed: false, // BESTIARY CHORUS: recorded types, 1/wave
+  syncMeter: 0, squadT: 0, squadCD: 0, // VICTORY FORMATION: sync + squadron
+  railPressure: 0,                // WAR MACHINE apex: gatling→rail pressure
+  celT: false, celS: false, celE: false, // CELESTIAL GUARDIAN apex sectors
+  regenLockT: 0,                  // IMMORTAL REACTOR: shield-regen stall
   wingCD: 0,                      // ACE INTERCEPTOR WING patrol cadence
   ascendT: 0,                     // ELEMENTAL ASCENSION retune clock during Mega
   webSeen: {}, lastOfferKeys: [], // offer pity counters + reroll anti-repeat
@@ -1183,8 +1198,10 @@ function buildLevel(lvl) {
     }
   }
   if (junkie && pilotInfo().id > 0) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
-  // per-wave web state: the reactor re-arms, lingering wells + rains clear
+  // per-wave web state: the reactor re-arms, lingering wells + rains clear,
+  // the guardian and chorus get their one proc back, the squadron stands down
   G.reactorUsed = false; G.vortexes = []; G.meteorRain = null;
+  G.guardPulsedWave = false; G.chorusUsed = false; G.squadT = 0; G.lanceT = 0;
   // arriving at a region's doorstep checkpoints the run (post-draft state —
   // buildLevel runs after every pick, and after knockout tree burns too)
   if (!G.trial && stage === 0) saveCheckpoint();
@@ -1259,7 +1276,13 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.calibReturns = 0; G.calibShots = 0; G.lensKills = 0; G.vortexes = [];
   G.salvageCount = 0; G.salvageStored = 0; G.rescueN = 0; G.reactiveCD = 0; G.reactorUsed = false;
-  G.guardCharge = 0; G.wingCD = 0; G.ascendT = 0; G.meteorRain = null;
+  G.guardCharge = 0; G.guardPulsedWave = false; G.wingCD = 0; G.ascendT = 0; G.meteorRain = null;
+  G.matrixCharge = 0; G.prismN = 0; G.prismReady = false;
+  G.novaStage = 0; G.novaN = 0; G.novaT = 0;
+  G.wallSeg = 0; G.wallCD = 0; G.cataCD = 0; G.lanceT = 0; G.cometSeeds = 0;
+  G.facets = []; G.chorusTypes = []; G.chorusUsed = false;
+  G.syncMeter = 0; G.squadT = 0; G.squadCD = 0; G.railPressure = 0;
+  G.celT = false; G.celS = false; G.celE = false; G.regenLockT = 0;
   G.webSeen = {}; G.lastOfferKeys = [];
   G.lastDraftForm = 1; // re-baselined below once starterLvl is known
   G.secret = freshSecretState();
@@ -1309,7 +1332,8 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
       const eligible = [
         ...PATH_KEYS.filter(k => pathLvl(k) < 4).map(k => ({ path: k })),
         ...WEB_BRIDGES.filter(bridgeEligible).map(b => ({ web: b.key })),
-        ...WEB_SUPERS.filter(superEligible).map(s => ({ web: s.key })),
+        ...WEB_FUSIONS.filter(fusionEligible).map(f => ({ web: f.key })),
+        ...WEB_APEXES.filter(apexEligible).map(x => ({ web: x.key })),
       ];
       if (!eligible.length) break;
       const pick = eligible[Math.floor(gameRand() * eligible.length)];

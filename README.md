@@ -408,21 +408,31 @@ rate. **Rule: mutate any field gameplay reads in `update`; render only reads.**
 
 ### Skill tree (`PATHS` in data.js ~423) — now the hub of THE UPGRADE WEB
 Six paths × four tiers, **permanent**, drafted between every wave. The 24
-tiers are the save-stable ANCHOR nodes of a 39-node web (`WEB_SPOKE_ORDER`,
-`WEB_BRIDGES`, `WEB_SUPERS`, `WEB_SATELLITES` in data.js): six **Form II
-bridge synergies** sit between adjacent constellations (need partner
-evolution + one owned node on each side; real two-system mechanics with
-ball-first classic adapters), six **Final Form superskills** crown the
-spokes (need region-7 evolution + the path capstone + its bridge; rule
-changers — meteor rains, gravity wells, element retuning, a lethal-hit
-reactor, a guardian pulse, permanent wingmates), and the three mastery
-stacks dock as ranked **satellite nodes**. The draft deals
-Commit/Adapt/Explore (`rollUpgradeChoices`, update.js) with superskill
-priority, a newly-unlocked guarantee after evolving, reroll anti-repeat and
-pity; knockout burns only graph LEAVES (`webRegressibleLeaves`) so a defeat
-can never orphan a recipe; checkpoints are schema v3 with a never-throws
-v1/v2 migration (`migrateCheckpoint`, state.js). The constellation screen
-addresses all 39 nodes with exact lock reasons on every locked node. Advancing
+tiers are the save-stable ANCHOR nodes of a 50-node web (`WEB_SPOKE_ORDER`,
+`WEB_BRIDGES`, `WEB_FUSIONS`, `WEB_APEXES`, `WEB_SATELLITES` in data.js;
+design: `FUSION_APEX_PLAN.md`): six **Form II bridge synergies** sit
+between adjacent constellations (partner evolution + one owned node each
+side; real two-system mechanics with ball-first classic adapters), **15
+FUSION POWERS** cover every path pair exactly once (Final Form + 3 ranks in
+both paths + a capstone in either + the bridge for adjacent pairs — **max
+2 per run**; the six original superskills became the adjacent fusions with
+limiters: matrix-gated meteor rain, once-per-target gravity wells, a
+once-per-wave guardian pulse… plus nine cross-web fusions: Prismstorm,
+Hypernova, Bulwark Battery, Cataclysm, Aegis Lance, Comet Shepherd, Mirror
+Spectrum, Bestiary Chorus, Victory Formation), and **2 APEX POWERS** crown
+the chart (stage 24+, two compatible fusions, nine ranks — **max 1**: War
+Machine's pressure-fold weapon flow, Celestial Guardian's three-sector
+ward). The three mastery stacks dock as ranked **satellite nodes**. The
+draft deals Commit/Adapt/Explore (`rollUpgradeChoices`, update.js) with
+apex > fusion priority, ONE fusion/apex per hand, a newly-unlocked
+guarantee after evolving, reroll anti-repeat and pity; knockout burns only
+graph LEAVES (`webRegressibleLeaves` simulates every removal against
+`webBuildLegal`) so a defeat can never break a recipe; checkpoints are
+schema v3 with a never-throws v1/v2 migration (`migrateCheckpoint`,
+state.js). The constellation screen addresses all 50 nodes — locked
+fusions stay compact silhouettes until 2 ranks in both paths, connectors
+draw only for owned/offered/selected nodes, and every locked node states
+its exact unlock route. Advancing
 is `advancePath(key)`. The hand guarantees an offense option and a non-offense
 option while both groups remain, so damage never crowds survival/utility off
 the screen:

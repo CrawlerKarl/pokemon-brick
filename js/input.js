@@ -264,33 +264,25 @@ window.addEventListener('keydown', e => {
   }
   if (upgradeTreeOpen && G.state === 'upgrade' && G.stateT > 0.8 &&
       ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
-    // ←/→ walk a spoke outward: core tiers → superskill → satellite (a bridge
-    // exits onto its two wedges); ↑/↓ cycle spokes in DISPLAY order (or hop
-    // bridge to bridge), so the cursor always moves the way the map looks.
-    const kind = treeSel.kind || 'tier';
-    const spokePiAt = pos => Math.max(0, PATH_KEYS.indexOf(WEB_SPOKE_ORDER[((pos % 6) + 6) % 6]));
-    const satOf = pi => WEB_SATELLITES.findIndex(s => s.path === PATH_KEYS[pi]);
-    if (e.code === 'ArrowLeft') {
-      if (kind === 'sat') treeSel = { kind: 'super', pi: treeSel.pi, ti: 3 };
-      else if (kind === 'super') treeSel = { kind: 'tier', pi: treeSel.pi, ti: 3 };
-      else if (kind === 'bridge') treeSel = { kind: 'tier', pi: Math.max(0, PATH_KEYS.indexOf(WEB_BRIDGES[treeSel.bi].paths[0])), ti: 1 };
-      else treeSel = { kind: 'tier', pi: treeSel.pi, ti: Math.max(0, treeSel.ti - 1) };
-    } else if (e.code === 'ArrowRight') {
-      if (kind === 'tier' && treeSel.ti >= 3) treeSel = { kind: 'super', pi: treeSel.pi, ti: 3 };
-      else if (kind === 'tier') treeSel = { kind: 'tier', pi: treeSel.pi, ti: treeSel.ti + 1 };
-      else if (kind === 'super' && satOf(treeSel.pi) >= 0) treeSel = { kind: 'sat', si: satOf(treeSel.pi), pi: treeSel.pi, ti: 3 };
-      else if (kind === 'bridge') treeSel = { kind: 'tier', pi: Math.max(0, PATH_KEYS.indexOf(WEB_BRIDGES[treeSel.bi].paths[1])), ti: 1 };
-    } else {
+    // ←/→ walk the RADIAL STACK at the cursor's angle (core → capstone →
+    // satellite/fusion/apex); ↑/↓ rotate through all 12 half-positions
+    // (spoke axes and wedge boundaries alternate) at a similar depth.
+    let half = treeSelHalf(treeSel);
+    let stack = treeStackAt(half);
+    let depth = stack.findIndex(s => sameTreeSel(s, treeSel));
+    if (depth < 0) depth = 0;
+    if (e.code === 'ArrowLeft') depth = Math.max(0, depth - 1);
+    else if (e.code === 'ArrowRight') depth = Math.min(stack.length - 1, depth + 1);
+    else {
       const dir = e.code === 'ArrowDown' ? 1 : -1;
-      if (kind === 'bridge') treeSel = { kind: 'bridge', bi: (treeSel.bi + dir + 6) % 6, pi: 0, ti: 0 };
-      else {
-        const npi = spokePiAt(WEB_SPOKE_ORDER.indexOf(PATH_KEYS[treeSel.pi]) + dir);
-        if (kind === 'sat') treeSel = satOf(npi) >= 0
-          ? { kind: 'sat', si: satOf(npi), pi: npi, ti: 3 }
-          : { kind: 'super', pi: npi, ti: 3 };
-        else treeSel = { kind, pi: npi, ti: treeSel.ti };
+      for (let hop = 0; hop < 12; hop++) {
+        half = ((half + dir) % 12 + 12) % 12;
+        const next = treeStackAt(half);
+        if (next.length) { stack = next; break; }
       }
+      depth = Math.min(depth, stack.length - 1);
     }
+    treeSel = stack[depth];
     const offer = choiceIndexForSel(treeSel);
     if (offer >= 0) draftSel = offer;
     ensureTreeSelVisible(); // the camera follows the keyboard cursor
@@ -389,8 +381,62 @@ function upgradeLayout() {
     tree: { x: W / 2 + row / 2 - bw, y: ay, w: bw, h: 34 } };
 }
 // which tree node the player last tapped, so the detail panel can explain it.
-// kind: 'tier' (pi,ti) · 'bridge' (bi) · 'super' (pi) · 'sat' (si)
+// kind: 'tier' (pi,ti) · 'bridge' (bi) · 'fusion' (fi) · 'apex' (ai) · 'sat' (si)
 let treeSel = { kind: 'tier', pi: 0, ti: 0 };
+// ---- shared angular addressing: the chart is 12 half-positions (even = a
+// spoke AXIS, odd = a wedge BOUNDARY). Layout, hit-testing and keyboard nav
+// all derive angles from these, so they can never drift apart.
+function bridgeHalfPos(b) {
+  const s0 = WEB_SPOKE_ORDER.indexOf(b.paths[0]), s1 = WEB_SPOKE_ORDER.indexOf(b.paths[1]);
+  return Math.abs(s0 - s1) === 1 ? s0 + s1 : 11; // the 5↔0 wrap boundary
+}
+const FUSION_OPPOSITE_SLOTS = { hypernova: 3, lance: 5, chorus: 7 }; // authored halves
+function fusionHalfPos(f) {
+  if (f.bridge) return bridgeHalfPos(f);
+  const s0 = WEB_SPOKE_ORDER.indexOf(f.paths[0]), s1 = WEB_SPOKE_ORDER.indexOf(f.paths[1]);
+  const d = Math.abs(s0 - s1);
+  if (d === 2) return s0 + s1;              // the axis of the spoke between them
+  if (d === 4) return (s0 + s1 + 6) % 12;   // same, across the wrap
+  return FUSION_OPPOSITE_SLOTS[f.key] ?? 1; // opposite wedges: authored boundary
+}
+function treeSelHalf(sel) {
+  const kind = sel.kind || 'tier';
+  if (kind === 'bridge') return bridgeHalfPos(WEB_BRIDGES[sel.bi]);
+  if (kind === 'fusion') return fusionHalfPos(WEB_FUSIONS[sel.fi]);
+  if (kind === 'apex') return WEB_APEXES[sel.ai].mapSlot * 2;
+  return WEB_SPOKE_ORDER.indexOf(PATH_KEYS[sel.pi]) * 2;
+}
+// the radial stack living at one half-position, ordered core → rim
+function treeStackAt(half) {
+  const list = [];
+  if (half % 2 === 0) {
+    const pi = Math.max(0, PATH_KEYS.indexOf(WEB_SPOKE_ORDER[half / 2]));
+    for (let ti = 0; ti < 4; ti++) list.push({ kind: 'tier', pi, ti });
+    const si = WEB_SATELLITES.findIndex(s => s.path === PATH_KEYS[pi]);
+    if (si >= 0) list.push({ kind: 'sat', si, pi, ti: 3 });
+    const fi = WEB_FUSIONS.findIndex(f => !f.bridge && fusionHalfPos(f) === half);
+    if (fi >= 0) list.push({ kind: 'fusion', fi, pi, ti: 3 });
+  } else {
+    const bi = WEB_BRIDGES.findIndex(b => bridgeHalfPos(b) === half);
+    if (bi >= 0) list.push({ kind: 'bridge', bi, pi: 0, ti: 0 });
+    const afi = WEB_FUSIONS.findIndex(f => f.bridge && fusionHalfPos(f) === half);
+    if (afi >= 0) list.push({ kind: 'fusion', fi: afi, pi: 0, ti: 3 });
+    const dfi = WEB_FUSIONS.findIndex(f => !f.bridge && fusionHalfPos(f) === half);
+    if (dfi >= 0) list.push({ kind: 'fusion', fi: dfi, pi: 0, ti: 3 });
+    const ai = WEB_APEXES.findIndex(x => x.mapSlot * 2 === half);
+    if (ai >= 0) list.push({ kind: 'apex', ai, pi: 0, ti: 3 });
+  }
+  return list;
+}
+function sameTreeSel(a, b) {
+  if ((a.kind || 'tier') !== (b.kind || 'tier')) return false;
+  const k = a.kind || 'tier';
+  if (k === 'tier') return a.pi === b.pi && a.ti === b.ti;
+  if (k === 'bridge') return a.bi === b.bi;
+  if (k === 'fusion') return a.fi === b.fi;
+  if (k === 'apex') return a.ai === b.ai;
+  return a.si === b.si;
+}
 // MOBILE: the constellation no longer shrinks to fit — it enforces a large
 // minimum scale and the player drags the chart around instead. treePan is the
 // camera offset (clamped in upgradeTreeLayout); treeDrag tracks one active
@@ -399,7 +445,8 @@ let treePan = { x: 0, y: 0 }, treeDrag = null;
 function treeSelNodeRect(T) {
   const kind = treeSel.kind || 'tier';
   if (kind === 'bridge') return T.bridgeNode(treeSel.bi);
-  if (kind === 'super') return T.superNode(treeSel.pi);
+  if (kind === 'fusion') return T.fusionNode(treeSel.fi);
+  if (kind === 'apex') return T.apexNode(treeSel.ai);
   if (kind === 'sat') return T.satNode(treeSel.si);
   return T.node(treeSel.pi, treeSel.ti);
 }
@@ -425,10 +472,8 @@ function choiceIndexForSel(sel) {
   const cs = G.upgradeChoices || [];
   if (!sel || sel.kind === 'tier' || sel.kind == null) return choiceIndexForTreeNode(sel.pi, sel.ti);
   if (sel.kind === 'bridge') return cs.findIndex(c => c.web && c.web.key === WEB_BRIDGES[sel.bi].key);
-  if (sel.kind === 'super') {
-    const sup = superForPath(PATH_KEYS[sel.pi]);
-    return sup ? cs.findIndex(c => c.web && c.web.key === sup.key) : -1;
-  }
+  if (sel.kind === 'fusion') return cs.findIndex(c => c.web && c.web.key === WEB_FUSIONS[sel.fi].key);
+  if (sel.kind === 'apex') return cs.findIndex(c => c.web && c.web.key === WEB_APEXES[sel.ai].key);
   if (sel.kind === 'sat') return cs.findIndex(c => c.stack && c.stack.key === WEB_SATELLITES[sel.si].stackKey);
   return -1;
 }
@@ -436,7 +481,8 @@ function treeSelForChoice(c) {
   if (!c) return null;
   if (c.pathKey) return { kind: 'tier', pi: Math.max(0, PATH_KEYS.indexOf(c.pathKey)), ti: c.tierIdx };
   if (c.web) {
-    if (c.webKind === 'super') return { kind: 'super', pi: Math.max(0, PATH_KEYS.indexOf(c.web.path)), ti: 3 };
+    if (c.webKind === 'fusion') return { kind: 'fusion', fi: Math.max(0, WEB_FUSION_KEYS.indexOf(c.web.key)), pi: 0, ti: 3 };
+    if (c.webKind === 'apex') return { kind: 'apex', ai: Math.max(0, WEB_APEX_KEYS.indexOf(c.web.key)), pi: 0, ti: 3 };
     return { kind: 'bridge', bi: Math.max(0, WEB_BRIDGE_KEYS.indexOf(c.web.key)), pi: 0, ti: 0 };
   }
   if (c.stack) {
@@ -488,7 +534,9 @@ function upgradeTreeLayout() {
   const detail = sideDetail
     ? { x: panel.x + panel.w - detailSize - pad, y: panel.y + headH, w: detailSize, h: panel.h - headH - pad }
     : { x: panel.x + pad, y: panel.y + panel.h - detailSize - pad, w: panel.w - pad * 2, h: detailSize };
-  let radius = Math.max(74, Math.min(map.w * 0.39, map.h * 0.43) - (compact ? 2 : 10));
+  // the FUSION HALO (1.16r) and APEX ring (1.3r) sit beyond the capstones,
+  // so the base radius leaves headroom for them on desktop
+  let radius = Math.max(74, Math.min(map.w * 0.33, map.h * 0.345) - (compact ? 2 : 8));
   // MOBILE readability beats fitting: the compact chart enforces a big
   // minimum scale — it may overflow the map box; treePan (below) covers it
   if (compact) radius = Math.max(radius, 235);
@@ -504,9 +552,9 @@ function upgradeTreeLayout() {
       detail.y -= extraDetail; detail.h += extraDetail;
     }
   }
-  // clamp the camera to the chart's real extent (labels included); desktop
+  // clamp the camera to the chart's real extent (the apex ring); desktop
   // fits entirely, so its pan locks to zero and nothing changes there
-  const contentR = radius + (compact ? 36 : 60);
+  const contentR = radius * 1.3 + (compact ? 32 : 26);
   const panLim = {
     x: Math.max(0, contentR - map.w / 2 + 8),
     y: Math.max(0, contentR - map.h / 2 + 8),
@@ -542,23 +590,25 @@ function upgradeTreeLayout() {
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
     spokeA,
     label: pi => {
+      // wedge labels sit INSIDE the fusion halo, between the crown ring and
+      // the halo nodes, so nothing prints over the outer rings
       const a = spokeA(pi);
-      // tighter on compact maps so the top/bottom labels stay inside the box
-      const lr = radius + (compact ? 15 : 42);
-      return { x: cx + Math.cos(a) * lr, y: cy + Math.sin(a) * lr, a };
+      return { x: cx + Math.cos(a) * radius * 1.01, y: cy + Math.sin(a) * radius * 1.01, a };
     },
     node: (pi, ti) => at(spokeA(pi), inner + ti * step, drawR + (ti === 3 ? 1 : 0)),
     // a bridge sits on the BOUNDARY between its two wedges at mid-ring height
-    bridgeNode: bi => {
-      const b = WEB_BRIDGES[bi];
-      const s0 = WEB_SPOKE_ORDER.indexOf(b.paths[0]), s1 = WEB_SPOKE_ORDER.indexOf(b.paths[1]);
-      // the boundary halfway between the two spokes (handles the 5↔0 wrap)
-      const mid = (Math.abs(s0 - s1) === 1 ? (s0 + s1) / 2 : 5.5);
-      return at(-Math.PI / 2 + mid * Math.PI / 3, inner + 2.05 * step, drawR * 0.92);
+    bridgeNode: bi => at(-Math.PI / 2 + bridgeHalfPos(WEB_BRIDGES[bi]) * Math.PI / 6,
+      inner + 2.05 * step, drawR * 0.92),
+    // fusions: adjacent pairs crown their own boundary just past the capstone
+    // ring; cross-web pairs ride the FUSION HALO (axis of the spoke between
+    // them, or an authored boundary for opposite pairs)
+    fusionNode: fi => {
+      const f = WEB_FUSIONS[fi];
+      const a = -Math.PI / 2 + fusionHalfPos(f) * Math.PI / 6;
+      return at(a, radius * (f.bridge ? 0.93 : 1.16), drawR + 2);
     },
-    // the superskill crowns its spoke just past the capstone, offset to one
-    // side; the mastery satellite docks on the other side of the same crown
-    superNode: pi => at(spokeA(pi) - 0.3, radius * 0.93, drawR + 2),
+    // apexes hold the outermost ring, beyond the halo
+    apexNode: ai => at(-Math.PI / 2 + WEB_APEXES[ai].mapSlot * Math.PI / 3, radius * 1.3, drawR + 4),
     satNode: si => {
       const pi = Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path));
       return at(spokeA(pi) + 0.3, radius * 0.93, Math.max(6, drawR * 0.72));
@@ -614,9 +664,10 @@ function pickUpgrade(i) {
   // WEB node pick: a Form II bridge synergy or a Final Form superskill.
   // Effects all read upgN(key) at use time, so installing is just ownership.
   if (c.web) {
-    const isSuper = c.webKind === 'super';
+    const kind = c.webKind || 'bridge';
+    const big = kind === 'fusion' || kind === 'apex';
     G.upg[c.web.key] = 1;
-    beginUpgradeInstallFx(c.web.icon, c.web.color, c.web.name, isSuper ? 'super' : 'bridge', 3, isSuper);
+    beginUpgradeInstallFx(c.web.icon, c.web.color, c.web.name, kind, 3, big);
     G.upgradeChoices = null;
     upgradeTreeOpen = false;
     SFX.power();
@@ -624,12 +675,13 @@ function pickUpgrade(i) {
     serve();
     if (G.justEvolved) { G.justEvolved = false; return; }
     setAnnounce(c.web.icon, c.web.color,
-      isSuper ? '★ ' + c.web.name + ' ★' : c.web.name,
-      webNodeDesc(c.web), isSuper ? 3.4 : 2.6,
-      isSuper ? 'SUPERSKILL ONLINE — YOUR RIG HAS TRANSFORMED'
-        : 'BRIDGE SYNERGY ONLINE · ' + PATHS[c.web.paths[0]].name + ' × ' + PATHS[c.web.paths[1]].name);
+      kind === 'apex' ? '★★ ' + c.web.name + ' ★★' : big ? '★ ' + c.web.name + ' ★' : c.web.name,
+      webNodeDesc(c.web), big ? 3.4 : 2.6,
+      kind === 'apex' ? 'APEX TRANSFORMATION — THE RIG ITSELF HAS CHANGED'
+        : kind === 'fusion' ? 'FUSION POWER ONLINE · ' + c.web.paths.map(pk => PATHS[pk].name).join(' × ')
+          : 'BRIDGE SYNERGY ONLINE · ' + PATHS[c.web.paths[0]].name + ' × ' + PATHS[c.web.paths[1]].name);
     queueSecretRewardNotice();
-    if (isSuper) SFX.mega();
+    if (big) SFX.mega();
     return;
   }
   // late-run mastery STACK pick (literal held item in SPACE JUNKIE)
@@ -797,7 +849,12 @@ function onPress(x, y) {
           for (let ti = 0; ti < 4; ti++) {
             if (inRect(x, y, T.node(pi, ti))) { selectMapNode({ kind: 'tier', pi, ti }); return; }
           }
-          if (inRect(x, y, T.superNode(pi))) { selectMapNode({ kind: 'super', pi, ti: 3 }); return; }
+        }
+        for (let fi = 0; fi < WEB_FUSIONS.length; fi++) {
+          if (inRect(x, y, T.fusionNode(fi))) { selectMapNode({ kind: 'fusion', fi, pi: 0, ti: 3 }); return; }
+        }
+        for (let ai = 0; ai < WEB_APEXES.length; ai++) {
+          if (inRect(x, y, T.apexNode(ai))) { selectMapNode({ kind: 'apex', ai, pi: 0, ti: 3 }); return; }
         }
         for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
           if (inRect(x, y, T.bridgeNode(bi))) { selectMapNode({ kind: 'bridge', bi, pi: 0, ti: 0 }); return; }
@@ -965,7 +1022,20 @@ function fireAction(auto = false) {
   if (!blasterArmed()) return;
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
   if (G.blasterCD > 0) return;
-  G.blasterCD = (upgN('hyper') ? 0.24 : 0.3) * starterMod('fireRate', 1);
+  // HYPERNOVA CYCLE: during Mega an unbroken stream spins through 3 cadence
+  // stages (the stream breaks — see tickEffects — and the stages fall away)
+  let cd = (upgN('hyper') ? 0.24 : 0.3) * starterMod('fireRate', 1);
+  if (upgN('hypernova') && G.megaT > 0) {
+    cd *= [1, 0.94, 0.86, 0.77][G.novaStage] || 1;
+    G.novaT = 0.7;
+    if (++G.novaN >= 6 && G.novaStage < 3) {
+      G.novaN = 0;
+      G.novaStage++;
+      tone(520 + G.novaStage * 180, 0.1, 'sawtooth', 0.05, 240);
+      addFloater(G.paddle.x, shipY() - 64, 'HYPERNOVA STAGE ' + G.novaStage, '#ffff8d', 12);
+    }
+  }
+  G.blasterCD = cd;
   G.shotsFired++;
   G.muzzle = 0.12;
   // heat: fire freely like a shooter — a long sustained stream (~15+ shots)
@@ -980,7 +1050,10 @@ function fireAction(auto = false) {
   // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
   // heat-limited well below the faster cadence and the capstone adds no DPS
   const hyperCool = upgN('hyper') ? 0.85 : 1;
-  G.heat = Math.min(1, G.heat + 0.12 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool);
+  // HYPERNOVA's upper stages run dangerously hot — the +30% sustain is real,
+  // but stage three cooks the barrel (the plan's declared limiter)
+  const novaHeat = G.novaStage ? [1, 1.1, 1.25, 1.5][G.novaStage] : 1;
+  G.heat = Math.min(1, G.heat + 0.12 * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * modeCool * masteryCool * novaHeat);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
@@ -990,6 +1063,23 @@ function fireAction(auto = false) {
   // species, the color + type follow the current element (green fire, etc.)
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
   if (pil) G.attackAnim = 1; // the pilot visibly ATTACKS — lunge + flash
+  // PRISMSTORM ARRAY: the primed volley fans into five tuned lanes instead
+  if (upgN('prismstorm') && G.prismReady) {
+    G.prismReady = false;
+    const lanes = counterElements(2);
+    for (let i = 0; i < 5; i++) {
+      G.lasers.push({
+        x: G.paddle.x + (i - 2) * 24, y: shipY() - 16, basic: true, prism: true,
+        powerMul: 0.5, mega: G.megaT > 0,
+        shape: pil ? pil.shape : null,
+        element: lanes[i % lanes.length] || (pil ? attackElement() : null),
+        tier: pil ? G.starterLvl : 1,
+      });
+    }
+    addFloater(G.paddle.x, shipY() - 58, 'PRISMSTORM!', '#64ffda', 13);
+    SFX.laser();
+    return;
+  }
   const nBolts = upgN('twin') ? 2 : 1;
   const pulseEvery = upgN('impactX') ? 4 : 5;
   const pulse = !!upgN('pulse') && G.shotsFired % pulseEvery === 0;
@@ -1003,6 +1093,7 @@ function fireAction(auto = false) {
       explosive: !!G.fx_fire || G.megaT > 0,
       powerMul: nBolts > 1 ? 0.6 : 1,
       heavy: !!upgN('heavy'), pulse, nova: pulse && !!upgN('impactX'), calib,
+      wall: !!(upgN('battery') && G.wallSeg > 0), // BULWARK: fire through the wall
       mega: G.megaT > 0,
       shape: pil ? pil.shape : null,
       element: pil ? attackElement() : null,
@@ -1016,12 +1107,21 @@ function fireAction(auto = false) {
 function fireCharge(c) {
   if (G.state !== 'play') return;
   G.chargedEver = true; // the charge tutor banner retires once you've done it
-  const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1); // 1..5, capstone +25%
-  const pierce = 1 + Math.round(c * 3);  // drills through 1..4 blocks
+  // AEGIS LANCE: while shielded, a full charge SPENDS one real shield and the
+  // bolt becomes the lance — unstoppable, armor-breaking (fusion)
+  let lanceShot = false;
+  if (upgN('lance') && c >= 0.9 && G.shieldCharges > 0) {
+    G.shieldCharges--;
+    lanceShot = true;
+    addFloater(G.paddle.x, shipY() - 72, 'AEGIS LANCE!', '#d4e157', 14);
+    SFX.shield();
+  }
+  const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1) * (lanceShot ? 1.5 : 1);
+  const pierce = lanceShot ? 99 : 1 + Math.round(c * 3);  // drills through 1..4 blocks
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
   if (pil) G.attackAnim = 1.4; // charge release = the big attack animation
   G.lasers.push({
-    x: G.paddle.x, y: shipY() - 18, basic: true, charged: true,
+    x: G.paddle.x, y: shipY() - 18, basic: true, charged: true, lance: lanceShot,
     power, pierce, r: (12 + c * 22) * (upgN('heavy') ? 1.15 : 1),
     heavy: !!upgN('heavy'), explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0,
     shape: pil ? pil.shape : null,
@@ -1029,8 +1129,11 @@ function fireCharge(c) {
     tier: pil ? G.starterLvl : 1,
   });
   // the big shot dumps a decent slug of heat — a full charge is ~0.6 of the
-  // bar, so leaning on the charge (or chaining them) really can overheat you
-  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0) * starterMod('heat', 1);
+  // bar, so leaning on the charge (or chaining them) really can overheat you.
+  // WAR MACHINE spends banked rail pressure to run the shot far cooler.
+  const wmSpend = upgN('warmachine') ? G.railPressure : 0;
+  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0) * starterMod('heat', 1)
+    * (1 - 0.45 * wmSpend);
   G.heat = Math.min(1, G.heat + (0.30 + 0.30 * c) * heatMods);
   if (G.heat >= 1) {
     G.overheat = OVERHEAT_DUR;
@@ -1039,13 +1142,22 @@ function fireCharge(c) {
   }
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
+  // WAR MACHINE: the rail spend never resets the gatling's cadence — the two
+  // forms flow into each other, sharing only the heat bar
+  if (upgN('warmachine')) {
+    G.blasterCD = 0;
+    if (wmSpend > 0.2) {
+      ringFx(G.paddle.x, shipY() - 20, '#ff6e40', 5, 60, 3, 0.35);
+      tone(120, 0.22, 'sawtooth', 0.07, 60); // the deeper rail report
+    }
+    G.railPressure = 0;
+  }
   // CALIBRATED BARRAGE: the spent charge primes the next three volleys
   if (upgN('calibrated')) {
     G.calibShots = 3;
     addFloater(G.paddle.x, shipY() - 58, 'CALIBRATED!', '#ffcc80', 13);
   }
-  // METEOR MATRIX: a full-power charge calls the meteor rain (superskill)
-  if (upgN('meteor') && c >= 0.75) beginMeteorRain();
+  fusionChargeReleases(c); // meteor / cataclysm / shepherd / mirror / battery
   SFX.blaster();
   tone(170 + c * 320, 0.2, 'sawtooth', 0.06, 300);
 }
@@ -1093,11 +1205,20 @@ function tryMega() {
     addFloater(G.paddle.x, shipY() - 62, 'REACTIVE SHIELD!', '#dce775', 13);
     SFX.shield();
   }
-  // ELEMENTAL ASCENSION: the retune clock starts NOW (superskill)
+  // ELEMENTAL ASCENSION: the retune clock starts NOW (fusion)
   if (upgN('ascension')) G.ascendT = 0.01;
-  // METEOR MATRIX (classic): Mega itself calls the rain — the ball-first
-  // adapter for a superskill the shooter modes trigger from a full charge
-  if (upgN('meteor') && G.mode === 'classic') beginMeteorRain();
+  // VICTORY FORMATION: Mega at full Sync calls the partner squadron
+  if (upgN('formation') && G.syncMeter >= 8) {
+    G.syncMeter = 0;
+    G.squadT = 8;
+    G.squadCD = 0;
+    addFloater(G.paddle.x, shipY() - 78, 'VICTORY FORMATION!', '#ffd180', 15);
+    SFX.gotcha();
+  }
+  // classic is ball-first with no charge input, so every charge-released
+  // fusion fires on Mega activation instead (recipes force an offense path
+  // to rank 3+, so the sidearm is always armed there)
+  if (G.mode === 'classic') classicFusionReleases();
   G.shake = 14;
   haptic('boss');
   SFX.mega();

@@ -24,11 +24,19 @@
 > 39 nodes (two-tone bridge hexes, double-hex super crowns, ranked
 > satellites, exact lock reasons, keyboard/touch, desktop + 390×844 +
 > 844×390). Locked by 7 new invariant suites — 39/39 green.
-> REMAINING (deliberately deferred): §3 route tracking, the §7 triad chase
-> supers (War Machine / Celestial Guardian), §10 discovery codex + stellar
-> currents, animated node previews in the detail panel, and the Rift
-> rewards' off-map cluster presentation (they remain their own fixed
-> draft).
+> REMAINING (deliberately deferred): §3 route tracking, §10 discovery
+> codex + stellar currents, animated node previews in the detail panel,
+> and the Rift rewards' off-map cluster presentation (they remain their
+> own fixed draft).
+>
+> **FUSION/APEX round (2026-07-18):** the superskills evolved into the
+> three-level progression spine of `FUSION_APEX_PLAN.md` — 15 Fusion
+> powers (all path pairs; the six §7 supers converted with stricter
+> recipes + limiters), the §7 triad supers shipped as the two APEX powers
+> (War Machine / Celestial Guardian) behind stage-24 + double-fusion
+> recipes, 2-Fusion/1-Apex slot caps, silhouette/selective-connector map
+> presentation, and a seeded acquisition-rate suite. See that plan's
+> status header for its own deferred list.
 
 ## Executive recommendation
 

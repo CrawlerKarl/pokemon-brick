@@ -1275,14 +1275,119 @@ function drawPilotUpgradeHardware(x, y, s, preview = false) {
       ctx.beginPath(); ctx.moveTo(dx, dy - 4); ctx.lineTo(dx + dir * 4, dy + 3); ctx.lineTo(dx - dir * 3, dy + 3); ctx.closePath(); ctx.fill();
     }
   }
-  // ---- SUPERSKILL transformations: each crowns its constellation's slot
-  if (upgN('meteor')) { // deployed side racks with orbiting charge motes
+  // ---- FUSION transformations: each writes to its slot with a live
+  // READINESS state (stored charges, facets, seeds, stages — always visible)
+  if (upgN('meteor')) { // side racks; the motes ARE the matrix charge readout
     ctx.globalAlpha = 0.85; ctx.strokeStyle = '#40c4ff'; ctx.lineWidth = 1.6;
     for (const dir of [-1, 1]) {
       roundRect(x + dir * 15 - 2.5, my - 6, 5, 12, 2); ctx.stroke();
-      const a = G.time * 1.6 * motion + (dir > 0 ? 0 : Math.PI);
-      ctx.fillStyle = '#e1f5fe';
-      ctx.beginPath(); ctx.arc(x + dir * 15 + Math.cos(a) * 6, my + Math.sin(a) * 6, 1.6, 0, Math.PI * 2); ctx.fill();
+      const a = G.time * (0.8 + (G.matrixCharge || 0) * 2) * motion + (dir > 0 ? 0 : Math.PI);
+      ctx.globalAlpha = 0.3 + 0.7 * (G.matrixCharge || 0);
+      ctx.fillStyle = G.matrixCharge >= 1 ? '#ffffff' : '#e1f5fe';
+      ctx.beginPath(); ctx.arc(x + dir * 15 + Math.cos(a) * 6, my + Math.sin(a) * 6, 1.6 + (G.matrixCharge || 0), 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.85;
+    }
+  }
+  if (upgN('prismstorm')) { // faceted lens over the muzzles; fills 0-12
+    const fill = G.prismReady ? 1 : (G.prismN || 0) / 12;
+    ctx.globalAlpha = 0.5 + 0.5 * fill;
+    ctx.strokeStyle = G.prismReady ? '#ffffff' : '#64ffda'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) {
+      const fx2 = x + (i - 2) * 5.5;
+      ctx.beginPath(); ctx.moveTo(fx2, my - 12); ctx.lineTo(fx2 + 2.5, my - 7); ctx.lineTo(fx2 - 2.5, my - 7); ctx.closePath();
+      if (i / 5 < fill) { ctx.fillStyle = '#64ffda88'; ctx.fill(); }
+      ctx.stroke();
+    }
+  }
+  if (upgN('hypernova')) { // heat rings count the active Mega stream stage
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = i < (G.novaStage || 0) ? 0.9 : 0.22;
+      ctx.strokeStyle = i < (G.novaStage || 0) ? '#ffff8d' : '#fff59d';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x, my, 12 + i * 3.5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    }
+  }
+  if (upgN('cataclysm')) { // collapsed reactor ring; glows when the cost is banked
+    const armed = G.megaT <= 0 && G.mega >= 0.5 && (G.cataCD || 0) <= 0;
+    ctx.globalAlpha = armed ? 0.7 + 0.25 * Math.sin(G.time * 5 * motion) : 0.3;
+    ctx.strokeStyle = armed ? '#ffab40' : '#8d6e63'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x, my + 2, 8, 3.2, G.time * 0.8 * motion, 0, Math.PI * 2); ctx.stroke();
+  }
+  if (upgN('lance')) { // shield plates rotate forward while a spend is possible
+    const armed = G.shieldCharges > 0;
+    ctx.globalAlpha = armed ? 0.85 : 0.3;
+    ctx.fillStyle = '#d4e157';
+    for (const dir of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(x + dir * 6, my - 10); ctx.lineTo(x + dir * 9, my + 2); ctx.lineTo(x + dir * 3.5, my - 2); ctx.closePath(); ctx.fill();
+    }
+  }
+  if (upgN('shepherd')) { // banked comet seeds orbit the rear rig
+    for (let i = 0; i < 3; i++) {
+      const a = G.time * 1.1 * motion + i * Math.PI * 2 / 3;
+      const lit = i < (G.cometSeeds || 0);
+      ctx.globalAlpha = lit ? 0.95 : 0.2;
+      ctx.fillStyle = lit ? '#ffab91' : '#6d4c41';
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.5, y + s * 0.42 + Math.sin(a) * 5, lit ? 2.4 : 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (upgN('mirror')) { // captured facets ring the shield in their OWN types
+    for (let i = 0; i < 3; i++) {
+      const a = Math.PI * (1.2 + i * 0.3);
+      const t = (G.facets || [])[i];
+      ctx.globalAlpha = t ? 0.95 : 0.22;
+      ctx.fillStyle = t ? (TYPE_COLORS[t] || '#80cbc4') : '#455a64';
+      ctx.save(); ctx.translate(x + Math.cos(a) * s * 0.72, y + Math.sin(a) * s * 0.62); ctx.rotate(a);
+      ctx.fillRect(-3, -1.6, 6, 3.2); ctx.restore();
+    }
+  }
+  if (upgN('chorus')) { // recorded type outlines gather behind the crest
+    for (let i = 0; i < 3; i++) {
+      const t = (G.chorusTypes || [])[i];
+      ctx.globalAlpha = t ? 0.85 : 0.2;
+      ctx.strokeStyle = t ? (TYPE_COLORS[t] || '#f48fb1') : '#607d8b'; ctx.lineWidth = 1.3;
+      constellationHex(x + (i - 1) * 9, y + s * 0.56, 3.4, Math.PI / 6); ctx.stroke();
+    }
+  }
+  if (upgN('formation')) { // the sync meter arcs under the power ring
+    const fill = Math.min(1, (G.syncMeter || 0) / 8);
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = 'rgba(255,209,128,0.25)'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(x, y + 4, s * 0.58, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+    if (fill > 0) {
+      ctx.strokeStyle = fill >= 1 ? '#ffffff' : '#ffd180';
+      ctx.beginPath(); ctx.arc(x, y + 4, s * 0.58, Math.PI * 0.15, Math.PI * (0.15 + 0.7 * fill)); ctx.stroke();
+    }
+    if (G.squadT > 0) { // the squadron holds its V while the call lasts
+      for (const dir of [-1, 1]) {
+        const wx = x + dir * s * 0.95, wy = y - s * 0.05 + Math.sin(G.time * 3 * motion + dir) * 3;
+        ctx.fillStyle = '#ffd180';
+        ctx.beginPath(); ctx.moveTo(wx, wy - 5); ctx.lineTo(wx + dir * 5, wy + 4); ctx.lineTo(wx - dir * 4, wy + 4); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  // ---- APEX transformations: the rig itself changes
+  if (upgN('warmachine')) { // the fold: pressure gauge + swapping silhouette
+    const p = G.railPressure || 0;
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = 'rgba(255,110,64,0.3)'; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(x - 11, my + 9); ctx.lineTo(x + 11, my + 9); ctx.stroke();
+    if (p > 0) {
+      ctx.strokeStyle = p > 0.6 ? '#ffab91' : '#ff6e40';
+      ctx.beginPath(); ctx.moveTo(x - 11, my + 9); ctx.lineTo(x - 11 + 22 * p, my + 9); ctx.stroke();
+    }
+    if (p > 0.6) { // the rail form asserts itself: a long amber barrel sleeve
+      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = '#ff6e40'; ctx.lineWidth = 2;
+      roundRect(x - 3, my - 16, 6, 18, 2); ctx.stroke();
+    }
+  }
+  if (upgN('celestial')) { // three halo sectors: type / shield / bond
+    const secs = [[G.celT, '#18ffff'], [G.celS, '#66bb6a'], [G.celE, '#ec407a']];
+    for (let i = 0; i < 3; i++) {
+      const a0 = -Math.PI / 2 + i * Math.PI * 2 / 3 + 0.12;
+      ctx.globalAlpha = secs[i][0] ? 0.85 : 0.22;
+      ctx.strokeStyle = secs[i][0] ? secs[i][1] : '#546e7a'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(x, y - s * 0.08, s * 0.66, a0, a0 + Math.PI * 2 / 3 - 0.24); ctx.stroke();
     }
   }
   if (upgN('ascension')) { // rainbow lens halo above the crown
@@ -1301,12 +1406,12 @@ function drawPilotUpgradeHardware(x, y, s, preview = false) {
     ctx.beginPath(); ctx.ellipse(x, y + 4, s * 0.56, s * 0.34, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (upgN('guardian')) { // guardian sigil behind the pilot, six pips filling
-    ctx.globalAlpha = 0.5;
+  if (upgN('guardian')) { // guardian sigil behind the pilot, EIGHT pips filling
+    ctx.globalAlpha = G.guardPulsedWave ? 0.28 : 0.5; // spent this wave = resting
     ctx.strokeStyle = '#b9f6ca'; ctx.lineWidth = 1.6;
     constellationHex(x, y - s * 0.1, s * 0.52, Math.PI / 6); ctx.stroke();
-    for (let i = 0; i < 6; i++) {
-      const a = -Math.PI / 2 + i * Math.PI / 3;
+    for (let i = 0; i < 8; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 4;
       ctx.fillStyle = i < (G.guardCharge || 0) ? '#b9f6ca' : 'rgba(185,246,202,0.2)';
       ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.52, y - s * 0.1 + Math.sin(a) * s * 0.52, 1.8, 0, Math.PI * 2); ctx.fill();
     }
@@ -1424,9 +1529,10 @@ function drawPilotRig(x, py, preview = false) {
       const n = (G.stacks && G.stacks[si.key]) || 0;
       if (n) badges.push({ icon: si.icon, color: si.color, count: n });
     }
-    // bridges + superskills rack their own hardpoint chips (supers glint)
+    // bridges, fusions and the apex rack their own hardpoint chips
     for (const b of WEB_BRIDGES) if (upgN(b.key)) badges.push({ icon: b.icon, color: b.color, count: 1 });
-    for (const sp of WEB_SUPERS) if (upgN(sp.key)) badges.push({ icon: sp.icon, color: sp.color, count: 1, capped: true });
+    for (const f of WEB_FUSIONS) if (upgN(f.key)) badges.push({ icon: f.icon, color: f.color, count: 1, capped: true });
+    for (const x of WEB_APEXES) if (upgN(x.key)) badges.push({ icon: x.icon, color: x.color, count: 1, capped: true });
     const maxBadges = IS_TOUCH ? 5 : 6;
     const shown = badges.slice(0, maxBadges);
     const extra = Math.max(0, badges.length - shown.length);
@@ -1521,7 +1627,8 @@ function drawBuildRail(x, py, pw, ph) {
   // path sockets — same rail, so the paddle rig stays the single build record
   const webOwned = [
     ...WEB_BRIDGES.filter(b => upgN(b.key)),
-    ...WEB_SUPERS.filter(s => upgN(s.key)),
+    ...WEB_FUSIONS.filter(f => upgN(f.key)),
+    ...WEB_APEXES.filter(x => upgN(x.key)),
   ];
   const socketN = totalPathLevels() + webOwned.length;
   if (socketN) {
@@ -2755,6 +2862,29 @@ function drawRings() {
 // SINGULARITY / EVENT HORIZON wells: an IMPLODING dashed ring (it contracts —
 // the visual opposite of the expanding ringFx) with a dark heart. Strokes
 // only: no per-frame gradients, respects the perf rules.
+// BULWARK BATTERY's hex wall is a real gameplay ZONE (it eats shots crossing
+// py-84), so it draws in every mode at exactly that line — segments are the
+// readiness readout, and a rebuild floor shows as a dim outline.
+function drawBulwarkWall() {
+  if (!upgN('battery') || (G.state !== 'play' && G.state !== 'serve')) return;
+  const wy = shipY() - 84, px = G.paddle.x;
+  ctx.save();
+  for (let i = 0; i < 3; i++) {
+    const wx = px + (i - 1) * 40;
+    const lit = i < (G.wallSeg || 0);
+    ctx.globalAlpha = lit ? 0.6 + 0.15 * Math.sin(G.time * 3 + i) : (G.wallCD > 0 ? 0.1 : 0.2);
+    ctx.strokeStyle = lit ? '#a5d6a7' : '#546e7a';
+    ctx.lineWidth = lit ? 2 : 1.2;
+    constellationHex(wx, wy, 13, 0); ctx.stroke();
+    if (lit) {
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = '#a5d6a7';
+      constellationHex(wx, wy, 13, 0); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 function drawVortexes() {
   if (!G.vortexes.length) return;
   ctx.save();
@@ -2783,6 +2913,7 @@ function drawVortexes() {
 function drawParticles() {
   drawRings();
   drawVortexes();
+  drawBulwarkWall();
   // regular particles glow additively (premium over the dark sky); sparkle
   // glints ride the cached 4-point star sprite, twinkling as they fade
   ctx.save();
@@ -4829,15 +4960,15 @@ function drawFullUpgradeTree() {
   // maxWidth keeps the title clear of the close button on phones
   ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION',
     p.x + p.w / 2, p.y + (T.compact ? 18 : 22), p.w - 116);
-  // the build count spans the whole web: 24 tiers + 6 bridges + 6 superskills
-  // + 3 satellites (a satellite counts once at any rank) = 39 nodes
+  // the build count spans the whole web: 24 tiers + 6 bridges + 15 fusions
+  // + 2 apexes + 3 satellites (a satellite counts once at any rank) = 50
   const satOwnedN = WEB_SATELLITES.filter(s => (G.stacks && G.stacks[s.stackKey]) > 0).length;
   const ownedN = totalBuildLevels() + satOwnedN;
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
   ctx.font = `700 ${T.compact ? 9 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
   const buildLine = T.compact
-    ? 'BUILD ' + ownedN + '/39 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
-    : 'BUILD ' + ownedN + '/39 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
+    ? 'BUILD ' + ownedN + '/50 · ' + activeN + ' PATHS · 3 OFFERS GLOW'
+    : 'BUILD ' + ownedN + '/50 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
       ' · THREE GLOWING NODES ARE THIS STAGE’S OFFERS';
   ctx.fillText(buildLine, p.x + p.w / 2, p.y + (T.compact ? 37 : 45), p.w - 96);
 
@@ -4845,6 +4976,8 @@ function drawFullUpgradeTree() {
   treeSel.pi = Math.max(0, Math.min(PATH_KEYS.length - 1, treeSel.pi | 0));
   treeSel.ti = Math.max(0, Math.min(3, treeSel.ti | 0));
   if (treeSel.kind === 'bridge') treeSel.bi = Math.max(0, Math.min(WEB_BRIDGES.length - 1, treeSel.bi | 0));
+  if (treeSel.kind === 'fusion') treeSel.fi = Math.max(0, Math.min(WEB_FUSIONS.length - 1, treeSel.fi | 0));
+  if (treeSel.kind === 'apex') treeSel.ai = Math.max(0, Math.min(WEB_APEXES.length - 1, treeSel.ai | 0));
   if (treeSel.kind === 'sat') treeSel.si = Math.max(0, Math.min(WEB_SATELLITES.length - 1, treeSel.si | 0));
 
   const map = T.map, C = T.center;
@@ -4870,11 +5003,17 @@ function drawFullUpgradeTree() {
       ctx.fillText(ringNames[ti], C.x + Math.cos(la) * (rr + 6), C.y + Math.sin(la) * (rr + 6));
     }
   }
-  // the CROWN ring: superskills + mastery satellites orbit past the capstones
+  // the CROWN ring (adjacent fusions + satellites), the FUSION HALO (the
+  // nine cross-web fusions) and the APEX ring beyond it
   ctx.setLineDash([2, 10]);
   ctx.lineDashOffset = -G.time * (SETTINGS.reduceFlash ? 2 : 8);
   ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.arc(C.x, C.y, T.radius * 0.93, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.arc(C.x, C.y, T.radius * 1.16, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([3, 14]);
+  ctx.strokeStyle = 'rgba(255,110,64,0.12)';
+  ctx.beginPath(); ctx.arc(C.x, C.y, T.radius * 1.3, 0, Math.PI * 2); ctx.stroke();
   ctx.setLineDash([]);
 
   // Connectors first, behind their nodes. Owned routes are solid; an offered
@@ -4921,17 +5060,34 @@ function drawFullUpgradeTree() {
       connectTo(T.node(PATH_KEYS.indexOf(pk), 1), n, PATHS[pk].color, owned, offered);
     }
   }
-  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
-    const sup = superForPath(PATH_KEYS[pi]);
-    if (sup) {
-      const n = T.superNode(pi);
-      const owned = !!upgN(sup.key);
-      const offered = choiceIndexForSel({ kind: 'super', pi }) >= 0;
-      connectTo(T.node(pi, 3), n, sup.color, owned, offered);
-      // the recipe thread: bridge → super, barely-there until it matters
-      ctx.globalAlpha = owned || offered ? 0.5 : 0.16;
-      connectTo(T.bridgeNode(WEB_BRIDGE_KEYS.indexOf(sup.bridge)), n, sup.color, owned, offered);
+  // FUSION connectors are SELECTIVE (the plan's mobile-readability rule):
+  // a fusion's two prerequisite-spoke threads draw only while it is owned,
+  // offered, or the selected node — never all fifteen at once.
+  for (let fi = 0; fi < WEB_FUSIONS.length; fi++) {
+    const f = WEB_FUSIONS[fi], n = T.fusionNode(fi);
+    const owned = !!upgN(f.key);
+    const offered = choiceIndexForSel({ kind: 'fusion', fi }) >= 0;
+    const sel = treeSel.kind === 'fusion' && treeSel.fi === fi;
+    if (!(owned || offered || sel)) continue;
+    for (const pk of f.paths) {
+      connectTo(T.node(PATH_KEYS.indexOf(pk), 3), n, PATHS[pk].color, owned, offered);
+    }
+    if (f.bridge) {
+      ctx.globalAlpha = owned || offered ? 0.5 : 0.3;
+      connectTo(T.bridgeNode(WEB_BRIDGE_KEYS.indexOf(f.bridge)), n, f.color, owned, offered);
       ctx.globalAlpha = 1;
+    }
+  }
+  // an apex thread runs to each of its COMPATIBLE fusions, same selectivity
+  for (let ai = 0; ai < WEB_APEXES.length; ai++) {
+    const x = WEB_APEXES[ai], n = T.apexNode(ai);
+    const owned = !!upgN(x.key);
+    const offered = choiceIndexForSel({ kind: 'apex', ai }) >= 0;
+    const sel = treeSel.kind === 'apex' && treeSel.ai === ai;
+    if (!(owned || offered || sel)) continue;
+    for (const f of apexCompatFusions(x)) {
+      connectTo(T.fusionNode(WEB_FUSION_KEYS.indexOf(f.key)), n,
+        upgN(f.key) ? f.color : 'rgba(255,255,255,0.35)', owned && upgN(f.key), offered);
     }
   }
   for (let si = 0; si < WEB_SATELLITES.length; si++) {
@@ -5033,36 +5189,86 @@ function drawFullUpgradeTree() {
     if (offered) offerChip(n, offer);
     ctx.restore();
   }
-  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
-    const sup = superForPath(PATH_KEYS[pi]);
-    if (!sup) continue;
-    const n = T.superNode(pi);
-    const owned = !!upgN(sup.key), eligible = superEligible(sup);
-    const sel = treeSel.kind === 'super' && treeSel.pi === pi;
-    const offer = choiceIndexForSel({ kind: 'super', pi });
+  // FUSION nodes: compact SILHOUETTES until the player holds two ranks in
+  // both paths (then they expand and reveal their recipe); double-hex crowns
+  // when live. Only offers pulse. Two-tone rim = its two path colors.
+  for (let fi = 0; fi < WEB_FUSIONS.length; fi++) {
+    const f = WEB_FUSIONS[fi], n = T.fusionNode(fi);
+    const owned = !!upgN(f.key), eligible = fusionEligible(f), visible = fusionVisible(f);
+    const sel = treeSel.kind === 'fusion' && treeSel.fi === fi;
+    const offer = choiceIndexForSel({ kind: 'fusion', fi });
     const offered = offer >= 0, chosen = offered && draftSel === offer;
-    const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + pi * 1.1);
+    const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.5 + fi * 0.9);
     ctx.save();
-    if (sel || offered || owned) { ctx.shadowColor = offered ? '#ffffff' : sup.color; ctx.shadowBlur = offered ? 15 + pulse * 10 : owned ? 13 : 15; }
-    // the DOUBLE HEX star crown marks a superskill — shape, not color alone
+    if (!visible && !sel) { // locked silhouette: a small quiet marker
+      ctx.globalAlpha = 0.55;
+      constellationHex(n.cx, n.cy, n.r * 0.55, Math.PI / 6);
+      ctx.fillStyle = 'rgba(11,16,32,0.9)'; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+    if (sel || offered || owned) { ctx.shadowColor = offered ? '#ffffff' : f.color; ctx.shadowBlur = offered ? 15 + pulse * 10 : owned ? 13 : 15; }
     constellationHex(n.cx, n.cy, n.r + 1.5, Math.PI / 6);
-    ctx.fillStyle = chosen ? mixHex(sup.color, '#ffffff', 0.25) : owned ? mixHex(sup.color, '#071022', 0.45)
-      : offered ? mixHex(sup.color, '#071022', 0.7) : 'rgba(9,14,28,0.92)';
+    ctx.fillStyle = chosen ? mixHex(f.color, '#ffffff', 0.25) : owned ? mixHex(f.color, '#071022', 0.45)
+      : offered ? mixHex(f.color, '#071022', 0.7) : 'rgba(9,14,28,0.92)';
     ctx.fill();
+    // two-tone rim: each half in one of its path colors (never color alone —
+    // the double hex is the fusion SHAPE)
+    const cA = PATHS[f.paths[0]].color, cB = PATHS[f.paths[1]].color;
     ctx.lineWidth = chosen || sel ? 2.6 : owned || offered ? 2.2 : eligible ? 1.7 : 1;
-    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered ? sup.color : eligible ? sup.color + 'aa' : 'rgba(255,255,255,0.16)';
-    ctx.stroke();
+    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cA : 'rgba(255,255,255,0.16)';
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered || eligible ? cB : 'rgba(255,255,255,0.2)';
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 2.5, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
     constellationHex(n.cx, n.cy, n.r + 1.5, 0);
+    ctx.strokeStyle = owned || offered ? f.color : 'rgba(255,255,255,0.2)';
     ctx.globalAlpha = owned || offered || eligible || sel ? 0.8 : 0.3;
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
     const lit = owned || offered || eligible || sel;
-    const badge = iconBadge(sup.icon, sup.color, Math.max(7, Math.round(n.r * 0.62)), lit ? 'lit' : 'dim');
-    ctx.globalAlpha = lit ? 1 : 0.4;
+    const badge = iconBadge(f.icon, f.color, Math.max(7, Math.round(n.r * 0.62)), lit ? 'lit' : 'dim');
+    ctx.globalAlpha = lit ? 1 : 0.45;
     ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
     ctx.globalAlpha = 1;
     if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.72, n.cy + n.r * 0.68, 3, 0, Math.PI * 2); ctx.fill(); }
+    if (offered) offerChip(n, offer);
+    ctx.restore();
+  }
+  // APEX nodes hold the outermost ring — triple-ring crowns, dim until two
+  // compatible fusions are installed
+  for (let ai = 0; ai < WEB_APEXES.length; ai++) {
+    const x = WEB_APEXES[ai], n = T.apexNode(ai);
+    const owned = !!upgN(x.key), eligible = apexEligible(x);
+    const near = apexCompatFusions(x).filter(f => upgN(f.key)).length >= 2;
+    const sel = treeSel.kind === 'apex' && treeSel.ai === ai;
+    const offer = choiceIndexForSel({ kind: 'apex', ai });
+    const offered = offer >= 0, chosen = offered && draftSel === offer;
+    const pulse = SETTINGS.reduceFlash ? 0.5 : 0.5 + 0.5 * Math.sin(G.time * 2.2 + ai * 2.4);
+    ctx.save();
+    if (sel || offered || owned) { ctx.shadowColor = offered ? '#ffffff' : x.color; ctx.shadowBlur = offered ? 16 + pulse * 10 : 14; }
+    constellationHex(n.cx, n.cy, n.r + 2, Math.PI / 6);
+    ctx.fillStyle = chosen ? mixHex(x.color, '#ffffff', 0.25) : owned ? mixHex(x.color, '#071022', 0.4)
+      : offered ? mixHex(x.color, '#071022', 0.68) : 'rgba(9,14,28,0.94)';
+    ctx.fill();
+    ctx.lineWidth = chosen || sel ? 2.8 : owned || offered ? 2.4 : eligible || near ? 1.8 : 1;
+    ctx.strokeStyle = chosen || sel ? '#fff' : owned || offered ? x.color : eligible || near ? x.color + 'aa' : 'rgba(255,255,255,0.14)';
+    ctx.stroke();
+    constellationHex(n.cx, n.cy, n.r + 2, 0);
+    ctx.globalAlpha = owned || offered || near || sel ? 0.8 : 0.25;
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(n.cx, n.cy, n.r + 6, 0, Math.PI * 2);
+    ctx.globalAlpha = owned || offered ? 0.6 : near || sel ? 0.3 : 0.12;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    const lit = owned || offered || eligible || near || sel;
+    const badge = iconBadge(x.icon, x.color, Math.max(8, Math.round(n.r * 0.58)), lit ? 'lit' : 'dim');
+    ctx.globalAlpha = lit ? 1 : 0.4;
+    ctx.drawImage(badge, n.cx - badge.width / 2, n.cy - badge.height / 2);
+    ctx.globalAlpha = 1;
+    if (owned) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(n.cx + n.r * 0.74, n.cy + n.r * 0.7, 3.2, 0, Math.PI * 2); ctx.fill(); }
     if (offered) offerChip(n, offer);
     ctx.restore();
   }
@@ -5176,14 +5382,32 @@ function drawTreeDetailWeb(T) {
     status = owned ? 'OWNED' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
       : eligible ? 'REACHABLE · NOT OFFERED' : 'LOCKED';
     statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
-  } else if (kind === 'super') {
-    const sup = superForPath(PATH_KEYS[treeSel.pi]);
-    const owned = !!upgN(sup.key), eligible = superEligible(sup);
-    color = sup.color; icon = sup.icon; name = sup.name;
-    heading = '★ SUPERSKILL · ' + PATHS[sup.path].name + ' APEX';
-    desc = webNodeDesc(sup); visual = sup.visual; proc = sup.proc;
-    locks = owned || offered || eligible ? [] : webLockReason(sup, 'super');
-    status = owned ? '★ ONLINE' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
+  } else if (kind === 'fusion') {
+    const f = WEB_FUSIONS[treeSel.fi];
+    const owned = !!upgN(f.key), eligible = fusionEligible(f);
+    color = f.color; icon = f.icon; name = f.name;
+    heading = '★ FUSION · ' + f.paths.map(pk => PATHS[pk].name).join(' × ') +
+      (f.bridge ? '' : ' · CROSS-WEB') + ' · ' + (f.role || '');
+    desc = webNodeDesc(f);
+    visual = f.visual;
+    proc = (f.ready ? 'READY: ' + f.ready + ' · ' : '') + (f.proc || '') +
+      (f.limit ? ' · LIMIT: ' + f.limit : '');
+    locks = owned || offered || eligible ? [] : webLockReason(f, 'fusion');
+    status = owned ? '★ FUSION ONLINE · SLOT ' + fusionsOwnedCount() + '/2'
+      : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
+        : eligible ? 'RECIPE COMPLETE · NOT OFFERED' : 'LOCKED';
+    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
+  } else if (kind === 'apex') {
+    const x = WEB_APEXES[treeSel.ai];
+    const owned = !!upgN(x.key), eligible = apexEligible(x);
+    color = x.color; icon = x.icon; name = x.name;
+    heading = '★★ APEX · ' + x.paths.map(pk => PATHS[pk].name).join(' × ') + ' · ' + (x.role || '');
+    desc = webNodeDesc(x);
+    visual = x.visual;
+    proc = (x.ready ? 'READY: ' + x.ready + ' · ' : '') + (x.proc || '') +
+      (x.limit ? ' · LIMIT: ' + x.limit : '');
+    locks = owned || offered || eligible ? [] : webLockReason(x, 'apex');
+    status = owned ? '★★ APEX ONLINE' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
       : eligible ? 'RECIPE COMPLETE · NOT OFFERED' : 'LOCKED';
     statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
   } else {
@@ -5228,7 +5452,7 @@ function drawTreeDetailWeb(T) {
     ctx.fillText('TO UNLOCK', d.x + pad, y, d.w - pad * 2);
     y += T.compact ? 13 : 14;
     ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#ffcdb8';
-    for (const reason of locks.slice(0, 3)) {
+    for (const reason of locks.slice(0, 4)) {
       ctx.fillText('· ' + reason, d.x + pad, y, d.w - pad * 2);
       y += T.compact ? 12 : 13;
     }
@@ -5824,7 +6048,7 @@ function drawOverlays() {
       } else if (selC.web) {
         ctx.font = '800 11px Orbitron, sans-serif';
         ctx.fillStyle = selC.web.color;
-        ctx.fillText((selC.webKind === 'super' ? '★ SUPERSKILL · ' : 'FORM II BRIDGE · ') + selC.synergy,
+        ctx.fillText((selC.webKind === 'apex' ? '★★ APEX · ' : selC.webKind === 'fusion' ? '★ FUSION · ' : 'FORM II BRIDGE · ') + selC.synergy,
           W / 2, headerY, W * 0.94);
       } else {
         const P = selC.path, lvlSel = pathLvl(selC.pathKey);
@@ -5900,10 +6124,11 @@ function drawOverlays() {
         // WEB card: a Form II bridge synergy (two-tone border) or a Final
         // Form superskill (starred, brighter). Copy is mode-aware.
         if (c.web) {
-          const wcol = c.web.color, isSuper = c.webKind === 'super';
+          const wcol = c.web.color, isSuper = c.webKind === 'fusion' || c.webKind === 'apex';
           const sel = draftSel === i;
           const hovW = sel || inRect(mouseX, lastMouseY, r);
-          const head = isSuper ? '★ SUPERSKILL · FINAL FORM' : 'BRIDGE SYNERGY · FORM II';
+          const head = c.webKind === 'apex' ? '★★ APEX · STAGE 24+'
+            : c.webKind === 'fusion' ? '★ FUSION POWER · FINAL FORM' : 'BRIDGE SYNERGY · FORM II';
           ctx.save();
           ctx.globalAlpha = a * (draftSel != null && !sel ? 0.55 : 1);
           if (hovW || isSuper) { ctx.shadowColor = sel ? '#ffffff' : wcol; ctx.shadowBlur = sel ? 28 : 24; }

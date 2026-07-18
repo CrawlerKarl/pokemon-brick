@@ -327,13 +327,13 @@ window.requestAnimationFrame = function () { return 0; };
     return '6×4 tree; every tier has a visual tell; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−20% cooldown';
   });
 
-  // 2w) THE UPGRADE WEB — graph integrity: adjacency, unique keys, complete
-  // copy/visual contracts, and the Form II / Final Form eligibility gates.
+  // 2w) THE UPGRADE WEB — graph integrity: adjacency, pair coverage, unique
+  // keys, complete copy/visual contracts, and every eligibility gate.
   test('upgrade web: graph integrity + eligibility gates', async () => {
     assert(WEB_SPOKE_ORDER.length === 6 && PATH_KEYS.every(k => WEB_SPOKE_ORDER.includes(k)),
       'WEB_SPOKE_ORDER must be a permutation of PATH_KEYS');
-    assert(WEB_BRIDGES.length === 6 && WEB_SUPERS.length === 6 && WEB_SATELLITES.length === 3,
-      'expected 6 bridges, 6 superskills, 3 satellites');
+    assert(WEB_BRIDGES.length === 6 && WEB_FUSIONS.length === 15 && WEB_APEXES.length === 2 &&
+      WEB_SATELLITES.length === 3, 'expected 6 bridges, 15 fusions, 2 apexes, 3 satellites');
     const spokeIdx = k => WEB_SPOKE_ORDER.indexOf(k);
     for (const b of WEB_BRIDGES) {
       const d = Math.abs(spokeIdx(b.paths[0]) - spokeIdx(b.paths[1]));
@@ -345,50 +345,85 @@ window.requestAnimationFrame = function () { return 0; };
       assert(WEB_BRIDGES.filter(b => b.paths.includes(pk)).length === 2,
         pk + ' must touch exactly 2 bridges');
     }
-    const superPaths = new Set(WEB_SUPERS.map(s => s.path));
-    assert(superPaths.size === 6 && PATH_KEYS.every(k => superPaths.has(k)),
-      'each path needs exactly one superskill');
-    for (const s of WEB_SUPERS) {
-      const br = webBridge(s.bridge);
-      assert(br && br.paths.includes(s.path), 'super ' + s.key + ' must ride a bridge touching its path');
-      assert(s.name && s.icon && s.desc && s.visual && s.proc,
-        'super ' + s.key + ' is missing copy/visual contract fields');
+    // FUSIONS cover every unordered path pair EXACTLY once; the six adjacent
+    // pairs carry their bridge, the nine cross-web pairs carry none
+    const pairSeen = new Set();
+    for (const f of WEB_FUSIONS) {
+      const pair = f.paths.slice().sort().join('+');
+      assert(!pairSeen.has(pair), 'duplicate fusion pair ' + pair);
+      pairSeen.add(pair);
+      const d = Math.abs(spokeIdx(f.paths[0]) - spokeIdx(f.paths[1]));
+      const adjacent = d === 1 || d === 5;
+      assert(adjacent === !!f.bridge, f.key + ': bridge presence must match wedge adjacency');
+      if (f.bridge) {
+        const br = webBridge(f.bridge);
+        assert(br && br.paths.slice().sort().join('+') === pair, f.key + ' rides the wrong bridge');
+      }
+      assert(f.name && f.icon && f.color && f.desc && f.visual && f.proc && f.ready && f.role && f.limit,
+        'fusion ' + f.key + ' is missing copy/visual/limiter contract fields');
+    }
+    assert(pairSeen.size === 15, 'the 15 fusions must cover all C(6,2) path pairs');
+    for (const x of WEB_APEXES) {
+      assert(x.paths.length === 3 && apexCompatFusions(x).length === 3,
+        'apex ' + x.key + ' needs exactly three in-set fusions to choose from');
+      assert(x.name && x.icon && x.color && x.desc && x.visual && x.proc && x.ready && x.role && x.limit,
+        'apex ' + x.key + ' is missing contract fields');
+      assert(x.mapSlot != null, 'apex ' + x.key + ' needs a map slot');
     }
     for (const sat of WEB_SATELLITES) {
       assert(stackItem(sat.stackKey) && PATHS[sat.path], 'satellite ' + sat.stackKey + ' has bad references');
     }
     const allKeys = [
       ...PATH_KEYS.flatMap(k => PATHS[k].tiers.map(t => t.key)),
-      ...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS,
+      ...WEB_BRIDGE_KEYS, ...WEB_FUSION_KEYS, ...WEB_APEX_KEYS,
       ...STACK_ITEMS.map(s => s.key), ...SECRET_UPGRADES.map(s => s.key),
     ];
     assert(new Set(allKeys).size === allKeys.length, 'duplicate upgrade keys across the web');
-    // eligibility gates walk: Form I → no bridges; Form II + a node each side
-    // → bridge; Form III + capstone + bridge → super. Every super reachable.
+    // eligibility walk: every FUSION reachable via Form III + 3/3 ranks +
+    // either-side capstone (+ bridge when adjacent); the 2-slot cap bites
     SETTINGS.mode = 'blaster';
     resetRun(1, true);
     assert(WEB_BRIDGES.every(b => !bridgeEligible(b)), 'a bridge was eligible at Form I with no nodes');
-    for (const s of WEB_SUPERS) {
-      G.path = {}; G.upg = {}; G.starterLvl = 1;
-      const br = webBridge(s.bridge);
+    for (const f of WEB_FUSIONS) {
+      G.path = {}; G.upg = {}; G.starterLvl = 3;
+      advancePath(f.paths[0]); advancePath(f.paths[0]); advancePath(f.paths[0]);
+      advancePath(f.paths[1]); advancePath(f.paths[1]); advancePath(f.paths[1]);
+      assert(!fusionEligible(f), f.key + ' eligible at 3/3 without a capstone');
+      advancePath(f.paths[0]); // capstone one side
+      if (f.bridge) {
+        assert(!fusionEligible(f), f.key + ' eligible without its bridge');
+        G.upg[f.bridge] = 1;
+      }
+      assert(fusionEligible(f), f.key + ' not eligible with its full recipe');
       G.starterLvl = 2;
-      assert(!bridgeEligible(br), s.bridge + ' eligible with empty paths');
-      advancePath(br.paths[0]);
-      assert(!bridgeEligible(br), s.bridge + ' eligible with one side empty');
-      advancePath(br.paths[1]);
-      assert(bridgeEligible(br), s.bridge + ' not eligible with Form II + a node each side');
-      G.upg[br.key] = 1;
-      while (pathLvl(s.path) < 4) advancePath(s.path);
-      assert(!superEligible(s), s.key + ' eligible before Final Form');
+      assert(!fusionEligible(f), f.key + ' eligible before Final Form');
       G.starterLvl = 3;
-      assert(superEligible(s), s.key + ' not eligible at Final Form + capstone + bridge');
-      assert(webLockReason(s, 'super').length === 0 ||
-        !superEligible(s), s.key + ' lock reasons disagree with eligibility');
+      // the TWO-SLOT cap: with two other fusions owned it goes dark
+      const others = WEB_FUSION_KEYS.filter(k => k !== f.key).slice(0, 2);
+      for (const k of others) G.upg[k] = 1;
+      assert(!fusionEligible(f), f.key + ' ignored the 2-fusion slot cap');
+      assert(webLockReason(f, 'fusion').some(r => /SLOTS FULL/.test(r)),
+        f.key + ' does not explain the full slots');
     }
-    G.starterLvl = 1; G.path = {}; G.upg = {};
-    const reasons = webLockReason(WEB_SUPERS[0], 'super');
-    assert(reasons.length === 3, 'a fully locked super should list 3 unmet requirements, got ' + reasons.length);
-    return '6 bridges adjacent · 6 supers (1/path) reachable · unique keys · gates + lock reasons correct';
+    // APEX gates: stage 24+, two compatible fusions, nine ranks, one slot
+    for (const x of WEB_APEXES) {
+      G.path = {}; G.upg = {}; G.starterLvl = 3; G.level = 23;
+      for (const pk of x.paths) { advancePath(pk); advancePath(pk); advancePath(pk); }
+      const compat = apexCompatFusions(x);
+      G.upg[compat[0].key] = 1; G.upg[compat[1].key] = 1;
+      assert(!apexEligible(x), x.key + ' eligible before stage 24');
+      G.level = 24;
+      assert(apexEligible(x), x.key + ' not eligible with its full recipe at stage 24');
+      G.path[x.paths[0]] = 2; // drop below nine ranks
+      assert(!apexEligible(x), x.key + ' ignored the nine-rank floor');
+      G.path[x.paths[0]] = 3;
+      G.upg[WEB_APEXES.find(o => o.key !== x.key).key] = 1; // other apex owned
+      assert(!apexEligible(x), x.key + ' ignored the 1-apex slot cap');
+    }
+    G.level = 1; G.starterLvl = 1; G.path = {}; G.upg = {};
+    const reasons = webLockReason(WEB_FUSIONS[0], 'fusion');
+    assert(reasons.length >= 3, 'a fully locked fusion should list its unmet requirements, got ' + reasons.length);
+    return '15 fusions cover all pairs · 2 apexes gated · slot caps + lock reasons correct';
   });
 
   // 2w-i) OFFER ALGORITHM invariants: legal hands under fuzz, superskill
@@ -409,7 +444,8 @@ window.requestAnimationFrame = function () { return 0; };
         const opts = [
           ...PATH_KEYS.filter(k => pathLvl(k) < 4).map(k => () => advancePath(k)),
           ...WEB_BRIDGES.filter(bridgeEligible).map(b => () => { G.upg[b.key] = 1; }),
-          ...WEB_SUPERS.filter(superEligible).map(s => () => { G.upg[s.key] = 1; }),
+          ...WEB_FUSIONS.filter(fusionEligible).map(f => () => { G.upg[f.key] = 1; }),
+          ...WEB_APEXES.filter(apexEligible).map(x => () => { G.upg[x.key] = 1; }),
         ];
         if (!opts.length) break;
         opts[Math.floor(Math.random() * opts.length)]();
@@ -419,15 +455,21 @@ window.requestAnimationFrame = function () { return 0; };
       const cs = G.upgradeChoices || [];
       assert(cs.length === 3, 'iter ' + iter + ': hand size ' + cs.length);
       const authoredEligible = PATH_KEYS.filter(k => pathLvl(k) < 4).length +
-        WEB_BRIDGES.filter(bridgeEligible).length + WEB_SUPERS.filter(superEligible).length;
+        WEB_BRIDGES.filter(bridgeEligible).length + WEB_FUSIONS.filter(fusionEligible).length +
+        WEB_APEXES.filter(apexEligible).length;
       for (const c of cs) {
         if (c.pathKey) {
           assert(pathLvl(c.pathKey) < 4 && c.tierIdx === pathLvl(c.pathKey),
             'iter ' + iter + ': illegal continuation ' + c.pathKey + '@' + c.tierIdx);
         } else if (c.web) {
-          assert(c.webKind === 'super' ? superEligible(c.web) : bridgeEligible(c.web),
+          assert(c.webKind === 'apex' ? apexEligible(c.web)
+            : c.webKind === 'fusion' ? fusionEligible(c.web) : bridgeEligible(c.web),
             'iter ' + iter + ': ineligible web node ' + c.web.key + ' offered');
         } else assert(c.stack, 'iter ' + iter + ': unknown choice shape');
+      }
+      { // the plan's one-per-hand rule: never two fusions/apexes together
+        const bigs = cs.filter(c => c.web && (c.webKind === 'fusion' || c.webKind === 'apex')).length;
+        assert(bigs <= 1, 'iter ' + iter + ': ' + bigs + ' fusions/apexes in one hand');
       }
       const pks = cs.filter(c => c.pathKey).map(c => c.pathKey);
       assert(new Set(pks).size === pks.length, 'iter ' + iter + ': duplicate path in hand');
@@ -435,13 +477,20 @@ window.requestAnimationFrame = function () { return 0; };
       assert(3 - nStacks === Math.min(3, authoredEligible),
         'iter ' + iter + ': a satellite crowded out an authored node (' + nStacks + ' stacks, ' + authoredEligible + ' eligible)');
     }
-    // superskill priority: an eligible super always takes the Explore slot
+    // fusion priority: an eligible fusion always takes the Explore slot
     freshWeb(3);
     for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
     G.upg.calibrated = 1;
     rollUpgradeChoices();
     assert(G.upgradeChoices.some(c => c.web && c.web.key === 'meteor'),
-      'an eligible superskill was not offered');
+      'an eligible fusion was not offered');
+    // once TWO fusions are installed, no further fusion is ever dealt
+    G.upg.meteor = 1; G.upg.prismstorm = 1;
+    for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
+    for (const b of WEB_BRIDGE_KEYS) G.upg[b] = 1;
+    rollUpgradeChoices();
+    assert(!G.upgradeChoices.some(c => c.web && c.webKind === 'fusion'),
+      'a fusion was offered past the 2-slot cap');
     // post-evolution guarantee: reaching Form II surfaces a newly unlocked bridge
     freshWeb(1);
     advancePath('arsenal'); advancePath('impact');
@@ -468,41 +517,41 @@ window.requestAnimationFrame = function () { return 0; };
     // exhausted web: hand becomes exactly the three mastery satellites
     freshWeb(3);
     for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
-    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) G.upg[k] = 1;
+    for (const k of WEB_BRIDGE_KEYS) G.upg[k] = 1;
+    G.upg.meteor = 1; G.upg.horizon = 1; // both fusion slots spent
     rollUpgradeChoices();
     assert(G.upgradeChoices.length === 3 && G.upgradeChoices.every(c => c.stack),
       'a completed web should offer the three satellites');
     assert(ERR.length === e0, 'errors during offer tests: ' + ERR.slice(e0).join(' | '));
-    return '60 fuzzed hands legal · super priority · evolution guarantee · reroll fresh · rescue forced · satellites last';
+    return '60 fuzzed hands legal · fusion priority + slot caps · evolution guarantee · reroll fresh · rescue forced · satellites last';
   });
 
   // 2w-ii) knockout burns LEAVES only — a removal can never orphan an owned
-  // bridge (needs a node each side) or a superskill (bridge + capstone).
+  // bridge, break a fusion's recipe, or strand an apex below its floor.
   test('upgrade web: knockout regression burns leaves only', async () => {
     const e0 = ERR.length;
     SETTINGS.mode = 'blaster';
     resetRun(1, true);
-    G.starterLvl = 3;
-    for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
-    advancePath('prism'); advancePath('aegis'); advancePath('surge'); advancePath('bond');
-    G.upg.calibrated = 1; G.upg.singularity = 1; G.upg.meteor = 1;
-    const legal = () => {
-      for (const b of WEB_BRIDGES) {
-        if (upgN(b.key) && b.paths.some(pk => pathLvl(pk) < 1)) return b.key + ' orphaned';
-      }
-      for (const s of WEB_SUPERS) {
-        if (upgN(s.key) && (!upgN(s.bridge) || pathLvl(s.path) < 4)) return s.key + ' orphaned';
-      }
-      return null;
-    };
-    // the super is the only leaf above its own recipe: hyper (arsenal cap)
-    // and calibrated must be pinned while meteor is owned
+    G.starterLvl = 3; G.level = 24;
+    for (const pk of ['impact', 'surge']) while (pathLvl(pk) < 4) advancePath(pk);
+    advancePath('arsenal'); advancePath('arsenal'); advancePath('arsenal'); // 3 — meteor's ONLY capstone is impact
+    advancePath('prism'); advancePath('aegis'); advancePath('bond');
+    G.upg.calibrated = 1; G.upg.singularity = 1;
+    G.upg.meteor = 1; G.upg.cataclysm = 1; G.upg.warmachine = 1;
+    const legal = () => (webBuildLegal() ? null : 'recipe orphaned');
+    assert(!legal(), 'the seeded build must start legal');
+    // the apex is a leaf; the two fusions its recipe rides are NOT; the
+    // shared capstone, the 3-rank floor and the bridge are all pinned
     const leaves0 = webRegressibleLeaves();
-    assert(leaves0.some(l => l.kind === 'super' && l.key === 'meteor'), 'owned super is not a leaf');
+    assert(leaves0.some(l => l.kind === 'apex' && l.key === 'warmachine'), 'owned apex is not a leaf');
+    assert(!leaves0.some(l => l.kind === 'fusion'),
+      'a fusion pinned by an owned apex was offered as a leaf');
     assert(!leaves0.some(l => l.kind === 'bridge' && l.key === 'calibrated'),
-      'a bridge under an owned super was offered as a leaf');
+      'a bridge under an owned fusion was offered as a leaf');
     assert(!leaves0.some(l => l.kind === 'tier' && l.pathKey === 'arsenal'),
-      'a capstone pinned by an owned super was offered as a leaf');
+      'a 3-rank fusion floor was offered as a leaf');
+    assert(!leaves0.some(l => l.kind === 'tier' && l.pathKey === 'impact'),
+      "meteor + cataclysm's only capstone was offered as a leaf");
     let guard = 0;
     while (totalBuildLevels() > 0 && guard++ < 40) {
       G.lives = 1; G.state = 'play';
@@ -601,13 +650,18 @@ window.requestAnimationFrame = function () { return 0; };
     G.enemyShots = [{ x: G.missiles[0].x + 4, y: G.missiles[0].y - 6, vy: 0 }];
     for (let f = 0; f < 12 && !G.enemyShots.every(s => s.dead); f++) update(1 / 60);
     assert(G.enemyShots.length === 0 || G.enemyShots.every(s => s.dead), 'drones did not intercept the shot');
-    // METEOR MATRIX: a full charge calls a six-strike typed rain
+    // METEOR MATRIX: the rain needs a FULL matrix — never every charge
     G.upg.meteor = 1;
     const rainTarget = mk(500, 260);
     G.bricks = [rainTarget, mk(700, 120)];
     G.lasers = []; G.missiles = []; G.heat = 0; G.overheat = 0;
+    G.matrixCharge = 0.4;
     fireCharge(1);
-    assert(G.meteorRain && G.meteorRain.n === 6, 'full charge did not begin the meteor rain');
+    assert(!G.meteorRain, 'a half-full matrix must NOT rain on a charge');
+    G.matrixCharge = 1; G.heat = 0; G.overheat = 0;
+    fireCharge(1);
+    assert(G.meteorRain && G.meteorRain.n === 6 && G.matrixCharge === 0,
+      'a full matrix + full charge did not begin the rain');
     G.lasers = [];
     for (let f = 0; f < 140 && G.meteorRain; f++) update(1 / 60);
     assert(!G.meteorRain, 'the meteor rain never finished');
@@ -629,33 +683,43 @@ window.requestAnimationFrame = function () { return 0; };
     update(1 / 60);
     assert(G.lives === 4 && G.reactorUsed && G.mega === 0 && G.invuln > 0,
       'the reactor did not eat the lethal hit (lives=' + G.lives + ')');
+    assert(G.regenLockT > 0, 'the reactor must stall shield regrowth (limiter)');
     G.invuln = 0; G.mega = 0.6;
     G.enemyShots = [{ x: G.paddle.x, y: shipY() - 4, vy: 100 }];
     update(1 / 60);
     assert(G.lives === 3, 'the reactor fired twice in one wave');
-    // GUARDIAN ANGEL: six charges → the pulse clears fire and heals
+    // GUARDIAN ANGEL: eight charges → one pulse, AT MOST once per wave
     G.upg.guardian = 1;
-    G.guardCharge = 5; G.lives = 3; G.livesMax = 5; G.invuln = 99;
+    G.guardPulsedWave = false;
+    G.guardCharge = 7; G.lives = 3; G.livesMax = 5; G.invuln = 99;
     G.enemyShots = [{ x: 200, y: 200, vy: 0 }, { x: 500, y: 300, vy: 0 }];
     collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
-    assert(G.guardCharge === 0 && G.enemyShots.every(s => s.dead),
+    assert(G.guardCharge === 0 && G.guardPulsedWave && G.enemyShots.every(s => s.dead),
       'the guardian pulse did not clear the sky');
     assert(G.lives === 5, 'heal + guardian pulse should restore 2 lives, got ' + G.lives);
+    G.guardCharge = 7; G.enemyShots = [{ x: 200, y: 200, vy: 0 }];
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
+    assert(!G.enemyShots[0].dead && G.guardCharge === 7,
+      'the guardian pulsed twice in one wave (limiter broken)');
     // ACE INTERCEPTOR WING: permanent wingmates patrol on a 5s cadence
     G.upg.acewing = 1;
     G.wingCD = 0.01; G.missiles = [];
     update(1 / 60);
     assert(G.missiles.length === 2 && G.missiles.every(m => m.drone) && Math.abs(G.wingCD - 5) < 0.1,
       'the wing patrol did not launch');
-    // a fully webbed pilot renders clean in junkie AND classic
+    // a fully webbed pilot renders clean in junkie AND classic — every
+    // bridge, both fusion slots, an apex, and live readiness meters at once
     G.invuln = 0;
     for (const mode of ['junkie', 'classic']) {
       SETTINGS.mode = mode;
       resetRun(1, true);
-      G.starterLvl = 3;
+      G.starterLvl = 3; G.level = 24;
       for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
-      for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) G.upg[k] = 1;
+      for (const k of WEB_BRIDGE_KEYS) G.upg[k] = 1;
+      G.upg.meteor = 1; G.upg.cataclysm = 1; G.upg.warmachine = 1;
       G.state = 'play'; G.guardCharge = 3; G.calibShots = 2; G.salvageStored = 1;
+      G.matrixCharge = 0.7; G.prismN = 6; G.wallSeg = 2; G.cometSeeds = 2;
+      G.facets = ['fire']; G.chorusTypes = ['water']; G.syncMeter = 4; G.railPressure = 0.7;
       update(1 / 60); render();
     }
     // classic: stored drones intercept an enemy shot short of the paddle
@@ -667,11 +731,12 @@ window.requestAnimationFrame = function () { return 0; };
     return 'all 6 bridges + 6 superskills proc correctly · webbed pilot renders clean in junkie + classic';
   });
 
-  // 2w-iic) the map addresses all 39 nodes: geometry is sane, every offer
+  // 2w-iic) the map addresses all 50 nodes: geometry is sane, every offer
   // kind resolves to its node, taps select, and the install path completes.
   test('upgrade web: map addresses and installs every node kind', async () => {
     const e0 = ERR.length;
     SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    treePan.x = 0; treePan.y = 0;
     resetRun(1, true);
     const T = upgradeTreeLayout();
     // bridge nodes sit BETWEEN their two spokes; supers/satellites crown theirs
@@ -685,11 +750,12 @@ window.requestAnimationFrame = function () { return 0; };
     const all = [];
     for (let pi = 0; pi < PATH_KEYS.length; pi++) {
       for (let ti = 0; ti < 4; ti++) all.push({ id: 'tier ' + pi + ',' + ti, n: T.node(pi, ti) });
-      all.push({ id: 'super ' + pi, n: T.superNode(pi) });
     }
+    for (let fi = 0; fi < WEB_FUSIONS.length; fi++) all.push({ id: 'fusion ' + WEB_FUSIONS[fi].key, n: T.fusionNode(fi) });
+    for (let ai = 0; ai < WEB_APEXES.length; ai++) all.push({ id: 'apex ' + WEB_APEXES[ai].key, n: T.apexNode(ai) });
     for (let bi = 0; bi < 6; bi++) all.push({ id: 'bridge ' + bi, n: T.bridgeNode(bi) });
     for (let si = 0; si < 3; si++) all.push({ id: 'sat ' + si, n: T.satNode(si) });
-    assert(all.length === 39, 'expected 39 addressable nodes, got ' + all.length);
+    assert(all.length === 50, 'expected 50 addressable nodes, got ' + all.length);
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
       const a = all[i], b = all[j];
       const gap = Math.hypot(a.n.cx - b.n.cx, a.n.cy - b.n.cy);
@@ -700,20 +766,21 @@ window.requestAnimationFrame = function () { return 0; };
     for (const pk of ['arsenal', 'impact']) while (pathLvl(pk) < 4) advancePath(pk);
     G.upg.calibrated = 1;
     G.state = 'upgrade'; G.stateT = 2;
-    rollUpgradeChoices(); // super 'meteor' takes the Explore slot
-    const superIdx = (G.upgradeChoices || []).findIndex(c => c.web && c.webKind === 'super');
-    assert(superIdx >= 0, 'no super offered for the map test');
-    const meteorPi = PATH_KEYS.indexOf('arsenal');
-    assert(choiceIndexForSel({ kind: 'super', pi: meteorPi }) === superIdx,
-      'the super offer did not resolve to its map node');
-    selectDraftChoice(superIdx);
-    assert(treeSel.kind === 'super' && treeSel.pi === meteorPi, 'selecting the offer did not move the map cursor');
+    rollUpgradeChoices(); // fusion 'meteor' takes the Explore slot
+    const fusionIdx = (G.upgradeChoices || []).findIndex(c => c.web && c.webKind === 'fusion');
+    assert(fusionIdx >= 0, 'no fusion offered for the map test');
+    const meteorFi = WEB_FUSION_KEYS.indexOf('meteor');
+    assert(choiceIndexForSel({ kind: 'fusion', fi: meteorFi }) === fusionIdx,
+      'the fusion offer did not resolve to its map node');
+    selectDraftChoice(fusionIdx);
+    assert(treeSel.kind === 'fusion' && treeSel.fi === meteorFi, 'selecting the offer did not move the map cursor');
     render(); // web detail panel renders without errors
-    pickUpgrade(superIdx);
-    assert(upgN('meteor') === 1, 'installing from the map did not grant the superskill');
+    pickUpgrade(fusionIdx);
+    assert(upgN('meteor') === 1, 'installing from the map did not grant the fusion');
     // a satellite offer resolves to its docked node
     for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
-    for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) G.upg[k] = 1;
+    for (const k of WEB_BRIDGE_KEYS) G.upg[k] = 1;
+    G.upg.horizon = 1; // second fusion slot spent (meteor + horizon)
     G.state = 'upgrade'; G.stateT = 2;
     rollUpgradeChoices();
     assert(G.upgradeChoices.every(c => c.stack), 'full web should deal satellites');
@@ -728,10 +795,228 @@ window.requestAnimationFrame = function () { return 0; };
     G.path = {}; G.upg = {}; G.starterLvl = 1;
     treeSel = { kind: 'bridge', bi: 0, pi: 0, ti: 0 };
     render();
-    treeSel = { kind: 'super', pi: 0, ti: 3 };
+    treeSel = { kind: 'fusion', fi: WEB_FUSION_KEYS.indexOf('cataclysm'), pi: 0, ti: 3 };
+    render();
+    treeSel = { kind: 'apex', ai: 0, pi: 0, ti: 3 };
     render();
     assert(ERR.length === e0, 'errors during map test: ' + ERR.slice(e0).join(' | '));
-    return '39 nodes placed without overlap · bridges centred · super/satellite offers resolve, select, install · locked panels render';
+    return '50 nodes placed without overlap · bridges centred · fusion/satellite offers resolve, select, install · locked panels render';
+  });
+
+  // 2w-iid) the NINE cross-web fusions and TWO apexes fire with their
+  // declared limiters (banked resources, caps, once-per-wave rules).
+  test('upgrade web: cross-web fusions + apex mechanics', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'blaster'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    G.state = 'play'; G.lives = 5; G.livesMax = 5; G.starterLvl = 3; G.reinforce = 0;
+    G.fx = 0; G.fy = 0; G.enemyShots = []; G.powerups = [];
+    const mk = (x, y, t = 'normal') => ({ bx: x, by: y, hx: x, hy: y, row: 0, col: 0,
+      w: 70, h: 50, hp: 100, maxHp: 100, poke: { id: 19, t }, flash: 0, wobble: 0 });
+    const step = () => { paused = false; G.freeze = 0; update(1 / 60); };
+    // PRISMSTORM ARRAY: the 12th hit primes; the primed volley fans 5 lanes
+    G.upg.prismstorm = 1;
+    G.bricks = [mk(300, 200, 'water'), mk(700, 120)];
+    G.prismN = 11; G.prismReady = false;
+    G.lasers = [{ x: 300, y: 205, basic: true, powerMul: 1 }];
+    step();
+    assert(G.prismReady, 'the 12th basic hit did not prime the array');
+    G.lasers = []; G.blasterCD = 0; G.heat = 0; G.overheat = 0;
+    fireAction();
+    assert(G.lasers.length === 5 && G.lasers.every(l => l.prism) && !G.prismReady,
+      'the primed volley did not fan into five lanes');
+    const pBoss = Object.assign(mk(400, 220), { isBoss: true, phase: 1, phaseCount: 3 });
+    G.bricks = [pBoss, mk(700, 120)];
+    G.lasers = [{ x: 400, y: 225, basic: true, prism: true, powerMul: 0.5 }];
+    step();
+    assert(Math.abs((100 - pBoss.hp) - 0.25) < 1e-6,
+      'prism lane boss cap broken (dealt ' + (100 - pBoss.hp) + ', expected 0.25)');
+    // HYPERNOVA CYCLE: a six-shot Mega stream reaches stage 1; echo on intercept
+    G.upg.hypernova = 1;
+    G.megaT = 5; G.novaStage = 0; G.novaN = 0;
+    for (let i = 0; i < 6; i++) { G.blasterCD = 0; G.heat = 0; fireAction(); }
+    assert(G.novaStage >= 1, 'a six-shot Mega stream did not reach stage 1');
+    G.lasers = [{ x: 300, y: 300, basic: true }];
+    G.enemyShots = [{ x: 302, y: 302, vy: 0 }];
+    step();
+    assert(G.lasers.some(l => l.echo), 'an interception during Mega released no echo bolt');
+    G.megaT = 0; G.novaT = 0;
+    step();
+    assert(G.novaStage === 0, 'the stream break did not drop the stages');
+    // BULWARK BATTERY: intercepts build the wall; the wall eats a shot; a
+    // full wall turns the next release into a counterbeam with a 12s floor
+    G.upg.battery = 1; G.wallSeg = 0; G.wallCD = 0;
+    G.lasers = [{ x: 300, y: 300, basic: true }];
+    G.enemyShots = [{ x: 302, y: 302, vy: 0 }];
+    step();
+    assert(G.wallSeg === 1, 'an interception did not add a wall segment');
+    G.wallSeg = 2; G.invuln = 0; G.lasers = [];
+    G.enemyShots = [{ x: G.paddle.x, y: shipY() - 92, vy: 300 }];
+    step();
+    assert(G.enemyShots.every(sh => sh.dead) && G.wallSeg === 1, 'the wall did not eat the crossing shot');
+    G.wallSeg = 3; G.heat = 0; G.overheat = 0; G.lasers = [];
+    fireCharge(1);
+    assert(G.lasers.some(l => l.beam) && G.wallSeg === 0 && G.wallCD > 10,
+      'a full wall did not fire the counterbeam with its rebuild floor');
+    // CATACLYSM CORE: consumes 50% banked Mega, 20s CD, boss takes a sliver
+    G.upg.cataclysm = 1;
+    G.mega = 0.8; G.megaT = 0; G.cataCD = 0;
+    const cTarget = mk(400, 220);
+    const cBoss = Object.assign(mk(600, 200), { isBoss: true, phase: 1, phaseCount: 3 });
+    G.bricks = [cTarget, cBoss, mk(700, 120)];
+    G.heat = 0; G.overheat = 0; G.lasers = [];
+    fireCharge(1);
+    assert(Math.abs(G.mega - 0.3) < 1e-9 && Math.abs(G.cataCD - 20) < 0.01, 'the nova did not bank its cost');
+    assert(cTarget.hp < 100, 'the nova missed the fodder');
+    assert(100 - cBoss.hp <= 3.01, 'the nova hit the boss too hard (' + (100 - cBoss.hp).toFixed(2) + ')');
+    // AEGIS LANCE (shooter): a full charge SPENDS one shield, bolt pierces all
+    G.upg.lance = 1;
+    G.shieldCharges = 2; G.mega = 0; G.lasers = []; G.heat = 0; G.overheat = 0;
+    fireCharge(1);
+    const lanceBolt = G.lasers.find(l => l.charged && l.lance);
+    assert(G.shieldCharges === 1 && lanceBolt && lanceBolt.pierce === 99,
+      'the lance did not spend a shield for an unstoppable bolt');
+    // COMET SHEPHERD: pickups bank seeds (max 3); a release sends them all
+    G.upg.shepherd = 1;
+    G.cometSeeds = 0;
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.star });
+    assert(G.cometSeeds === 1, 'a pickup did not bank a comet seed');
+    G.cometSeeds = 3; G.missiles = []; G.lasers = []; G.heat = 0; G.overheat = 0; G.shieldCharges = 0;
+    fireCharge(1);
+    assert(G.missiles.filter(m => m.comet).length === 3 && G.cometSeeds === 0,
+      'the release did not send all three comets');
+    // MIRROR SPECTRUM: deflections + shield saves store facets; release fires them
+    G.upg.mirror = 1;
+    G.facets = []; G.missiles = [];
+    G.ballElement = 'water'; G.ballElementT = 30; G.invuln = 0;
+    G.enemyShots = [{ x: G.paddle.x, y: shipY() - 4, vy: 100, type: 'fire' }];
+    step();
+    assert(G.facets.length === 1 && G.facets[0] === 'fire', 'a deflection did not store its facet');
+    G.shieldCharges = 1; G.invuln = 0;
+    G.enemyShots = [{ x: G.paddle.x, y: shipY() - 4, vy: 100, type: 'electric' }];
+    step();
+    assert(G.facets.length === 2, 'a shield save did not store its facet');
+    G.lasers = []; G.heat = 0; G.overheat = 0; G.shieldCharges = 0; G.mega = 0;
+    fireCharge(1);
+    assert(G.lasers.filter(l => l.facet).length === 2 && G.facets.length === 0,
+      'the release did not fire the stored facets back');
+    G.ballElement = null; G.ballElementT = 0;
+    // BESTIARY CHORUS: three DIFFERENT recorded types → one strike per wave
+    G.upg.chorus = 1;
+    G.chorusUsed = false; G.chorusTypes = [];
+    const chTarget = mk(360, 220, 'grass');
+    G.bricks = [chTarget, mk(700, 120)];
+    chorusRecord('fire'); chorusRecord('water'); chorusRecord('water');
+    assert(!G.chorusUsed, 'two distinct types must not trigger the chorus');
+    chorusRecord('electric');
+    assert(G.chorusUsed && chTarget.hp < 100, 'three types did not trigger the strike');
+    const chHp = chTarget.hp;
+    chorusRecord('ice'); chorusRecord('psychic'); chorusRecord('dark');
+    assert(chTarget.hp === chHp, 'the chorus struck twice in one wave (limiter broken)');
+    // VICTORY FORMATION: Mega at full Sync calls the squadron for 8s
+    G.upg.formation = 1;
+    G.syncMeter = 8; G.squadT = 0; G.mega = 1; G.megaT = 0;
+    tryMega();
+    assert(G.squadT > 7 && G.syncMeter === 0, 'Mega at full Sync did not call the squadron');
+    G.missiles = [];
+    step();
+    assert(G.missiles.filter(m => m.drone).length >= 2, 'the squadron launched no wingmates');
+    G.squadT = 0; G.megaT = 0;
+    // WAR MACHINE (apex): hits build rail pressure; the spend never resets
+    // the cadence and runs far cooler
+    G.upg.warmachine = 1;
+    G.railPressure = 0;
+    G.bricks = [mk(300, 200), mk(700, 120)];
+    G.lasers = [{ x: 300, y: 205, basic: true, powerMul: 1 }];
+    step();
+    assert(G.railPressure > 0, 'a basic hit did not build rail pressure');
+    G.railPressure = 0.8; G.blasterCD = 0.3; G.heat = 0.3; G.overheat = 0; G.lasers = [];
+    const heat0 = G.heat;
+    fireCharge(1);
+    assert(G.blasterCD === 0 && G.railPressure === 0, 'the rail spend reset the cadence or kept pressure');
+    assert(G.heat - heat0 < 0.42, 'rail pressure did not run the spend cooler (heat +' + (G.heat - heat0).toFixed(2) + ')');
+    // CELESTIAL GUARDIAN (apex): type + shield + bond sectors → ONE ward
+    G.upg.celestial = 1;
+    G.celT = G.celS = G.celE = false;
+    G.shieldCharges = 0; G.lives = 3; G.livesMax = 5;
+    const shell = Object.assign(mk(420, 200), { shellArmor: true });
+    G.bricks = [shell, mk(700, 120)];
+    G.enemyShots = [{ x: 200, y: 200, vy: 0 }];
+    celestialSector('t'); celestialSector('s');
+    assert(!G.enemyShots[0].dead, 'two sectors must not fire the ward');
+    celestialSector('e');
+    assert(G.enemyShots[0].dead, 'the full ward did not clear ordinary fire');
+    assert(!shell.shellArmor, 'the ward did not crack armor');
+    assert(G.shieldCharges === 1 && G.lives === 3, 'the ward must restore a shield OR HP — never both');
+    assert(!G.celT && !G.celS && !G.celE, 'the ward did not reset its sectors');
+    assert(ERR.length === e0, 'errors during fusion/apex mechanics: ' + ERR.slice(e0).join(' | '));
+    return 'all 9 cross-web fusions + 2 apexes proc with their limiters intact';
+  });
+
+  // 2w-iie) SEEDED ACQUISITION: the plan's structural pacing targets — a
+  // focused route earns its fusion by Galar ≥80% of the time, caps hold,
+  // and no apex ever lands before stage 24.
+  test('upgrade web: seeded acquisition rates + caps', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    const runDraft = strategy => {
+      G.path = {}; G.upg = {}; G.stacks = { orb: 0, ice: 0, bell: 0 };
+      G.webSeen = {}; G.lastOfferKeys = []; G.rerolled = false;
+      G.lives = 4; G.livesMax = 4;
+      const out = { fusionAt: null, fusions: 0, apexAt: null };
+      for (let lvl = 1; lvl <= 27; lvl++) {
+        G.level = lvl + 1; // drafting happens after the clear, at the next stage's doorstep
+        G.starterLvl = starterStage(G.level, null);
+        rollUpgradeChoices();
+        const cs = G.upgradeChoices || [];
+        const pick = strategy(cs) || cs[0];
+        if (!pick) break;
+        if (pick.pathKey) advancePath(pick.pathKey);
+        else if (pick.web) {
+          G.upg[pick.web.key] = 1;
+          if (pick.webKind === 'fusion') { out.fusions++; if (!out.fusionAt) out.fusionAt = G.level; }
+          if (pick.webKind === 'apex') out.apexAt = G.level;
+        } else if (pick.stack) G.stacks[pick.stack.key]++;
+        G.lastDraftForm = webForm();
+      }
+      return out;
+    };
+    const focused = cs =>
+      cs.find(c => c.web && c.webKind === 'apex')
+      || cs.find(c => c.web && c.webKind === 'fusion')
+      || cs.find(c => c.web && c.webKind === 'bridge' && c.web.key === 'calibrated')
+      || cs.find(c => c.pathKey === 'arsenal') || cs.find(c => c.pathKey === 'impact')
+      || cs.find(c => c.pathKey === 'surge') || cs.find(c => c.pathKey);
+    const casual = cs => cs[Math.floor(Math.random() * cs.length)];
+    let focusedHit = 0, focusedSum = 0, apexCount = 0, capViol = 0, earlyApex = 0;
+    for (let i = 0; i < 40; i++) {
+      const r = runDraft(focused);
+      if (r.fusionAt) { focusedSum += r.fusionAt; if (r.fusionAt <= 24) focusedHit++; }
+      if (r.fusions > 2) capViol++;
+      if (r.apexAt) { apexCount++; if (r.apexAt < 24) earlyApex++; }
+    }
+    assert(capViol === 0, 'a run exceeded the 2-fusion cap');
+    assert(earlyApex === 0, 'an apex landed before stage 24');
+    assert(focusedHit >= 32, 'focused fusion-by-Galar rate ' + focusedHit + '/40 < 80%');
+    // a full 27-pick journey usually completes SOME recipe eventually — the
+    // pacing target is that unfocused discovery lands notably LATER than a
+    // focused chase, and the 2-slot cap bounds everyone equally
+    let casualHit = 0, casualSum = 0;
+    for (let i = 0; i < 40; i++) {
+      const r = runDraft(casual);
+      if (r.fusions > 2) capViol++;
+      if (r.fusionAt) { casualHit++; casualSum += r.fusionAt; }
+    }
+    assert(capViol === 0, 'a casual run exceeded the 2-fusion cap');
+    assert(casualHit >= 8, 'unfocused runs never discover fusions: ' + casualHit + '/40');
+    const focusedAvg = focusedSum / Math.max(1, focusedHit), casualAvg = casualSum / Math.max(1, casualHit);
+    assert(casualAvg > focusedAvg + 0.5,
+      'unfocused discovery should land later than a focused chase (focused ' +
+      focusedAvg.toFixed(1) + ' vs casual ' + casualAvg.toFixed(1) + ')');
+    assert(apexCount >= 1, 'a strongly focused route never completed an apex in 40 journeys');
+    return 'focused fusion≤Galar ' + focusedHit + '/40 @~' + focusedAvg.toFixed(1) +
+      ' · casual ' + casualHit + '/40 @~' + casualAvg.toFixed(1) + ' · apexes ' +
+      apexCount + '/40 (never pre-24) · caps hold';
   });
 
   // 2w-iii) checkpoint migration: v1/v2 accepted, normalized v3 out, lossless
@@ -1210,8 +1495,9 @@ window.requestAnimationFrame = function () { return 0; };
         };
         for (let pi = 0; pi < PATH_KEYS.length; pi++) {
           for (let ti = 0; ti < 4; ti++) reach('constellation(' + pi + ',' + ti + ')', TP.node(pi, ti));
-          reach('super(' + pi + ')', TP.superNode(pi));
         }
+        for (let fi = 0; fi < WEB_FUSIONS.length; fi++) reach('fusion(' + fi + ')', TP.fusionNode(fi));
+        for (let ai = 0; ai < WEB_APEXES.length; ai++) reach('apex(' + ai + ')', TP.apexNode(ai));
         for (let bi = 0; bi < WEB_BRIDGES.length; bi++) reach('bridge(' + bi + ')', TP.bridgeNode(bi));
         for (let si = 0; si < WEB_SATELLITES.length; si++) reach('satellite(' + si + ')', TP.satNode(si));
         count = Object.keys(rects).length;

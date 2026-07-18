@@ -61,7 +61,7 @@ real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
-- **Automated invariants:** open `/test.html` (drives the sim headless, 39
+- **Automated invariants:** open `/test.html` (drives the sim headless, 41
   checks, sets `window.TEST_RESULTS`). Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
@@ -186,24 +186,34 @@ phone — flag anything only verifiable there.
   `treeSel`, `drawTreeDetail` explains it. Keep render + hit-test using the
   same `node(pi,ti)` rects.
 - **The upgrade WEB is additive and graph-safe.** The 24 tiers are anchor
-  nodes with unchanged keys; `WEB_BRIDGES`/`WEB_SUPERS`/`WEB_SATELLITES`
-  (data.js) add 15 more — bridges/supers live as additive `G.upg` keys,
-  satellites reuse the stable `G.stacks` keys. Gates read REAL evolution:
-  `webForm()` = `G.starterLvl` (NO PARTNER's drone and Pikachu's region-5
-  Raichu included). A bridge needs Form II + one owned node on EACH side; a
-  super needs Final Form + its bridge + its path's capstone. Knockout burns
-  only `webRegressibleLeaves()` — a removal must never orphan an owned
-  bridge or superskill recipe. Checkpoints are schema v3: `migrateCheckpoint`
-  (state.js) accepts v1/v2 forever, NEVER throws, and grandfathers nodes
-  whose prerequisites are missing — never erase a run. `rollUpgradeChoices`
-  deals Commit/Adapt/Explore (super priority, post-evolution guarantee,
-  reroll anti-repeat, 4-draft pity, low-health rescue, offense/non-offense
-  guard); satellites only fill EMPTY slots. Classic adapters never add free
-  fire: Salvage/Ace wingmates INTERCEPT-only there, and every web mechanic
-  reads `upgN(key)` at use time so removal always shuts it down cleanly.
-  The constellation map addresses all 39 nodes — render and hit-testing
-  share `upgradeTreeLayout`'s rects (`node`/`bridgeNode`/`superNode`/
-  `satNode`), and the detail panel must state exact lock reasons.
+  nodes with unchanged keys; `WEB_BRIDGES`/`WEB_FUSIONS`/`WEB_APEXES`/
+  `WEB_SATELLITES` (data.js; design: FUSION_APEX_PLAN.md) add 26 more —
+  all additive `G.upg` keys (satellites reuse the stable `G.stacks` keys).
+  Gates read REAL state: `webForm()` = `G.starterLvl` (NO PARTNER's drone
+  and Pikachu's region-5 Raichu included). A bridge needs Form II + one
+  owned node each side. A FUSION (15 — every path pair exactly once; the
+  six former superskills kept their keys) needs Final Form + 3 ranks in
+  BOTH paths + a capstone in EITHER + the bridge (adjacent pairs) + a free
+  slot — **MAX 2 FUSIONS PER RUN**. An APEX (warmachine/celestial) needs
+  stage 24+, two compatible installed Fusions, nine ranks across its three
+  paths — **MAX 1 PER RUN**. These slot caps are the balance spine — never
+  lift them. Knockout burns only `webRegressibleLeaves()`, which SIMULATES
+  each removal against `webBuildLegal()` — a burn can never break a recipe
+  (grandfathered-illegal saves burn freely). Checkpoints are schema v3:
+  `migrateCheckpoint` (state.js) accepts v1/v2 forever, NEVER throws, and
+  grandfathers unknown-prereq nodes. `rollUpgradeChoices` deals Commit/
+  Adapt/Explore (apex > fusion > bridge priority, ONE fusion/apex per hand,
+  post-evolution guarantee, reroll anti-repeat, pity, low-health rescue,
+  offense/non-offense guard); satellites only fill EMPTY slots. Proc
+  hygiene: primed lanes/echoes/reflections never feed hit meters, meteors
+  can't call meteors, fusion area damage passes `meta.noMega`. Classic
+  stays ball-first (charge-released fusions fire on Mega activation there;
+  wingmates intercept-only) and every mechanic reads `upgN(key)` at use
+  time so removal shuts it down cleanly. The map addresses all 50 nodes
+  (`node`/`bridgeNode`/`fusionNode`/`apexNode`/`satNode` — render and
+  hit-testing share the rects); locked fusions stay compact silhouettes
+  until 2 ranks in both paths, connectors draw ONLY for owned/offered/
+  selected fusions, and the detail panel states exact lock reasons.
 - **Readability over density.** The ball/character must never get lost. Caps:
   `flyerBudget` ≤20, junkie squads ≤26, particles ≤450, rings ≤24. The ball's
   glow scales with `clutter`.

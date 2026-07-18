@@ -749,36 +749,146 @@ const WEB_BRIDGES = [
     visual: 'TWO SMALL SALVAGE DRONES DOCK OFF THE MAGNET VANES',
     proc: 'DRONE BOLTS TRAIL CYAN-PINK · INTERCEPTS FLASH A HEX' },
 ];
-// FINAL-FORM superskills: one per constellation, gated on that path's CAPSTONE
-// plus its bridge, unlocked only at Form III. Rule-changing, visibly
-// transformative, and removable cleanly (effects all read upgN at use time).
-const WEB_SUPERS = [
-  { key: 'meteor', name: 'METEOR MATRIX', icon: 'multi', color: '#40c4ff', path: 'arsenal', bridge: 'calibrated',
-    desc: 'MEGA EVOLUTION CALLS A METEOR RAIN — 6 TYPED STRIKES ACROSS THE WAVE',
-    sdesc: 'EVERY FULL CHARGED SHOT CALLS A METEOR RAIN — 6 TYPED STRIKES',
+// FUSION POWERS — the progression spine's late-game identity layer
+// (FUSION_APEX_PLAN.md). All 15 two-path combinations exist EXACTLY ONCE:
+// the six ADJACENT pairs ride their Form II bridge (the original superskills,
+// keys unchanged so shipped saves grandfather cleanly); the nine CROSS-WEB
+// pairs need no bridge but the same deep investment. Recipe (fusionEligible):
+// Final Form + >=3 ranks in BOTH paths + a capstone in EITHER + the bridge
+// (adjacent pairs only) + a free Fusion slot. MAX TWO Fusions per run — the
+// structural safeguard that keeps late runs specialized instead of complete.
+const WEB_FUSIONS = [
+  // ---- the six adjacent (bridge-backed) fusions ----
+  { key: 'meteor', name: 'METEOR MATRIX', icon: 'multi', color: '#40c4ff', paths: ['arsenal', 'impact'], bridge: 'calibrated',
+    role: 'CROWD BURST',
+    desc: 'LINED-UP HITS FILL THE MATRIX — MEGA EVOLUTION UNLEASHES A 6-STRIKE METEOR RAIN',
+    sdesc: 'BASIC HITS FILL THE MATRIX — A FULL CHARGE UNLEASHES A 6-STRIKE METEOR RAIN',
+    ready: 'THE SIDE-RACK MOTES BRIGHTEN AS THE MATRIX FILLS',
     visual: 'DEPLOYED SIDE RACKS FLANK THE MUZZLES, MOTES ORBITING',
-    proc: 'ELEMENT-COLORED METEORS STREAK DOWN ONTO TARGETS' },
-  { key: 'horizon', name: 'EVENT HORIZON', icon: 'warp', color: '#ff7043', path: 'impact', bridge: 'singularity',
-    desc: 'YOUR IMPLOSIONS BECOME GRAVITY WELLS — WIDER, LONGER, AND THEY EAT ENEMY FIRE',
+    proc: 'ELEMENT-COLORED METEORS STREAK DOWN ONTO TARGETS',
+    limit: 'THE RAIN NEEDS A FULL MATRIX — NEVER EVERY CHARGE' },
+  { key: 'horizon', name: 'EVENT HORIZON', icon: 'warp', color: '#ff7043', paths: ['impact', 'prism'], bridge: 'singularity',
+    role: 'GROUPING & CONTROL',
+    desc: 'YOUR IMPLOSIONS BECOME GRAVITY WELLS THAT ERASE ENEMY FIRE — EACH TARGET BURNS ONCE',
+    ready: 'THE ACCRETION RIM STAYS LIT WHILE A WELL CAN FORM',
     visual: 'THE SINGULARITY ORB GROWS A BRIGHT ACCRETION RIM',
-    proc: 'A DARK WELL LINGERS AT THE BLAST, ERASING ENEMY SHOTS' },
-  { key: 'ascension', name: 'ELEMENTAL ASCENSION', icon: 'star', color: '#18ffff', path: 'prism', bridge: 'aurora',
+    proc: 'A DARK WELL LINGERS AT THE BLAST, ERASING ENEMY SHOTS',
+    limit: 'WELL DAMAGE HITS EACH TARGET ONCE · BOSSES RESIST 4-FOLD' },
+  { key: 'ascension', name: 'ELEMENTAL ASCENSION', icon: 'star', color: '#18ffff', paths: ['prism', 'surge'], bridge: 'aurora',
+    role: 'TYPE MASTERY',
     desc: 'DURING MEGA YOUR ELEMENT RETUNES EVERY 1.5s TO COUNTER THE WAVE',
+    ready: 'THE RAINBOW HALO TURNS WHILE MEGA IS BANKED',
     visual: 'A RAINBOW LENS HALO CROWNS THE OMNI LENS',
-    proc: 'THE LIVE TYPE GLYPH SWAPS WITH A PRISM FLASH EACH RETUNE' },
-  { key: 'immortal', name: 'IMMORTAL REACTOR', icon: 'mega', color: '#ffea00', path: 'surge', bridge: 'reactive',
-    desc: 'ONCE PER WAVE: A LETHAL HIT DRAINS YOUR MEGA METER (25%+) INSTEAD OF A LIFE',
+    proc: 'THE LIVE TYPE GLYPH SWAPS WITH A PRISM FLASH EACH RETUNE',
+    limit: 'NEVER EXTENDS TOTAL MEGA DURATION' },
+  { key: 'immortal', name: 'IMMORTAL REACTOR', icon: 'mega', color: '#ffea00', paths: ['surge', 'aegis'], bridge: 'reactive',
+    role: 'EMERGENCY SURVIVAL',
+    desc: 'ONCE PER WAVE: A LETHAL HIT DRAINS YOUR WHOLE MEGA METER (25%+ BANKED) INSTEAD OF A LIFE',
+    ready: 'THE ARMORED SHELL RINGS SOLID WHILE THE REACTOR IS ARMED',
     visual: 'A GOLD-GREEN ARMORED REACTOR SHELL RINGS THE CORE',
-    proc: 'THE SHELL CRACKS, FLARES, AND A COUNTERBURST CLEARS ENEMY FIRE' },
-  { key: 'guardian', name: 'GUARDIAN ANGEL', icon: 'fairy', color: '#b9f6ca', path: 'aegis', bridge: 'rescue',
-    desc: 'POTIONS, CATCHES + SHIELD SAVES CHARGE A GUARDIAN PULSE — AT FULL: CLEAR ENEMY FIRE, HEAL +1 HP',
+    proc: 'THE SHELL CRACKS, FLARES, AND A COUNTERBURST CLEARS ENEMY FIRE',
+    limit: 'SHIELD REGROWTH STALLS 6s AFTER IT FIRES' },
+  { key: 'guardian', name: 'GUARDIAN ANGEL', icon: 'fairy', color: '#b9f6ca', paths: ['aegis', 'bond'], bridge: 'rescue',
+    role: 'RECOVERY',
+    desc: 'POTIONS, CATCHES + SHIELD SAVES CHARGE THE PULSE (8) — AT FULL: CLEAR ENEMY FIRE, HEAL +1 HP',
+    ready: 'EIGHT SIGIL PIPS FILL BEHIND YOU',
     visual: 'A COMPANION SIGIL WITH PINK-GREEN PULSE WINGS RIDES BEHIND YOU',
-    proc: 'THE SIGIL FLARES AND A WING-SHAPED PULSE SWEEPS THE SCREEN' },
-  { key: 'acewing', name: 'ACE INTERCEPTOR WING', icon: 'flying', color: '#ff80ab', path: 'bond', bridge: 'salvage',
+    proc: 'THE SIGIL FLARES AND A WING-SHAPED PULSE SWEEPS THE SCREEN',
+    limit: 'AT MOST ONE PULSE PER WAVE' },
+  { key: 'acewing', name: 'ACE INTERCEPTOR WING', icon: 'flying', color: '#ff80ab', paths: ['bond', 'arsenal'], bridge: 'salvage',
+    role: 'COMPANION OFFENSE',
     desc: 'TWO PERMANENT WINGMATES INTERCEPT ENEMY FIRE ON PATROL',
     sdesc: 'TWO PERMANENT WINGMATES FIRE SEEKING BOLTS + INTERCEPT ENEMY FIRE',
+    ready: 'THE FORMATION LIGHTS HOLD STATION WHENEVER THE WING IS LIVE',
     visual: 'TWO FORMATION LIGHTS HOLD STATION OFF YOUR WINGS',
-    proc: 'WINGMATE BOLTS TRAIL YOUR ELEMENT COLOR AT LOWER BRIGHTNESS' },
+    proc: 'WINGMATE BOLTS TRAIL YOUR ELEMENT COLOR AT LOWER BRIGHTNESS',
+    limit: 'WINGMATES STAY WELL BELOW YOUR OWN SUSTAINED FIRE' },
+  // ---- the nine cross-web fusions (no bridge — pure deep investment) ----
+  { key: 'prismstorm', name: 'PRISMSTORM ARRAY', icon: 'laser', color: '#64ffda', paths: ['arsenal', 'prism'],
+    role: 'TUNED VOLUME FIRE',
+    desc: 'EVERY 12TH HIT PRIMES A FIVE-LANE PRISM VOLLEY, EACH LANE TUNED AGAINST THE WAVE',
+    ready: 'THE LENS FACETS FILL AS HITS LINE UP (0-12)',
+    visual: 'A FACETED LENS UNFOLDS ACROSS THE MUZZLES',
+    proc: 'FIVE COLORED LIGHT RAILS FAN OUT OF THE LENS',
+    limit: 'BOSS DAMAGE CAPPED NEAR 1.25 NORMAL VOLLEYS' },
+  { key: 'hypernova', name: 'HYPERNOVA CYCLE', icon: 'swift', color: '#ffff8d', paths: ['arsenal', 'surge'],
+    role: 'MEGA SUSTAIN',
+    desc: 'DURING MEGA, AN UNBROKEN STREAM SPINS THROUGH 3 CADENCE STAGES · INTERCEPTIONS RELEASE ECHO BOLTS',
+    ready: 'HEAT RINGS AROUND THE BARRELS SHOW THE ACTIVE STAGE',
+    visual: 'CYAN BARRELS SPIN INSIDE A GOLD MEGA CROWN',
+    proc: 'ECHO BOLTS SNAP OUT OF EVERY INTERCEPTION',
+    limit: 'PEAK +30% SUSTAIN · STAGE THREE RUNS DANGEROUSLY HOT' },
+  { key: 'battery', name: 'BULWARK BATTERY', icon: 'wide', color: '#a5d6a7', paths: ['arsenal', 'aegis'],
+    role: 'FORTIFIED FIRE',
+    desc: 'INTERCEPTIONS BUILD A 3-SEGMENT HEX WALL AHEAD OF YOU · A FULL WALL TURNS YOUR NEXT RELEASE INTO A COUNTERBEAM',
+    ready: 'WALL SEGMENTS FLOAT AHEAD OF THE PILOT (0-3)',
+    visual: 'A TRANSLUCENT HEX WALL RIDES FORWARD OF THE PILOT',
+    proc: 'THE WALL FOLDS INTO A HORIZONTAL RAIL AND FIRES',
+    limit: '12s REBUILD FLOOR AFTER THE BEAM' },
+  { key: 'cataclysm', name: 'CATACLYSM CORE', icon: 'fire', color: '#ffab40', paths: ['impact', 'surge'],
+    role: 'SCREEN CLEAR',
+    desc: 'MEGA EVOLUTION MAY DETONATE A SCREEN-CLEARING NOVA (20s COOLDOWN)',
+    sdesc: 'A FULL CHARGE MAY CONSUME 50% BANKED MEGA — A SCREEN-CLEARING NOVA',
+    ready: 'THE COLLAPSED RING GLOWS WHEN THE COST IS BANKED',
+    visual: 'A COLLAPSED REACTOR RING ORBITS THE CHARGE CHAMBER',
+    proc: 'THE SCREEN DIMS, THEN A GOLD-ORANGE RING SWEEPS IT',
+    limit: '20s COOLDOWN · BOSSES TAKE ONLY A SLIVER' },
+  { key: 'lance', name: 'AEGIS LANCE', icon: 'target', color: '#d4e157', paths: ['impact', 'aegis'],
+    role: 'ARMOR BREAKER',
+    desc: 'MEGA + A SHIELD: YOUR ATTACKS BECOME THE LANCE FOR THE WINDOW — PIERCING, ARMOR-BREAKING',
+    sdesc: 'WHILE SHIELDED, A FULL CHARGE CONSUMES ONE SHIELD — AN UNSTOPPABLE ARMOR-BREAKING LANCE',
+    ready: 'SHIELD PLATES ROTATE FORWARD WHILE A CHARGE IS BANKED',
+    visual: 'SHIELD PLATES FORM AN ARMORED BARREL AROUND THE BORE',
+    proc: 'THE LANCE PIERCES EVERYTHING ON ITS LINE',
+    limit: 'COSTS A REAL SHIELD CHARGE EVERY TIME' },
+  { key: 'shepherd', name: 'COMET SHEPHERD', icon: 'coin', color: '#ffab91', paths: ['impact', 'bond'],
+    role: 'ECONOMY BURST',
+    desc: 'PICKUPS BANK COMET SEEDS (MAX 3) — YOUR NEXT RELEASE SENDS THEM AT SEPARATE TARGETS',
+    ready: 'SEED STARS ORBIT THE REAR RIG (0-3)',
+    visual: 'HELD-ITEM GLYPHS BECOME SMALL ORBITING SEED STARS',
+    proc: 'CURVED COMET TRAILS PEEL AWAY TOWARD TARGETS',
+    limit: 'SEEDS HIT ELITES AND BOSSES SOFTLY' },
+  { key: 'mirror', name: 'MIRROR SPECTRUM', icon: 'ice', color: '#80cbc4', paths: ['prism', 'aegis'],
+    role: 'REFLECTED DEFENSE',
+    desc: 'DEFLECTED SHOTS AND SHIELD SAVES STORE FACETS (MAX 3) — YOUR NEXT RELEASE FIRES THEM BACK, TYPED',
+    ready: 'COLORED PRISM PLATES RING THE SHIELD (0-3)',
+    visual: 'THE SHIELD DIVIDES INTO COLORED PRISM PLATES',
+    proc: 'A REFLECTED FAN FIRES IN THE CAPTURED TYPES',
+    limit: 'THREE FACETS · REFLECTIONS NEVER RE-CHARGE IT' },
+  { key: 'chorus', name: 'BESTIARY CHORUS', icon: 'sound', color: '#f48fb1', paths: ['prism', 'bond'],
+    role: 'COMPANION STRIKE',
+    desc: 'RECORD 3 DIFFERENT TYPES (CATCHES / ELEMENT ORBS) — A FAVORABLE-TYPE COMPANION STRIKE ANSWERS',
+    ready: 'THREE CONSTELLATION OUTLINES FILL BEHIND THE CREST',
+    visual: 'FAINT MON CONSTELLATIONS ORBIT THE BOND CREST',
+    proc: 'THE OUTLINES CONVERGE INTO ONE ATTACK GLYPH',
+    limit: 'ONCE PER WAVE' },
+  { key: 'formation', name: 'VICTORY FORMATION', icon: 'pokeball', color: '#ffd180', paths: ['surge', 'bond'],
+    role: 'SQUADRON CALL',
+    desc: 'PICKUPS + CATCHES FILL SYNC (8) — MEGA AT FULL SYNC CALLS A PARTNER SQUADRON FOR 8s',
+    ready: 'THE SYNC METER RIDES YOUR POWER RING',
+    visual: 'TWO LIGHT SILHOUETTES HOLD A V OFF YOUR WINGS',
+    proc: 'THE SQUADRON LAUNCHES SYNCHRONIZED SEEKING ATTACKS',
+    limit: 'EIGHT SECONDS · THE SQUAD HUNTS ADDS FIRST' },
+];
+// APEX POWERS — the rare three-path transformations. Recipe (apexEligible):
+// stage 24+, TWO compatible installed Fusions (both inside the apex's three
+// paths), nine total ranks across those paths, and the single Apex slot.
+// Apexes change how the rig FLOWS, never just its numbers.
+const WEB_APEXES = [
+  { key: 'warmachine', name: 'WAR MACHINE', icon: 'steel', color: '#ff6e40', paths: ['arsenal', 'impact', 'surge'], mapSlot: 0.5,
+    role: 'FLUID WEAPON FORMS',
+    desc: 'THE RIG FOLDS BETWEEN GATLING AND RAIL: BASIC HITS BUILD RAIL PRESSURE · SPENDING IT RUNS COOLER AND NEVER RESETS YOUR CADENCE',
+    ready: 'THE PRESSURE GAUGE CLIMBS ALONG THE BARREL',
+    visual: 'THE WHOLE WEAPON RIG FOLDS BETWEEN TWO SILHOUETTES',
+    proc: 'A FOLD FLASH AND A DEEPER RAIL REPORT ON THE SPEND',
+    limit: 'BOTH FORMS SHARE ONE HEAT BAR' },
+  { key: 'celestial', name: 'CELESTIAL GUARDIAN', icon: 'star', color: '#b388ff', paths: ['prism', 'aegis', 'bond'], mapSlot: 4.5,
+    role: 'CONSTELLATION WARD',
+    desc: 'TYPE, SHIELD AND BOND EVENTS FILL THREE HALO SECTORS — AT FULL: A TYPED WAVE CLEARS FIRE, CRACKS ARMOR, RESTORES 1 SHIELD OR 1 HP',
+    ready: 'THREE HALO SECTORS FILL BEHIND THE PILOT',
+    visual: 'A SIX-POINT HALO WITH THREE COLORED SECTORS',
+    proc: 'THE HALO EXPANDS AS TRANSLUCENT WINGS',
+    limit: 'RESTORES A SHIELD OR HP — NEVER BOTH' },
 ];
 // Mastery satellites: the SAME forever-stacking items (G.stacks keys are
 // storage-stable) docked onto their home wedge as revisitable web nodes.
@@ -789,13 +899,14 @@ const WEB_SATELLITES = [
   { stackKey: 'bell', path: 'bond' },    // SOOTHE BELL — fortune mastery
 ];
 const WEB_BRIDGE_KEYS = WEB_BRIDGES.map(b => b.key);
-const WEB_SUPER_KEYS = WEB_SUPERS.map(s => s.key);
+const WEB_FUSION_KEYS = WEB_FUSIONS.map(f => f.key);
+const WEB_APEX_KEYS = WEB_APEXES.map(x => x.key);
 function webBridge(key) { return WEB_BRIDGES.find(b => b.key === key) || null; }
-function webSuper(key) { return WEB_SUPERS.find(s => s.key === key) || null; }
-function superForPath(pk) { return WEB_SUPERS.find(s => s.path === pk) || null; }
+function webFusion(key) { return WEB_FUSIONS.find(f => f.key === key) || null; }
+function webApex(key) { return WEB_APEXES.find(x => x.key === key) || null; }
 function satelliteForPath(pk) { return WEB_SATELLITES.find(s => s.path === pk) || null; }
 function stackItem(stackKey) { return STACK_ITEMS.find(s => s.key === stackKey) || null; }
-// the pilot's evolution Form (1–3) — the web's ring gate. NO PARTNER's drone
+// the pilot's evolution Form (1-3) — the web's ring gate. NO PARTNER's drone
 // and every starter line advance G.starterLvl on the journey's act boundaries
 // (Pikachu at its real region-5 Raichu evolution), so this is always live.
 function webForm() { return Math.max(1, Math.min(3, G.starterLvl || 1)); }
@@ -803,8 +914,27 @@ function webNodeDesc(node) { return (G.mode !== 'classic' && node.sdesc) ? node.
 function bridgeEligible(b) {
   return !upgN(b.key) && webForm() >= 2 && pathLvl(b.paths[0]) >= 1 && pathLvl(b.paths[1]) >= 1;
 }
-function superEligible(s) {
-  return !upgN(s.key) && webForm() >= 3 && upgN(s.bridge) && pathLvl(s.path) >= 4;
+function fusionsOwnedCount() { return WEB_FUSION_KEYS.reduce((a, k) => a + (upgN(k) ? 1 : 0), 0); }
+function apexOwnedCount() { return WEB_APEX_KEYS.reduce((a, k) => a + (upgN(k) ? 1 : 0), 0); }
+// a Fusion node stays a compact silhouette on the map until the player has
+// two ranks in both of its paths (then it expands and reveals its recipe)
+function fusionVisible(f) {
+  return upgN(f.key) || (pathLvl(f.paths[0]) >= 2 && pathLvl(f.paths[1]) >= 2);
+}
+function fusionEligible(f) {
+  return !upgN(f.key) && webForm() >= 3 && fusionsOwnedCount() < 2 &&
+    pathLvl(f.paths[0]) >= 3 && pathLvl(f.paths[1]) >= 3 &&
+    f.paths.some(pk => pathLvl(pk) >= 4) &&
+    (!f.bridge || upgN(f.bridge));
+}
+function apexCompatFusions(x) {
+  return WEB_FUSIONS.filter(f => f.paths.every(pk => x.paths.includes(pk)));
+}
+function apexRankSum(x) { return x.paths.reduce((a, pk) => a + pathLvl(pk), 0); }
+function apexEligible(x) {
+  return !upgN(x.key) && apexOwnedCount() < 1 && G.level >= 24 &&
+    apexCompatFusions(x).filter(f => upgN(f.key)).length >= 2 &&
+    apexRankSum(x) >= 9;
 }
 // exact lock reasons for the detail panel — the player should never need a
 // guide to see why a node is unavailable
@@ -813,40 +943,68 @@ function webLockReason(node, kind) {
   if (kind === 'bridge') {
     if (webForm() < 2) reasons.push('REQUIRES FORM II (PARTNER EVOLUTION · REGION 4)');
     for (const pk of node.paths) if (pathLvl(pk) < 1) reasons.push('REQUIRES ANY ' + PATHS[pk].name + ' NODE');
-  } else if (kind === 'super') {
+  } else if (kind === 'fusion') {
     if (webForm() < 3) reasons.push('REQUIRES FINAL FORM (REGION 7)');
-    if (!upgN(node.bridge)) reasons.push('REQUIRES BRIDGE: ' + webBridge(node.bridge).name);
-    if (pathLvl(node.path) < 4) reasons.push('REQUIRES THE ' + PATHS[node.path].name + ' CAPSTONE');
+    for (const pk of node.paths) if (pathLvl(pk) < 3) reasons.push('REQUIRES 3 RANKS IN ' + PATHS[pk].name + ' (' + pathLvl(pk) + '/3)');
+    if (!node.paths.some(pk => pathLvl(pk) >= 4)) reasons.push('REQUIRES A CAPSTONE IN EITHER PATH');
+    if (node.bridge && !upgN(node.bridge)) reasons.push('REQUIRES BRIDGE: ' + webBridge(node.bridge).name);
+    if (!upgN(node.key) && fusionsOwnedCount() >= 2) reasons.push('FUSION SLOTS FULL (2/2)');
+  } else if (kind === 'apex') {
+    if (G.level < 24) reasons.push('REQUIRES STAGE 24+ (NOW AT ' + G.level + ')');
+    const compat = apexCompatFusions(node), owned = compat.filter(f => upgN(f.key)).length;
+    if (owned < 2) reasons.push('REQUIRES 2 OF: ' + compat.map(f => f.name).join(' / ') + ' (' + owned + '/2)');
+    if (apexRankSum(node) < 9) reasons.push('REQUIRES 9 RANKS ACROSS ITS PATHS (' + apexRankSum(node) + '/9)');
+    if (!upgN(node.key) && apexOwnedCount() >= 1) reasons.push('THE APEX SLOT IS TAKEN (1/1)');
   } else if (kind === 'sat') {
     if (pathLvl(node.path) < 4) reasons.push('UNLOCKS WHEN ' + PATHS[node.path].name + ' IS MASTERED (4/4)');
   }
   return reasons;
 }
 function ownedWebNodeCount() {
-  return WEB_BRIDGE_KEYS.reduce((a, k) => a + (upgN(k) ? 1 : 0), 0)
-    + WEB_SUPER_KEYS.reduce((a, k) => a + (upgN(k) ? 1 : 0), 0);
+  return [...WEB_BRIDGE_KEYS, ...WEB_FUSION_KEYS, ...WEB_APEX_KEYS]
+    .reduce((a, k) => a + (upgN(k) ? 1 : 0), 0);
 }
 // total burnable build (knockouts consume this; game over only when it's 0)
 function totalBuildLevels() { return totalPathLevels() + ownedWebNodeCount(); }
-// ---- knockout regression, graph-aware: only LEAVES may burn, so a removal
-// can never orphan an owned bridge (needs one node each side) or superskill
-// (needs its bridge + its path capstone). Supers burn first by construction:
-// they are always leaves; a bridge or capstone under an owned super is not.
+// ---- knockout regression, graph-aware and SIMULATED: a candidate removal is
+// a leaf only if the remaining build still satisfies every owned node's
+// recipe (bridges keep a node each side; fusions keep 3/3 ranks + an either-
+// side capstone + their bridge; apexes keep two compatible fusions + nine
+// ranks). Apexes are always leaves. A grandfathered save that STARTS illegal
+// burns freely — never soft-lock the knockout loop.
+function webBuildLegal() {
+  for (const b of WEB_BRIDGES) if (upgN(b.key) && b.paths.some(pk => pathLvl(pk) < 1)) return false;
+  for (const f of WEB_FUSIONS) {
+    if (!upgN(f.key)) continue;
+    if (f.paths.some(pk => pathLvl(pk) < 3)) return false;
+    if (!f.paths.some(pk => pathLvl(pk) >= 4)) return false;
+    if (f.bridge && !upgN(f.bridge)) return false;
+  }
+  for (const x of WEB_APEXES) {
+    if (!upgN(x.key)) continue;
+    if (apexCompatFusions(x).filter(f => upgN(f.key)).length < 2) return false;
+    if (apexRankSum(x) < 9) return false;
+  }
+  return true;
+}
 function webRegressibleLeaves() {
   const leaves = [];
-  for (const k of WEB_SUPER_KEYS) if (upgN(k)) leaves.push({ kind: 'super', key: k });
+  const baseline = webBuildLegal();
+  const tryLeaf = (mutate, undo, leaf) => {
+    mutate();
+    if (webBuildLegal() || !baseline) leaves.push(leaf);
+    undo();
+  };
+  for (const k of WEB_APEX_KEYS) if (upgN(k)) leaves.push({ kind: 'apex', key: k });
+  for (const f of WEB_FUSIONS) {
+    if (upgN(f.key)) tryLeaf(() => { delete G.upg[f.key]; }, () => { G.upg[f.key] = 1; }, { kind: 'fusion', key: f.key });
+  }
   for (const b of WEB_BRIDGES) {
-    if (!upgN(b.key)) continue;
-    const locked = WEB_SUPERS.some(s => upgN(s.key) && s.bridge === b.key);
-    if (!locked) leaves.push({ kind: 'bridge', key: b.key });
+    if (upgN(b.key)) tryLeaf(() => { delete G.upg[b.key]; }, () => { G.upg[b.key] = 1; }, { kind: 'bridge', key: b.key });
   }
   for (const pk of PATH_KEYS) {
     const lvl = pathLvl(pk);
-    if (!lvl) continue;
-    const sup = superForPath(pk);
-    if (lvl >= 4 && sup && upgN(sup.key)) continue;          // capstone pinned by its super
-    if (lvl === 1 && WEB_BRIDGES.some(b => upgN(b.key) && b.paths.includes(pk))) continue; // last node pinned by a bridge
-    leaves.push({ kind: 'tier', pathKey: pk });
+    if (lvl) tryLeaf(() => { G.path[pk] = lvl - 1; }, () => { G.path[pk] = lvl; }, { kind: 'tier', pathKey: pk });
   }
   return leaves;
 }
@@ -856,7 +1014,8 @@ function regressWebLeaf(leaf) {
     return t ? t.name : null;
   }
   delete G.upg[leaf.key];
-  const def = leaf.kind === 'super' ? webSuper(leaf.key) : webBridge(leaf.key);
+  const def = leaf.kind === 'apex' ? webApex(leaf.key)
+    : leaf.kind === 'fusion' ? webFusion(leaf.key) : webBridge(leaf.key);
   return def ? def.name : null;
 }
 
