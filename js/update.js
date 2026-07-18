@@ -55,6 +55,29 @@ function tickEffects(dt) {
   }
   G.gustT = Math.max(0, G.gustT - dt);
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
+  G.reactiveCD = Math.max(0, (G.reactiveCD || 0) - dt); // REACTIVE OVERDRIVE regrow clock
+  // ELEMENTAL ASCENSION (superskill): during Mega the live element retunes
+  // every 1.5s to counter the most common enemy type on screen. The retune is
+  // a normal timed override, so Mega's end lets it lapse back naturally.
+  if (upgN('ascension') && G.megaT > 0 && G.state === 'play') {
+    G.ascendT -= dt;
+    if (G.ascendT <= 0) {
+      G.ascendT = 1.5;
+      const counts = {};
+      for (const br of G.bricks) if (!br.dead && !br.dormant && !br.barrier) counts[br.poke.t] = (counts[br.poke.t] || 0) + 1;
+      const dom = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+      const counter = dom && Object.keys(TYPE_COLORS).find(t => (EFFECTIVE[t] || []).includes(dom));
+      if (counter) {
+        if (counter !== attackElement()) {
+          addFloater(G.paddle.x, shipY() - 66, 'ASCENSION · ' + counter.toUpperCase(), TYPE_COLORS[counter], 12);
+          sparkle(G.paddle.x, shipY() - 20, 4, false);
+        }
+        G.ballElement = counter;
+        G.ballElementT = Math.max(G.ballElementT, 2.2);
+        G.resistStreak = 0;
+      }
+    }
+  } else if (G.megaT <= 0) G.ascendT = 0;
   G.veilHintCD = Math.max(0, (G.veilHintCD || 0) - dt);
   G.chargeHintCD = Math.max(0, (G.chargeHintCD || 0) - dt);
 }
@@ -181,6 +204,11 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (element && dmg < 90) {
     if ((EFFECTIVE[element] || []).includes(br.poke.t)) {
       dmg *= 2 * (upgN('amplify') ? 1.3 : 1);
+      // AURORA DRIVE: super-effective hits feed the Mega ring (gold motes)
+      if (upgN('aurora') && G.megaT <= 0) {
+        G.mega = Math.min(1, G.mega + 0.015);
+        G.surgeFlash = Math.max(G.surgeFlash || 0, 0.4);
+      }
       if (element === G.ballElement) G.resistStreak = 0;
       if (G.seCD <= 0) {
         // PRISM AMPLIFY proc: the notice itself reports the boosted multiplier
@@ -349,6 +377,13 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + rallyKill);
     // RALLY proc: the surge ring on the rig flashes as the kill banks Mega
     if (rallyKill && G.megaT <= 0) G.surgeFlash = Math.max(G.surgeFlash || 0, 0.5);
+    // SINGULARITY LENS (classic): every 5th break implodes for typed splash.
+    // The counter resets FIRST, so a cascade needs five fresh kills per layer.
+    if (G.mode === 'classic' && upgN('singularity') && dmg < 90 && ++G.lensKills >= 5) {
+      G.lensKills = 0;
+      const lensEl = G.ballElement || ((G.starter && G.starter !== 'none') ? G.starter : null);
+      chargeSplash(br.bx + G.fx, br.by + G.fy, lensEl, upgN('horizon') ? 1 : 0.5);
+    }
     if (br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
     if (br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
       setAnnounce('▒', '#b0bec5', 'MISSINGNO.', 'ITEM DUPLICATION! ×3 POWER-UPS', 2.2);
@@ -468,6 +503,13 @@ function chargeSplash(x, y, element, dmg) {
     if (br.dead) continue;
     const bx = br.bx + G.fx, by = br.by + G.fy;
     if (Math.hypot(bx - x, by - y) < radius + br.w / 2) damageBrick(br, dmg, bx, by, element);
+  }
+  // SINGULARITY LENS: the detonation leaves a typed implosion that keeps
+  // burning; EVENT HORIZON grows it into a gravity well that eats enemy fire
+  if (upgN('singularity') && G.vortexes.length < 6) {
+    const horizon = !!upgN('horizon');
+    G.vortexes.push({ x, y, element, t: 0, dur: horizon ? 1.5 : 0.9, tick: 0.24,
+      r: radius * (horizon ? 1.15 : 0.75), dmg: horizon ? 0.5 : 0.4, horizon });
   }
 }
 // is this block out of its box and flying a pattern?
@@ -688,6 +730,8 @@ function spawnRiftShard(index, x = W / 2, y = Math.max(105, H * 0.22)) {
 function collectPickup(pu) {
   if (G.runStats) G.runStats.itemsCaught++;
   haptic('item');
+  webPickupProcs(); // RESCUE / SALVAGE / GUARDIAN pickup economy
+  if (pu.p && (pu.p.key === 'heal' || pu.p.key === 'pokeball')) webGuardianCharge();
   if (pu.secretShard || pu.p.key === 'riftShard') {
     const i = Math.max(0, Math.min(2, pu.shardIndex || 0));
     G.secret.shards[i] = true;
@@ -1024,7 +1068,75 @@ function absorbHit(x, y) {
   burst(x, y, '#66bb6a', 18, 240, 0.5);
   ringFx(G.paddle.x, y, '#a5d6a7', 6, 64, 3, 0.4);
   SFX.shield();
+  // REACTIVE OVERDRIVE: the break feeds the Mega ring — gold surge on the rig
+  if (upgN('reactive') && G.megaT <= 0) {
+    G.mega = Math.min(1, G.mega + 0.15);
+    G.surgeFlash = 1;
+    addFloater(G.paddle.x, y - 64, '+15% MEGA', '#dce775', 12);
+  }
+  webGuardianCharge(); // GUARDIAN ANGEL counts shield saves
   return true;
+}
+
+// ---- pickup-economy bridges: RESCUE CIRCUIT + SALVAGE DRONES (and the
+// GUARDIAN ANGEL superskill) all key off collection — one shared hook so
+// every collection path counts exactly once.
+function webPickupProcs() {
+  if (upgN('rescue') && ++G.rescueN >= 8) {
+    G.rescueN = 0;
+    if (G.shieldCharges < shieldCap()) {
+      G.shieldCharges++;
+      ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
+      addFloater(G.paddle.x, shipY() - 34, 'RESCUE SHIELD!', '#ff8a80', 12);
+      SFX.shield();
+    }
+  }
+  if (upgN('salvage') && ++G.salvageCount >= 3) {
+    G.salvageCount = 0;
+    launchSalvageDrones();
+  }
+}
+function launchSalvageDrones() {
+  if (G.mode === 'classic') {
+    // classic stays ball-first: drones bank up to two stored INTERCEPTS that
+    // eat the next enemy shots aimed at you — never a free blaster
+    if (G.salvageStored < 2) {
+      G.salvageStored++;
+      addFloater(G.paddle.x, shipY() - 46, 'DRONES ON STATION ×' + G.salvageStored, '#ea80fc', 12);
+      tone(720, 0.1, 'sine', 0.05, 140);
+    }
+    return;
+  }
+  const el = attackElement();
+  for (const dir of [-1, 1]) {
+    G.missiles.push({ x: G.paddle.x + dir * 26, y: shipY() - 8, vx: dir * 200, vy: -260, tier: 1, drone: true, element: el });
+  }
+  addFloater(G.paddle.x, shipY() - 46, 'SALVAGE VOLLEY!', '#ea80fc', 12);
+  SFX.missile();
+}
+// GUARDIAN ANGEL (superskill): potions, catches, and shield saves each add a
+// charge; at six the guardian pulse sweeps the sky clear and heals one life.
+function webGuardianCharge() {
+  if (!upgN('guardian')) return;
+  G.guardCharge = (G.guardCharge || 0) + 1;
+  if (G.guardCharge >= 6) {
+    G.guardCharge = 0;
+    for (const s of G.enemyShots) if (!s.boss) s.dead = true;
+    if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; }
+    ringFx(G.paddle.x, shipY(), '#b9f6ca', 12, 230, 6, 0.7);
+    ringFx(G.paddle.x, shipY(), '#f8bbd0', 8, 160, 4, 0.55);
+    sparkle(G.paddle.x, shipY() - 30, 10, true);
+    addFloater(G.paddle.x, shipY() - 70, 'GUARDIAN ANGEL!', '#b9f6ca', 16);
+    SFX.mega();
+  } else {
+    addFloater(G.paddle.x, shipY() - 30, 'GUARDIAN ' + G.guardCharge + '/6', '#b9f6ca', 10);
+  }
+}
+// METEOR MATRIX (superskill): a delayed rain of six typed strikes across the
+// living wave — shooter modes call it on a full charge, classic on Mega.
+function beginMeteorRain() {
+  G.meteorRain = { n: 6, t: 0.15, element: attackElement() };
+  addFloater(G.paddle.x, shipY() - 74, 'METEOR MATRIX!', '#40c4ff', 14);
 }
 
 function favoriteRunPath() {
@@ -1056,6 +1168,22 @@ function loseLife(cause = 'MISSED BALL') {
     addFloater(G.paddle.x, shipY() - 42, 'PHASE SHIFT!', '#b388ff', 16);
     ringFx(G.paddle.x, shipY(), '#b388ff', 6, 78, 3, 0.45);
     tone(540, 0.18, 'sine', 0.06, 220);
+    return;
+  }
+  // IMMORTAL REACTOR (superskill): once per wave, the reactor eats a lethal
+  // hit by draining the Mega meter (needs 25%+ banked) — the armored core
+  // cracks, flares, and a counterburst clears ordinary enemy fire.
+  if (upgN('immortal') && !G.reactorUsed && G.megaT <= 0 && G.mega >= 0.25 && G.state === 'play') {
+    G.reactorUsed = true;
+    G.mega = 0;
+    G.invuln = Math.max(G.invuln, 1.6);
+    for (const s of G.enemyShots) if (!s.boss) s.dead = true;
+    ringFx(G.paddle.x, shipY(), '#ffea00', 10, 190, 6, 0.6);
+    ringFx(G.paddle.x, shipY(), '#69f0ae', 6, 120, 4, 0.5);
+    burst(G.paddle.x, shipY(), '#ffea00', 30, 360, 0.7);
+    addFloater(G.paddle.x, shipY() - 58, 'IMMORTAL REACTOR!', '#ffea00', 16);
+    G.shake = Math.min(G.shake + 8, 14);
+    SFX.mega();
     return;
   }
   G.lastDamageCause = cause;
@@ -2516,6 +2644,12 @@ function update(dt) {
         // a clean return vents blaster heat and (with Momentum) charges Mega
         if (G.overheat <= 0) G.heat = Math.max(0, G.heat - 0.5);
         if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.02 * upgN('momentum'));
+        // CALIBRATED BARRAGE (classic): every 4th clean return primes the ball
+        if (G.mode === 'classic' && upgN('calibrated') && ++G.calibReturns >= 4) {
+          G.calibReturns = 0; G.calibShots = 1;
+          addFloater(G.paddle.x, py - 48, 'CALIBRATED!', '#ffcc80', 13);
+          tone(760, 0.1, 'sine', 0.05, 180);
+        }
         // ---- starter partner abilities trigger on clean returns ----
         if (G.starter === 'fire') { // Blaze: the return ignites the ball
           b.ember = G.starterLvl;
@@ -2586,6 +2720,12 @@ function update(dt) {
           }
           if (G.mode === 'classic') {
             dmg *= 1 + 0.15 * upgN('heavy') + 0.25 * upgN('demo');
+            // CALIBRATED BARRAGE proc: the primed return lands white-hot
+            if (upgN('calibrated') && G.calibShots > 0) {
+              G.calibShots--;
+              dmg *= 1.6;
+              burst(b.x, b.y, '#ffcc80', 10, 190, 0.4);
+            }
           }
           damageBrick(br, dmg, b.x, b.y, G.ballElement);
           if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
@@ -2688,6 +2828,7 @@ function update(dt) {
         let dmg = L.charged ? L.power : (L.powerMul || 1);
         if (L.heavy) dmg *= 1.15;
         if (L.nova) dmg *= 2;
+        if (L.calib) dmg *= 1.6; // CALIBRATED BARRAGE: primed volley
         if (L.mega) dmg *= upgN('megaX') ? 1.4 : 1.25;
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'));
@@ -2721,9 +2862,23 @@ function update(dt) {
     }
   }
   for (const m of G.missiles) {
-    const tgt = nearestBrick(m.x, m.y);
-    if (tgt) {
-      const tx = tgt.bx + G.fx, ty = tgt.by + G.fy;
+    // SALVAGE / ACE drones hunt enemy FIRE first — interception is their job —
+    // and only fall back to the nearest enemy when the sky is clear
+    let tx = null, ty = null, shotTgt = null;
+    if (m.drone) {
+      let td = 240;
+      for (const s of G.enemyShots) {
+        if (s.dead || s.boss) continue;
+        const d = Math.hypot(s.x - m.x, s.y - m.y);
+        if (d < td) { td = d; shotTgt = s; }
+      }
+      if (shotTgt) { tx = shotTgt.x; ty = shotTgt.y; }
+    }
+    if (tx == null) {
+      const tgt = nearestBrick(m.x, m.y);
+      if (tgt) { tx = tgt.bx + G.fx; ty = tgt.by + G.fy; }
+    }
+    if (tx != null) {
       const a = Math.atan2(ty - m.y, tx - m.x);
       const cur = Math.atan2(m.vy, m.vx);
       let da = a - cur;
@@ -2734,19 +2889,99 @@ function update(dt) {
       m.vx = Math.cos(na) * sp; m.vy = Math.sin(na) * sp;
     }
     m.x += m.vx * ts * dt; m.y += m.vy * ts * dt;
-    if (G.particles.length < 430) G.particles.push({ x: m.x, y: m.y, vx: -m.vx * 0.08, vy: -m.vy * 0.08, life: 0.3, maxLife: 0.3, color: '#ffab91', r: 2.5 });
+    if (G.particles.length < 430) G.particles.push({ x: m.x, y: m.y, vx: -m.vx * 0.08, vy: -m.vy * 0.08, life: 0.3, maxLife: 0.3, color: m.drone ? '#ea80fc' : '#ffab91', r: 2.5 });
+    if (shotTgt && !shotTgt.dead && Math.hypot(shotTgt.x - m.x, shotTgt.y - m.y) < 18) {
+      // drone intercept: the shot dies to a hex flash, never reaching you
+      shotTgt.dead = true; m.dead = true;
+      ringFx(m.x, m.y, '#ea80fc', 4, 30, 3, 0.3);
+      tone(880, 0.07, 'square', 0.04, -160);
+    }
     for (const br of G.bricks) {
       if (br.dead || br.phaseT > 0 || m.dead) continue;
       const bx = br.bx + G.fx, by = br.by + G.fy;
       if (Math.abs(m.x - bx) < br.w / 2 + 6 && Math.abs(m.y - by) < br.h / 2 + 6) {
         m.dead = true;
-        damageBrick(br, 2, m.x, m.y, 'dragon');
-        fireballExplosion(m.x, m.y, m.tier >= 3 ? 2 : 1);
+        if (m.drone) { // reduced payload, typed like your attack — you stay the star
+          damageBrick(br, 1, m.x, m.y, m.element || null);
+          ringFx(m.x, m.y, '#ea80fc', 4, 28, 2, 0.3);
+        } else {
+          damageBrick(br, 2, m.x, m.y, 'dragon');
+          fireballExplosion(m.x, m.y, m.tier >= 3 ? 2 : 1);
+        }
       }
     }
     if (m.y < 30 || m.x < -40 || m.x > W + 40) m.dead = true;
   }
   G.missiles = G.missiles.filter(m => !m.dead);
+
+  // ---- SINGULARITY / EVENT HORIZON gravity wells: a lingering typed
+  // implosion at the blast point. Ticks reuse damageBrick (so effectiveness
+  // and mastery apply); the HORIZON well also erases ordinary enemy fire.
+  for (const v of G.vortexes) {
+    v.t += dt;
+    v.tick -= dt;
+    if (v.tick <= 0) {
+      v.tick = 0.24;
+      for (const br of G.bricks) {
+        if (br.dead) continue;
+        const bx = br.bx + G.fx, by = br.by + G.fy;
+        if (Math.hypot(bx - v.x, by - v.y) < v.r + br.w / 2) damageBrick(br, v.dmg, bx, by, v.element);
+      }
+    }
+    if (v.horizon) {
+      for (const s of G.enemyShots) {
+        if (!s.dead && !s.boss && Math.hypot(s.x - v.x, s.y - v.y) < v.r) {
+          s.dead = true;
+          ringFx(s.x, s.y, TYPE_COLORS[v.element] || '#b388ff', 3, 20, 2, 0.25);
+        }
+      }
+    }
+  }
+  G.vortexes = G.vortexes.filter(v => v.t < v.dur);
+
+  // ---- METEOR MATRIX rain: six spaced typed strikes on random living targets
+  if (G.meteorRain && G.state === 'play') {
+    const mr = G.meteorRain;
+    mr.t -= dt;
+    if (mr.t <= 0) {
+      mr.t = 0.22;
+      mr.n--;
+      const targets = G.bricks.filter(b => !b.dead && !b.dormant && !b.barrier);
+      if (targets.length) {
+        const br = targets[Math.floor(gameRand() * targets.length)];
+        const bx = br.bx + G.fx, by = br.by + G.fy;
+        const col = TYPE_COLORS[mr.element] || '#40c4ff';
+        damageBrick(br, 1.2, bx, by, mr.element);
+        burst(bx, by - 8, col, 14, 240, 0.5);
+        ringFx(bx, by, col, 4, 44, 3, 0.3);
+        for (let i = 0; i < 5 && G.particles.length < 440; i++) { // the falling streak
+          G.particles.push({ x: bx + (i - 2) * 3, y: by - 60 - i * 26, vx: 0, vy: 480,
+            life: 0.22, maxLife: 0.22, color: i % 2 ? '#ffffff' : col, r: 2.6 });
+        }
+        tone(240 + mr.n * 60, 0.08, 'sawtooth', 0.05, -120);
+      }
+      if (mr.n <= 0) G.meteorRain = null;
+    }
+  }
+
+  // ---- ACE INTERCEPTOR WING patrol: permanent wingmates. Shooter modes fire
+  // seeking drone bolts; classic wingmates only bank INTERCEPTS — the ball
+  // stays THE weapon.
+  if (upgN('acewing') && G.state === 'play') {
+    G.wingCD -= dt;
+    if (G.wingCD <= 0) {
+      G.wingCD = 5;
+      if (G.mode === 'classic') {
+        if (G.salvageStored < 2) G.salvageStored++;
+      } else {
+        const el = attackElement();
+        for (const dir of [-1, 1]) {
+          G.missiles.push({ x: G.paddle.x + dir * 34, y: shipY() + 6, vx: dir * 160, vy: -240, tier: 1, drone: true, element: el });
+        }
+        tone(660, 0.06, 'sine', 0.03, 120);
+      }
+    }
+  }
 
   // ---- enemy fire (telegraphed — a warning flashes before every shot) ----
   if (G.state === 'play' && G.bossIntro <= 0) {
@@ -2903,6 +3138,15 @@ function update(dt) {
     const hitH = (jk ? 24 : G.paddle.h) + spl;
     if (!s.dead && G.invuln <= 0 && s.y > py - hitH && s.y < py + hitH &&
         Math.abs(s.x - G.paddle.x) < hitW) {
+      // SALVAGE DRONES (classic): a stored drone intercepts the shot short of you
+      if (G.mode === 'classic' && G.salvageStored > 0 && !s.boss) {
+        G.salvageStored--;
+        s.dead = true;
+        ringFx(s.x, py - 30, '#ea80fc', 5, 40, 3, 0.35);
+        addFloater(G.paddle.x, py - 44, 'DRONE INTERCEPT!', '#ea80fc', 12);
+        tone(880, 0.08, 'square', 0.05, -160);
+        continue;
+      }
       const eff = shotEffect(s.type); // +1 super-effective, -1 you resist
       const pc = TYPE_COLORS[playerType()] || '#90a4ae';
       // a NORMAL shot your type resists is deflected — no life lost. Heavy elite

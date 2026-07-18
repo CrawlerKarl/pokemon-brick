@@ -520,6 +520,153 @@ window.requestAnimationFrame = function () { return 0; };
     return 'rich build burned to 0 across ' + guard + ' knockouts — every intermediate state legal';
   });
 
+  // 2w-iib) every bridge synergy and superskill actually FIRES in play, in
+  // the right mode, with its proc visible (floaters/rings assert via state).
+  test('upgrade web: bridge + superskill mechanics fire in play', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'blaster'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    G.state = 'play'; G.lives = 5; G.livesMax = 5; G.starterLvl = 3; G.reinforce = 0;
+    G.fx = 0; G.fy = 0; G.enemyShots = []; G.powerups = []; // hermetic arena
+    const mk = (x, y, t = 'normal') => ({ bx: x, by: y, hx: x, hy: y, row: 0, col: 0,
+      w: 70, h: 50, hp: 100, maxHp: 100, poke: { id: 19, t }, flash: 0, wobble: 0 });
+    // CALIBRATED BARRAGE: a spent charge primes 3 volleys at +60%
+    G.upg.calibrated = 1;
+    G.lasers = [];
+    fireCharge(1);
+    assert(G.calibShots === 3, 'charge release should prime 3 volleys, got ' + G.calibShots);
+    G.lasers = []; G.blasterCD = 0; G.heat = 0; G.overheat = 0;
+    fireAction();
+    assert(G.lasers.length && G.lasers.every(l => l.calib) && G.calibShots === 2,
+      'primed volley was not marked (calibShots=' + G.calibShots + ')');
+    const calTarget = mk(300, 200);
+    G.bricks = [calTarget, mk(700, 120)];
+    G.lasers = [{ x: 300, y: 205, basic: true, calib: true, powerMul: 1 }];
+    paused = false; G.freeze = 0; update(1 / 60);
+    assert(Math.abs((100 - calTarget.hp) - 1.6) < 1e-6,
+      'calibrated volley dealt ' + (100 - calTarget.hp) + ', expected 1.6');
+    // SINGULARITY LENS: the detonation leaves a ticking typed implosion
+    G.upg.singularity = 1;
+    G.vortexes = [];
+    const vTarget = mk(300, 200, 'grass');
+    G.bricks = [vTarget, mk(700, 120)];
+    chargeSplash(300, 200, 'fire', 1);
+    assert(G.vortexes.length === 1 && !G.vortexes[0].horizon, 'detonation left no vortex');
+    const hpAfterSplash = vTarget.hp;
+    for (let f = 0; f < 30; f++) update(1 / 60);
+    assert(vTarget.hp < hpAfterSplash, 'the vortex never ticked damage');
+    // EVENT HORIZON: the well grows and eats ordinary enemy fire
+    G.upg.horizon = 1;
+    G.vortexes = []; G.enemyShots = [{ x: 310, y: 210, vy: 0 }];
+    chargeSplash(300, 200, 'fire', 1);
+    assert(G.vortexes[0] && G.vortexes[0].horizon, 'horizon well not marked');
+    update(1 / 60);
+    assert(G.enemyShots.length === 0 || G.enemyShots.every(s => s.dead),
+      'the event horizon did not erase enemy fire inside its rim');
+    // AURORA DRIVE: super-effective hits feed Mega; Mega opens with a nova
+    G.upg.aurora = 1; G.mega = 0; G.megaT = 0;
+    const seTarget = mk(400, 240, 'fire');
+    G.bricks = [seTarget, mk(700, 120)];
+    damageBrick(seTarget, 1, 400, 240, 'water');
+    assert(G.mega > 0.014, 'super-effective hit did not feed Mega (' + G.mega + ')');
+    G.mega = 1; G.paddle.x = 400;
+    const novaHp = seTarget.hp;
+    tryMega();
+    assert(G.megaT > 0 && seTarget.hp < novaHp, 'Mega did not open with the aurora nova');
+    G.megaT = 0;
+    // REACTIVE OVERDRIVE: absorbs feed Mega; entering Mega regrows a shield
+    G.upg.reactive = 1;
+    G.shieldCharges = 1; G.mega = 0; G.invuln = 0;
+    absorbHit(G.paddle.x, shipY());
+    assert(Math.abs(G.mega - 0.15) < 1e-9, 'shield break gave ' + G.mega + ' Mega, expected 0.15');
+    G.mega = 1; G.reactiveCD = 0; G.shieldCharges = 0;
+    tryMega();
+    assert(G.shieldCharges === 1 && G.reactiveCD === 20, 'entering Mega did not regrow a shield');
+    G.megaT = 0;
+    // RESCUE CIRCUIT: potions restore a shield; every 8th pickup grows one
+    G.upg.rescue = 1;
+    G.shieldCharges = 0; G.lives = 3;
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
+    assert(G.shieldCharges === 1, 'potion did not restore a shield');
+    G.rescueN = 7; G.shieldCharges = 0;
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.star });
+    assert(G.shieldCharges === 1 && G.rescueN === 0, 'the 8th pickup did not grow a shield');
+    // SALVAGE DRONES (shooter): every 3rd pickup launches a seeking volley
+    G.upg.salvage = 1;
+    G.salvageCount = 2; G.missiles = [];
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.star });
+    assert(G.missiles.length === 2 && G.missiles.every(m => m.drone),
+      'the 3rd pickup did not launch 2 drones');
+    // drones intercept enemy fire before falling back to targets
+    G.enemyShots = [{ x: G.missiles[0].x + 4, y: G.missiles[0].y - 6, vy: 0 }];
+    for (let f = 0; f < 12 && !G.enemyShots.every(s => s.dead); f++) update(1 / 60);
+    assert(G.enemyShots.length === 0 || G.enemyShots.every(s => s.dead), 'drones did not intercept the shot');
+    // METEOR MATRIX: a full charge calls a six-strike typed rain
+    G.upg.meteor = 1;
+    const rainTarget = mk(500, 260);
+    G.bricks = [rainTarget, mk(700, 120)];
+    G.lasers = []; G.missiles = []; G.heat = 0; G.overheat = 0;
+    fireCharge(1);
+    assert(G.meteorRain && G.meteorRain.n === 6, 'full charge did not begin the meteor rain');
+    G.lasers = [];
+    for (let f = 0; f < 140 && G.meteorRain; f++) update(1 / 60);
+    assert(!G.meteorRain, 'the meteor rain never finished');
+    assert(rainTarget.hp < 100 || G.bricks.some(b => b.hp < b.maxHp), 'the rain damaged nothing');
+    // ELEMENTAL ASCENSION: during Mega the element retunes to counter the wave
+    G.upg.ascension = 1;
+    G.bricks = [mk(300, 200, 'water'), mk(380, 200, 'water'), mk(460, 200, 'water')];
+    G.ballElement = null; G.mega = 1; tryMega();
+    G.ascendT = 0.001;
+    update(1 / 60);
+    assert(G.ballElement && (EFFECTIVE[G.ballElement] || []).includes('water'),
+      'ascension did not retune to counter the water wave (got ' + G.ballElement + ')');
+    G.megaT = 0; G.ballElement = null; G.ballElementT = 0;
+    // IMMORTAL REACTOR: once per wave a lethal hit drains Mega instead
+    G.upg.immortal = 1;
+    G.reactorUsed = false; G.mega = 0.6; G.megaT = 0; G.shieldCharges = 0;
+    G.lives = 4; G.invuln = 0;
+    G.enemyShots = [{ x: G.paddle.x, y: shipY() - 4, vy: 100 }];
+    update(1 / 60);
+    assert(G.lives === 4 && G.reactorUsed && G.mega === 0 && G.invuln > 0,
+      'the reactor did not eat the lethal hit (lives=' + G.lives + ')');
+    G.invuln = 0; G.mega = 0.6;
+    G.enemyShots = [{ x: G.paddle.x, y: shipY() - 4, vy: 100 }];
+    update(1 / 60);
+    assert(G.lives === 3, 'the reactor fired twice in one wave');
+    // GUARDIAN ANGEL: six charges → the pulse clears fire and heals
+    G.upg.guardian = 1;
+    G.guardCharge = 5; G.lives = 3; G.livesMax = 5; G.invuln = 99;
+    G.enemyShots = [{ x: 200, y: 200, vy: 0 }, { x: 500, y: 300, vy: 0 }];
+    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
+    assert(G.guardCharge === 0 && G.enemyShots.every(s => s.dead),
+      'the guardian pulse did not clear the sky');
+    assert(G.lives === 5, 'heal + guardian pulse should restore 2 lives, got ' + G.lives);
+    // ACE INTERCEPTOR WING: permanent wingmates patrol on a 5s cadence
+    G.upg.acewing = 1;
+    G.wingCD = 0.01; G.missiles = [];
+    update(1 / 60);
+    assert(G.missiles.length === 2 && G.missiles.every(m => m.drone) && Math.abs(G.wingCD - 5) < 0.1,
+      'the wing patrol did not launch');
+    // a fully webbed pilot renders clean in junkie AND classic
+    G.invuln = 0;
+    for (const mode of ['junkie', 'classic']) {
+      SETTINGS.mode = mode;
+      resetRun(1, true);
+      G.starterLvl = 3;
+      for (const pk of PATH_KEYS) while (pathLvl(pk) < 4) advancePath(pk);
+      for (const k of [...WEB_BRIDGE_KEYS, ...WEB_SUPER_KEYS]) G.upg[k] = 1;
+      G.state = 'play'; G.guardCharge = 3; G.calibShots = 2; G.salvageStored = 1;
+      update(1 / 60); render();
+    }
+    // classic: stored drones intercept an enemy shot short of the paddle
+    G.upg.salvage = 1; G.salvageStored = 1; G.invuln = 0; G.lives = 4;
+    G.enemyShots = [{ x: G.paddle.x, y: shipY() - 4, vy: 100 }];
+    update(1 / 60);
+    assert(G.lives === 4 && G.salvageStored === 0, 'classic drone intercept failed');
+    assert(ERR.length === e0, 'errors during mechanics test: ' + ERR.slice(e0).join(' | '));
+    return 'all 6 bridges + 6 superskills proc correctly · webbed pilot renders clean in junkie + classic';
+  });
+
   // 2w-iii) checkpoint migration: v1/v2 accepted, normalized v3 out, lossless
   // tier mapping, grandfathered web keys, and hostile shapes never throw.
   test('checkpoint migration: v1/v2 → v3 round-trip', async () => {

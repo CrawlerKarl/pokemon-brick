@@ -842,13 +842,16 @@ function fireAction(auto = false) {
   const nBolts = upgN('twin') ? 2 : 1;
   const pulseEvery = upgN('impactX') ? 4 : 5;
   const pulse = !!upgN('pulse') && G.shotsFired % pulseEvery === 0;
+  // CALIBRATED BARRAGE (shooter modes): a spent charge primed these volleys
+  const calib = G.mode !== 'classic' && G.calibShots > 0;
+  if (calib) G.calibShots--; // one prime per VOLLEY, not per bolt
   for (let i = 0; i < nBolts; i++) {
     G.lasers.push({
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
       y: shipY() - 16, basic: true, // fires from wherever the ship flies
       explosive: !!G.fx_fire || G.megaT > 0,
       powerMul: nBolts > 1 ? 0.6 : 1,
-      heavy: !!upgN('heavy'), pulse, nova: pulse && !!upgN('impactX'),
+      heavy: !!upgN('heavy'), pulse, nova: pulse && !!upgN('impactX'), calib,
       mega: G.megaT > 0,
       shape: pil ? pil.shape : null,
       element: pil ? attackElement() : null,
@@ -885,6 +888,13 @@ function fireCharge(c) {
   }
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
+  // CALIBRATED BARRAGE: the spent charge primes the next three volleys
+  if (upgN('calibrated')) {
+    G.calibShots = 3;
+    addFloater(G.paddle.x, shipY() - 58, 'CALIBRATED!', '#ffcc80', 13);
+  }
+  // METEOR MATRIX: a full-power charge calls the meteor rain (superskill)
+  if (upgN('meteor') && c >= 0.75) beginMeteorRain();
   SFX.blaster();
   tone(170 + c * 320, 0.2, 'sawtooth', 0.06, 300);
 }
@@ -911,6 +921,32 @@ function primaryAction() {
 function tryMega() {
   if (G.state !== 'play' || G.megaT > 0 || G.mega < 1) return;
   G.megaT = megaDur(); G.mega = 0;
+  // AURORA DRIVE: Mega opens with a typed nova against the nearest enemies
+  if (upgN('aurora')) {
+    const el = attackElement();
+    const px = G.paddle.x, py = shipY();
+    const targets = G.bricks.filter(b => !b.dead && !b.dormant && !b.barrier)
+      .sort((a, b) => Math.hypot(a.bx + G.fx - px, a.by + G.fy - py) -
+        Math.hypot(b.bx + G.fx - px, b.by + G.fy - py)).slice(0, 5);
+    for (const br of targets) {
+      const bx = br.bx + G.fx, by = br.by + G.fy;
+      ringFx(bx, by, TYPE_COLORS[el] || '#ffd54f', 4, 40, 3, 0.35);
+      damageBrick(br, 0.8, bx, by, el);
+    }
+    ringFx(px, py, TYPE_COLORS[el] || '#ffd54f', 10, 150, 5, 0.5);
+  }
+  // REACTIVE OVERDRIVE: entering Mega regrows one missing shield (on cooldown)
+  if (upgN('reactive') && G.reactiveCD <= 0 && G.shieldCharges < shieldCap()) {
+    G.shieldCharges++;
+    G.reactiveCD = 20;
+    addFloater(G.paddle.x, shipY() - 62, 'REACTIVE SHIELD!', '#dce775', 13);
+    SFX.shield();
+  }
+  // ELEMENTAL ASCENSION: the retune clock starts NOW (superskill)
+  if (upgN('ascension')) G.ascendT = 0.01;
+  // METEOR MATRIX (classic): Mega itself calls the rain — the ball-first
+  // adapter for a superskill the shooter modes trigger from a full charge
+  if (upgN('meteor') && G.mode === 'classic') beginMeteorRain();
   G.shake = 14;
   haptic('boss');
   SFX.mega();

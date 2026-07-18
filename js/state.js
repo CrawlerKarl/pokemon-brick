@@ -264,9 +264,11 @@ const G = {
   calibReturns: 0, calibShots: 0, // CALIBRATED BARRAGE: classic return count / primed volleys left
   lensKills: 0, vortexes: [],     // SINGULARITY LENS + EVENT HORIZON gravity wells
   salvageCount: 0, salvageStored: 0, // SALVAGE DRONES pickup meter + classic stored intercepts
+  rescueN: 0,                     // RESCUE CIRCUIT pickup counter (8 → +1 shield)
   reactiveCD: 0,                  // REACTIVE OVERDRIVE shield-regrow cooldown
   reactorUsed: false,             // IMMORTAL REACTOR: once per wave
   guardCharge: 0,                 // GUARDIAN ANGEL pulse meter (0..6 events)
+  meteorRain: null,               // METEOR MATRIX: an active six-strike rain
   wingCD: 0,                      // ACE INTERCEPTOR WING patrol cadence
   ascendT: 0,                     // ELEMENTAL ASCENSION retune clock during Mega
   webSeen: {}, lastOfferKeys: [], // offer pity counters + reroll anti-repeat
@@ -349,6 +351,13 @@ function applyPower(p, srcType) {
       G.lives = Math.min(Math.max(1, G.livesMax || preset().lives), G.lives + 1);
       G.healthDropPity = 0;
       G.hurtHud = 2.8;
+      // RESCUE CIRCUIT: recovery also restores a shield charge (heartbeat ring)
+      if (upgN('rescue') && G.shieldCharges < shieldCap()) {
+        G.shieldCharges++;
+        ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
+        addFloater(G.paddle.x, shipY() - 34, 'RESCUE SHIELD!', '#ff8a80', 12);
+        SFX.shield();
+      }
       tier = 1;
       if (G.lives === before) {
         G.score += 250;
@@ -1174,8 +1183,8 @@ function buildLevel(lvl) {
     }
   }
   if (junkie && pilotInfo().id > 0) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
-  // per-wave web state: the reactor re-arms, lingering wells clear
-  G.reactorUsed = false; G.vortexes = [];
+  // per-wave web state: the reactor re-arms, lingering wells + rains clear
+  G.reactorUsed = false; G.vortexes = []; G.meteorRain = null;
   // arriving at a region's doorstep checkpoints the run (post-draft state —
   // buildLevel runs after every pick, and after knockout tree burns too)
   if (!G.trial && stage === 0) saveCheckpoint();
@@ -1249,8 +1258,9 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.shieldCharges = 0; G.shieldFlash = 0; G.surgeFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.calibReturns = 0; G.calibShots = 0; G.lensKills = 0; G.vortexes = [];
-  G.salvageCount = 0; G.salvageStored = 0; G.reactiveCD = 0; G.reactorUsed = false;
-  G.guardCharge = 0; G.wingCD = 0; G.ascendT = 0; G.webSeen = {}; G.lastOfferKeys = [];
+  G.salvageCount = 0; G.salvageStored = 0; G.rescueN = 0; G.reactiveCD = 0; G.reactorUsed = false;
+  G.guardCharge = 0; G.wingCD = 0; G.ascendT = 0; G.meteorRain = null;
+  G.webSeen = {}; G.lastOfferKeys = [];
   G.lastDraftForm = 1; // re-baselined below once starterLvl is known
   G.secret = freshSecretState();
   G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;

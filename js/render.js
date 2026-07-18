@@ -1087,7 +1087,7 @@ function drawFragments() {
 function drawPilotUpgradeHardware(x, y, s, preview = false) {
   const volley = pathLvl('arsenal'), impact = pathLvl('impact'), prism = pathLvl('prism');
   const aegis = pathLvl('aegis'), surge = pathLvl('surge'), bond = pathLvl('bond');
-  if (!(volley || impact || prism || aegis || surge || bond)) return;
+  if (!(volley || impact || prism || aegis || surge || bond || ownedWebNodeCount())) return;
   const motion = SETTINGS.reduceFlash ? 0.12 : 1;
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -1223,6 +1223,100 @@ function drawPilotUpgradeHardware(x, y, s, preview = false) {
       }
     }
   }
+
+  // ---- BRIDGE SYNERGY hardware: each bridge writes to the slot region
+  // BETWEEN its two constellations' gear, so the rig reads as connected —
+  // never a new orbiting ring around the pilot.
+  if (upgN('calibrated')) { // twin calibration rails bridging the muzzle
+    const hot = G.calibShots > 0;
+    ctx.globalAlpha = hot ? 0.65 + 0.3 * Math.sin(G.time * 10 * motion) : 0.7;
+    ctx.strokeStyle = hot ? '#fff8e1' : '#ffcc80'; ctx.lineWidth = 1.6;
+    for (const dir of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(x + dir * 4.5, my - 8); ctx.lineTo(x + dir * 4.5, my + 7); ctx.stroke();
+    }
+  }
+  if (upgN('singularity')) { // the dark prism orb seated in the heavy bore
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#12002a';
+    ctx.beginPath(); ctx.arc(x, my, 3.4, 0, Math.PI * 2); ctx.fill();
+    // EVENT HORIZON: a bright accretion rim crowns the orb
+    ctx.strokeStyle = upgN('horizon') ? '#ffffff' : '#b388ff';
+    ctx.lineWidth = upgN('horizon') ? 1.6 : 1.1;
+    ctx.stroke();
+  }
+  if (upgN('aurora')) { // aurora ribbon arcing between lens and power ring
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = '#69f0ae'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(x + s * 0.34, y - s * 0.05, s * 0.34, -Math.PI * 0.7, Math.PI * 0.28); ctx.stroke();
+  }
+  if (upgN('reactive')) { // feed lines linking the shield arc to the core
+    ctx.globalAlpha = 0.6;
+    ctx.strokeStyle = '#dce775'; ctx.lineWidth = 1.4;
+    for (const dir of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(x + dir * s * 0.5, y - s * 0.12);
+      ctx.quadraticCurveTo(x + dir * s * 0.3, y + 2, x + dir * 8, y + 5); ctx.stroke();
+    }
+  }
+  if (upgN('rescue')) { // lifeline coil + heart at the shield socket
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = '#ff8a80'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x - s * 0.6, y - s * 0.1, 4.6, 0, Math.PI * 1.5); ctx.stroke();
+    drawGlyph(ctx, 'heart', x - s * 0.6, y - s * 0.1, 2.6, '#ff8a80');
+  }
+  if (upgN('salvage')) { // two salvage drones docked off the magnet vanes
+    ctx.globalAlpha = 0.9;
+    for (const dir of [-1, 1]) {
+      const dx = x + dir * s * 0.62, dy = y + s * 0.16;
+      ctx.fillStyle = '#ea80fc';
+      ctx.beginPath(); ctx.moveTo(dx, dy - 4); ctx.lineTo(dx + dir * 4, dy + 3); ctx.lineTo(dx - dir * 3, dy + 3); ctx.closePath(); ctx.fill();
+    }
+  }
+  // ---- SUPERSKILL transformations: each crowns its constellation's slot
+  if (upgN('meteor')) { // deployed side racks with orbiting charge motes
+    ctx.globalAlpha = 0.85; ctx.strokeStyle = '#40c4ff'; ctx.lineWidth = 1.6;
+    for (const dir of [-1, 1]) {
+      roundRect(x + dir * 15 - 2.5, my - 6, 5, 12, 2); ctx.stroke();
+      const a = G.time * 1.6 * motion + (dir > 0 ? 0 : Math.PI);
+      ctx.fillStyle = '#e1f5fe';
+      ctx.beginPath(); ctx.arc(x + dir * 15 + Math.cos(a) * 6, my + Math.sin(a) * 6, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (upgN('ascension')) { // rainbow lens halo above the crown
+    ctx.globalAlpha = 0.75;
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `hsl(${(G.time * 40 * motion + i * 72) % 360},85%,65%)`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x, y - s * 0.7, 7 + i * 1.6, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    }
+  }
+  if (upgN('immortal')) { // armored reactor shell — cracked + dim once spent
+    const spent = G.reactorUsed;
+    ctx.globalAlpha = spent ? 0.35 : 0.8;
+    ctx.strokeStyle = spent ? '#9e9d24' : '#ffea00'; ctx.lineWidth = 2;
+    ctx.setLineDash(spent ? [3, 6] : [8, 4]);
+    ctx.beginPath(); ctx.ellipse(x, y + 4, s * 0.56, s * 0.34, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (upgN('guardian')) { // guardian sigil behind the pilot, six pips filling
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#b9f6ca'; ctx.lineWidth = 1.6;
+    constellationHex(x, y - s * 0.1, s * 0.52, Math.PI / 6); ctx.stroke();
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 3;
+      ctx.fillStyle = i < (G.guardCharge || 0) ? '#b9f6ca' : 'rgba(185,246,202,0.2)';
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.52, y - s * 0.1 + Math.sin(a) * s * 0.52, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (upgN('acewing')) { // two wingmate formation lights holding station
+    for (const dir of [-1, 1]) {
+      const wx = x + dir * s * 0.85, wy = y + s * 0.1 + Math.sin(G.time * 2.4 * motion + dir) * 3;
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#ff80ab';
+      ctx.beginPath(); ctx.moveTo(wx, wy - 5); ctx.lineTo(wx + dir * 5, wy + 4); ctx.lineTo(wx - dir * 4, wy + 4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(wx, wy, 1.3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
@@ -1326,6 +1420,9 @@ function drawPilotRig(x, py, preview = false) {
       const n = (G.stacks && G.stacks[si.key]) || 0;
       if (n) badges.push({ icon: si.icon, color: si.color, count: n });
     }
+    // bridges + superskills rack their own hardpoint chips (supers glint)
+    for (const b of WEB_BRIDGES) if (upgN(b.key)) badges.push({ icon: b.icon, color: b.color, count: 1 });
+    for (const sp of WEB_SUPERS) if (upgN(sp.key)) badges.push({ icon: sp.icon, color: sp.color, count: 1, capped: true });
     const maxBadges = IS_TOUCH ? 5 : 6;
     const shown = badges.slice(0, maxBadges);
     const extra = Math.max(0, badges.length - shown.length);
@@ -1416,7 +1513,13 @@ function drawPilotRig(x, py, preview = false) {
 // Pokémon pilot, so this rail is for the two paddle modes.
 function drawBuildRail(x, py, pw, ph) {
   if (G.mode === 'junkie') return;
-  const socketN = totalPathLevels();
+  // web nodes (bridges + superskills) dock as DIAMOND sockets after the round
+  // path sockets — same rail, so the paddle rig stays the single build record
+  const webOwned = [
+    ...WEB_BRIDGES.filter(b => upgN(b.key)),
+    ...WEB_SUPERS.filter(s => upgN(s.key)),
+  ];
+  const socketN = totalPathLevels() + webOwned.length;
   if (socketN) {
     const railW = Math.min(pw - 22, Math.max(26, socketN * 7));
     const gap = socketN > 1 ? railW / (socketN - 1) : 0;
@@ -1435,7 +1538,31 @@ function drawBuildRail(x, py, pw, ph) {
         ctx.strokeStyle = '#102033'; ctx.lineWidth = 1; ctx.stroke();
       }
     }
+    for (const node of webOwned) {
+      const sx = socketN > 1 ? x - railW / 2 + socketI * gap : x;
+      socketI++;
+      ctx.save();
+      ctx.translate(sx, sy); ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = node.color;
+      ctx.fillRect(-3, -3, 6, 6);
+      ctx.strokeStyle = '#102033'; ctx.lineWidth = 1; ctx.strokeRect(-3, -3, 6, 6);
+      ctx.restore();
+    }
     ctx.restore();
+  }
+  // classic wingmates / stored salvage drones hover as small station lights
+  if ((upgN('acewing') || G.salvageStored > 0) && G.mode === 'classic') {
+    for (let i = 0; i < Math.max(G.salvageStored, upgN('acewing') ? 2 : 0); i++) {
+      const lit = i < G.salvageStored;
+      const dir = i % 2 ? 1 : -1;
+      const wx = x + dir * (pw / 2 + 22), wy = py - 14 + Math.sin(G.time * 2.2 + i) * 2.5;
+      ctx.save();
+      ctx.globalAlpha = lit ? 0.95 : 0.35;
+      ctx.fillStyle = '#ea80fc';
+      ctx.beginPath(); ctx.moveTo(wx, wy - 4); ctx.lineTo(wx + dir * 4, wy + 3); ctx.lineTo(wx - dir * 3, wy + 3); ctx.closePath(); ctx.fill();
+      if (lit) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(wx, wy, 1.2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
   }
   // Mastery stacks remain individually countable after the main tree caps.
   let mi = 0;
@@ -2380,13 +2507,22 @@ function drawProjectiles() {
         ctx.beginPath(); ctx.ellipse(L.x, L.y, L.heavy ? 14 : 10, L.heavy ? 24 : 19, 0, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       }
+      if (L.calib) { // CALIBRATED BARRAGE: the primed attack runs white-hot
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = '#ffcc80'; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.ellipse(L.x, L.y, 12, 22, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#fff8e1';
+        ctx.beginPath(); ctx.arc(L.x, L.y - 24, 2.4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
       continue;
     }
     // BLASTER-mode basic bolts read as sleek energy darts (vs the classic slug)
     if (G.mode === 'blaster' && L.basic) {
-      const bw4 = 5 + (L.heavy ? 3 : 0) + (L.pulse ? 2 : 0);
-      const boltCol = L.nova ? '#ffccbc' : L.pulse ? PATHS.impact.color : '#4dd0e1';
-      ctx.shadowColor = boltCol; ctx.shadowBlur = L.pulse ? 23 : 15;
+      const bw4 = 5 + (L.heavy ? 3 : 0) + (L.pulse ? 2 : 0) + (L.calib ? 2 : 0);
+      const boltCol = L.calib ? '#ffcc80' : L.nova ? '#ffccbc' : L.pulse ? PATHS.impact.color : '#4dd0e1';
+      ctx.shadowColor = boltCol; ctx.shadowBlur = L.pulse || L.calib ? 23 : 15;
       ctx.fillStyle = boltCol;
       roundRect(L.x - bw4 / 2, L.y - 26, bw4, 42, bw4 / 2); ctx.fill();
       ctx.fillStyle = '#e0ffff';
@@ -2612,8 +2748,37 @@ function drawRings() {
   ctx.restore();
 }
 
+// SINGULARITY / EVENT HORIZON wells: an IMPLODING dashed ring (it contracts —
+// the visual opposite of the expanding ringFx) with a dark heart. Strokes
+// only: no per-frame gradients, respects the perf rules.
+function drawVortexes() {
+  if (!G.vortexes.length) return;
+  ctx.save();
+  for (const v of G.vortexes) {
+    const p = Math.min(1, v.t / v.dur);
+    const col = TYPE_COLORS[v.element] || (v.horizon ? '#b388ff' : '#ffab40');
+    const rr = v.r * (1 - p * 0.55); // contracting rim
+    ctx.globalAlpha = (1 - p) * (v.horizon ? 0.8 : 0.6);
+    ctx.setLineDash([6, 8]);
+    ctx.lineDashOffset = G.time * (SETTINGS.reduceFlash ? -14 : -60);
+    ctx.strokeStyle = col; ctx.lineWidth = v.horizon ? 3 : 2;
+    ctx.beginPath(); ctx.arc(v.x, v.y, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = (1 - p) * 0.4;
+    ctx.fillStyle = v.horizon ? '#12002a' : '#1a0e00';
+    ctx.beginPath(); ctx.arc(v.x, v.y, rr * 0.34, 0, Math.PI * 2); ctx.fill();
+    if (v.horizon) { // bright accretion rim — the EVENT HORIZON read
+      ctx.globalAlpha = (1 - p) * 0.85;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(v.x, v.y, rr * 0.38, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 function drawParticles() {
   drawRings();
+  drawVortexes();
   // regular particles glow additively (premium over the dark sky); sparkle
   // glints ride the cached 4-point star sprite, twinkling as they fade
   ctx.save();
