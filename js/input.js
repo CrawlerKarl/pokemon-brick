@@ -583,6 +583,21 @@ async function shareDailyResult() {
 }
 function onPress(x, y) {
   audio();
+  if (G.state === 'ending') {
+    const E = G.ending;
+    if (!E) { G.state = 'menu'; menuPage = 'modes'; return; }
+    if (E.done) { // the two explicit choices on the final beat
+      const B = endingButtons();
+      if (inRect(x, y, B.spiral)) { beginTimeSpiral(); SFX.power(); return; }
+      if (inRect(x, y, B.title)) { G.ending = null; G.state = 'menu'; menuPage = 'modes'; SFX.wall(); return; }
+      return;
+    }
+    if (E.t < 1.2) return; // beat one's silence cannot be skipped into by accident
+    // a tap advances one beat; a returning champion skips straight to dawn
+    if (E.seenBefore) { E.beat = 5; E.t = Math.max(E.t, ENDING_BEATS[3] + 0.01); return; }
+    if (E.beat < 5) { E.t = ENDING_BEATS[E.beat - 1]; E.beat++; }
+    return;
+  }
   if (G.state === 'dex') {
     if (inRect(x, y, dexCloseGeom())) { G.state = 'menu'; dexScroll = 0; }
     else if (!IS_TOUCH) { G.state = 'menu'; dexScroll = 0; } // desktop: click anywhere returns

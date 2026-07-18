@@ -1938,7 +1938,9 @@ function drawTypedBolt(L) {
     ctx.fillStyle = col;
     for (let e = 0; e < 1 + tier; e++) {
       const ex = L.x + Math.sin(t * (23 + e * 9) + L.y * 0.2 + e * 2) * (4 + e * 3);
-      ctx.beginPath(); ctx.arc(ex, L.y + h * (0.5 + e * 0.18), 2.4 - e * 0.8, 0, Math.PI * 2); ctx.fill();
+      // clamp: at tier III the 4th ember's radius hits float-negative zero,
+      // and ctx.arc THROWS on a negative radius — this crashed fire pilots
+      ctx.beginPath(); ctx.arc(ex, L.y + h * (0.5 + e * 0.18), Math.max(0.5, 2.4 - e * 0.7), 0, Math.PI * 2); ctx.fill();
     }
   } else if (L.shape === 'aqua') {
     // a sleek water dart: teardrop body, specular highlight, ripple ring
@@ -4951,9 +4953,297 @@ function drawGameOverSummary() {
   ctx.restore();
 }
 
+// ============================================================
+//  THE NINEFOLD DAWN — the campaign ending (WORLD_BOSS_FINALE_PLAN §7).
+//  Five beats: silence → the night sky CRACKS and shatters into daylight →
+//  nine region ribbons form one impossible panorama → the journey becomes a
+//  constellation → dawn, THE WAVE IS BROKEN, and the explicit TIME SPIRAL /
+//  TITLE choice. reduceFlash swaps the white burst for a gold edge wipe and
+//  outlined shards; nothing here allocates in hot loops beyond a handful of
+//  gradients on a single non-combat screen.
+// ============================================================
+function drawEnding() {
+  const E = G.ending;
+  if (!E) return;
+  const t = E.t, rf = SETTINGS.reduceFlash;
+  const ease = q => q * q * (3 - 2 * q);
+  // ---- the DAWN behind everything: revealed as the night breaks ----
+  const dawn = ctx.createLinearGradient(0, 0, 0, H);
+  dawn.addColorStop(0, '#ffe9b8'); dawn.addColorStop(0.45, '#ffc98a'); dawn.addColorStop(1, '#ff9e6d');
+  ctx.fillStyle = dawn; ctx.fillRect(0, 0, W, H);
+  // beat-5 sun cresting the combined horizon
+  if (E.beat >= 4) {
+    const sp = ease(Math.min(1, Math.max(0, (t - ENDING_BEATS[2] - 4) / 8)));
+    const sy = H * 0.78 - sp * H * 0.1, sr = Math.min(W, H) * (0.1 + sp * 0.06);
+    const sg = ctx.createRadialGradient(W / 2, sy, 2, W / 2, sy, sr * 3.4);
+    sg.addColorStop(0, 'rgba(255,255,255,0.95)'); sg.addColorStop(0.25, 'rgba(255,236,170,0.6)');
+    sg.addColorStop(1, 'rgba(255,236,170,0)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fffbe8';
+    ctx.beginPath(); ctx.arc(W / 2, sy, sr, 0, Math.PI * 2); ctx.fill();
+  }
+  // ---- beat 3+: nine region ribbons — one continuous impossible panorama.
+  // Each carries its region's accent palette and one recognisable landmark.
+  if (E.beat >= 3) {
+    const rw = W / 9;
+    for (let i = 0; i < 9; i++) {
+      const enter = ease(Math.min(1, Math.max(0, (t - (ENDING_BEATS[1] + i * 0.85)) / 1.1)));
+      if (enter <= 0) continue;
+      const x0 = i * rw, base = H * 0.74, hgt = H * (0.16 + 0.05 * Math.sin(i * 2.1)) * enter;
+      const col = GENS[i].accent || '#66bb6a';
+      ctx.globalAlpha = 0.85 * enter;
+      const g2 = ctx.createLinearGradient(0, base - hgt, 0, base + H * 0.26);
+      g2.addColorStop(0, col); g2.addColorStop(1, mixHex(col, '#331c08', 0.55));
+      ctx.fillStyle = g2;
+      ctx.beginPath(); // rolling silhouette band that joins its neighbours
+      ctx.moveTo(x0, base + H * 0.26); ctx.lineTo(x0, base);
+      ctx.quadraticCurveTo(x0 + rw * 0.5, base - hgt, x0 + rw, base);
+      ctx.lineTo(x0 + rw, base + H * 0.26); ctx.closePath(); ctx.fill();
+      drawEndingLandmark(i, x0 + rw / 2, base - hgt * 0.35, Math.min(rw * 0.62, 74), mixHex(col, '#140a04', 0.62), enter);
+      // the cleared node stamps above its ribbon with a boss-colour ring
+      const stampT = Math.min(1, Math.max(0, (t - (ENDING_BEATS[1] + 1 + i * 0.85)) / 0.5));
+      if (stampT > 0) {
+        ctx.globalAlpha = enter;
+        ctx.strokeStyle = col; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x0 + rw / 2, base - hgt - 22, 6 + stampT * 8 * (rf ? 0.5 : 1), 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(x0 + rw / 2, base - hgt - 22, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  // ---- beat 4: the journey becomes the sky — caught Pokémon spiral in as a
+  // living constellation; the nine legendaries salute for one second.
+  if (E.beat >= 4) {
+    const bt = t - ENDING_BEATS[2];
+    const ids = Array.from(DEX).slice(0, 24);
+    const ccx = W / 2, ccy = H * 0.36;
+    for (let i = 0; i < ids.length; i++) {
+      const a = ease(Math.min(1, Math.max(0, (bt - i * 0.18) / 0.9)));
+      if (a <= 0) continue;
+      const ang = i * 0.62 + bt * 0.12, rr = (26 + i * 9) * a;
+      const px2 = ccx + Math.cos(ang) * rr, py2 = ccy + Math.sin(ang) * rr * 0.62;
+      const spr = getSprite(ids[i]);
+      ctx.globalAlpha = 0.85 * a;
+      if (spr.complete && spr.naturalWidth) ctx.drawImage(spr, px2 - 13, py2 - 13, 26, 26);
+      ctx.globalAlpha = 1;
+    }
+    // subtle stars keep uncaught slots from reading as a penalty
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    for (let i = ids.length; i < 24; i++) {
+      const ang = i * 0.62 + bt * 0.12, rr = 26 + i * 9;
+      ctx.fillRect(ccx + Math.cos(ang) * rr, ccy + Math.sin(ang) * rr * 0.62, 2, 2);
+    }
+    const salute = Math.max(0, Math.min(1, (bt - 5) / 0.4)) * Math.max(0, Math.min(1, (7 - bt) / 0.8));
+    if (salute > 0) {
+      for (let i = 0; i < 9; i++) {
+        const sil = getSilhouette(GENS[i].boss.id, GENS[i].accent);
+        if (!sil) continue;
+        const ang = -Math.PI / 2 + i * Math.PI * 2 / 9;
+        ctx.globalAlpha = 0.6 * salute;
+        ctx.drawImage(sil, ccx + Math.cos(ang) * W * 0.3 - 20, ccy + Math.sin(ang) * H * 0.2 - 20, 40, 40);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  // ---- the NIGHT LID on top: intact in beat 1, cracking in beat 2, then
+  // breaking apart into large deliberate glass shards that fall away.
+  const crackT = Math.max(0, t - ENDING_BEATS[0]);          // crack spreads 3s→6.5s
+  const shatterT = Math.max(0, t - (ENDING_BEATS[0] + 3.5)); // shards fall from 6.5s
+  if (E.beat <= 2 || shatterT < 6) {
+    if (shatterT <= 0) {
+      const night = ctx.createLinearGradient(0, 0, 0, H);
+      night.addColorStop(0, '#05060f'); night.addColorStop(1, '#0c1226');
+      ctx.fillStyle = night; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      for (let i = 0; i < 40; i++) ctx.fillRect((i * 137.5) % W, (i * 71.3) % (H * 0.8), 1.6, 1.6);
+      // the partner's glow is the only living light in beat one
+      drawEndingPartner(W / 2, H * 0.62, 1);
+      // Koraidon's crack, spreading like glass from the zenith
+      if (crackT > 0 || E.beat >= 1) {
+        const spread = ease(Math.min(1, (E.beat === 1 ? 0.12 : 0.12 + crackT / 3.2)));
+        ctx.save();
+        ctx.strokeStyle = rf ? '#ffd54f' : '#fff8e1';
+        ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = rf ? 4 : 14;
+        for (let b2 = 0; b2 < 7; b2++) {
+          const ba = Math.PI * 0.5 + (b2 - 3) * 0.42;
+          const len = (H * 0.9) * spread * (0.5 + ((b2 * 73) % 10) / 18);
+          ctx.lineWidth = b2 === 3 ? 3 : 1.5;
+          ctx.beginPath(); ctx.moveTo(W / 2, -4);
+          let px3 = W / 2, py3 = -4;
+          for (let s2 = 1; s2 <= 5; s2++) {
+            px3 += Math.cos(ba + Math.sin(b2 * 9 + s2 * 4) * 0.5) * len / 5;
+            py3 += Math.sin(ba) * len / 5;
+            ctx.lineTo(px3, py3);
+          }
+          ctx.stroke();
+          // warm daylight bleeding through the widest cracks
+          if (spread > 0.5 && !rf) {
+            ctx.save(); ctx.globalAlpha = (spread - 0.5) * 1.4; ctx.lineWidth = 6;
+            ctx.strokeStyle = 'rgba(255,214,130,0.35)'; ctx.stroke(); ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+    } else {
+      // the lid is broken: shards of night fall away over the dawn
+      for (const sh of E.shards) {
+        const fall = shatterT * (0.7 + sh.v);
+        const sx2 = sh.u * W + sh.vx * fall, sy2 = sh.v * H + sh.vy * fall * (1 + fall * 0.4);
+        if (sy2 > H + 80) continue;
+        ctx.save();
+        ctx.translate(sx2, sy2); ctx.rotate(sh.rot + sh.vr * fall);
+        ctx.globalAlpha = Math.max(0, 1 - shatterT / 5.5);
+        ctx.fillStyle = '#0a0f22';
+        ctx.strokeStyle = rf ? '#ffd54f' : 'rgba(255,244,214,0.8)'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let k = 0; k < sh.sides + 2; k++) {
+          const aa = k * Math.PI * 2 / (sh.sides + 2);
+          const rr2 = sh.r * (0.7 + 0.3 * Math.sin(k * 2.7 + sh.u * 9));
+          k ? ctx.lineTo(Math.cos(aa) * rr2, Math.sin(aa) * rr2) : ctx.moveTo(Math.cos(aa) * rr2, Math.sin(aa) * rr2);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+      // one bright release the instant it breaks (gold edge wipe on reduceFlash)
+      const flash = Math.max(0, 0.8 - shatterT) / 0.8;
+      if (flash > 0) {
+        ctx.fillStyle = rf ? `rgba(255,213,79,${flash * 0.25})` : `rgba(255,251,235,${flash * 0.75})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+  }
+  // partner front and centre once the world has returned
+  if (E.beat >= 3) drawEndingPartner(W / 2, H * 0.4 - Math.min(1, (t - ENDING_BEATS[1]) / 3) * H * 0.06, Math.min(1, (t - ENDING_BEATS[1]) / 1.2));
+  // ---- beat 5: dawn and completion ----
+  if (E.beat >= 5) {
+    const bt = t - ENDING_BEATS[3];
+    const a = ease(Math.min(1, bt / 1.2));
+    ctx.globalAlpha = a;
+    // dark warm title with a gold halo — pure gold washes out on the dawn sky
+    const ts2 = Math.min(40, W / 14);
+    ctx.font = `900 ${ts2}px Orbitron, sans-serif`;
+    ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 22;
+    ctx.fillStyle = '#7a3312';
+    ctx.fillText('THE WAVE IS BROKEN', W / 2, H * 0.16, W * 0.94);
+    ctx.shadowBlur = 0;
+    ctx.font = '800 12px Orbitron, sans-serif'; ctx.fillStyle = '#7a4a12';
+    ctx.fillText('9 REGIONS · 27 STAGES · JOURNEY COMPLETE', W / 2, H * 0.16 + ts2 * 0.85, W * 0.9);
+    const s = G.runSummary || {};
+    const modeLabel = (MODES.find(m => m.key === G.mode) || MODES[0]).label;
+    const lines = [
+      (s.score || G.score).toLocaleString() + ' PTS · ' + modeLabel + ' · ' + preset().label,
+      'PARTNER ' + (pilotInfo().id > 0 ? (NAMES[pilotInfo().id] || 'PARTNER').toUpperCase() : 'TRAINING DRONE')
+        + ' · ' + (s.catches || G.caughtRun) + ' CATCHES · ' + ((G.runStats && G.runStats.bossesDefeated) || 0) + ' BOSSES',
+      s.path && s.path !== 'NO PATH YET' ? 'FAVOURITE PATH · ' + s.path : null,
+      G.secret && G.secret.completed ? 'KANTO RIFT · CONQUERED' : null,
+    ].filter(Boolean);
+    // a soft parchment panel keeps the record readable over the panorama
+    const panW = Math.min(W * 0.86, 520), panH = 26 + lines.length * 22;
+    roundRect(W / 2 - panW / 2, H * 0.66 - 18, panW, panH, 14);
+    ctx.fillStyle = 'rgba(255,248,230,0.82)'; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(122,74,18,0.45)'; ctx.stroke();
+    ctx.font = bodyFont(11.5, 700);
+    lines.forEach((l, i) => { ctx.fillStyle = i ? '#6b3f10' : '#4a2a08'; ctx.fillText(l, W / 2, H * 0.66 + i * 22, panW - 24); });
+    ctx.globalAlpha = 1;
+    if (E.done) {
+      const B = endingButtons();
+      for (const [b, label2, col2] of [
+        [B.spiral, '↻ TIME SPIRAL', '#d780ff'],
+        [B.title, '⌂ RETURN TO TITLE', '#4a2a08'],
+      ]) {
+        const hov = inRect(mouseX, lastMouseY, b);
+        roundRect(b.x, b.y, b.w, b.h, 12);
+        ctx.fillStyle = hov ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)'; ctx.fill();
+        ctx.lineWidth = 1.6; ctx.strokeStyle = col2; ctx.stroke();
+        ctx.font = `900 ${W < 480 ? 10 : 12}px Orbitron, sans-serif`;
+        ctx.fillStyle = col2;
+        ctx.fillText(label2, b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 12);
+      }
+      ctx.font = bodyFont(9, 600); ctx.fillStyle = 'rgba(74,42,8,0.8)';
+      ctx.fillText('TIME SPIRAL LOOPS THE JOURNEY WITH HARDER SKIES', W / 2, endingButtons().spiral.y - 12, W * 0.9);
+    }
+  } else if (t > 1.4 && !E.seenBefore) {
+    ctx.font = bodyFont(9.5, 600); ctx.fillStyle = E.beat <= 2 ? 'rgba(207,216,220,0.5)' : 'rgba(74,42,8,0.55)';
+    ctx.fillText('TAP TO CONTINUE', W / 2, H - 18 - SAFE_B);
+  }
+}
+// the pilot/partner as the ending's protagonist — sprite when there is one,
+// the neutral drone otherwise, always wearing its element glow
+function drawEndingPartner(x, y, a) {
+  const pil = pilotInfo();
+  const col = TYPE_COLORS[pil.t] || '#80d8ff';
+  const bob = Math.sin(G.time * 1.6) * 4;
+  ctx.save();
+  ctx.globalAlpha = a;
+  const gg = ctx.createRadialGradient(x, y + bob, 2, x, y + bob, 54);
+  gg.addColorStop(0, col + '66'); gg.addColorStop(1, col + '00');
+  ctx.fillStyle = gg;
+  ctx.beginPath(); ctx.arc(x, y + bob, 54, 0, Math.PI * 2); ctx.fill();
+  const img = pil.id > 0 ? getSprite(pil.id) : null;
+  if (img && img.complete && img.naturalWidth) {
+    ctx.shadowColor = col; ctx.shadowBlur = 14;
+    ctx.drawImage(img, x - 30, y - 30 + bob, 60, 60);
+    ctx.shadowBlur = 0;
+  } else {
+    ctx.fillStyle = '#e3f2fd';
+    ctx.beginPath(); ctx.arc(x, y + bob, 10, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+// nine pocket landmarks, one per region — small vector icons that make each
+// ribbon identifiable at a glance (windmill, pagoda, crater sea, mountain,
+// skyline, tower, palm, stadium, academy clock)
+function drawEndingLandmark(i, x, y, s, col, a) {
+  ctx.save();
+  ctx.globalAlpha = a * 0.9;
+  ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, s * 0.05);
+  const u = s / 2;
+  if (i === 0) { // Kanto windmill
+    ctx.beginPath(); ctx.moveTo(x - u * 0.16, y + u); ctx.lineTo(x, y - u * 0.1); ctx.lineTo(x + u * 0.16, y + u); ctx.closePath(); ctx.fill();
+    for (let b2 = 0; b2 < 4; b2++) {
+      const aa = b2 * Math.PI / 2 + Math.PI / 5;
+      ctx.beginPath(); ctx.moveTo(x, y - u * 0.1); ctx.lineTo(x + Math.cos(aa) * u * 0.62, y - u * 0.1 + Math.sin(aa) * u * 0.62); ctx.stroke();
+    }
+  } else if (i === 1) { // Johto pagoda tiers
+    for (let r2 = 0; r2 < 3; r2++) {
+      const w2 = u * (1 - r2 * 0.26), y2 = y + u * 0.7 - r2 * u * 0.55;
+      ctx.beginPath(); ctx.moveTo(x - w2, y2); ctx.lineTo(x + w2, y2); ctx.lineTo(x + w2 * 0.6, y2 - u * 0.34); ctx.lineTo(x - w2 * 0.6, y2 - u * 0.34); ctx.closePath(); ctx.fill();
+    }
+  } else if (i === 2) { // Hoenn crater sea
+    ctx.beginPath(); ctx.arc(x, y + u * 0.5, u * 0.85, Math.PI, 0); ctx.fill();
+    ctx.fillRect(x - u * 0.85, y + u * 0.42, u * 1.7, u * 0.14);
+  } else if (i === 3) { // Sinnoh peak
+    ctx.beginPath(); ctx.moveTo(x - u, y + u); ctx.lineTo(x - u * 0.2, y - u * 0.7); ctx.lineTo(x + u * 0.25, y + u * 0.05); ctx.lineTo(x + u * 0.7, y - u * 0.25); ctx.lineTo(x + u, y + u); ctx.closePath(); ctx.fill();
+  } else if (i === 4) { // Unova skyline
+    for (let b2 = 0; b2 < 4; b2++) ctx.fillRect(x - u + b2 * u * 0.55, y + u - u * (0.7 + ((b2 * 37) % 5) / 6), u * 0.4, u * (0.7 + ((b2 * 37) % 5) / 6));
+  } else if (i === 5) { // Kalos prism tower
+    ctx.beginPath(); ctx.moveTo(x - u * 0.34, y + u); ctx.lineTo(x, y - u * 0.85); ctx.lineTo(x + u * 0.34, y + u); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y - u * 0.85, u * 0.12, 0, Math.PI * 2); ctx.fill();
+  } else if (i === 6) { // Alola palm
+    ctx.beginPath(); ctx.moveTo(x - u * 0.08, y + u); ctx.quadraticCurveTo(x - u * 0.05, y, x + u * 0.14, y - u * 0.5); ctx.lineTo(x + u * 0.26, y - u * 0.45); ctx.quadraticCurveTo(x + u * 0.05, y + u * 0.1, x + u * 0.12, y + u); ctx.closePath(); ctx.fill();
+    for (let b2 = 0; b2 < 4; b2++) {
+      const aa = -Math.PI * 0.75 + b2 * 0.42;
+      ctx.beginPath(); ctx.moveTo(x + u * 0.2, y - u * 0.48);
+      ctx.quadraticCurveTo(x + u * 0.2 + Math.cos(aa) * u * 0.5, y - u * 0.48 + Math.sin(aa) * u * 0.5, x + u * 0.2 + Math.cos(aa) * u * 0.72, y - u * 0.48 + Math.sin(aa) * u * 0.3);
+      ctx.stroke();
+    }
+  } else if (i === 7) { // Galar stadium arch
+    ctx.lineWidth = Math.max(2, s * 0.1);
+    ctx.beginPath(); ctx.arc(x, y + u * 0.8, u * 0.85, Math.PI, 0); ctx.stroke();
+    ctx.fillRect(x - u * 0.95, y + u * 0.72, u * 1.9, u * 0.16);
+  } else { // Paldea academy clock
+    ctx.beginPath(); ctx.moveTo(x - u * 0.7, y + u); ctx.lineTo(x - u * 0.4, y - u * 0.4); ctx.lineTo(x, y - u * 0.75); ctx.lineTo(x + u * 0.4, y - u * 0.4); ctx.lineTo(x + u * 0.7, y + u); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffe9b8';
+    ctx.beginPath(); ctx.arc(x, y - u * 0.28, u * 0.16, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
+  else if (G.state === 'ending') { drawEnding(); }
   else if (G.state === 'dex') { drawDex(); }
   else if (G.state === 'serve' && !paused) {
     // The stage card owns the centre first; controls arrive immediately after

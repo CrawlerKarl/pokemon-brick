@@ -1456,6 +1456,19 @@ function update(dt) {
   if (Math.abs(G.score - G.scoreShown) < 1) G.scoreShown = G.score;
   G.comboPop = Math.max(0, G.comboPop - dt * 3.2);
 
+  if (G.state === 'ending') {
+    // the ending owns its own clock: no combat sim, no timers, just beats.
+    // Taps (input.js) advance a beat after a grace period; veterans who have
+    // seen the dawn before jump straight to the completion card.
+    const E = G.ending;
+    if (E) {
+      E.t += dt;
+      while (E.beat < 5 && E.t >= ENDING_BEATS[E.beat - 1]) E.beat++;
+      if (E.beat >= 5 && E.t >= ENDING_BEATS[4] + 1.5) E.done = true; // choices go live
+    }
+    G.scoreShown = G.score;
+    return;
+  }
   if (G.state === 'menu' || G.state === 'gameover' || G.state === 'dex') return;
   if (paused) return;
   if (G.state === 'upgrade') {
@@ -2905,6 +2918,15 @@ function update(dt) {
       return;
     }
     if (G.secret.pendingShard != null) return;
+    // ---- THE NINEFOLD DAWN: clearing stage 27 on a real journey ENDS the
+    // campaign — it must never silently roll into a harder Kanto loop. The
+    // old loop survives as TIME SPIRAL, an explicit choice on the ending's
+    // final beat. Trials and dailies keep their existing flow.
+    if (G.level === 27 && !G.trial && !G.daily) {
+      G.score += Math.round((300 + 2 * 250) * (G.fx_score ? 2 : 1));
+      beginEnding();
+      return;
+    }
     const clearedStage = stageIdx(G.level);
     const secretVictory = !!(G.secret.vmax && clearedStage === 2);
     G.level++;

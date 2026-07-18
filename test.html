@@ -188,6 +188,76 @@ window.requestAnimationFrame = function () { return 0; };
       (FORCED_VIEWPORT ? ' (viewport reported 0×0 — forced virtual 900×700)' : '');
   });
 
+  // 1b) every pilot attack shape renders at every evolution tier — a tier-III
+  // fire pilot once CRASHED here (negative ember radius throws in ctx.arc)
+  test('typed bolts render at all tiers', async () => {
+    ensureViewport();
+    const shapes = ['flame', 'draco', 'fist', 'aqua', 'shard', 'gear', 'leaf', 'sting',
+      'venom', 'quake', 'gale', 'pixel', 'psy', 'star', 'wisp', 'claw', 'volt', null];
+    const elements = ['fire', 'water', 'grass', 'electric', 'psychic', 'dark'];
+    let drawn = 0;
+    for (const shape of shapes) {
+      for (let tier = 1; tier <= 3; tier++) {
+        for (let k = 0; k < 4; k++) { // several phases so time-varying maths runs
+          G.time = k * 0.61;
+          drawTypedBolt({ x: 120 + k * 40, y: 200, shape, element: elements[k % elements.length], tier });
+          drawn++;
+        }
+      }
+    }
+    assert(ERR.length === 0, 'typed-bolt rendering threw: ' + ERR.join(' | '));
+    return shapes.length + ' shapes × 3 tiers rendered clean (' + drawn + ' draws)';
+  });
+
+  // 1c) THE NINEFOLD DAWN: stage 27 must END a real campaign (never silently
+  // build stage 28), record completion durably, keep the checkpoint, and
+  // offer TIME SPIRAL as the explicit New Game+ path. Trials keep the loop.
+  test('campaign completion branch', async () => {
+    const priorVictory = localStorage.getItem('pkbrk-victory');
+    const priorCkpt = localStorage.getItem('pkbrk-run');
+    try {
+      SETTINGS.mode = 'junkie';
+      resetRun(27);
+      G.trial = false; G.lives = 99;
+      let guard = 0;
+      while (G.state === 'play' && guard++ < 4000) {
+        paused = false; G.freeze = 0;
+        for (const b of G.bricks) if (!b.dead && !b.dormant && !b.barrier) damageBrick(b, 9999, b.bx + G.fx, b.by + G.fy);
+        update(1 / 60);
+      }
+      assert(G.state === 'ending', "stage 27 clear entered '" + G.state + "', expected 'ending'");
+      assert(G.level === 27, 'level incremented to ' + G.level + ' — the campaign must not loop uninvited');
+      const rec = JSON.parse(localStorage.getItem('pkbrk-victory') || '{}');
+      assert(rec && rec.everSeen && rec['junkie:' + SETTINGS.preset], 'completion record missing after the clear');
+      assert(localStorage.getItem('pkbrk-run') === priorCkpt, 'the safe checkpoint was erased by the ending');
+      // the ending renders through every beat without exceptions
+      const e0 = ERR.length;
+      for (let f = 0; f < 60 * 36; f++) { update(1 / 60); if (f % 120 === 0) render(); }
+      assert(G.ending && G.ending.done, 'ending never reached its completion beat');
+      render();
+      assert(ERR.length === e0, 'ending render threw: ' + ERR.slice(e0).join(' | '));
+      // TIME SPIRAL is the explicit continuation into the old level-28 loop
+      beginTimeSpiral();
+      assert(G.level === 28 && G.state === 'upgrade' && G.upgradeChoices,
+        'TIME SPIRAL did not open the level-28 draft');
+      // trials keep their existing flow: clearing 27 in a trial still loops
+      resetRun(27, true);
+      G.lives = 99; guard = 0;
+      while (G.state === 'play' && guard++ < 4000) {
+        paused = false; G.freeze = 0;
+        for (const b of G.bricks) if (!b.dead && !b.dormant && !b.barrier) damageBrick(b, 9999, b.bx + G.fx, b.by + G.fy);
+        update(1 / 60);
+      }
+      assert(G.state === 'upgrade' && G.level === 28, 'trial stage 27 should keep the classic loop');
+      return 'stage 27 → ending (level stays 27) · record saved · checkpoint kept · 36s of beats render clean · TIME SPIRAL → 28 · trial loops';
+    } finally {
+      if (priorVictory == null) localStorage.removeItem('pkbrk-victory'); else localStorage.setItem('pkbrk-victory', priorVictory);
+      if (priorCkpt == null) localStorage.removeItem('pkbrk-run'); else localStorage.setItem('pkbrk-run', priorCkpt);
+      G.ending = null;
+      resetBetween();
+    }
+  });
+
   // 2) mode smoke ×3
   async function modeSmoke(mode, frames) {
     const e0 = ERR.length;

@@ -1,5 +1,24 @@
 # WAVEBREAKER — World, Boss, and Finale Plan
 
+> **Implementation status (2026-07-17).** Landed in the worktree, verified by
+> suite (33/33) + screenshots: **§1 prerequisite bug** (tier-III ember radius
+> clamp in `drawTypedBolt` + an all-shapes×all-tiers render test) and the
+> full **§7 ending structure** — stage 27 on a real journey now enters
+> `G.state = 'ending'` (never level 28), writes a versioned completion record
+> to `pkbrk-victory` BEFORE the sequence plays, keeps the checkpoint intact,
+> runs the five-beat Ninefold Dawn (silence → sky-crack/shatter → nine
+> landmark ribbons + node stamps → DEX constellation + legendary salute →
+> sun, THE WAVE IS BROKEN, stats), honours reduceFlash (gold outlined shards,
+> no white flash), lets taps advance beats / veterans skip to dawn, and ends
+> in the explicit **TIME SPIRAL** (old level-28 loop) vs **TITLE** choice.
+> Trials/dailies keep the classic loop. Suite test: `campaign completion
+> branch` (test.html). NOT yet built: §5 scene director, §6 boss director +
+> encounter scripts, region postcards, Theater/Boss Rush, music layers, dawn
+> title treatment — beat-sheet niceties still simplified (no final-shot
+> interaction in beat 2, no act-emblem merge, no hold-to-skip [tap-to-skip
+> for veterans instead], constellation uses capped DEX rather than per-run
+> catch list).
+
 ## The intended outcome
 
 The 27-stage campaign should feel like a journey through nine genuinely different places, not one long night with changing silhouettes. Every three-stage region should have a visible environmental story, every legendary should change the rules of play rather than only firing a differently colored pattern, and stage 27 should end in a bespoke victory sequence instead of silently looping back to Kanto.

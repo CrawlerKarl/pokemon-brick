@@ -191,6 +191,7 @@ const G = {
   starterHits: 0, starterKOs: 0, starterChillT: 0,
   ceremony: null, // act-boundary evolution ceremony (end of Hoenn / Kalos)
   encounter: null, // SPACE JUNKIE choreography: one authored encounter per wave
+  ending: null,        // THE NINEFOLD DAWN: campaign-victory sequence state
   guardSwapCD: 8, waveThemeObj: null,
   motionTier: 0, motionStyle: 'march',
   marchDir: 1, divers: false, diveCD: 6, gridCols: 10, pathSpeed: 0.04,
@@ -1201,7 +1202,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.starterLvl = starterStage(startLevel, G.starter);
   G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
   G.justEvolved = false; G.ceremony = null;
-  G.encounter = null; G.waveThemeObj = null; G.guardSwapCD = 8;
+  G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
   G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
@@ -1355,4 +1356,68 @@ function shatterBrick(br, x, y, bare) {
       });
     }
   }
+}
+
+// ============================================================
+//  THE NINEFOLD DAWN — campaign completion (design: WORLD_BOSS_FINALE_PLAN)
+// ============================================================
+// Clearing stage 27 on a real journey ends the campaign. The completion
+// record is written UP FRONT so no crash or reload can ever lose the clear,
+// and the region checkpoint survives untouched until that write has landed.
+let VICTORY_REC = (v => (v && typeof v === 'object') ? v : {})(loadStore('pkbrk-victory', '{}'));
+function beginEnding() {
+  // the arena goes still: hostile state dies instantly, damage is over
+  G.enemyShots = []; G.telegraphs = []; G.columnStrikes = []; G.lasers = [];
+  G.powerups = []; G.freeze = 0; G.dramaticT = 0; G.flashT = 0; G.shake = 0;
+  G.announce = null; G.announceQueue = []; G.combatNotice = null;
+  finalizeRun(); // snapshot score/catches/path into G.runSummary
+  const s = G.runSummary || {};
+  const seenBefore = !!VICTORY_REC.everSeen;
+  VICTORY_REC.v = 1;
+  VICTORY_REC.everSeen = true;
+  VICTORY_REC[G.mode + ':' + SETTINGS.preset] = {
+    date: dailyDateKey(), score: G.score, starter: G.starter || 'none',
+    partnerLvl: G.starterLvl, catches: G.caughtRun,
+    bosses: (G.runStats && G.runStats.bossesDefeated) || 0,
+    path: s.path || null, rift: !!(G.secret && G.secret.completed),
+    playT: Math.round(G.playT || 0),
+  };
+  saveStore('pkbrk-victory', VICTORY_REC);
+  // the night sky pre-shatters into FEW, LARGE, deliberate glass shards —
+  // this is a set piece, not a particle burst (deterministic, no Date/random)
+  const shards = [];
+  for (let i = 0; i < 40; i++) {
+    const h1 = Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1;
+    const h2 = Math.abs(Math.sin(i * 78.233) * 12543.8567) % 1;
+    shards.push({
+      u: h1, v: h2 * 0.8, // screen-fraction position
+      vx: (h1 - 0.5) * 60, vy: 40 + h2 * 130, rot: h1 * Math.PI, vr: (h2 - 0.5) * 1.6,
+      r: 26 + h1 * 60, sides: 3 + Math.floor(h2 * 3),
+    });
+  }
+  G.ending = { t: 0, beat: 1, seenBefore, shards, sfx: {}, done: false };
+  G.state = 'ending'; G.stateT = 0;
+}
+// beat boundaries in seconds — beat 5 holds until the player chooses
+const ENDING_BEATS = [3, 8, 19, 27, 33];
+// the explicit New Game+ choice: the old post-27 loop, now opt-in
+function beginTimeSpiral() {
+  G.ending = null;
+  G.level = 28;
+  G.state = 'upgrade'; G.stateT = 0;
+  G.clearedStage = 2;
+  rollUpgradeChoices();
+  upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices && G.upgradeChoices.every(x => x.pathKey);
+  if (upgradeTreeOpen) syncTreeSelectionToDraft();
+  draftSel = null; G.rerolled = false;
+  setAnnounce('warp', '#d780ff', 'TIME SPIRAL', 'THE JOURNEY LOOPS — HARDER SKIES AHEAD', 3.2);
+}
+// shared geometry: render draws these, input hit-tests them
+function endingButtons() {
+  const w = Math.min(240, W * 0.42), h = 46, gap = 14;
+  const y = H * 0.84;
+  return {
+    spiral: { x: W / 2 - w - gap / 2, y, w, h },
+    title: { x: W / 2 + gap / 2, y, w, h },
+  };
 }

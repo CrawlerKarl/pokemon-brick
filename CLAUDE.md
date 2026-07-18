@@ -134,6 +134,12 @@ phone — flag anything only verifiable there.
   smooth journey curve in `diff()` (smoothstep over the 9 regions: ×0.78
   opening → ~×1.1 middle → ×1.4 finale — replaces the per-act steps); the
   act boundary plays the evolution ceremony (`G.ceremony`, drawCeremony).
+  **Clearing stage 27 on a real run ends the campaign**: `beginEnding()`
+  (state.js) → `G.state = 'ending'` (THE NINEFOLD DAWN, drawEnding) — it must
+  NEVER silently roll into level 28. The completion record (`pkbrk-victory`)
+  is written before the sequence plays and the checkpoint survives; the old
+  28+ loop lives on only as the explicit TIME SPIRAL choice
+  (`beginTimeSpiral`). Trials/dailies keep the classic loop.
   Progress is NEVER wiped by knockout or game over: the latest region checkpoint
   remains available through CONTINUE. The pause screen hides
   an ornate ✦ CHEAT CODES panel (CHEAT_ITEMS, data.js) — using it sets
