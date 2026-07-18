@@ -1,5 +1,13 @@
 # HANDOFF — Hex-Web & Superskills Expansion
 
+> **STATUS: EXECUTED (2026-07-17).** All six slices shipped — graph data
+> model + checkpoint v3 migration, the Commit/Adapt/Explore offer
+> algorithm, six bridge synergies, six superskills, in-web mastery
+> satellites, and the 39-node constellation map — suite 39/39 green. See
+> the status header in `STARFIGHTER_UPGRADE_WEB_REDESIGN_PLAN.md` for
+> exactly what landed and the short deferred list (route tracking, triad
+> supers, codex).
+
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
 Implement the branching upgrade web and final-form superskills described in

@@ -1,19 +1,34 @@
 # STARFIGHTER Upgrade Web Redesign
 
-> **Implementation status (2026-07-17).** SHIPPED: the constellation choice
-> surface over the existing 24 save-compatible tiers (six spokes × four
-> rings, offers/owned/reachable/locked states, detail panel with PATH
-> PROGRESS strip, install FX, keyboard/touch/mouse, responsive at desktop /
-> 390×844 / 844×390, capstone chips tucked centre-side); the complete §9
-> tell layer — every tier has persistent rig hardware plus a proc tell
-> (OMNI LENS pierce, AMPLIFY multiplier, SUPER SHIELD regrow, ✕ intercept
-> cancellation, live SURGE ring, COOLANT teal heat band, HYPER cycler ring,
-> FORTUNE drop blessing, ATTUNED pickup notice) or a documented continuous-
-> passive rationale (bulwark/wide/blaze/megaX); build-biased offer scoring;
-> wing hardpoint dock. REMAINING (deliberately deferred): §4 hex-web
-> topology, §6 Form II bridge synergies, §7 superskills, §8 in-web mastery,
-> §10 full offer algorithm, route tracking, save-schema migration — see
-> `HEXWEB_SUPERSKILLS_HANDOFF.md` for the ready-to-run implementation brief.
+> **Implementation status (2026-07-17, hex-web round).** SHIPPED: everything
+> from the previous round (constellation choice surface, complete §9 tell
+> layer for the 24 tiers, wing hardpoint dock) PLUS the full hex-web and
+> superskills expansion: the **§4 web topology** as data (`WEB_SPOKE_ORDER`
+> / `WEB_BRIDGES` / `WEB_SUPERS` / `WEB_SATELLITES` in data.js — 24 anchor
+> tiers with unchanged keys, 6 bridges between adjacent wedges, 6
+> superskills, 3 satellites = 39 addressable nodes); **§6 bridge
+> synergies** (Calibrated Barrage, Singularity Lens, Aurora Drive, Reactive
+> Overdrive, Rescue Circuit, Salvage Drones — each a real two-system
+> mechanic with classic adapters that keep BREAKER ball-first, persistent
+> rig hardware in named slots, and proc tells); **§7 superskills** one per
+> constellation (Meteor Matrix, Event Horizon, Elemental Ascension,
+> Immortal Reactor, Guardian Angel, Ace Interceptor Wing — gated on Final
+> Form + capstone + bridge, larger install beat, rig transformation);
+> **§8 in-web mastery** (the three ∞-stacks docked as ranked satellite
+> nodes, offered only to fill empty slots, wedge-capped first); the **§10
+> offer algorithm** (Commit/Adapt/Explore composition, superskill priority,
+> post-evolution guarantee, reroll anti-repeat, 4-draft pity, low-health
+> rescue, offense/non-offense guard); **graph-safe knockout** (leaf-only
+> regression — never orphans a bridge or recipe); **checkpoint schema v3**
+> with a never-throws v1/v2 migration and grandfather rule; and the map at
+> 39 nodes (two-tone bridge hexes, double-hex super crowns, ranked
+> satellites, exact lock reasons, keyboard/touch, desktop + 390×844 +
+> 844×390). Locked by 7 new invariant suites — 39/39 green.
+> REMAINING (deliberately deferred): §3 route tracking, the §7 triad chase
+> supers (War Machine / Celestial Guardian), §10 discovery codex + stellar
+> currents, animated node previews in the detail panel, and the Rift
+> rewards' off-map cluster presentation (they remain their own fixed
+> draft).
 
 ## Executive recommendation
 

@@ -406,8 +406,23 @@ flash) decays in `update()` dt-scaled, NOT render — it gates the pierce
 i-frame, so a per-render-frame decay would couple DPS to the display's refresh
 rate. **Rule: mutate any field gameplay reads in `update`; render only reads.**
 
-### Skill tree (`PATHS` in data.js ~423)
-Six paths × four tiers, **permanent**, drafted between every wave. Advancing
+### Skill tree (`PATHS` in data.js ~423) — now the hub of THE UPGRADE WEB
+Six paths × four tiers, **permanent**, drafted between every wave. The 24
+tiers are the save-stable ANCHOR nodes of a 39-node web (`WEB_SPOKE_ORDER`,
+`WEB_BRIDGES`, `WEB_SUPERS`, `WEB_SATELLITES` in data.js): six **Form II
+bridge synergies** sit between adjacent constellations (need partner
+evolution + one owned node on each side; real two-system mechanics with
+ball-first classic adapters), six **Final Form superskills** crown the
+spokes (need region-7 evolution + the path capstone + its bridge; rule
+changers — meteor rains, gravity wells, element retuning, a lethal-hit
+reactor, a guardian pulse, permanent wingmates), and the three mastery
+stacks dock as ranked **satellite nodes**. The draft deals
+Commit/Adapt/Explore (`rollUpgradeChoices`, update.js) with superskill
+priority, a newly-unlocked guarantee after evolving, reroll anti-repeat and
+pity; knockout burns only graph LEAVES (`webRegressibleLeaves`) so a defeat
+can never orphan a recipe; checkpoints are schema v3 with a never-throws
+v1/v2 migration (`migrateCheckpoint`, state.js). The constellation screen
+addresses all 39 nodes with exact lock reasons on every locked node. Advancing
 is `advancePath(key)`. The hand guarantees an offense option and a non-offense
 option while both groups remain, so damage never crowds survival/utility off
 the screen:
