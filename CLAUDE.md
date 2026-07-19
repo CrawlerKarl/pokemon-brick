@@ -85,7 +85,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
 - **`gallery.html`** renders every projectile through the real renderer over
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
-- **Automated invariants:** open `/test.html` (drives the sim headless, 53
+- **Automated invariants:** open `/test.html` (drives the sim headless, 55
   checks, sets `window.TEST_RESULTS`; keep the tab FRONTED — background
   timer throttling makes it crawl). Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against

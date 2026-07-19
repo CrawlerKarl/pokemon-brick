@@ -335,6 +335,25 @@ toward the player's LIVE position; a squad falls silent ~1.5s when its
 elite dies. Kill-release is smooth: eased sep offsets (fast build, ~0.4s
 drain) mean a death leaves an honest Galaga gap, never a snap.
 
+### Charge resonance, overcharge, and the Spectral Veil (Milestone 2)
+The charge shot has a full timing arc now:
+- **RESONANT release**: the instant the charge tops out, a `RESONANCE_WINDOW`
+  (0.38s) sweet spot opens — releasing inside it fires the resonant shot:
+  +25% power, +1 pierce, 30% less heat, a crystalline chime, and its own
+  ledger counter (`resonants`). The FIRE pad announces the arc explicitly:
+  charge % → **RESONANT!** → RELEASE! → **OVERCHARGE**.
+- **Overcharge**: sitting on a full charge past ~1.4s heats the barrel
+  FASTER than passive cooling drains it (net ≈ +0.12/s) — hoarding the big
+  shot has a real cost, and the suite proves sustained spam still overheats
+  inside the honest 5–10s band while fire-rate upgrades can only ever make
+  that band kinder.
+- **SPECTRAL VEIL** (region 3+, ≤2 spirit-type flyers per wave): a cycling
+  shimmer (~2s on / 1.4s off, deterministic phase, dashed violet halo tell)
+  that CHARGED shots phase straight through — no damage, no pierce spent —
+  while basic fire always lands. The anti-charge-spam counterweight to
+  armor: mixed waves now punish "charge everything" without ever making
+  charge feel weak (the open window still rewards a timed big shot).
+
 ### Charge-gated shooter content (the charge shot always matters)
 - **SHELL ARMOR** (junkie, region 2+ elites; 3 tutors on Kanto 2/3): normal
   bolts crack it in three deliberate hits; ONE charged shot breaks it outright.

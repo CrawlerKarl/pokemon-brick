@@ -29,6 +29,10 @@ function barrierCharges() {
     + (G.mode === 'classic' && upgN('intercept') ? 1 : 0);
 }
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
+// The perfect-release sweet spot: seconds after a charge tops out during
+// which releasing fires the RESONANT shot (Milestone 2). Wide enough to hit
+// on purpose on touch, narrow enough to stay a timing skill.
+const RESONANCE_WINDOW = 0.38;
 // ---- STARFIGHTER pilots: in junkie mode your starter IS the ship. Flying
 // without a partner uses a neutral training drone. The attack's SHAPE follows the pilot's
 // species; its COLOR + type follow the CURRENT element, so a Charmeleon
@@ -247,6 +251,7 @@ const G = {
   blocksStatic: false, // boxed bricks are anchored; only the Pokémon move
   mode: 'classic',     // 'classic' (ball) or 'blaster' (ball-less pure shooter)
   charge: 0, chargeCD: 0, // BLASTER mode: hold to charge a heavy shot
+  chargeFullT: 0,      // seconds sitting on a FULL charge (resonance/overcharge clock)
   shipYv: 0,           // SPACE JUNKIE: the ship flies vertically in a band
   maneuver: null, maneuverCD: 8, // SPACE JUNKIE: periodic squad maneuvers
   stacks: { orb: 0, ice: 0, bell: 0 }, // SPACE JUNKIE: infinitely-stacking held items
@@ -370,6 +375,12 @@ function statsKnockout() {
   const L = statsCur(); if (L) L.knockout = true;
 }
 function statsIntercept() { const L = statsCur(); if (L) L.intercepts = (L.intercepts || 0) + 1; }
+function statsResonant() { const L = statsCur(); if (L) L.resonants = (L.resonants || 0) + 1; }
+// SPECTRAL VEIL cycle: ~2s shimmering (charge phases through) / ~1.4s open.
+// Deterministic per mon (phase from gameRand at build) — readable, no RNG.
+function specVeilActive(br) {
+  return !!br.specVeil && ((G.time + br.specVeil.ph) % 3.4) < 2.0;
+}
 function statsShellCrack() { const L = statsCur(); if (L) L.shellCracks = (L.shellCracks || 0) + 1; }
 // ---- STAGE MEDALS (pkbrk-medals): { '<lvl>': { objectiveKey: 1 } }.
 // Awarded on the results screen from stageObjectives(lvl) checks — real
@@ -1214,6 +1225,21 @@ function buildLevel(lvl) {
       attackSq: resolved.findIndex(q => q.role === 'attacker'),
       openTop: geo.openTop, floorY: geo.floorY,
     };
+    // ---- SPECTRAL VEIL (Milestone 2): from region 3, up to two spirit-type
+    // flyers cycle a shimmer that CHARGED shots phase straight through —
+    // basic fire is the answer. The counterweight to armor: charge-spraying
+    // a mixed wave now wastes the big shot exactly where armor rewards it.
+    if (regionsIn >= 2 && !hasBoss) {
+      const spirits = G.bricks.filter(b => b.flight && ['ghost', 'psychic', 'fairy', 'dark'].includes(b.poke.t) && !b.shellArmor);
+      for (let i = 0; i < Math.min(2, spirits.length); i++) {
+        spirits[i].specVeil = { ph: gameRand() * 3.4 };
+      }
+      if (spirits.length && !G.specVeilTaught) {
+        G.specVeilTaught = true;
+        setAnnounce('ghost', '#b39ddb', 'SPECTRAL VEIL',
+          'SHIMMERING SPIRITS — CHARGE PASSES THROUGH · USE BASIC FIRE', 3.2);
+      }
+    }
     // ---- ROCK TOMB barriers (region 2+): curled-up boulder Pokémon drifting
     // between the flocks and your airspace. Normal bolts shatter ON them —
     // only a CHARGED shot cracks the rock. Living cover for the enemy.
@@ -1431,7 +1457,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.secret = freshSecretState();
   G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
-  G.charge = 0; G.chargeCD = 0;
+  G.charge = 0; G.chargeCD = 0; G.chargeFullT = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;
   G.stacks = { orb: 0, ice: 0, bell: 0 }; G.attackAnim = 0; G.upgradeFx = null;
@@ -1445,6 +1471,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
+  G.specVeilTaught = false; // re-teach the veil once per journey
   G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
   G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0,
     knockouts: 0, levels: [], cur: null };

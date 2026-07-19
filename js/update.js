@@ -2296,12 +2296,22 @@ function update(dt) {
       charging = true;
       // COOLANT's shooter translation: a cooler barrel also charges faster
       G.charge = Math.min(1, G.charge + dt / (upgN('heavy') ? 0.8 : 1.1)); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
+      // RESONANCE (Milestone 2): the instant the charge tops out, a short
+      // sweet-spot window opens (RESONANCE_WINDOW) — release inside it for
+      // the resonant shot. Sitting on a full charge past ~1.4s OVERCHARGES:
+      // the barrel slowly cooks, so hoarding the big shot has a real cost.
+      if (G.charge >= 1) {
+        G.chargeFullT += dt;
+        // must OUTPACE passive cooling (~0.28/s) or hoarding is free —
+        // net ≈ +0.12 heat/s: gentle, but a hot barrel will tip over
+        if (G.chargeFullT > 1.4) addWeaponHeat(dt * 0.4);
+      }
     } else if (G.charge > 0) {
-      fireCharge(G.charge);
+      fireCharge(G.charge, G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW);
       chargedThisFrame = true;
-      G.charge = 0; G.chargeCD = 0.25;
+      G.charge = 0; G.chargeCD = 0.25; G.chargeFullT = 0;
     }
-  } else if (G.charge > 0) { G.charge = 0; }
+  } else if (G.charge > 0) { G.charge = 0; G.chargeFullT = 0; }
   // Held desktop/CLASSIC fire keeps shooting. The optional shooter auto-fire
   // setting does the same without a held pointer, but yields immediately when
   // a FIRE-pad touch may be turning into (or is already) a charged shot.
@@ -3405,6 +3415,18 @@ function update(dt) {
       // charged shots are fat, so they connect over a wider span
       const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0) + (L.heavy ? 6 : 0);
       if (Math.abs(L.x - bx) < xtol && Math.abs(L.y - by) < br.h / 2) {
+        // SPECTRAL VEIL: while the shimmer is up, heavy charged energy
+        // phases straight through the spirit — the bolt keeps flying (no
+        // pierce spent, no damage). Basic fire lands normally, and the
+        // veil's open window still rewards a well-timed charge.
+        if (L.charged && specVeilActive(br)) {
+          if (!br.veilFxT || G.time - br.veilFxT > 0.5) {
+            br.veilFxT = G.time;
+            addFloater(bx, by - br.h / 2 - 10, 'PHASED THROUGH!', '#b39ddb', 12);
+            tone(520, 0.08, 'sine', 0.04, -200);
+          }
+          continue;
+        }
         // SHELL ARMOR / ROCK TOMB: charge is the fast answer, not the ONLY
         // answer. Three accurate basic bolts crack the casing; one charged
         // shot still does it immediately and keeps its satisfying shortcut.

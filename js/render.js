@@ -850,6 +850,15 @@ function drawBricks() {
         ctx.beginPath(); ctx.arc(x, yb, s2 * 0.45, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
+      // SPECTRAL VEIL shimmer: a breathing dashed halo while the veil is up —
+      // the readable tell that charged shots will phase through right now
+      if (specVeilActive(br)) {
+        ctx.globalAlpha = 0.45 + 0.25 * Math.sin(G.time * 9 + br.wobble);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#b39ddb'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.62, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
       if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, yb - s2 * 0.4, 5, '#ffd700');
       // Sentinel bosses always carry a named bar; ordinary tough flyers use a
       // compact ring once damaged. This creates a clear health hierarchy:
@@ -3951,12 +3960,17 @@ function drawTouchControls() {
     // ONE consistent state language: the label always names the current state
     // or the next action — no bare FIRE/AUTO/HOT ambiguity mid-fight
     const shooter = G.mode !== 'classic';
+    // the full-charge label walks the resonance arc: the sweet-spot window
+    // shouts RESONANT!, then plain RELEASE!, then OVERCHARGE once the barrel
+    // starts cooking — the state language stays explicit at every moment
+    const resonantNow = full && G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW;
+    const overNow = full && G.chargeFullT > 1.4;
     const label = hot ? 'COOLING ' + Math.ceil(G.overheat) + 's'
-      : charging ? (full ? 'RELEASE!' : Math.round(Math.min(1, G.charge) * 100) + '%')
+      : charging ? (resonantNow ? 'RESONANT!' : overNow ? 'OVERCHARGE' : full ? 'RELEASE!' : Math.round(Math.min(1, G.charge) * 100) + '%')
       : heatWarn ? 'HEAT HIGH'
       : shooter ? (SETTINGS.autoFire ? 'AUTO ON' : 'TAP FIRE') : 'FIRE';
     ctx.font = '900 9px Orbitron, sans-serif';
-    ctx.fillStyle = hot ? '#ff8a80' : charging ? (full ? '#e0ffff' : '#80deea') : heatWarn ? '#ffb74d' : '#b3e5fc';
+    ctx.fillStyle = hot ? '#ff8a80' : charging ? (resonantNow ? '#80ffea' : overNow ? '#ffab66' : full ? '#e0ffff' : '#80deea') : heatWarn ? '#ffb74d' : '#b3e5fc';
     ctx.fillText(label, f.x, f.y + 12, f.r * 1.7);
     // second line: what HOLDING does right now (shooter modes only)
     const sub = !shooter ? '' : hot ? 'LOCKED' : charging ? (full ? '' : 'KEEP HOLDING') : 'HOLD = CHARGE';

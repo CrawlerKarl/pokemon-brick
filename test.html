@@ -2275,6 +2275,99 @@ window.requestAnimationFrame = function () { return 0; };
     return '≤2 flocks × ≤5 birds, top third of the sky, Kanto only';
   });
 
+  test('charge resonance, overcharge cost, and heat fairness', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(1, true, { seed: 'resonance' });
+      paused = false; G.freeze = 0;
+      // RESONANT release: full charge, release inside the sweet spot
+      chargeHeld = true;
+      await runFrames(90, () => G.charge < 1 ? undefined : false);
+      await runFrames(12); // ~0.2s into the window
+      assert(G.charge >= 1 && G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW, 'sweet spot not reached');
+      const h0 = G.heat;
+      chargeHeld = false; update(1 / 60);
+      const res = G.lasers.find(l => l.charged);
+      const resHeat = G.heat - h0;
+      assert(res && statsCur().resonants === 1, 'resonant release was not detected/counted');
+      // PLAIN full release for comparison
+      G.lasers = []; G.chargeCD = 0; chargeHeld = true;
+      await runFrames(90, () => G.charge < 1 ? undefined : false);
+      await runFrames(40); // past the window
+      const h1 = G.heat;
+      chargeHeld = false; update(1 / 60);
+      const plain = G.lasers.find(l => l.charged);
+      assert(res.power > plain.power && res.pierce === plain.pierce + 1,
+        'resonance did not boost power/pierce over a plain full release');
+      assert(resHeat < (G.heat - h1) * 0.85, 'resonance did not run cooler');
+      assert(statsCur().resonants === 1, 'plain release miscounted as resonant');
+      // OVERCHARGE: sitting on a full charge heats faster than the barrel cools
+      G.lasers = []; G.chargeCD = 0; chargeHeld = true;
+      await runFrames(200, () => G.chargeFullT < 1.5 ? undefined : false);
+      const h2 = G.heat;
+      await runFrames(120); // 2s of overcharging
+      assert(G.heat - h2 > 0.15, 'overcharge did not outpace passive cooling');
+      chargeHeld = false; update(1 / 60);
+      // HEAT FAIRNESS: sustained spam overheats in the honest band, and the
+      // fire-rate path can only ever make that band KINDER, never crueller
+      const timeToOverheat = async () => {
+        paused = false; G.freeze = 0;
+        const t0 = G.playT;
+        let oh = false;
+        await runFrames(60 * 18, () => {
+          if (G.state === 'results') { G.stateT = 1; advanceResults(); return; }
+          if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); return; }
+          if (G.state === 'upgrade') { G.stateT = 1; if (G.upgradeChoices) pickUpgrade(0); return; }
+          if (G.state === 'play') fireAction(true);
+          if (G.overheat > 0) { oh = true; return false; }
+        });
+        return oh ? G.playT - t0 : Infinity;
+      };
+      resetRun(1, true, { seed: 'heat-base' }); G.lives = 99;
+      const base = await timeToOverheat();
+      assert(base >= 5 && base <= 10.5, 'baseline sustained fire overheats outside the 5-10s band (' + base.toFixed(1) + 's)');
+      resetRun(1, true, { seed: 'heat-up' }); G.lives = 99;
+      devGrantBuild('arsenal:4');
+      const upgraded = await timeToOverheat();
+      assert(upgraded >= base - 0.5, 'fire-rate upgrades made overheating CRUELLER (' + upgraded.toFixed(1) + 's vs ' + base.toFixed(1) + 's)');
+      return 'resonant +power/+pierce/−heat once; overcharge costs ~0.12/s; spam overheats in ' +
+        base.toFixed(1) + 's base, ' + (upgraded === Infinity ? 'never' : upgraded.toFixed(1) + 's') + ' with full VOLLEY';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; chargeHeld = false; }
+  });
+
+  test('spectral veil: charge phases through, basic fire answers', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(7, true, { seed: 'veil-t' });
+      paused = false; G.freeze = 0;
+      const v = G.bricks.find(b => b.flight);
+      v.specVeil = { ph: 0 };
+      for (const b of G.bricks) if (b !== v) b.dead = true;
+      G.reinforce = 0;
+      v.specVeil.ph = 3.4 - (G.time % 3.4) + 0.1; // shimmer ACTIVE
+      assert(specVeilActive(v), 'veil phase alignment failed');
+      const hp0 = v.hp;
+      G.lasers = [{ charged: true, basic: true, power: 3, pierce: 3, r: 12, x: v.bx + G.fx, y: v.by + G.fy + 8 }];
+      update(1 / 60);
+      assert(v.hp === hp0 && G.lasers.some(l => l.charged && !l.dead),
+        'a charged bolt did not phase through the active veil');
+      G.lasers = [{ basic: true, x: v.bx + G.fx, y: v.by + G.fy + 8 }];
+      update(1 / 60);
+      assert(v.hp < hp0 || v.dead, 'basic fire did not land on the veiled spirit');
+      if (!v.dead) {
+        v.specVeil.ph = 3.4 - (G.time % 3.4) + 2.5; // OPEN window
+        assert(!specVeilActive(v), 'open-window phase alignment failed');
+        const hp1 = v.hp;
+        G.lasers = [{ charged: true, basic: true, power: 3, pierce: 3, r: 12, x: v.bx + G.fx, y: v.by + G.fy + 8 }];
+        update(1 / 60);
+        assert(v.hp < hp1 || v.dead, 'a charged bolt failed to land during the open window');
+      }
+      return 'shimmer: charge passes, basic lands; open window: charge lands — the anti-spam counterweight works';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

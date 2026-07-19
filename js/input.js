@@ -1255,10 +1255,14 @@ function fireAction(auto = false) {
 }
 // shooter-mode heavy shot — a fat, piercing bolt scaled by how long you held
 // the charge (c in 0..1). Distinct fat visual + a deeper report.
-function fireCharge(c) {
+// resonant (Milestone 2): released inside the sweet-spot window right after
+// the charge tops out — +25% power, +1 pierce, 30% less heat, its own chime.
+// The timing reward, never a requirement: a plain full release stays strong.
+function fireCharge(c, resonant = false) {
   if (G.state !== 'play') return;
   G.chargedEver = true; // the charge tutor banner retires once you've done it
   statsShotFired(true);
+  if (resonant) statsResonant();
   // AEGIS LANCE: while shielded, a full charge SPENDS one real shield and the
   // bolt becomes the lance — unstoppable, armor-breaking (fusion)
   let lanceShot = false;
@@ -1268,8 +1272,9 @@ function fireCharge(c) {
     addFloater(G.paddle.x, shipY() - 72, 'AEGIS LANCE!', '#d4e157', 14);
     SFX.shield();
   }
-  const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1) * (lanceShot ? 1.5 : 1);
-  const pierce = lanceShot ? 99 : 1 + Math.round(c * 3);  // drills through 1..4 blocks
+  const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1) * (lanceShot ? 1.5 : 1)
+    * (resonant ? 1.25 : 1);
+  const pierce = (lanceShot ? 99 : 1 + Math.round(c * 3)) + (resonant ? 1 : 0);  // drills through 1..4 blocks
   const pil = G.mode === 'junkie' ? pilotInfo() : null;
   if (pil) G.attackAnim = 1.4; // charge release = the big attack animation
   G.lasers.push({
@@ -1286,9 +1291,14 @@ function fireCharge(c) {
   const wmSpend = upgN('warmachine') ? G.railPressure : 0;
   const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0) * starterMod('heat', 1)
     * (1 - 0.45 * wmSpend);
-  addWeaponHeat((0.30 + 0.30 * c) * heatMods);
+  addWeaponHeat((0.30 + 0.30 * c) * heatMods * (resonant ? 0.7 : 1));
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
+  if (resonant) {
+    addFloater(G.paddle.x, shipY() - 72, 'RESONANT!', '#80ffea', 15);
+    ringFx(G.paddle.x, shipY() - 20, '#80ffea', 5, 74, 3, 0.4);
+    tone(1240, 0.16, 'sine', 0.06, 320); // the crystalline timing chime
+  }
   // WAR MACHINE: the rail spend never resets the gatling's cadence — the two
   // forms flow into each other, sharing only the heat bar
   if (upgN('warmachine')) {

@@ -5,6 +5,24 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 2 Round A: resonance, overcharge, Spectral Veil
+
+- **Resonant release**: `RESONANCE_WINDOW` (0.38s, state.js) after the
+  charge tops out; `G.chargeFullT` clocks it (update.js charge block);
+  `fireCharge(c, resonant)` applies +25% power / +1 pierce / ×0.7 heat +
+  chime + `statsResonant()`. FIRE pad label walks % → RESONANT! →
+  RELEASE! → OVERCHARGE.
+- **Overcharge**: >1.4s on a full charge → `addWeaponHeat(dt*0.4)` — nets
+  ≈ +0.12 heat/s over passive cooling, so hoarding costs.
+- **Spectral Veil**: `br.specVeil` assigned in buildLevel (region 3+,
+  ≤2 spirit-type flyers, junkie, non-boss; one-per-run teach card);
+  `specVeilActive` cycles 2.0s on / 1.4s off; charged bolts `continue`
+  through active veils in the bolt block (no pierce/lastHit spend);
+  dashed-halo shimmer tell in the bareMon render path.
+- **Tests** (53 → 55): resonance boost/count, plain-release contrast,
+  overcharge net heat, sustained-spam overheat band [5, 10.5]s, fire-rate
+  upgrades never crueller; veil active/open windows both directions.
+
 ## 2026-07-19 — Milestone 1 Round D (part 2): Kanto sky life + demo audit
 
 - **Distant flocks** (scenery.js `updateFlocks`/`drawFlocks`): loose V
