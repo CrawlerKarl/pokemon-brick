@@ -757,6 +757,23 @@ function beginUpgradeInstallFx(icon, color, name, pathKey = null, tierIdx = 0, b
   const dur = big ? 3.4 : 2.4;
   G.upgradeFx = { icon, color, name, pathKey, tierIdx, t: dur, max: dur, big };
 }
+// Mew VMAX victory owes an EXTRA normal draft: after installing a pick, if a
+// bonus draft is still owed, roll a fresh hand (reflecting the just-installed
+// node) and stay on the draft instead of resuming play. Returns true when it
+// kept the player in the draft.
+function chainBonusDraft() {
+  if (!(G.secret.bonusDrafts > 0)) return false;
+  G.secret.bonusDrafts--;
+  rollUpgradeChoices(); // reflects the node just installed
+  if (!G.upgradeChoices) return false; // nothing left to offer → resume play
+  G.state = 'upgrade'; G.stateT = 0;
+  draftSel = null; G.rerolled = false;
+  upgradeTreeOpen = G.mode === 'junkie' && G.upgradeChoices.every(x => x.pathKey || x.web || x.stack);
+  if (upgradeTreeOpen) syncTreeSelectionToDraft();
+  setAnnounce('fairy', '#d780ff', 'RIFT BONUS DRAFT',
+    'MEW VMAX GRANTS ONE MORE CONSTELLATION PICK', 2.8);
+  return true;
+}
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
@@ -793,6 +810,7 @@ function pickUpgrade(i) {
     G.upgradeChoices = null;
     upgradeTreeOpen = false;
     SFX.power();
+    if (chainBonusDraft()) return;
     buildLevel(G.level);
     serve();
     if (G.justEvolved) { G.justEvolved = false; return; }
@@ -814,6 +832,7 @@ function pickUpgrade(i) {
     G.upgradeChoices = null;
     upgradeTreeOpen = false;
     SFX.power();
+    if (chainBonusDraft()) return;
     buildLevel(G.level);
     serve();
     setAnnounce(c.stack.icon, c.stack.color,
@@ -829,6 +848,7 @@ function pickUpgrade(i) {
   G.upgradeChoices = null;
   upgradeTreeOpen = false;
   SFX.power();
+  if (chainBonusDraft()) return;
   const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);
   serve();
@@ -1079,12 +1099,12 @@ function onPress(x, y) {
       }
       return;
     }
-    // PAGE 1 — pick your game: three animated mode cards
+    // PAGE 1 — select a game in the compact rail, then use the single hero
+    // action to enter setup. Keeping selection and launch separate prevents a
+    // stray tap from dropping players into a setup flow they did not expect.
     const L = menuLayout();
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
     if (inRect(x, y, L.quick)) {
-      SETTINGS.mode = 'junkie';
-      saveSettings();
       setupStep = 'pilot'; menuPage = 'setup'; SFX.power();
       return;
     }
@@ -1092,7 +1112,7 @@ function onPress(x, y) {
     for (let i = 0; i < MODES.length; i++) {
       if (inRect(x, y, L.card(i))) {
         SETTINGS.mode = MODES[i].key; saveSettings();
-        setupStep = 'pilot'; menuPage = 'setup'; SFX.power(); return;
+        SFX.wall(); return;
       }
     }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }

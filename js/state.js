@@ -204,6 +204,7 @@ function freshSecretState() {
     shards: [false, false, false], offered: [false, false, false], pendingShard: null,
     vmax: false, rewardDraft: false, deferredChoices: null,
     completed: false, lastReward: null,
+    bonusDrafts: 0, // Mew VMAX victory grants this many EXTRA normal drafts
   };
 }
 function secretEligible() {
@@ -550,7 +551,11 @@ function applyPower(p, srcType) {
     const weak = (RESIST[srcType] || []).slice(0, 2).join(', ').toUpperCase();
     sub = srcType.toUpperCase() + ' BALL' + (strong ? ' — 2× vs ' + strong : '') + (weak ? ' · ¼× vs ' + weak : '');
   }
-  setAnnounce(p.icon, p.color, p.name + (tier > 1 ? '  ' + romanTier(tier) : ''), p.desc, 2.0, sub);
+  // shooter modes read the paddle-free label (`sname`/`sdesc`) when a power
+  // has one — a Starfighter pilot never hears about a paddle it doesn't have.
+  const pName = (G.mode !== 'classic' && p.sname) ? p.sname : p.name;
+  const pDesc = (G.mode !== 'classic' && p.sdesc) ? p.sdesc : p.desc;
+  setAnnounce(p.icon, p.color, pName + (tier > 1 ? '  ' + romanTier(tier) : ''), pDesc, 2.0, sub);
 }
 
 // ============================================================

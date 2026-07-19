@@ -4111,8 +4111,334 @@ function drawMenuAdventureBackdrop(L) {
   ctx.fillStyle = 'rgba(16,74,92,0.48)'; ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
 }
+
+// Home-screen redesign: the selected game owns the canvas. The backdrop is
+// deliberately quiet; the large diorama carries the fantasy and the three
+// bottom switches are the only mode-choice UI.
+function drawHomeBackdrop(L, mode) {
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#050816'); bg.addColorStop(0.52, '#0a1428'); bg.addColorStop(1, '#101a31');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const gx = L.narrow ? W * 0.52 : W * 0.78, gy = H * 0.3;
+  const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, Math.max(W, H) * 0.62);
+  glow.addColorStop(0, mode.accent + '32'); glow.addColorStop(0.46, mode.accent + '10'); glow.addColorStop(1, mode.accent + '00');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  for (let i = 0; i < 38; i++) {
+    const drift = SETTINGS.reduceFlash ? 0 : (G.time * (1.4 + i % 3) + i * 37) % (W + 60);
+    const x = ((i * 97 + drift) % (W + 60)) - 30, y = 20 + ((i * 53) % Math.max(40, H - 70));
+    const a = 0.08 + (i % 5) * 0.025;
+    ctx.fillStyle = i % 6 ? `rgba(255,255,255,${a})` : mode.accent + '28';
+    ctx.fillRect(x, y, i % 7 ? 1.2 : 2.2, i % 7 ? 1.2 : 2.2);
+  }
+  // One broad energy path supplies depth without fighting the UI.
+  ctx.globalAlpha = 0.2; ctx.strokeStyle = mode.accent; ctx.lineWidth = Math.max(2, W * 0.004); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-40, H * 0.9);
+  ctx.bezierCurveTo(W * 0.3, H * 0.66, W * 0.52, H * 0.96, W + 50, H * 0.68); ctx.stroke();
+  ctx.restore();
+  const shade = ctx.createLinearGradient(0, 0, 0, H);
+  shade.addColorStop(0, 'rgba(0,0,0,0.06)'); shade.addColorStop(0.65, 'rgba(0,0,0,0.02)'); shade.addColorStop(1, 'rgba(0,0,0,0.38)');
+  ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);
+}
+
+function drawHomeUtility(g, label, activeColor) {
+  const hov = inRect(mouseX, lastMouseY, g);
+  roundRect(g.x, g.y, g.w, g.h, Math.min(14, g.h / 2));
+  ctx.fillStyle = hov ? 'rgba(255,255,255,0.12)' : 'rgba(11,18,35,0.72)'; ctx.fill();
+  ctx.strokeStyle = hov ? activeColor : 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.font = `800 ${g.w < 115 ? 9 : 10}px Orbitron, sans-serif`;
+  ctx.fillStyle = hov ? '#ffffff' : '#b8c4d8';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, g.x + g.w / 2, g.y + g.h / 2 + 0.5, g.w - 14);
+}
+
+function drawHomePreviewBadge(r, mode, rightText) {
+  const h = 24, y = r.y + 14;
+  ctx.font = '800 9px Orbitron, sans-serif';
+  const left = 'LIVE GAMEPLAY';
+  const lw = ctx.measureText(left).width + 22;
+  roundRect(r.x + 14, y, lw, h, h / 2);
+  ctx.fillStyle = 'rgba(5,8,20,0.76)'; ctx.fill();
+  ctx.strokeStyle = mode.accent + '99'; ctx.stroke();
+  ctx.fillStyle = '#f6f8ff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(left, r.x + 14 + lw / 2, y + h / 2 + 0.5);
+  if (r.w > 430) {
+    const rw = ctx.measureText(rightText).width + 22;
+    roundRect(r.x + r.w - 14 - rw, y, rw, h, h / 2);
+    ctx.fillStyle = 'rgba(5,8,20,0.76)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.stroke();
+    ctx.fillStyle = mode.accent; ctx.fillText(rightText, r.x + r.w - 14 - rw / 2, y + h / 2 + 0.5);
+  }
+}
+
+function drawHomePreview(mode, r) {
+  const t = SETTINGS.reduceFlash ? (mode.key === 'junkie' ? 2.2 : 1.2) : G.time;
+  ctx.save();
+  roundRect(r.x, r.y, r.w, r.h, Math.min(22, r.h * 0.08)); ctx.clip();
+  const sky = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+  if (mode.key === 'junkie') {
+    sky.addColorStop(0, '#111a51'); sky.addColorStop(0.55, '#3a286a'); sky.addColorStop(1, '#9b536d');
+  } else if (mode.key === 'classic') {
+    sky.addColorStop(0, '#153552'); sky.addColorStop(0.56, '#23655f'); sky.addColorStop(1, '#397643');
+  } else {
+    sky.addColorStop(0, '#092b46'); sky.addColorStop(0.5, '#075b70'); sky.addColorStop(1, '#176b64');
+  }
+  ctx.fillStyle = sky; ctx.fillRect(r.x, r.y, r.w, r.h);
+
+  if (mode.key === 'junkie') {
+    // A real battle lane: squad above, controllable partner below, friendly
+    // shots travelling up and hostile shots travelling down.
+    const vx = r.x + r.w / 2, horizon = r.y + r.h * 0.3;
+    ctx.strokeStyle = 'rgba(215,184,255,0.18)'; ctx.lineWidth = 1;
+    for (let i = -7; i <= 7; i++) {
+      ctx.beginPath(); ctx.moveTo(vx + i * r.w * 0.008, horizon); ctx.lineTo(vx + i * r.w * 0.11, r.y + r.h); ctx.stroke();
+    }
+    for (let i = 1; i <= 4; i++) {
+      ctx.globalAlpha = 0.24 - i * 0.025; ctx.beginPath();
+      ctx.ellipse(vx, horizon, r.w * (0.08 + i * 0.11), r.h * (0.03 + i * 0.11), 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < 28; i++) {
+      const sx = r.x + ((i * 79 + 13) % r.w), sy = r.y + ((i * 43 + 21) % r.h);
+      ctx.fillStyle = `rgba(255,255,255,${0.16 + 0.2 * Math.abs(Math.sin(t * 1.5 + i))})`;
+      ctx.fillRect(sx, sy, 1.5, 1.5);
+    }
+    const enemyIds = [16, 41, 10, 92, 19], enemyY = r.y + r.h * 0.25;
+    const spread = Math.min(r.w * 0.33, 250), es = Math.max(24, Math.min(46, r.h * 0.13));
+    for (let i = 0; i < enemyIds.length; i++) {
+      const a = Math.PI + i / 4 * Math.PI, ex = vx + Math.cos(a) * spread;
+      const ey = enemyY + Math.sin(a) * r.h * 0.08 + Math.sin(t * 2 + i) * 3;
+      const img = getSprite(enemyIds[i]);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, ex - es / 2, ey - es / 2, es, es);
+    }
+    const ps = Math.max(72, Math.min(142, r.h * 0.39, r.w * 0.23));
+    const px = vx + Math.sin(t * 0.72) * r.w * 0.15, py = r.y + r.h * 0.72;
+    for (let k = 0; k < 3; k++) {
+      const u = (t * 0.72 + k * 0.34) % 1;
+      const bx = px + (k - 1) * 10 * (1 - u), by = py - ps * 0.28 + (enemyY - py) * u;
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = 12;
+      roundRect(bx - 3, by - 11, 6, 22, 3); ctx.fill(); ctx.shadowBlur = 0;
+    }
+    for (let k = 0; k < 3; k++) {
+      const u = (t * 0.38 + k * 0.36) % 1, side = k % 2 ? 1 : -1;
+      const sx = vx + side * spread * (0.35 + k * 0.12);
+      const ex = sx + (px + side * r.w * 0.1 - sx) * u, ey = enemyY + (py - enemyY) * u;
+      ctx.fillStyle = k === 1 ? '#ffd180' : '#ff7185'; ctx.shadowColor = '#ff5a70'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(ex, ey, k === 1 ? 4 : 2.7, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    }
+    drawMenuStarfighterRig(px, py, ps, t, mode.accent, true);
+    drawHomePreviewBadge(r, mode, 'FLY + DODGE + FIRE');
+  } else {
+    // The wall modes show their literal game loop, including Pokémon inside
+    // the blocks. Breaker gets one bright ball; Blaster gets a volley + charge.
+    const cols = 5, rows = 3, gap = Math.max(4, Math.min(8, r.w * 0.012));
+    const wallW = Math.min(r.w - 52, 560), bw = (wallW - gap * (cols - 1)) / cols;
+    const bh = Math.max(22, Math.min(42, r.h * 0.12));
+    const wallX = r.x + r.w / 2 - wallW / 2, wallY = r.y + r.h * 0.23;
+    const ids = [25, 74, 133, 92, 10, 1, 7, 4, 39, 52, 143, 147, 37, 41, 54];
+    for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) {
+      const i = row * cols + col, x = wallX + col * (bw + gap), y = wallY + row * (bh + gap);
+      const hit = mode.key === 'classic'
+        ? Math.max(0, 1 - Math.abs(((t * 0.48) % 1) - (i % cols) / cols) * 8)
+        : Math.max(0, 1 - Math.abs(((t * 0.7 + col * 0.12) % 1) - 0.9) * 10);
+      if (hit > 0.15) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 14 * hit; }
+      roundRect(x, y, bw, bh, 7);
+      const colors = ['#ff7d87', '#61bff4', '#ffd966', '#75d49b', '#be8df1'];
+      ctx.fillStyle = colors[col] + (row === 1 ? 'dd' : 'bb'); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.stroke();
+      const img = getSprite(ids[i]), ms = Math.min(bh * 1.12, bw * 0.42);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, x + bw / 2 - ms / 2, y + bh / 2 - ms / 2, ms, ms);
+    }
+    const paddleY = r.y + r.h * 0.84, paddleW = Math.max(78, Math.min(154, r.w * 0.25));
+    const paddleX = r.x + r.w / 2 + Math.sin(t * 0.7) * r.w * 0.16;
+    ctx.shadowColor = mode.accent; ctx.shadowBlur = 15;
+    roundRect(paddleX - paddleW / 2, paddleY, paddleW, 11, 6); ctx.fillStyle = mode.accent; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; roundRect(paddleX - paddleW * 0.28, paddleY + 2, paddleW * 0.56, 3, 2); ctx.fill();
+    if (mode.key === 'classic') {
+      const u = 1 - Math.abs(((t * 0.72) % 2) - 1), targetX = wallX + wallW * (0.18 + 0.64 * ((Math.floor(t * 0.36) % 4) / 3));
+      const bx = paddleX + (targetX - paddleX) * u, by = paddleY - 10 + (wallY + rows * (bh + gap) - paddleY) * u;
+      ctx.strokeStyle = 'rgba(190,232,255,0.3)'; ctx.lineWidth = 2; ctx.setLineDash([7, 9]);
+      ctx.beginPath(); ctx.moveTo(paddleX, paddleY - 5); ctx.lineTo(targetX, wallY + rows * (bh + gap)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(bx, by, Math.max(7, r.h * 0.025), 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      drawHomePreviewBadge(r, mode, 'BOUNCE + AIM + RALLY');
+    } else {
+      for (let k = 0; k < 4; k++) {
+        const u = (t * 0.76 + k * 0.24) % 1, bx = paddleX + (k - 1.5) * 18 * u;
+        const by = paddleY - 8 + (wallY + rows * (bh + gap) - paddleY) * u;
+        ctx.fillStyle = '#d9ffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = 11;
+        roundRect(bx - 3, by - 11, 6, 22, 3); ctx.fill(); ctx.shadowBlur = 0;
+      }
+      const charge = (t % 4.2) / 4.2;
+      if (charge > 0.58 && charge < 0.78) {
+        const u = (charge - 0.58) / 0.2, by = paddleY - 12 + (wallY + rows * (bh + gap) - paddleY) * u;
+        ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#8ff7ff'; ctx.shadowBlur = 24;
+        roundRect(paddleX - 8, by - 22, 16, 44, 8); ctx.fill(); ctx.shadowBlur = 0;
+      }
+      drawHomePreviewBadge(r, mode, 'DIRECT FIRE + CHARGE');
+    }
+  }
+  const edge = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+  edge.addColorStop(0, 'rgba(255,255,255,0.08)'); edge.addColorStop(0.6, 'rgba(255,255,255,0)'); edge.addColorStop(1, 'rgba(2,4,12,0.34)');
+  ctx.fillStyle = edge; ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.restore();
+  roundRect(r.x, r.y, r.w, r.h, Math.min(22, r.h * 0.08));
+  ctx.strokeStyle = mode.accent + 'aa'; ctx.lineWidth = 1.6; ctx.stroke();
+}
+
+function drawHomeModeSwitch(mode, g, selected, L) {
+  const hov = inRect(mouseX, lastMouseY, g);
+  ctx.save();
+  if (selected) { ctx.shadowColor = mode.accent; ctx.shadowBlur = hov ? 18 : 10; }
+  roundRect(g.x, g.y, g.w, g.h, Math.min(13, g.h * 0.22));
+  ctx.fillStyle = selected ? mode.accent + '22' : hov ? 'rgba(255,255,255,0.1)' : 'rgba(7,12,25,0.76)'; ctx.fill();
+  ctx.shadowBlur = 0; ctx.strokeStyle = selected ? mode.accent : 'rgba(255,255,255,0.13)'; ctx.lineWidth = selected ? 1.8 : 1; ctx.stroke();
+  if (selected) {
+    roundRect(g.x + 9, g.y + 7, 4, g.h - 14, 2); ctx.fillStyle = mode.accent; ctx.fill();
+  }
+  const tx = g.x + (selected ? 24 : 16);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `900 ${L.short ? 10 : L.narrow ? 11.5 : 14}px Orbitron, sans-serif`;
+  ctx.fillStyle = selected || hov ? '#ffffff' : '#a9b4c8';
+  ctx.fillText(mode.label, tx, g.y + g.h * (L.short ? 0.5 : 0.39), g.w - (selected ? 32 : 24));
+  if (!L.short) {
+    const copy = mode.key === 'junkie' ? 'FLY + FIRE' : mode.key === 'classic' ? 'BALL + PADDLE' : 'DIRECT FIRE';
+    ctx.font = bodyFont(L.narrow ? 9 : 10.5, 700); ctx.fillStyle = selected ? mode.accent : '#748198';
+    ctx.fillText(copy, tx, g.y + g.h * 0.7, g.w - (selected ? 32 : 24));
+  }
+  ctx.restore();
+}
+
+function drawMenuRedesign() {
+  const L = menuLayout();
+  const activeIndex = Math.max(0, MODES.findIndex(m => m.key === SETTINGS.mode));
+  const mode = MODES[activeIndex];
+  drawHomeBackdrop(L, mode);
+  ctx.textBaseline = 'middle';
+
+  // Compact brand bar: no glass billboard, no competing tagline.
+  const brandX = L.narrow ? W / 2 : L.pad;
+  ctx.textAlign = L.narrow ? 'center' : 'left';
+  ctx.font = `900 ${L.titleSize}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#ffffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = 12;
+  ctx.fillText(GAME_TITLE, brandX, L.titleY);
+  const brandWidth = ctx.measureText(GAME_TITLE).width;
+  ctx.shadowBlur = 0;
+  const editionText = 'POKÉMON EDITION';
+  ctx.font = '800 8px Orbitron, sans-serif';
+  const editionW = ctx.measureText(editionText).width + 20;
+  const ex = L.narrow ? W / 2 - editionW / 2 : L.pad + brandWidth + 14;
+  const ey = L.narrow ? L.titleY + L.titleSize * 0.68 : L.titleY - 11;
+  roundRect(ex, ey, editionW, 22, 11); ctx.fillStyle = mode.accent + '24'; ctx.fill();
+  ctx.strokeStyle = mode.accent + '88'; ctx.stroke(); ctx.fillStyle = mode.accent;
+  ctx.textAlign = 'center'; ctx.fillText(editionText, ex + editionW / 2, ey + 11.5);
+  drawHomeUtility(L.dex, '◓ POKÉDEX ' + DEX.size + '/' + dexTotal(), mode.accent);
+  drawHomeUtility(L.adv, '⚙ SETTINGS', mode.accent);
+
+  // Unified hero surface, with a calm copy column and a literal game preview.
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.58)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14;
+  roundRect(L.hero.x, L.hero.y, L.hero.w, L.hero.h, L.narrow ? 22 : 28);
+  ctx.fillStyle = 'rgba(7,11,24,0.92)'; ctx.fill(); ctx.restore();
+  roundRect(L.hero.x, L.hero.y, L.hero.w, L.hero.h, L.narrow ? 22 : 28);
+  ctx.strokeStyle = 'rgba(255,255,255,0.13)'; ctx.lineWidth = 1; ctx.stroke();
+  if (!L.narrow) {
+    const pane = ctx.createLinearGradient(L.hero.x, 0, L.hero.x + L.hero.w * 0.39, 0);
+    pane.addColorStop(0, mode.accent + '13'); pane.addColorStop(1, mode.accent + '00');
+    ctx.fillStyle = pane; roundRect(L.hero.x + 1, L.hero.y + 1, L.hero.w * 0.4, L.hero.h - 2, 27); ctx.fill();
+  }
+  drawHomePreview(mode, L.preview);
+
+  const c = L.copy, top = c.y + (L.narrow ? 4 : 2);
+  ctx.textAlign = 'left';
+  ctx.font = `800 ${L.short ? 9 : 11}px Orbitron, sans-serif`; ctx.fillStyle = mode.accent;
+  ctx.fillText((mode.key === 'junkie' ? '★ FEATURED CAMPAIGN' : 'ARCADE CAMPAIGN') + '  /  ' + mode.desc,
+    c.x, top + 8, c.w);
+  const nameY = top + (L.short ? 32 : 52);
+  ctx.font = `900 ${L.short ? 25 : L.narrow ? 34 : Math.min(48, c.w / 7.7)}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#ffffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = 13;
+  ctx.fillText(mode.label, c.x, nameY, c.w); ctx.shadowBlur = 0;
+  if (!L.short || (L.narrow && H >= 560)) {
+    const summaryY = nameY + (L.narrow ? 45 : 57);
+    ctx.font = bodyFont(L.short ? 12.5 : L.narrow ? 15 : 17, 600); ctx.fillStyle = '#c5cedd';
+    ctx.fillText(mode.summary[0], c.x, summaryY, c.w);
+    ctx.fillText(mode.summary[1], c.x, summaryY + (L.short ? 19 : L.narrow ? 22 : 25), c.w);
+  }
+  // The control recipe already appears in the mode switcher. On shorter
+  // phones, omitting this duplicate pill preserves breathing room between
+  // the description and the primary touch target.
+  if (!L.narrow || H >= 760 || L.short) {
+    const pillY = L.quick.y - (L.short ? 24 : 38), pillH = L.short ? 18 : 25;
+    ctx.font = `800 ${L.short ? 8 : 10}px Orbitron, sans-serif`;
+    const pillW = Math.min(c.w, ctx.measureText(mode.mechanic).width + (L.short ? 20 : 28));
+    roundRect(c.x, pillY - pillH / 2, pillW, pillH, pillH / 2);
+    ctx.fillStyle = mode.accent + '1f'; ctx.fill(); ctx.strokeStyle = mode.accent + '99'; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = '#eef1f8';
+    ctx.fillText(mode.mechanic, c.x + pillW / 2, pillY + 0.5, pillW - 12);
+  }
+
+  // One unambiguous start action for the selected mode.
+  ctx.textAlign = 'center';
+  const q = L.quick, hovQ = inRect(mouseX, lastMouseY, q);
+  ctx.save(); ctx.shadowColor = mode.accent; ctx.shadowBlur = hovQ ? 24 : 13;
+  roundRect(q.x, q.y, q.w, q.h, 13);
+  const qg = ctx.createLinearGradient(0, q.y, 0, q.y + q.h);
+  qg.addColorStop(0, mixHex(mode.accent, '#ffffff', hovQ ? 0.34 : 0.18));
+  qg.addColorStop(1, mixHex(mode.accent, '#050816', mode.key === 'junkie' ? 0.28 : 0.18));
+  ctx.fillStyle = qg; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.font = `900 ${L.short ? 11 : 14}px Orbitron, sans-serif`;
+  ctx.fillStyle = mode.key === 'junkie' ? '#ffffff' : '#07101c';
+  ctx.fillText('▶  START ' + mode.label, q.x + q.w / 2, q.y + q.h / 2 + 0.5, q.w - 20);
+  ctx.restore();
+
+  const d = L.daily, hovD = inRect(mouseX, lastMouseY, d), best = dailyBest();
+  roundRect(d.x, d.y, d.w, d.h, 11);
+  ctx.fillStyle = hovD ? 'rgba(128,216,255,0.18)' : 'rgba(255,255,255,0.055)'; ctx.fill();
+  ctx.strokeStyle = hovD ? '#80d8ff' : 'rgba(255,255,255,0.18)'; ctx.stroke();
+  ctx.font = `800 ${L.short ? 8 : d.w < 180 ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = hovD ? '#ffffff' : '#aebbd0';
+  const dailyLabel = best ? '★ DAILY · BEST ' + best : '★ DAILY BREAKER · ' + dailyShortDate();
+  ctx.fillText(dailyLabel, d.x + d.w / 2, d.y + d.h / 2 + 0.5, d.w - 12);
+  if (L.resume && RUN_CKPT) {
+    const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
+    roundRect(rb.x, rb.y, rb.w, rb.h, 11);
+    ctx.fillStyle = hovR ? 'rgba(128,216,255,0.24)' : 'rgba(128,216,255,0.1)'; ctx.fill();
+    ctx.strokeStyle = '#80d8ff'; ctx.stroke();
+    ctx.font = `900 ${L.short ? 8 : rb.w < 180 ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = '#e7f8ff';
+    ctx.fillText('▶ CONTINUE · WAVE ' + RUN_CKPT.lvl, rb.x + rb.w / 2, rb.y + rb.h / 2 + 0.5, rb.w - 12);
+  }
+
+  for (let i = 0; i < MODES.length; i++) drawHomeModeSwitch(MODES[i], L.card(i), i === activeIndex, L);
+
+  // Returning-player context is reduced to one calm footer line on roomy
+  // screens. Mobile keeps only the two utility buttons.
+  if (L.progress) {
+    const p = L.progress, next = nextDexReward(), lvl = RUN_CKPT ? RUN_CKPT.lvl : 1;
+    roundRect(p.x, p.y, p.w, p.h, 15); ctx.fillStyle = 'rgba(7,12,24,0.74)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.stroke();
+    ctx.textAlign = 'left'; ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#7c8aa2';
+    ctx.fillText('JOURNEY', p.x + 20, p.y + 17);
+    ctx.font = bodyFont(12, 700); ctx.fillStyle = '#e4e9f2';
+    ctx.fillText(genFor(lvl).name + '  ·  WAVE ' + lvl + ' OF 27', p.x + 20, p.y + 35);
+    const rx = p.x + Math.min(300, p.w * 0.31);
+    ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#7c8aa2';
+    ctx.fillText('RESEARCH  ' + DEX.size + '/' + dexTotal(), rx, p.y + 17);
+    ctx.font = bodyFont(12, 700); ctx.fillStyle = '#e4e9f2';
+    ctx.fillText(next ? next.name + '  ·  ' + Math.max(0, next.at - DEX.size) + ' TO GO' : 'ALL REWARDS UNLOCKED', rx, p.y + 35, p.w * 0.38);
+    if (p.w > 760) {
+      const routeX = p.x + p.w - 250, routeY = p.y + p.h / 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(routeX, routeY); ctx.lineTo(routeX + 218, routeY); ctx.stroke();
+      for (let i = 0; i < 9; i++) {
+        ctx.fillStyle = i <= regionIdx(lvl) ? GENS[i].accent : '#263248';
+        ctx.beginPath(); ctx.arc(routeX + i * 27.25, routeY, i === regionIdx(lvl) ? 5 : 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+  if (advOpen) drawAdvanced();
+  if (trialOpen) drawTrial();
+}
 function drawMenu() {
   if (menuPage === 'setup') { drawSetup(); return; }
+  drawMenuRedesign();
+  return;
   const L = menuLayout();
   drawMenuAdventureBackdrop(L);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -4688,7 +5014,11 @@ function drawPilotSetup(L, mode) {
   ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR FLIGHT PARTNER' : 'CHOOSE YOUR PARTNER', W / 2, L.sectionY);
   if (!L.short) {
     ctx.font = bodyFont(L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#90a4ae';
-    ctx.fillText('ALL 18 ARE HERE · EACH CHANGES YOUR ATTACK TYPE AND PASSIVE', W / 2, L.sectionY + 18, maxW);
+    const selected = STARTER_MON[SETTINGS.starter];
+    const headerCopy = L.info.h <= 12 && selected
+      ? selected.names[0].toUpperCase() + ' · ' + starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1).ability
+      : 'ALL 18 ARE HERE · EACH CHANGES YOUR ATTACK TYPE AND PASSIVE';
+    ctx.fillText(headerCopy, W / 2, L.sectionY + 18, maxW);
   }
   for (let i = 0; i < STARTERS.length; i++) {
     const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
@@ -4713,11 +5043,11 @@ function drawPilotSetup(L, mode) {
       ctx.font = '900 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#181100';
       ctx.fillText('OP', pg.x + pg.w - 13, pg.y + 9);
     }
-    ctx.font = `900 ${Math.min(compact ? 8.5 : 10, pg.w / 9.5)}px Orbitron, sans-serif`;
+    ctx.font = `900 ${Math.min(compact ? 9 : 11.5, pg.w / 9.5)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#fff' : '#dce4e8';
     ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h - (compact ? 8 : 18), pg.w - 5);
     if (!compact) {
-      ctx.font = `800 ${Math.min(7.2, pg.w / 14)}px Orbitron, sans-serif`; ctx.fillStyle = col;
+      ctx.font = `800 ${Math.min(8.5, pg.w / 14)}px Orbitron, sans-serif`; ctx.fillStyle = col;
       ctx.fillText(copy.ability, pg.x + pg.w / 2, pg.y + pg.h - 7, pg.w - 5);
     }
     ctx.restore();
@@ -5454,18 +5784,29 @@ function drawFullUpgradeTree() {
   };
   // A literal OPTION tag replaces the ambiguous numbered dot. Tags sit on
   // the centre-facing side so capstone/fusion labels remain unobstructed.
-  const offerFlag = (n, offer, inward = false) => {
+  // They are COLLECTED here and drawn in one final pass after every node so
+  // no neighbouring hexagon can ever paint over a tag; each gets a dark
+  // padding cushion so it reads cleanly against whatever sits behind it.
+  const offerPills = [];
+  const offerFlag = (n, offer, inward = false) => offerPills.push([n, offer, inward]);
+  const drawOfferPill = (n, offer, inward) => {
     const fw = Math.max(40, Math.min(54, n.r * 2.75)), fh = Math.max(13, Math.min(17, n.r * 0.8));
     const a = Number.isFinite(n.a) ? n.a : -Math.PI / 2;
     const dir = inward ? -1 : 1;
     const fcX = n.cx + Math.cos(a) * dir * (n.r + fw * 0.42);
     const fcY = n.cy + Math.sin(a) * dir * (n.r + fh * 0.68);
-    ctx.save(); ctx.shadowColor = '#ffffff'; ctx.shadowBlur = SETTINGS.reduceFlash ? 8 : 12;
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    // dark padding cushion — a hair larger than the tag on every side
+    const pad = 4;
+    roundRect(fcX - fw / 2 - pad, fcY - fh / 2 - pad, fw + pad * 2, fh + pad * 2, (fh + pad * 2) / 2);
+    ctx.fillStyle = 'rgba(4,9,22,0.85)'; ctx.fill();
+    ctx.shadowColor = '#ffffff'; ctx.shadowBlur = SETTINGS.reduceFlash ? 8 : 12;
     roundRect(fcX - fw / 2, fcY - fh / 2, fw, fh, fh / 2);
     ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = 'rgba(7,16,34,0.5)'; ctx.lineWidth = 1; ctx.stroke();
     ctx.font = `900 ${Math.max(6.5, Math.min(8, n.r * 0.42))}px Orbitron, sans-serif`;
-    ctx.fillStyle = '#071022'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#071022';
     ctx.fillText('OPTION ' + (offer + 1), fcX, fcY + 0.5, fw - 6);
     ctx.restore();
   };
@@ -5691,6 +6032,10 @@ function drawFullUpgradeTree() {
   }
   ctx.restore();
   ctx.restore();
+
+  // OPTION tags last of all — above every hexagon and the pilot core, so the
+  // three installable choices are always fully legible
+  offerPills.forEach(p => drawOfferPill(p[0], p[1], p[2]));
 
   drawTreeCameraControls(T);
   drawTreeDetail(T);
@@ -6369,6 +6714,7 @@ function drawResults() {
   const gen = GENS[regionIdx(R.lvl)];
   const accent = gen.accent;
   const short = H < 560;
+  const narrow = W < 620; // phones lay the medal rows out on two lines
   const fade = Math.min(1, t / 0.45);
   dim(0.62 * fade);
   ctx.save();
@@ -6397,40 +6743,57 @@ function drawResults() {
     W / 2, rowY + rowGap, W * 0.92);
   // objectives — the mastery list with medal states
   const objY = rowY + rowGap * (short ? 2.2 : 2.7);
-  const objH = short ? 30 : 40;
+  // narrow phones stack name+badge over the description, so the row is taller
+  const objH = narrow ? (short ? 42 : 54) : (short ? 30 : 40);
   const panelW = Math.min(W * 0.92, 640);
   ctx.font = '800 ' + (short ? 11 : 13) + 'px Orbitron, sans-serif';
   ctx.fillStyle = accent;
   ctx.fillText('— MASTERY OBJECTIVES —', W / 2, objY - (short ? 16 : 22));
   R.objectives.forEach((o, i) => {
-    const y = objY + i * objH + objH / 2;
     const x0 = W / 2 - panelW / 2;
-    roundRect(x0, objY + i * objH + 2, panelW, objH - 5, 9);
+    const rowTop = objY + i * objH + 2;
+    const cy = rowTop + (objH - 5) / 2;
+    roundRect(x0, rowTop, panelW, objH - 5, 9);
     ctx.fillStyle = o.done ? 'rgba(30,60,40,0.6)' : 'rgba(10,16,34,0.6)';
     ctx.fill();
     ctx.lineWidth = 1.2;
     ctx.strokeStyle = o.done ? '#66bb6a' : 'rgba(120,144,178,0.4)';
     ctx.stroke();
-    ctx.textAlign = 'left';
+    // the badge column is measured FIRST so the description can be clipped
+    // before it — the medal notification never gets text run into it
+    const badgeText = o.isNew ? 'NEW MEDAL!' : (o.already && o.done) ? 'EARNED' : '';
+    const badgeFont = o.isNew ? '900 ' + (short ? 9.5 : 11) + 'px Orbitron, sans-serif'
+      : '700 ' + (short ? 9 : 10.5) + 'px Orbitron, sans-serif';
+    let badgeW = 0;
+    if (badgeText) { ctx.font = badgeFont; badgeW = ctx.measureText(badgeText).width + 12; }
+    const nameX = x0 + 34;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = '900 ' + (short ? 12 : 14) + 'px Orbitron, sans-serif';
     ctx.fillStyle = o.done ? '#9CFF57' : '#5c6f8a';
-    ctx.fillText(o.done ? '✓' : '·', x0 + 14, y);
-    ctx.fillStyle = o.done ? '#ffffff' : '#8fa4bd';
-    ctx.font = '800 ' + (short ? 10.5 : 12.5) + 'px Orbitron, sans-serif';
-    ctx.fillText((o.ace ? '★ ' : '') + o.name, x0 + 34, y, panelW * 0.34);
-    ctx.font = bodyFont(short ? 10 : 12, 600);
-    ctx.fillStyle = o.done ? '#cfe8d0' : '#6d7f96';
-    ctx.fillText(o.desc, x0 + 34 + panelW * 0.36, y, panelW * 0.44);
-    ctx.textAlign = 'right';
-    if (o.isNew) {
-      const gl = 0.7 + 0.3 * Math.sin(G.time * 5 + i);
-      ctx.font = '900 ' + (short ? 9.5 : 11) + 'px Orbitron, sans-serif';
-      ctx.fillStyle = `rgba(255,213,79,${gl})`;
-      ctx.fillText('NEW MEDAL!', x0 + panelW - 12, y);
-    } else if (o.already && o.done) {
-      ctx.font = '700 ' + (short ? 9 : 10.5) + 'px Orbitron, sans-serif';
-      ctx.fillStyle = '#7e8ea6';
-      ctx.fillText('EARNED', x0 + panelW - 12, y);
+    ctx.fillText(o.done ? '✓' : '·', x0 + 14, cy);
+    if (narrow) {
+      // name + badge share the top line; the full description sits below
+      const nameY = cy - (short ? 8 : 10), descY = cy + (short ? 9 : 11);
+      ctx.fillStyle = o.done ? '#ffffff' : '#8fa4bd';
+      ctx.font = '800 ' + (short ? 10.5 : 12.5) + 'px Orbitron, sans-serif';
+      ctx.fillText((o.ace ? '★ ' : '') + o.name, nameX, nameY, panelW - 44 - badgeW);
+      ctx.font = bodyFont(short ? 9.5 : 11, 600);
+      ctx.fillStyle = o.done ? '#cfe8d0' : '#6d7f96';
+      ctx.fillText(o.desc, nameX, descY, panelW - 46);
+    } else {
+      ctx.fillStyle = o.done ? '#ffffff' : '#8fa4bd';
+      ctx.font = '800 12.5px Orbitron, sans-serif';
+      ctx.fillText((o.ace ? '★ ' : '') + o.name, nameX, cy, panelW * 0.30);
+      const descX = nameX + panelW * 0.32;
+      ctx.font = bodyFont(12, 600);
+      ctx.fillStyle = o.done ? '#cfe8d0' : '#6d7f96';
+      ctx.fillText(o.desc, descX, cy, (x0 + panelW - 12 - badgeW) - descX - 6);
+    }
+    if (badgeText) {
+      ctx.textAlign = 'right';
+      ctx.font = badgeFont;
+      ctx.fillStyle = o.isNew ? `rgba(255,213,79,${0.7 + 0.3 * Math.sin(G.time * 5 + i)})` : '#7e8ea6';
+      ctx.fillText(badgeText, x0 + panelW - 12, narrow ? cy - (short ? 8 : 10) : cy);
     }
     ctx.textAlign = 'center';
   });

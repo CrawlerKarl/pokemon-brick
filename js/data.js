@@ -297,9 +297,12 @@ function drawGlyph(c, key, x, y, r, col = '#fff', lw = null) {
 }
 const POWERS = {
   fire:   { key: 'fire',   icon: 'fire',   name: 'FIREBALL',       desc: 'BALLS BURN THROUGH BLOCKS',  color: '#ff7043' },
-  laser:  { key: 'laser',  icon: 'laser',  name: 'LASERS',          desc: 'PADDLE AUTO-FIRES LASERS',   color: '#ffd54f' },
+  laser:  { key: 'laser',  icon: 'laser',  name: 'LASERS',          desc: 'PADDLE AUTO-FIRES LASERS',   color: '#ffd54f',
+    sname: 'SUPPORT LASERS', sdesc: 'AUTO-FIRING SIDE CANNONS' },
   multi:  { key: 'multi',  icon: 'multi',  name: 'MULTIBALL',      desc: 'EVERY BALL SPLITS IN THREE', color: '#ab47bc' },
-  wide:   { key: 'wide',   icon: 'wide',   name: 'WIDE PADDLE',    desc: 'PADDLE GROWS LARGER',        color: '#42a5f5' },
+  // shooter modes have no paddle — `wide` widens the item-collection reach.
+  wide:   { key: 'wide',   icon: 'wide',   name: 'WIDE PADDLE',    desc: 'PADDLE GROWS LARGER',        color: '#42a5f5',
+    sname: 'WIDE CATCH', sdesc: 'ITEM COLLECTION REACH GROWS' },
   slow:   { key: 'slow',   icon: 'slow',   name: 'SLOW-MO',        desc: 'EVERYTHING SLOWS DOWN',      color: '#4dd0e1' },
   shield: { key: 'shield', icon: 'shield', name: 'SHIELD',         desc: 'BARRIER PROTECTS THE FLOOR', color: '#66bb6a' },
   magnet: { key: 'magnet', icon: 'magnet', name: 'MAGNET',         desc: 'BALLS STICK — FIRE TO AIM',  color: '#ec407a' },

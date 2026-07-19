@@ -1616,7 +1616,7 @@ window.requestAnimationFrame = function () { return 0; };
         setupStep = 'pilot'; const P = setupLayout();
         setupStep = 'difficulty'; const D = setupLayout();
         const L = menuLayout(), U = upgradeLayout(), T = upgradeTreeLayout(), A = advLayout();
-        const rects = { quick: L.quick, daily: L.daily, progress: L.progress, dex: L.dex, adv: L.adv,
+        const rects = { quick: L.quick, daily: L.daily, dex: L.dex, adv: L.adv,
           pilotBack: P.back, pilotNone: P.none, pilotNext: P.next,
           difficultyBack: D.back, pilotSummary: D.summary, editPilot: D.editPilot,
           trial: D.trial, start: D.start,
@@ -1626,6 +1626,7 @@ window.requestAnimationFrame = function () { return 0; };
           constellationZoomOut: T.zoomOut, constellationZoomIn: T.zoomIn,
           constellationFit: T.fit, constellationFocus: T.focus,
           constellationReroll: T.reroll, constellationInstall: T.confirm };
+        if (L.progress) rects.progress = L.progress;
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = P.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
@@ -1671,7 +1672,7 @@ window.requestAnimationFrame = function () { return 0; };
     const old = { mode: SETTINGS.mode, starter: SETTINGS.starter, preset: SETTINGS.preset,
       state: G.state, menuPage, setupStep };
     try {
-      assert(MODES[0].key === 'junkie' && /FEATURED/.test(MODES[0].desc),
+      assert(MODES[0].key === 'junkie' && MODES[0].summary && MODES[0].summary.length === 2,
         'STARFIGHTER is not the featured first mode');
       assert(!Object.values(MODE_MASCOTS).includes(384) && menuStarfighterPilot(0).id !== 384,
         'Rayquaza still owns the STARFIGHTER title-card identity');
@@ -1680,13 +1681,13 @@ window.requestAnimationFrame = function () { return 0; };
         /BALL|PADDLE/.test(MODES[1].mechanic + ' ' + MODES[1].lines.join(' ')) &&
         /NO BALL|DIRECT/.test(MODES[2].mechanic + ' ' + MODES[2].lines.join(' ')),
         'mode cards do not explain their distinct core interactions');
-      const L = menuLayout(), hero = L.card(0), side = L.card(1);
-      assert(hero.w * hero.h > side.w * side.h * 1.45,
-        'STARFIGHTER card is not materially larger than an arcade alternative');
+      const L = menuLayout(), first = L.card(0), side = L.card(1);
+      assert(Math.abs(first.w - side.w) < 2 && L.preview.w * L.preview.h > first.w * first.h * 2,
+        'selected-game preview is not clearly separated from the equal mode switchers');
       G.state = 'menu'; menuPage = 'modes'; setupStep = 'pilot'; SETTINGS.mode = 'classic';
       onPress(L.quick.x + L.quick.w / 2, L.quick.y + L.quick.h / 2);
-      assert(SETTINGS.mode === 'junkie' && menuPage === 'setup' && setupStep === 'pilot',
-        'primary CTA did not open STARFIGHTER partner selection');
+      assert(SETTINGS.mode === 'classic' && menuPage === 'setup' && setupStep === 'pilot',
+        'primary CTA did not open the selected mode\'s partner selection');
       const P = setupLayout();
       assert(STARTERS.every((_, i) => P.starter(i)), 'the partner screen does not expose all 18 choices');
       const fairy = STARTERS.findIndex(s => s.key === 'fairy'), fr = P.starter(fairy);
@@ -1906,25 +1907,31 @@ window.requestAnimationFrame = function () { return 0; };
     return '3 guaranteed pieces; complete key summons 18+ HP Mew VMAX; incomplete key keeps Mew';
   });
 
-  test('Mew VMAX grants a bonus secret-only upgrade draft', async () => {
-    SETTINGS.mode = 'classic'; resetRun(1, true, { seed: 'rift-reward' });
-    G.trial = false; G.daily = false; // test true-journey rewards in memory only
-    const ordinary = [{ stack: STACK_ITEMS[0] }];
-    G.state = 'upgrade'; G.secret.rewardDraft = true; G.secret.vmax = true;
-    G.secret.deferredChoices = ordinary;
-    G.upgradeChoices = SECRET_UPGRADES.map(secret => ({ secret }));
-    assert(G.upgradeChoices.length === 3 && new Set(G.upgradeChoices.map(c => c.secret.key)).size === 3,
-      'secret draft is not a fixed set of three unique rewards');
-    const hp0 = G.livesMax;
-    pickUpgrade(0);
-    assert(G.secretUpg.heart && G.livesMax === hp0 + 1 && G.lives === G.livesMax && G.mega === 1,
-      'Paradox Heart did not grant max HP, full healing, and full Mega');
-    assert(!G.secret.rewardDraft && !G.secret.vmax && G.upgradeChoices === ordinary,
-      'secret choice did not hand off to the normal Kanto reward');
-    applySecretUpgrade(SECRET_UPGRADES[1]); applySecretUpgrade(SECRET_UPGRADES[2]);
-    assert(G.secretUpg.lens && G.secretUpg.echo,
-      'Rift Lens or Echo Relay could not be equipped as secret-only upgrades');
-    return 'fixed 3-choice bonus draft; Heart, Lens, and Relay effects equip; ordinary draft follows';
+  test('Mew VMAX victory grants two normal drafts, no superpower', async () => {
+    const oldMode = SETTINGS.mode;
+    try {
+      SETTINGS.mode = 'junkie';
+      resetRun(3, true, { seed: 'rift-reward' });
+      G.trial = false; G.daily = false; // exercise the true-journey reward in memory
+      // reproduce the level-clear secret-victory setup (update.js)
+      rollUpgradeChoices();
+      G.secret.completed = true; G.secret.bonusDrafts = 1; G.rerolled = false;
+      G.state = 'upgrade'; G.stateT = 1;
+      assert(G.upgradeChoices && G.upgradeChoices.length && G.upgradeChoices.every(c => !c.secret),
+        'Mew VMAX offered superpower cards instead of a normal draft');
+      assert(G.secret.bonusDrafts === 1 && !G.secret.rewardDraft, 'bonus-draft reward was not armed');
+      // pick the FIRST → a second normal draft chains in, still on the draft
+      pickUpgrade(0);
+      assert(G.state === 'upgrade' && G.upgradeChoices && G.upgradeChoices.every(c => !c.secret) && G.secret.bonusDrafts === 0,
+        'first pick did not chain the second normal draft');
+      // pick the SECOND → resumes play, no third choice, no superpower granted
+      pickUpgrade(0);
+      assert((G.state === 'play' || G.state === 'serve') && !G.upgradeChoices,
+        'second pick did not resume play — a third choice appeared');
+      assert(!G.secretUpg.heart && !G.secretUpg.lens && !G.secretUpg.echo,
+        'a superpower was granted despite the reward being removed');
+      return 'Mew VMAX → two normal constellation drafts → next region; no one-off superpower';
+    } finally { SETTINGS.mode = oldMode; }
   });
 
   test('M0 balance instrumentation records the combat ledger', async () => {

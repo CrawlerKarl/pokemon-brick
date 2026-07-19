@@ -5,6 +5,29 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Polish pass: UI fixes + Mew VMAX reward rebalance
+
+Four player-reported items:
+- **Results medal overlap**: the objective description ran into the NEW
+  MEDAL! / EARNED badge on narrow screens. `drawResults` now measures the
+  badge column first and, on phones (`narrow = W < 620`), stacks name+badge
+  over the description on a taller row; desktop keeps one line with the
+  badge column reserved.
+- **OPTION tags covered by hexagons**: the constellation drew each OPTION
+  pill inline in the node loops, so a later neighbour painted over it. Pills
+  are now COLLECTED (`offerPills`) and drawn in one final pass above every
+  node + the pilot core, each on a dark padding cushion.
+- **"WIDE PADDLE" in Starfighter**: `wide` (and `laser`) power-ups weren't
+  remapped for shooter modes, so pickup announced paddle copy. Added
+  `sname`/`sdesc` to those POWERS and made `applyPower`'s announce
+  mode-aware (WIDE CATCH / SUPPORT LASERS).
+- **Mew VMAX reward** (user decision — two normal picks): retired the
+  one-off superpowers. Victory now sets `G.secret.bonusDrafts = 1` and
+  drops the rift background (`vmax = false`); the first pick chains a
+  second normal draft via `chainBonusDraft` (input.js), then Johto. No
+  reroll block (bonus drafts are normal, rerollable). `SECRET_UPGRADES`/
+  `applySecretUpgrade` kept only for grandfathered saves. Test rewritten.
+
 ## 2026-07-19 — Milestone 2 Round A: resonance, overcharge, Spectral Veil
 
 - **Resonant release**: `RESONANCE_WINDOW` (0.38s, state.js) after the

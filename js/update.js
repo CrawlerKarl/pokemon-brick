@@ -4061,19 +4061,20 @@ function update(dt) {
     rollUpgradeChoices();
     if (secretVictory) {
       G.secret.completed = true;
-      G.secret.rewardDraft = true;
-      G.secret.deferredChoices = G.upgradeChoices;
-      G.upgradeChoices = SECRET_UPGRADES.map(secret => ({ secret }));
+      G.secret.vmax = false; // the fight is won — drop the rift background
       G.score += 3000;
+      // Mew VMAX victory grants TWO normal constellation drafts — this one,
+      // plus a second chained in after the first pick (chainBonusDraft,
+      // input.js) — then straight to Johto. No one-off superpower.
+      G.secret.bonusDrafts = 1;
     }
     // The constellation is the primary choice surface for every normal hand —
     // tiers, bridges, superskills, and satellites all live on the map now.
-    // Only the fixed secret Rift draft keeps its dedicated cards.
-    upgradeTreeOpen = G.mode === 'junkie' && !secretVictory && !!G.upgradeChoices &&
+    upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices &&
       G.upgradeChoices.every(c => c.pathKey || c.web || c.stack);
     draftSel = null; // nothing inspected yet on a fresh draft
     if (upgradeTreeOpen) syncTreeSelectionToDraft();
-    G.rerolled = secretVictory; // forbidden rewards are a fixed, one-time set
+    G.rerolled = false; // bonus drafts are normal, rerollable hands
     // ---- ACT BOUNDARY: clearing Hoenn (→ act II) or Kalos (→ act III) is
     // the game's biggest beat — a full evolution ceremony plays before the
     // draft. The ceremony OWNS the partner evolution (bumps starterLvl now),
