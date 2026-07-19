@@ -2003,6 +2003,41 @@ function runBeat(beat) {
       break;
   }
 }
+// OBJECTIVE FAMILIES (Milestone 3 Round B) — a live in-wave objective that
+// changes the win condition. `survive`: the migration swarm keeps coming
+// (periodic reinforcements), you cannot clear by attrition — outlast the
+// timer and the flock DISPERSES (remaining flyers become fleeing crossers,
+// which the crosser-exempt clear logic then clears). The clear guard below
+// holds the wave open until the timer completes.
+function updateObjective(dt) {
+  const O = G.objective;
+  if (!O || G.mode !== 'junkie' || G.state !== 'play' || O.done) return;
+  if (O.type === 'survive') {
+    O.t += dt;
+    O.progress = Math.min(1, O.t / O.dur);
+    // keep the migration coming — periodic reinforcements, capped by budget
+    O.spawnT -= dt;
+    const aliveFlyers = G.bricks.filter(b => !b.dead && b.flight && !b.crosser).length;
+    if (O.spawnT <= 0 && aliveFlyers < 14) { spawnReinforcement(); O.spawnT = 5.5; }
+    if (O.t >= O.dur) {
+      O.done = true;
+      // the swarm DISPERSES: remaining flyers migrate away as fleeing
+      // crossers (no flight slot → crosser-exempt clear takes the wave)
+      for (const b of G.bricks) {
+        if (b.dead || b.isBoss || b.crosser) continue;
+        if (b.flight || b.dive || b.bare) {
+          b.flight = null; b.dive = null; b.bare = true;
+          b.crosser = { vx: ((b.bx + G.fx) < W / 2 ? -1 : 1) * Math.max(150, W * 0.2), bobPh: gameRand() * 6 };
+        }
+      }
+      G.enemyShots = G.enemyShots.filter(s => s.boss); // the swarm's fire scatters too
+      G.reinforce = 0; // outlasting the swarm ENDS the stage — no grind wave after
+      setAnnounce('star', '#ffd54f', 'MIGRATION SURVIVED!', 'THE FLOCK PASSES — THE SKY IS YOURS', 2.8,
+        null, null, false, true);
+      SFX.levelUp(); haptic('boss');
+    }
+  }
+}
 function updateDirector(dt) {
   const D = G.director;
   if (!D || G.mode !== 'junkie' || G.state !== 'play') return;
@@ -2471,6 +2506,7 @@ function update(dt) {
   }
 
   updateDirector(dt);
+  updateObjective(dt);
   // bonus crossers: straight harmless fly-bys — no formation slot, so the
   // separation solver and the overlap invariants never see them; escaping
   // off-screen retires them quietly (no faint, no reward)
@@ -4039,6 +4075,9 @@ function update(dt) {
 
   // ---- level clear → reinforcements first, then draft and move on ----
   if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier || b.crosser)) {
+    // a SURVIVE objective holds the wave open until its timer completes —
+    // you outlast the migration, you don't wipe it out
+    if (G.objective && G.objective.type === 'survive' && !G.objective.done) return;
     // the enemies are gone — any ROCK TOMB barriers crumble on their own
     for (const b of G.bricks) if (!b.dead && b.barrier) { b.dead = true; burst(b.bx + G.fx, b.by + G.fy, '#a1887f', 12, 180, 0.5); }
     if (G.reinforce > 0) {

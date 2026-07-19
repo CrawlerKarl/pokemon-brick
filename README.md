@@ -633,6 +633,16 @@ instead of blindly stacking attacks. Authored grammars so far: KANTO
 → recovery → final push); regions 3-9 use a default escalation → recovery
 arc until their Milestone 9 pass.
 
+**Objective families** (Milestone 3 Round B) — a stage may declare a live
+in-wave OBJECTIVE (`G.objective`, from `ENCOUNTER_OBJECTIVES` in data.js;
+controller `updateObjective`, banner `drawObjectiveBanner`) that changes
+HOW you clear it. **SURVIVE THE MIGRATION** (Hoenn challenge): you can't
+clear by attrition — a swarm keeps coming (periodic reinforcements);
+outlast the timer and the flock disperses (remaining flyers become
+fleeing crossers, and the crosser-exempt clear takes the wave). A gold
+top banner names the objective and counts down. More families
+(escort / capture / defend-lanes) join in a later round.
+
 ### HUD and first-wave coaching
 The HUD identifies a permanent starter element as **PARTNER** and a temporary
 override as **POWER-UP**/**ITEM** with its remaining duration. Mega shows a

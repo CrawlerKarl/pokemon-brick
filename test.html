@@ -2233,6 +2233,35 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('objective: survive the migration changes the win condition', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(8, true, { seed: 'obj-survive' }); // Hoenn challenge
+      paused = false; G.freeze = 0;
+      assert(G.objective && G.objective.type === 'survive' && G.objective.dur > 0,
+        'Hoenn challenge did not arm the survive objective');
+      // you CANNOT clear by attrition — killing everything keeps the wave open
+      let clearedEarly = false;
+      await runFrames(60 * 8, () => {
+        for (const b of G.bricks) if (!b.dead && !b.crosser && !b.barrier) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
+        if (G.state !== 'play') { clearedEarly = true; return false; }
+      });
+      assert(!clearedEarly && !G.objective.done, 'the survive wave cleared by attrition before the timer');
+      assert(G.objective.progress > 0.2, 'the survive timer did not advance');
+      // outlast the rest of the timer WITHOUT killing → the swarm disperses
+      await runFrames(60 * 16, () => G.objective.done ? false : undefined);
+      assert(G.objective.done, 'the survive timer did not complete');
+      assert(G.reinforce === 0 && G.bricks.some(b => b.crosser && !b.dead),
+        'the swarm did not disperse into fleeing crossers on survival');
+      // the dispersed swarm clears the wave (crosser-exempt) → results
+      await runFrames(60 * 8, () => G.state === 'play' ? undefined : false);
+      assert(G.state === 'results', 'surviving the migration did not clear the stage');
+      skipResults();
+      return 'survive: no clear-by-attrition; outlast the swarm → it disperses → stage clears';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   test('Mewtwo duel: focus orbs (deny/launch) + Psystrike interrupt', async () => {
     const oldPreset = SETTINGS.preset;
     try {

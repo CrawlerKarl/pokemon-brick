@@ -1645,3 +1645,14 @@ function encounterScript(lvl) {
   const g = REGION_GRAMMAR[regionIdx(lvl)] || REGION_GRAMMAR_DEFAULT;
   return (stageIdx(lvl) === 0 ? g.arrival : g.challenge) || [];
 }
+// OBJECTIVE FAMILIES (Milestone 3 Round B) — a stage may declare a live
+// in-wave OBJECTIVE that changes HOW you clear it, not just what you shoot.
+// `survive`: you cannot clear by attrition — a migration swarm keeps coming;
+// outlast the timer and the flock disperses (controller: updateObjective,
+// update.js; HUD: drawObjectiveBanner, render.js). Keyed region:stage,
+// junkie non-boss stages only. More families (escort/capture/…) join later.
+const ENCOUNTER_OBJECTIVES = {
+  '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
+    tip: "OUTLAST THE SWARM — YOU DON'T HAVE TO KILL THEM ALL" },
+};
+function encounterObjective(lvl) { return ENCOUNTER_OBJECTIVES[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }

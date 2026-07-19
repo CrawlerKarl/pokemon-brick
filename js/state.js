@@ -238,6 +238,7 @@ const G = {
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
   results: null, // stage-results interstitial payload (buildStageResults)
   director: null, // encounter director: the stage's authored beat script (Milestone 3)
+  objective: null, // live in-wave objective (survive/…) — Milestone 3 Round B
   uiTouchPulse: null, shareToast: 0,
   upgradeFx: null, // short install animation after a permanent draft pick
   // starter partner: which one, its ability tier, Torrent's return counter
@@ -1330,10 +1331,14 @@ function buildLevel(lvl) {
   // the director fires beats in order at their triggers and owns a live
   // threat multiplier. Boss stages keep their gauntlet choreography.
   G.director = null;
+  G.objective = null;
   if (G.mode === 'junkie' && !hasBoss) {
     const beats = encounterScript(lvl).map(b => ({ ...b, fired: false }));
     G.director = { beats, baseline: G.bricks.filter(b => !b.dead && !b.barrier).length,
       t: 0, lastFireT: 0, threatMul: 1, threatT: 0 };
+    // a live in-wave OBJECTIVE that changes how the stage is cleared
+    const o = encounterObjective(lvl);
+    if (o) G.objective = { ...o, t: 0, done: false, progress: 0, spawnT: 4 };
   }
   // ---- STARFIGHTER FIRST-FLIGHT COACH: five one-line steps taught during
   // Kanto's opening waves (fly → tap fire → hold charge → grab an orb → mega).

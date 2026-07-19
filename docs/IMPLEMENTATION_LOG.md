@@ -5,6 +5,23 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 3 Round B: objective families (survive)
+
+The first LIVE in-wave objective — a family that changes the win
+condition, not just a stat overlay.
+- **Framework**: `G.objective` (state.js, set in buildLevel from
+  `encounterObjective(lvl)` / `ENCOUNTER_OBJECTIVES` in data.js);
+  `updateObjective` (update.js); `drawObjectiveBanner` (render.js — a gold
+  top strip naming the objective + a countdown/progress fill).
+- **SURVIVE THE MIGRATION**: you can't clear by attrition — periodic
+  reinforcements keep the swarm dense; a clear guard holds the wave open
+  until the timer ends. On completion the flock DISPERSES (remaining
+  flyers become fleeing crossers, so the crosser-exempt clear takes the
+  wave) and `G.reinforce = 0` so no grind wave follows. Authored on Hoenn
+  challenge (`2:1`, level 8).
+- Suite 56 → 57 (survive: no clear-by-attrition, timer, disperse, clear).
+- Round C will add the entity-based families (escort / capture / defend).
+
 ## 2026-07-19 — Milestone 3 Round A: the reusable encounter director
 
 Generalized Kanto's hardcoded `G.beat` prototype into a data-driven

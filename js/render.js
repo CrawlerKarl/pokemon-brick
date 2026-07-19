@@ -3751,6 +3751,7 @@ function drawHUD() {
   ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
   drawBrickBehaviorLegend();
   drawCombatNotice();
+  drawObjectiveBanner();
   // ---- active power-up chips: capped slots so phones stay readable ----
   const active = [];
   for (const [slot, icon, color] of [
@@ -3848,6 +3849,37 @@ function drawBrickBehaviorLegend() {
   drawGlyph(ctx, info.icon, x + 15, y + h / 2, 5.5, info.color);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = info.color;
   ctx.fillText(label, x + w / 2 + 7, y + h / 2 + 0.5, w - 38);
+  ctx.restore();
+}
+// OBJECTIVE BANNER (Milestone 3 Round B) — a compact top strip naming the
+// live in-wave objective with a progress readout, so a survive/escort goal
+// is understandable from a UI cue, not just from the announce card.
+function drawObjectiveBanner() {
+  const O = G.objective;
+  if (!O || O.done || (G.state !== 'play' && G.state !== 'serve')) return;
+  const short = W < 560;
+  const label = O.name || 'OBJECTIVE';
+  let readout = '';
+  if (O.type === 'survive') readout = Math.max(0, Math.ceil(O.dur - O.t)) + 's';
+  const y = short ? 44 : 52;
+  const w = Math.min(W * 0.72, (short ? 220 : 300));
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  roundRect(W / 2 - w / 2, y, w, short ? 26 : 30, (short ? 26 : 30) / 2);
+  ctx.fillStyle = 'rgba(5,8,22,0.9)'; ctx.fill();
+  ctx.lineWidth = 1.4; ctx.strokeStyle = '#ffd54f'; ctx.stroke();
+  // progress bar fills the pill from the left
+  if (O.progress > 0) {
+    ctx.save();
+    roundRect(W / 2 - w / 2, y, w, short ? 26 : 30, (short ? 26 : 30) / 2); ctx.clip();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillRect(W / 2 - w / 2, y, w * O.progress, short ? 26 : 30);
+    ctx.restore();
+  }
+  ctx.font = `900 ${short ? 9.5 : 11}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#ffe082';
+  ctx.fillText('◎ ' + label + (readout ? '  ·  ' + readout : ''), W / 2, y + (short ? 13.5 : 15.5), w - 20);
   ctx.restore();
 }
 function drawCombatNotice() {
