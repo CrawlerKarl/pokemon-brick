@@ -15,6 +15,9 @@ future skins swap strings/art without touching mechanics. 11 JS modules in
 step / deps / framework. `G` (state.js) is the god-object holding all
 runtime state. The campaign roadmap lives in `docs/FULL_GAME_ROADMAP.md`
 (+ `docs/IMPLEMENTATION_LOG.md`) — consult it before starting a round.
+**Resuming after a break? Start at `docs/NEXT_SESSION_HANDOFF.md`** — it
+carries the current status, what to pick up next, the deploy loop, and the
+gotchas worth not rediscovering.
 
 **Three game modes** (`SETTINGS.mode` / `G.mode`, chosen on the title screen).
 UI labels are presentation-only (BREAKER / BLASTER / STARFIGHTER); the internal
@@ -170,6 +173,50 @@ phone — flag anything only verifiable there.
   deferred 0.5s for anticipation), swap sides in phase 2, and counter-rotate
   as boss-centered orbits in phase 3. Reinforcements reuse the wave's theme +
   family (`G.waveThemeObj`). The test suite asserts all of this.
+- **The ENCOUNTER DIRECTOR owns stage pacing (M3).** Every junkie non-boss
+  stage runs an authored beat script: `REGION_GRAMMAR`/`encounterScript`
+  (data.js) → `G.director` (buildLevel) → `updateDirector`/`runBeat`
+  (update.js). A beat fires ONCE at a `p` (alive/baseline progress) or
+  `afterPrev` (seconds after the previous beat) trigger, in list order.
+  Beat actions reuse existing machinery only — bonusFlock / raid / surge /
+  recovery / finalPush. **Regions must read differently by GRAMMAR, not by
+  bigger numbers.** `G.director.threatMul` (× `starThreatCap` via
+  `directorThreatMul()`) is the one knob for *simultaneous* threat —
+  recovery eases it, surge/finalPush raise it; never stack blind danger.
+- **Objective families may change the WIN CONDITION (M3).** `G.objective`
+  (`ENCOUNTER_OBJECTIVES`, data.js) + `updateObjective` (update.js) +
+  `drawObjectiveBanner` (render.js — an objective must always be readable
+  from a UI cue, not just an announce card). SURVIVE holds the wave open
+  via a clear guard, keeps the swarm dense with reinforcements, and on
+  completion DISPERSES survivors into fleeing crossers and zeroes
+  `G.reinforce` so outlasting ends the stage instead of spawning a grind
+  wave.
+- **`br.crosser` entities live OUTSIDE every formation system.** Bonus
+  flocks and dispersing swarms have no flight slot: excluded from the
+  separation solver, the overlap invariants, the shooter pool, the
+  `blocksStatic` position snap, the dramatic slow-mo, AND the level-clear
+  condition. Never let a crosser hold a wave hostage.
+- **Charge has a full timing arc (M2).** `RESONANCE_WINDOW` (0.38s after
+  the charge tops out) → resonant release (+25% power, +1 pierce, ×0.7
+  heat). Past ~1.4s the barrel OVERCHARGES (heat outpaces cooling). The
+  FIRE pad must always name the current point in that arc (% → RESONANT!
+  → RELEASE! → OVERCHARGE). **Heat fairness is a tested invariant:**
+  sustained spam overheats in the 5–10s band on Normal (7.6s today) and a
+  fire-rate upgrade may only ever make that band KINDER.
+- **Armor and veil are a matched pair.** SHELL ARMOR rewards the charged
+  shot; **SPECTRAL VEIL** (`br.specVeil`/`specVeilActive`, region 3+, ≤2
+  spirit flyers) punishes charge-spraying — charged bolts phase THROUGH
+  the shimmer (no damage, no pierce spent) while basic fire always lands.
+  Keep both alive so neither weapon dominates a mixed wave.
+- **Every stage clear passes through RESULTS (M1).** `G.state ===
+  'results'` sits between the wave clear and the draft: ledger readout +
+  mastery objectives + medals, ONE tap to continue (`advanceResults`,
+  input.js — mouse, touch, Space, Enter, Esc; a 0.45s dwell gate stops the
+  killing blow from skipping it). A pending act ceremony chains AFTER
+  results, then the draft. Tests that expect the draft right after a clear
+  must step through it (`skipResults()` in test.html). Medals persist in
+  `pkbrk-medals` for REAL journeys only — trials/dailies/cheated runs
+  evaluate and display but never save.
 - **Sprite kinematics live in update(), never render.** `updateSpriteKinematics`
   smooths `vvx/vvy/bank/face/animPh` with dt (60 Hz == 120 Hz); facing flips
   only after ~150 ms; gaits come from species `MOTION_PROFILES` (data.js,

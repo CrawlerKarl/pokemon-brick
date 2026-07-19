@@ -107,7 +107,8 @@ bright AND dark backdrops with honest hitR overlays, drawn by the game's own
 renderer), `package.json` (`check`/`verify-assets`/`serve` scripts), `tools/`
 (`fetch-sprites.js`, `verify-assets.js`), `assets/fonts/` (vendored Orbitron),
 `docs/` (`FULL_GAME_ROADMAP.md` + `IMPLEMENTATION_LOG.md` — the campaign
-roadmap and per-round log).
+roadmap and per-round log — plus `NEXT_SESSION_HANDOFF.md`, the start-here
+brief for resuming work).
 
 ---
 

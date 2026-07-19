@@ -91,31 +91,68 @@ non-blocking narrative cards, Kanto mastery medals + optional ace objectives.
 Done when: a new player learns every essential system without a manual;
 Kanto could ship as a public demo; Normal stays challenging but readable.
 
-## Milestone 2 — Normal-fire / charge / heat combat ecology ⬜
+## Milestone 2 — Normal-fire / charge / heat combat ecology 🔶
+(Round A shipped 2026-07-19, commit a00b803 — core ecology in place)
 
 Normal fire: destroys micro-projectiles, strips exposed shields, builds
 combo/Mega efficiently, maintains pressure while repositioning, rewards aim.
-Charge: cracks armor (SHELL ARMOR exists ◐), pierces formations, interrupts
-authored major attacks, big splash + feedback. Add perfect-release/resonance
-timing, clear readiness/overcharge feedback, enemies that punish
-indiscriminate charging, defensive states normal fire solves, armor charge
-solves faster, cooling upgrades that change play style, heat tuning across
-difficulties and fire-rate upgrades + tests proving fire-rate upgrades don't
-make overheating unfair (heat is already time-normalised — keep it).
+Charge: cracks armor (SHELL ARMOR ✅), pierces formations, interrupts
+authored major attacks (Psystrike ✅), big splash + feedback.
+
+Shipped (Round A):
+- [x] **Perfect-release / resonance timing** — `RESONANCE_WINDOW` 0.38s
+  after the charge tops out: +25% power, +1 pierce, ×0.7 heat, its own
+  chime + `resonants` ledger stat.
+- [x] **Readiness / overcharge feedback** — the FIRE pad narrates the whole
+  arc: charge % → RESONANT! → RELEASE! → OVERCHARGE.
+- [x] **Overcharge cost** — >1.4s on a full charge nets ≈ +0.12 heat/s over
+  passive cooling, so hoarding the big shot is no longer free.
+- [x] **An enemy that punishes indiscriminate charging** — SPECTRAL VEIL
+  (region 3+, ≤2 spirit flyers): charged bolts phase THROUGH the shimmer,
+  basic fire always lands. The counterweight to armor.
+- [x] **Heat fairness proven** — sustained spam overheats at 7.6s on
+  Normal, and the suite asserts fire-rate upgrades can only make that band
+  kinder, never crueller.
+
+Still open (later round / M9):
+- [ ] Cooling upgrades that *materially change play style* (COOLANT /
+  Never-Melt Ice exist ◐ but don't yet reshape a build's rhythm).
+- [ ] Heat tuning swept across every difficulty (only Normal is asserted).
+- [ ] More defensive states normal fire specifically solves.
 
 Done when: neither weapon dominates; early levels don't require charge
 mastery; later levels require both; Normal overheat stays ~5–10s sustained
-(current ~7.6s unless testing supports better).
+(currently 7.6s, asserted).
 
-## Milestone 3 — Authored encounter director ⬜
+## Milestone 3 — Authored encounter director 🔶
+(Rounds A+B shipped 2026-07-19, commits 1886bdd / b3c1533)
 
-Reusable beat system (arrival, formation reveal, escalation, elite
-intervention, hazard, recovery, final push, victory) layered on the existing
-`JUNKIE_CHOREO`/`G.encounter` clock. Objective families: shield relays,
-escort, migration survival, chase, multi-lane defense, capture-without-kill,
-projectile-break count, no-overheat section, weather survival, ace
-objectives. Every region gets a distinct encounter grammar, not just bigger
-numbers. Director limits simultaneous threat (extend `starThreatCap`).
+Shipped:
+- [x] **Reusable beat system** — `REGION_GRAMMAR`/`encounterScript`
+  (data.js) + `updateDirector`/`runBeat` (update.js) driving `G.director`.
+  Beats fire once at a `p` (progress) or `afterPrev` (delay) trigger.
+  Actions: bonusFlock, raid, surge, recovery, finalPush.
+- [x] **Director limits simultaneous threat** — `G.director.threatMul`
+  multiplies `starThreatCap` via `directorThreatMul()`; recovery eases to
+  ×0.35, surge/finalPush raise to ×1.25–1.4.
+- [x] **Recovery windows after intensity peaks** — the `recovery` beat
+  holds fire ~3.4s, primes heal pity, and eases the threat budget.
+- [x] **Distinct region grammars** — KANTO (teaching) and JOHTO (the hunt)
+  authored; regions 3-9 use a default escalation→recovery arc.
+- [x] **First objective family** — `G.objective`/`ENCOUNTER_OBJECTIVES` +
+  `updateObjective` + `drawObjectiveBanner`. **SURVIVE THE MIGRATION**
+  (Hoenn challenge) changes the win condition: no clear-by-attrition,
+  outlast the timer, the swarm disperses.
+
+Still open (Round C / M9):
+- [ ] Entity-based objective families: **escort/defend a friendly**,
+  **capture without destroying**, **defend multiple lanes**, **chase a
+  fleeing elite** — these need a friendly/neutral entity type.
+- [ ] Lighter overlay objectives: break-N-projectiles, no-overheat section,
+  shield-relay sequence, weather survival.
+- [ ] Author the remaining 7 region grammars (currently on the default arc).
+- [ ] Beat types not yet built: formation reveal, elite intervention as a
+  distinct spawn, hazard, victory.
 
 ## Milestone 4 — Full boss overhaul ⬜
 
