@@ -2150,6 +2150,7 @@ function update(dt) {
   }
   if (G.state === 'menu' || G.state === 'gameover' || G.state === 'dex') return;
   if (paused) return;
+  if (G.state === 'results') return; // static interstitial: no simulation
   if (G.state === 'upgrade') {
     // no draftable upgrades left → brief breather, then straight on
     if (!G.upgradeChoices && G.stateT > 2.2) { buildLevel(G.level); serve(); }
@@ -3256,7 +3257,7 @@ function update(dt) {
         const interceptDmg = L.charged ? 3 : 1;
         s.interceptHP = Math.max(0, (s.interceptHP || 1) - interceptDmg);
         const destroyed = s.interceptHP <= 0;
-        if (destroyed) s.dead = true;
+        if (destroyed) { s.dead = true; statsIntercept(); }
         L.hits = (L.hits || 0) + 1;
         if (L.hits > (L.charged ? 2 + upgN('intercept') : upgN('intercept'))) L.dead = true;
         // BULWARK BATTERY: every interception adds a wall segment (fusion)
@@ -3333,6 +3334,7 @@ function update(dt) {
         }
         if (br.shellArmor && L.charged) {
           br.shellArmor = false; // the shell CRACKS off — the mon is exposed
+          statsShellCrack();
           burst(bx, by, '#e0e0e0', 18, 240, 0.5);
           ringFx(bx, by, '#b0bec5', 5, 50, 3, 0.4);
           addFloater(bx, by - br.h / 2 - 12, 'SHELL CRACKED!', '#ffd54f', 13);
@@ -3843,10 +3845,18 @@ function update(dt) {
     const clearedStage = stageIdx(G.level);
     const secretVictory = !!(G.secret.vmax && clearedStage === 2);
     statsEndLevel();
-    G.level++;
-    G.state = 'upgrade'; G.stateT = 0;
-    G.clearedStage = clearedStage;
     G.score += Math.round((300 + clearedStage * 250) * (G.fx_score ? 2 : 1));
+    // ---- STAGE RESULTS (Milestone 1): every clear pauses on a one-tap
+    // interstitial — score, the combat ledger, and mastery objectives —
+    // BEFORE the draft. Built while statsCur() still points at the
+    // cleared level and G.level is pre-increment.
+    G.results = buildStageResults();
+    G.announce = null; G.announceQueue = []; // stale clear-time cards would overlap the panel
+    G.level++;
+    G.state = 'results'; G.stateT = 0;
+    SFX.stageClear();
+    if (G.results.objectives.some(o => o.isNew)) setTimeout(() => SFX.medal(), 650);
+    G.clearedStage = clearedStage;
     if (G.deathsThisWave === 0) G.adapt = Math.min(1.15, G.adapt * 1.04); // flawless → push back
     // Poké Revive capstone: every region you finish grants a life
     if (clearedStage === 2 && upgN('revive')) {
@@ -3892,8 +3902,9 @@ function update(dt) {
         applyStarterTierUpgrade(G.starterLvl, newLvl);
         G.starterLvl = newLvl;
       }
+      // the ceremony PENDS behind the results screen: clear → results →
+      // ceremony → draft. advanceResults() routes to it when set.
       G.ceremony = { act: actIdx(G.level), t: 0, evo, burst1: false, burst2: false };
-      G.state = 'ceremony'; G.stateT = 0;
     }
     SFX.levelUp();
     // confetti!

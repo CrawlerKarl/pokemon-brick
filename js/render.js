@@ -6344,6 +6344,98 @@ function drawEndingLandmark(i, x, y, s, col, a) {
   ctx.restore();
 }
 
+// ---- STAGE RESULTS (Milestone 1): the one-tap interstitial between a
+// cleared wave and the draft. Reads G.results (buildStageResults, state.js).
+// Everything fades in over ~0.5s; a single pulse prompt advances. Fits the
+// same short/narrow viewports as the draft — rows compress, never clip.
+function drawResults() {
+  const R = G.results;
+  if (!R) return;
+  const t = G.stateT;
+  const gen = GENS[regionIdx(R.lvl)];
+  const accent = gen.accent;
+  const short = H < 560;
+  const fade = Math.min(1, t / 0.45);
+  dim(0.62 * fade);
+  ctx.save();
+  ctx.globalAlpha = fade;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const topY = short ? H * 0.1 : H * 0.14;
+  title('STAGE CLEAR!', topY, short ? 30 : Math.min(46, W / 14), accent);
+  ctx.font = '700 ' + (short ? 12 : 15) + 'px Orbitron, sans-serif';
+  ctx.fillStyle = '#cfd8dc';
+  ctx.fillText(R.region + ' · ' + R.stage + '  —  STAGE ' + (stageIdx(R.lvl) + 1) + '/3', W / 2, topY + (short ? 26 : 40));
+  // combat readout: two compact rows straight from the balance ledger
+  const rowY = topY + (short ? 48 : 74);
+  const rowGap = short ? 20 : 26;
+  ctx.font = bodyFont(short ? 12 : 14, 700);
+  ctx.fillStyle = '#e3f2fd';
+  ctx.fillText(
+    'TIME ' + Math.round(R.t) + 'S   ·   DEFEATED ' + R.kills + '   ·   SCORE ' + R.score.toLocaleString(),
+    W / 2, rowY, W * 0.9);
+  ctx.fillStyle = '#90a4ae';
+  ctx.font = bodyFont(short ? 11 : 13, 600);
+  const hitLine = R.hitsTaken === 0 ? 'NO HITS TAKEN'
+    : R.hitsTaken + ' HIT' + (R.hitsTaken > 1 ? 'S' : '') + ' TAKEN' + (R.topFam ? ' — MOSTLY ' + R.topFam.toUpperCase() : '');
+  ctx.fillText(
+    hitLine + '   ·   SHOTS ' + R.shotsN + ' / CHARGED ' + R.shotsC
+    + (R.overheats ? '   ·   OVERHEATED ×' + R.overheats : ''),
+    W / 2, rowY + rowGap, W * 0.92);
+  // objectives — the mastery list with medal states
+  const objY = rowY + rowGap * (short ? 2.2 : 2.7);
+  const objH = short ? 30 : 40;
+  const panelW = Math.min(W * 0.92, 640);
+  ctx.font = '800 ' + (short ? 11 : 13) + 'px Orbitron, sans-serif';
+  ctx.fillStyle = accent;
+  ctx.fillText('— MASTERY OBJECTIVES —', W / 2, objY - (short ? 16 : 22));
+  R.objectives.forEach((o, i) => {
+    const y = objY + i * objH + objH / 2;
+    const x0 = W / 2 - panelW / 2;
+    roundRect(x0, objY + i * objH + 2, panelW, objH - 5, 9);
+    ctx.fillStyle = o.done ? 'rgba(30,60,40,0.6)' : 'rgba(10,16,34,0.6)';
+    ctx.fill();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = o.done ? '#66bb6a' : 'rgba(120,144,178,0.4)';
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.font = '900 ' + (short ? 12 : 14) + 'px Orbitron, sans-serif';
+    ctx.fillStyle = o.done ? '#9CFF57' : '#5c6f8a';
+    ctx.fillText(o.done ? '✓' : '·', x0 + 14, y);
+    ctx.fillStyle = o.done ? '#ffffff' : '#8fa4bd';
+    ctx.font = '800 ' + (short ? 10.5 : 12.5) + 'px Orbitron, sans-serif';
+    ctx.fillText((o.ace ? '★ ' : '') + o.name, x0 + 34, y, panelW * 0.34);
+    ctx.font = bodyFont(short ? 10 : 12, 600);
+    ctx.fillStyle = o.done ? '#cfe8d0' : '#6d7f96';
+    ctx.fillText(o.desc, x0 + 34 + panelW * 0.36, y, panelW * 0.44);
+    ctx.textAlign = 'right';
+    if (o.isNew) {
+      const gl = 0.7 + 0.3 * Math.sin(G.time * 5 + i);
+      ctx.font = '900 ' + (short ? 9.5 : 11) + 'px Orbitron, sans-serif';
+      ctx.fillStyle = `rgba(255,213,79,${gl})`;
+      ctx.fillText('NEW MEDAL!', x0 + panelW - 12, y);
+    } else if (o.already && o.done) {
+      ctx.font = '700 ' + (short ? 9 : 10.5) + 'px Orbitron, sans-serif';
+      ctx.fillStyle = '#7e8ea6';
+      ctx.fillText('EARNED', x0 + panelW - 12, y);
+    }
+    ctx.textAlign = 'center';
+  });
+  const belowObj = objY + R.objectives.length * objH + (short ? 12 : 20);
+  if (!R.medalsSaved) {
+    ctx.font = bodyFont(short ? 9.5 : 11, 600);
+    ctx.fillStyle = '#8090a8';
+    ctx.fillText(G.trial ? 'TRIAL RUN — MEDALS ARE NOT SAVED'
+      : G.daily ? 'DAILY RUN — MEDALS ARE NOT SAVED' : 'CHEATS USED — MEDALS ARE NOT SAVED', W / 2, belowObj);
+  }
+  if (R.nextName) {
+    ctx.font = '700 ' + (short ? 10.5 : 13) + 'px Orbitron, sans-serif';
+    ctx.fillStyle = accent;
+    ctx.fillText('NEXT — ' + R.nextName, W / 2, belowObj + (short ? 16 : 24));
+  }
+  ctx.restore();
+  if (t > 0.6) pulse(IS_TOUCH ? 'TAP TO CONTINUE' : 'CLICK TO CONTINUE', H * (short ? 0.9 : 0.88));
+}
+
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
@@ -6753,6 +6845,8 @@ function drawOverlays() {
       ctx.textAlign = 'center';
       if (upgradeTreeOpen) drawFullUpgradeTree();
     }
+  } else if (G.state === 'results') {
+    drawResults();
   } else if (G.state === 'ceremony') {
     drawCeremony();
   } else if (G.state === 'gameover') {
@@ -6899,8 +6993,8 @@ function render() {
     drawProjectiles();
     drawBalls();
     drawServeGuide();
-    if (G.state !== 'gameover' && G.state !== 'upgrade') drawPaddle();
-    if (G.state !== 'gameover' && G.state !== 'upgrade') drawUpgradeInstallFx();
+    if (G.state !== 'gameover' && G.state !== 'upgrade' && G.state !== 'results') drawPaddle();
+    if (G.state !== 'gameover' && G.state !== 'upgrade' && G.state !== 'results') drawUpgradeInstallFx();
     drawShootHint();
     drawParticles();
     drawAnnounce();
@@ -6909,7 +7003,7 @@ function render() {
   // bloom the gameplay scene before the vignette darkens the edges
   if (G.state === 'play' || G.state === 'serve') drawBloom();
   if (vignette) ctx.drawImage(vignette, 0, 0, W, H); // may be unset pre-boot
-  if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade') drawHUD();
+  if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade' && G.state !== 'results') drawHUD();
   drawOverlays();
   if (G.state === 'menu' || G.state === 'dex') drawAnnounce(); // konami toast etc.
   drawCursor();

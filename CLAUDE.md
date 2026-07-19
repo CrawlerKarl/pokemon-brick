@@ -85,7 +85,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
 - **`gallery.html`** renders every projectile through the real renderer over
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
-- **Automated invariants:** open `/test.html` (drives the sim headless, 48
+- **Automated invariants:** open `/test.html` (drives the sim headless, 50
   checks, sets `window.TEST_RESULTS`; keep the tab FRONTED — background
   timer throttling makes it crawl). Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
@@ -278,9 +278,12 @@ phone — flag anything only verifiable there.
   sequential (`G.coachStep`): aim during serve, high-ground goal after launch;
   STARFIGHTER has its own five-step first-install coach (`G.jCoach`,
   progression in update.js, pill in render.js, once-ever via `pkbrk-jcoach`).
-  During live combat (`G.state === 'play'`) only `hero` announcements (boss
-  rounds) may use the centre card — everything else renders as the compact
-  top strip (`drawAnnounceStrip`), so no banner ever covers the pilot's lane.
+  During live combat (`G.state === 'play'`) only `hero` announcements may use
+  the centre card, and ONLY when a fire-free window covers them: boss-round
+  reveals (entrances pause fire) and REGION INTRO cards (arrival waves grant
+  a 3.4s junkie first-volley grace, state.js — keep card duration ≤ grace).
+  Everything else renders as the compact top strip (`drawAnnounceStrip`), so
+  no banner ever covers the pilot's lane under fire.
   The FIRE pad must always NAME its state (TAP FIRE / AUTO ON / charge % /
   RELEASE! / HEAT HIGH / COOLING Ns) — never a bare unexplained label. All
   four safe-area insets (`SAFE_T/L/R/B`, setup.js) shift the HUD bar and

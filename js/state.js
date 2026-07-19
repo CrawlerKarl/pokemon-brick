@@ -231,6 +231,7 @@ const G = {
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
+  results: null, // stage-results interstitial payload (buildStageResults)
   uiTouchPulse: null, shareToast: 0,
   upgradeFx: null, // short install animation after a permanent draft pick
   // starter partner: which one, its ability tier, Torrent's return counter
@@ -366,6 +367,49 @@ function statsKnockout() {
   if (!G.runStats) return;
   G.runStats.knockouts = (G.runStats.knockouts || 0) + 1;
   const L = statsCur(); if (L) L.knockout = true;
+}
+function statsIntercept() { const L = statsCur(); if (L) L.intercepts = (L.intercepts || 0) + 1; }
+function statsShellCrack() { const L = statsCur(); if (L) L.shellCracks = (L.shellCracks || 0) + 1; }
+// ---- STAGE MEDALS (pkbrk-medals): { '<lvl>': { objectiveKey: 1 } }.
+// Awarded on the results screen from stageObjectives(lvl) checks — real
+// journeys only (never trial/daily/cheated). Survives corrupt storage via
+// the loadStore guard, same pattern as SETTINGS.
+const MEDALS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-medals', '{}'));
+function medalEarned(lvl, key) { return !!(MEDALS[lvl] && MEDALS[lvl][key]); }
+function awardMedal(lvl, key) {
+  if (medalEarned(lvl, key)) return false;
+  (MEDALS[lvl] = MEDALS[lvl] || {})[key] = 1;
+  saveStore('pkbrk-medals', MEDALS);
+  return true;
+}
+function medalCount() { let n = 0; for (const k in MEDALS) n += Object.keys(MEDALS[k]).length; return n; }
+// Build the results-interstitial payload for the stage that just cleared.
+// Objective checks run against the ledger record; medal persistence obeys
+// the real-journey rule. Called from the level-clear block BEFORE G.level++.
+function buildStageResults() {
+  const L = statsCur() || {};
+  const lvl = G.level;
+  const objectives = stageObjectives(lvl).map(o => {
+    const done = L.lv != null && !!o.check(L);
+    const already = medalEarned(lvl, o.key);
+    const canSave = !G.trial && !G.daily && !G.cheated;
+    const isNew = done && canSave && awardMedal(lvl, o.key);
+    return { key: o.key, name: o.name, desc: o.desc, ace: !!o.ace, done, isNew, already };
+  });
+  const hitsTaken = Object.values(L.dmgInBy || {}).reduce((a, b) => a + b, 0);
+  const topFam = Object.entries(L.dmgInBy || {}).sort((a, b) => b[1] - a[1])[0];
+  return {
+    lvl, region: genFor(lvl).name, stage: STAGE_NAMES[stageIdx(lvl)],
+    nextName: lvl >= 27 ? null
+      : stageIdx(lvl) === 2 ? genFor(lvl + 1).name + ' · ' + STAGE_NAMES[0]
+        : genFor(lvl).name + ' · ' + STAGE_NAMES[stageIdx(lvl) + 1],
+    t: L.t || 0, kills: L.kills || 0, score: G.score,
+    hitsTaken, topFam: topFam ? topFam[0] : null,
+    shotsN: L.shotsN || 0, shotsC: L.shotsC || 0,
+    overheats: L.overheats || 0, megas: L.megas || 0,
+    catches: G.caughtRun, medalsSaved: !G.trial && !G.daily && !G.cheated,
+    objectives,
+  };
 }
 // boss phase durations: the clock starts on the first damaging hit of each
 // phase window (br.phaseClockT) — engagement time, not entrance ceremony
@@ -1216,10 +1260,14 @@ function buildLevel(lvl) {
     G.bossIntro = G.gauntlet ? (junkie ? 2.8 : 0) : 1.6;
     SFX.roar();
   } else if (stage === 0) {
-    // a region that OPENS an act carries the act name on its banner
+    // REGION INTRO (Milestone 1): arriving in a region is a milestone beat —
+    // an authored hero card (title + tagline + flavour) with its own sting,
+    // not just the stage banner. Acts still announce themselves on top.
     const actTag = regionsIn % 3 === 0 ? 'ACT ' + ACTS[actIdx(lvl)].n + ': ' + ACTS[actIdx(lvl)].name : null;
-    setAnnounce(null, gen.accent, gen.name, 'STAGE 1/3 — ARRIVAL', 2.6,
-      [actTag, form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
+    const intro = REGION_INTROS[regionsIn % REGION_INTROS.length];
+    setAnnounce(null, gen.accent, gen.name, intro ? intro.tag : 'STAGE 1/3 — ARRIVAL', 3.2,
+      [actTag, intro && intro.sub].filter(Boolean).join('  ·  '), null, false, true);
+    SFX.regionIntro();
   } else if (G.modifier) {
     const m = G.modifier;
     setAnnounce(m.icon, m.color, m.name, m.desc, 3.2,
@@ -1239,7 +1287,11 @@ function buildLevel(lvl) {
     }
   }
   assignClassicBrickBehaviors(regionsIn, stage);
-  if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = 0.9; // they fire as they float in
+  // Junkie waves fire as squads float in — EXCEPT a region's arrival wave,
+  // which grants a 3.4s grace so the REGION INTRO hero card never covers
+  // live fire (the lane-invariant contract) and arrival reads as a beat of
+  // calm before the region's pressure starts.
+  if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = stage === 0 ? 3.4 : 0.9;
   // ---- STARFIGHTER FIRST-FLIGHT COACH: five one-line steps taught during
   // Kanto's opening waves (fly → tap fire → hold charge → grab an orb → mega).
   // Each step advances on the ACTION it teaches (progression in update.js,

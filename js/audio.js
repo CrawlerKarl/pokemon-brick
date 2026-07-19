@@ -65,6 +65,18 @@ const SFX = {
   bossHit: () => tone(110, 0.15, 'square', 0.07, -30),
   bossDown: () => { noiseBurst(0.6, 0.16); [220, 330, 440, 660, 880].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'triangle', 0.08), i * 90)); },
   shield: () => tone(440, 0.15, 'sine', 0.08, 220),
+  // stage-clear fanfare (results screen) — brighter than levelUp, shorter
+  // than mega: an upward triad roll with a sparkle tail
+  stageClear: () => {
+    [392, 494, 587, 784].forEach((f, i) => setTimeout(() => tone(f, 0.2, 'triangle', 0.075), i * 90));
+    setTimeout(() => tone(1175, 0.32, 'sine', 0.05), 400);
+  },
+  // region-arrival sting — two warm swells under the intro card
+  regionIntro: () => {
+    tone(196, 0.5, 'sine', 0.055, 30);
+    setTimeout(() => { tone(294, 0.5, 'sine', 0.05, 20); tone(392, 0.55, 'triangle', 0.045); }, 260);
+  },
+  medal: () => [880, 1109, 1319].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'sine', 0.06), i * 70)),
 };
 // ---- music: an original nine-region creature-adventure score -------------
 // Each route has its own scale, pulse, motif, rhythm and instrument family.

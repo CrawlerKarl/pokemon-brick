@@ -1531,3 +1531,70 @@ function addToDex(id, shiny) {
   if (shiny) { DEXS.add(id); saveStore('pkbrk-dexs', [...DEXS]); }
   return isNew;
 }
+
+// ============================================================
+// STAGE MASTERY OBJECTIVES (Milestone 1) — evaluated at stage clear from
+// the balance ledger (the cleared level's stats record L), shown on the
+// results interstitial, and persisted as medals in pkbrk-medals (real
+// journeys only — trials/dailies/cheated runs display but never save).
+// Kanto ('0:x') is fully authored as the gold-standard slice; every other
+// stage inherits the per-stage-type defaults until its own polish pass.
+// check(L) receives the stats record; ace objectives are the ★ stretch.
+// ============================================================
+const STAGE_OBJECTIVE_SETS = {
+  '0:0': [
+    { key: 'firstflight', name: 'FIRST FLIGHT', desc: 'CLEAR WITHOUT TAKING A HIT',
+      check: L => Object.values(L.dmgInBy).reduce((a, b) => a + b, 0) === 0 },
+    { key: 'flockbreak', name: 'FLOCK BREAKER', desc: 'DEFEAT 12 WILD POKÉMON', check: L => L.kills >= 12 },
+    { key: 'swiftwings', name: 'SWIFT WINGS', desc: 'CLEAR IN UNDER 75 SECONDS', ace: true,
+      check: L => L.t > 0 && L.t < 75 },
+  ],
+  '0:1': [
+    { key: 'shellbreak', name: 'SHELL BREAKER', desc: 'CRACK ARMOR WITH A CHARGED SHOT',
+      check: L => (L.shellCracks || 0) > 0 },
+    { key: 'coolhands', name: 'COOL HANDS', desc: 'CLEAR WITHOUT OVERHEATING', check: L => L.overheats === 0 },
+    { key: 'interceptor', name: 'INTERCEPTOR', desc: 'SHOOT DOWN 6 ENEMY SHOTS', ace: true,
+      check: L => (L.intercepts || 0) >= 6 },
+  ],
+  '0:2': [
+    { key: 'kantolegend', name: 'KANTO LEGEND', desc: 'WIN THE GAUNTLET WITHOUT A KNOCKOUT',
+      check: L => !L.knockout },
+    { key: 'psydancer', name: 'PSYCHIC DANCER', desc: 'TAKE NO HITS IN THE GAUNTLET', ace: true,
+      check: L => Object.values(L.dmgInBy).reduce((a, b) => a + b, 0) === 0 },
+  ],
+};
+const DEFAULT_OBJECTIVE_SETS = [
+  [ // arrival stages
+    { key: 'untouched', name: 'UNTOUCHED', desc: 'CLEAR WITHOUT TAKING A HIT',
+      check: L => Object.values(L.dmgInBy).reduce((a, b) => a + b, 0) === 0 },
+    { key: 'swift', name: 'SWIFT CLEAR', desc: 'CLEAR IN UNDER 90 SECONDS', ace: true,
+      check: L => L.t > 0 && L.t < 90 },
+  ],
+  [ // challenge stages
+    { key: 'coolhands', name: 'COOL HANDS', desc: 'CLEAR WITHOUT OVERHEATING', check: L => L.overheats === 0 },
+    { key: 'interceptor', name: 'INTERCEPTOR', desc: 'SHOOT DOWN 6 ENEMY SHOTS', ace: true,
+      check: L => (L.intercepts || 0) >= 6 },
+  ],
+  [ // legendary stages
+    { key: 'nokd', name: 'IRON WILL', desc: 'WIN THE GAUNTLET WITHOUT A KNOCKOUT', check: L => !L.knockout },
+    { key: 'flawless', name: 'FLAWLESS DUEL', desc: 'TAKE NO HITS IN THE GAUNTLET', ace: true,
+      check: L => Object.values(L.dmgInBy).reduce((a, b) => a + b, 0) === 0 },
+  ],
+];
+function stageObjectives(lvl) {
+  return STAGE_OBJECTIVE_SETS[regionIdx(lvl) + ':' + stageIdx(lvl)] || DEFAULT_OBJECTIVE_SETS[stageIdx(lvl)];
+}
+
+// ---- REGION INTROS: the arrival beat for each region's first stage — a
+// short hero card, not a cutscene. Kanto's is the authored template.
+const REGION_INTROS = [
+  { title: 'KANTO', tag: 'WHERE EVERY JOURNEY BEGINS', sub: 'BRIGHT ROUTES · FIRST RIVALS · AN OLD LEGEND STIRRING' },
+  { title: 'JOHTO', tag: 'TRADITION IN THE TWILIGHT', sub: 'BELL TOWERS · GUARDIAN BEASTS · THE SEA CALLS' },
+  { title: 'HOENN', tag: 'LAND, SEA, AND SKY', sub: 'TROPICAL SQUALLS · ANCIENT TITANS · A DRAGON ABOVE ALL' },
+  { title: 'SINNOH', tag: 'MYTHS OF TIME AND SPACE', sub: 'COLD PEAKS · LAKE SPIRITS · TIME ITSELF FIGHTS BACK' },
+  { title: 'UNOVA', tag: 'IDEALS AGAINST TRUTH', sub: 'CITY LIGHTS · STORM WINGS · THE BLACK LIGHTNING' },
+  { title: 'KALOS', tag: 'BEAUTY AND OBLIVION', sub: 'RADIANT SKIES · MIRROR FORESTS · THE WINGS OF RUIN' },
+  { title: 'ALOLA', tag: 'ISLANDS OF THE GUARDIANS', sub: 'WARM TRADE WINDS · ISLAND TRIALS · THE MOON BECKONS' },
+  { title: 'GALAR', tag: 'THE DARKEST DAY LOOMS', sub: 'INDUSTRIAL SPRAWL · GIGANTIC SHADOWS · ETERNITY WAITS' },
+  { title: 'PALDEA', tag: 'THE FINAL FRONTIER', sub: 'CRYSTAL BADLANDS · PARADOX BEASTS · THE JOURNEY\'S END' },
+];

@@ -36,7 +36,8 @@ Status legend: ✅ complete · 🔶 in progress · ⬜ not started · ◐ partia
 
 ---
 
-## Milestone 0 — Baseline audit and balance instrumentation 🔶
+## Milestone 0 — Baseline audit and balance instrumentation ✅
+(shipped 2026-07-18, commit 56a51c8)
 
 Build the tools needed to evaluate all later balance/design work.
 

@@ -550,6 +550,25 @@ hulls derive a palette and crest from every chosen type, while Fire/Water/Grass
 keep their bespoke flame, cannon, and frond silhouettes. NO PARTNER is neutral;
 STARFIGHTER renders a vector training drone with no partner ability.
 
+### Stage results, mastery medals, and region intros (Milestone 1)
+Every cleared stage pauses on a **one-tap RESULTS interstitial**
+(`G.state === 'results'`, `drawResults` render.js, payload from
+`buildStageResults` state.js) before the draft: time, kills, score, the
+combat ledger (hits taken by projectile family, shots normal/charged,
+overheats), and the stage's **MASTERY OBJECTIVES** with medal states. The
+flow order is clear → results → (act ceremony if pending) → draft
+(`advanceResults`, input.js). Objectives live in `STAGE_OBJECTIVE_SETS`
+(data.js) — Kanto's three stages are fully authored (First Flight / Flock
+Breaker / Swift Wings ★, Shell Breaker / Cool Hands / Interceptor ★, Kanto
+Legend / Psychic Dancer ★); other regions inherit per-stage-type defaults
+until their polish pass. Checks read the balance ledger (including the
+`intercepts`/`shellCracks` counters). Medals persist in `pkbrk-medals`
+(real journeys only — trials/dailies/cheated runs evaluate and display but
+never save; the screen says so). Entering a region's arrival wave plays an
+authored **REGION INTRO** hero card (`REGION_INTROS`, data.js + a
+`SFX.regionIntro` sting); junkie arrival waves grant a 3.4s first-volley
+grace so the card never covers live fire.
+
 ### HUD and first-wave coaching
 The HUD identifies a permanent starter element as **PARTNER** and a temporary
 override as **POWER-UP**/**ITEM** with its remaining duration. Mega shows a

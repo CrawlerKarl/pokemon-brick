@@ -321,6 +321,7 @@ window.addEventListener('keydown', e => {
     if (G.state === 'upgrade' && upgradeTreeOpen) upgradeTreeOpen = false;
     else if (G.state === 'upgrade') return;
     else if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); }
+    else if (G.state === 'results') advanceResults();
     else if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
     else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
@@ -350,6 +351,7 @@ window.addEventListener('keydown', e => {
       (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && draftSel != null) {
     pickUpgrade(draftSel);
   }
+  if (G.state === 'results' && (e.code === 'Enter' || e.code === 'NumpadEnter')) advanceResults();
   if (e.code === 'KeyR' && G.state === 'upgrade' && G.upgradeChoices &&
       !G.secret.rewardDraft && !G.rerolled && G.stateT > 0.8) {
     rerollDraft();
@@ -875,6 +877,16 @@ function rerollDraft() {
 function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
 // act-boundary ceremony: a tap mid-scene jumps to the reveal; once the act
 // card is up, a tap moves on to the draft
+// results interstitial: one tap/key moves on — to the pending act ceremony
+// if one queued behind it, otherwise straight to the draft. A short dwell
+// stops the killing blow's tap from skipping the screen unseen.
+function advanceResults() {
+  if (G.state !== 'results' || G.stateT < 0.45) return;
+  G.results = null;
+  if (G.ceremony) { G.state = 'ceremony'; G.stateT = 0; }
+  else { G.state = 'upgrade'; G.stateT = 0; }
+  SFX.wall();
+}
 function advanceCeremony() {
   const c = G.ceremony;
   if (!c) { G.state = 'upgrade'; G.stateT = 0; return; }
@@ -930,6 +942,7 @@ function onPress(x, y) {
     else if (!IS_TOUCH) { G.state = 'menu'; dexScroll = 0; } // desktop: click anywhere returns
     return;
   }
+  if (G.state === 'results') { advanceResults(); return; }
   if (G.state === 'ceremony') { advanceCeremony(); return; }
   if (G.state === 'gameover') {
     const L = gameOverLayout();
@@ -1311,6 +1324,7 @@ function primaryAction() {
     return;
   }
   if (G.state === 'gameover') { retryFromSummary(); return; }
+  if (G.state === 'results') { advanceResults(); return; }
   if (G.state === 'ceremony') { advanceCeremony(); return; }
   if (G.state === 'upgrade') return;
   fireAction();

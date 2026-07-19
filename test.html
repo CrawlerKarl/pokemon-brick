@@ -375,11 +375,13 @@ window.requestAnimationFrame = function () { return 0; };
       // trials keep their existing flow: clearing 27 in a trial still loops
       resetRun(27, true);
       G.lives = 99; guard = 0;
-      while (G.state === 'play' && guard++ < 4000) {
+      while ((G.state === 'play' || G.state === 'results') && guard++ < 4000) {
         paused = false; G.freeze = 0;
+        skipResults();
         for (const b of G.bricks) if (!b.dead && !b.dormant && !b.barrier) damageBrick(b, 9999, b.bx + G.fx, b.by + G.fy);
         update(1 / 60);
       }
+      skipResults();
       assert(G.state === 'upgrade' && G.level === 28, 'trial stage 27 should keep the classic loop');
       return 'stage 27 → ending (level stays 27) · record saved · checkpoint kept · 36s of beats render clean · TIME SPIRAL → 28 · trial loops';
     } finally {
@@ -390,6 +392,13 @@ window.requestAnimationFrame = function () { return 0; };
     }
   });
 
+  // step through the stage-results interstitial (and any pending ceremony)
+  // the same way a player's tap would — used wherever a test expects the
+  // draft right after a clear
+  function skipResults() {
+    if (G.state === 'results') { G.stateT = 1; advanceResults(); }
+    if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); }
+  }
   // 2) mode smoke ×3
   async function modeSmoke(mode, frames) {
     const e0 = ERR.length;
@@ -400,6 +409,7 @@ window.requestAnimationFrame = function () { return 0; };
     const startBricks = G.bricks.length;
     let reachedUpgrade = false;
     await runFrames(frames, () => {
+      if (G.state === 'results') skipResults();
       if (G.state === 'upgrade') { reachedUpgrade = true; return false; }
       if (G.state === 'serve') fireAction();
       if (mode === 'classic' && G.state === 'play') fireHeld = true; // classic = ball + free-firing blaster
@@ -419,7 +429,7 @@ window.requestAnimationFrame = function () { return 0; };
       if (G.state === 'serve') fireAction();
       G.reinforce = 0;
       for (const b of G.bricks) b.dead = true;
-      await runFrames(400, () => G.state === 'upgrade' ? false : undefined);
+      await runFrames(400, () => { skipResults(); return G.state === 'upgrade' ? false : undefined; });
     }
     // the upgrade draft must be usable
     assert(G.state === 'upgrade', "expected 'upgrade' state, got '" + G.state + "'");
@@ -1391,7 +1401,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(bars.length >= 1, 'region-2 junkie challenge should have a ROCK TOMB barrier');
     G.state = 'play'; G.reinforce = 0;
     for (const b of G.bricks) if (!b.barrier) b.dead = true;
-    await runFrames(300, () => G.state === 'upgrade' ? false : undefined);
+    await runFrames(300, () => { skipResults(); return G.state === 'upgrade' ? false : undefined; });
     assert(G.state === 'upgrade', 'wave did not clear with only barriers left (state ' + G.state + ')');
     return '27 classic waves brick-only · permanent fire at tier 3 · LASER temporary · boss guard bricks · junkie armor intact';
   });
@@ -1426,7 +1436,7 @@ window.requestAnimationFrame = function () { return 0; };
       let overlaps = 0, maxFlyers = 0, framesSampled = 0;
       const samples = [];
       await runFrames(1800, f => {
-        if (G.state === 'upgrade' || G.state === 'gameover') return false; // wave over — enough sampled
+        if (G.state === 'upgrade' || G.state === 'results' || G.state === 'gameover') return false; // wave over — enough sampled
         if (G.state === 'serve') fireAction(); // flyers only launch during play
         steerBallOrAim('classic');
         framesSampled = f + 1;
@@ -1469,7 +1479,7 @@ window.requestAnimationFrame = function () { return 0; };
       G.lives = 99;
       let overlaps = 0, maxFlyers = 0; const samples = [];
       await runFrames(1400, f => {
-        if (G.state === 'upgrade' || G.state === 'gameover') return false;
+        if (G.state === 'upgrade' || G.state === 'results' || G.state === 'gameover') return false;
         if (G.state === 'serve') fireAction();
         steerBallOrAim(mode);
         const fl = G.bricks.filter(b => !b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.entry && !b.flight.entering);
@@ -2051,6 +2061,76 @@ window.requestAnimationFrame = function () { return 0; };
       assert(pathLvl('impact') === 4 && G.stacks.orb === 2, 'devGrantBuild did not apply paths + stacks');
       return 'same seed → identical wave; round jumps, path/stack grants, trial-by-default all work';
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('stage results interstitial: flow, ledger display, ceremony order', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(1, true, { seed: 'results-flow' });
+      paused = false; G.freeze = 0;
+      // arrival waves grant the region-intro fire grace; later waves don't
+      assert(G.enemyShotCD > 3, 'region arrival lost its first-volley grace window');
+      await runFrames(2000, () => {
+        for (const b of G.bricks) if (!b.dead) damageBrick(b, 9999, b.bx, b.by, null, { ignorePhaseGate: true });
+        return G.state !== 'results';
+      });
+      assert(G.state === 'results' && G.results, 'stage clear did not open the results interstitial');
+      const R = G.results;
+      assert(R.lvl === 1 && R.region === 'KANTO' && R.nextName === 'KANTO · CHALLENGE',
+        'results payload has the wrong stage identity');
+      assert(R.objectives.length === 3 && R.objectives.every(o => o.name && o.desc),
+        'Kanto arrival objectives missing');
+      assert(!R.medalsSaved, 'trial run claimed to save medals');
+      assert(G.level === 2 && G.upgradeChoices, 'level advance / draft roll did not happen behind results');
+      drawResults(); // renders without throwing
+      // dwell gate: an immediate tap must NOT skip the screen
+      G.stateT = 0.1; advanceResults();
+      assert(G.state === 'results', 'results skipped before the dwell gate');
+      G.stateT = 1; advanceResults();
+      assert(G.state === 'upgrade', 'tap did not advance results to the draft');
+      return 'clear → results (ledger + objectives) → one tap → draft; arrival grace present';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('mastery medals persist for real runs and pend the act ceremony', async () => {
+    const oldPreset = SETTINGS.preset, savedMedals = JSON.stringify(MEDALS);
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      for (const k in MEDALS) delete MEDALS[k];
+      resetRun(9, true, { seed: 'medal-act' });
+      G.trial = false; // exercise the real-run rules in memory
+      paused = false; G.freeze = 0;
+      await runFrames(6000, () => {
+        for (const b of G.bricks) if (!b.dead) damageBrick(b, 9999, b.bx, b.by, null, { ignorePhaseGate: true });
+        return G.state !== 'results';
+      });
+      assert(G.state === 'results', 'Hoenn finale did not reach results');
+      const R = G.results;
+      assert(R.medalsSaved && R.objectives.some(o => o.isNew), 'real run did not award new medals');
+      assert(medalEarned(9, R.objectives.find(o => o.isNew).key), 'awarded medal not persisted in MEDALS');
+      assert(G.ceremony, 'act boundary did not queue the evolution ceremony behind results');
+      G.stateT = 1; advanceResults();
+      assert(G.state === 'ceremony', 'results did not hand off to the pending ceremony');
+      G.ceremony.t = 99; advanceCeremony();
+      assert(G.state === 'upgrade', 'ceremony did not hand off to the draft');
+      // second clear of the same stage: objectives complete but no longer NEW
+      resetRun(9, true, { seed: 'medal-act' });
+      G.trial = false; paused = false; G.freeze = 0;
+      await runFrames(6000, () => {
+        for (const b of G.bricks) if (!b.dead) damageBrick(b, 9999, b.bx, b.by, null, { ignorePhaseGate: true });
+        return G.state !== 'results';
+      });
+      assert(G.state === 'results' &&
+        G.results.objectives.every(o => !o.isNew) && G.results.objectives.some(o => o.already && o.done),
+        'repeat clear re-awarded medals instead of showing EARNED');
+      return 'medals persist once per stage; clear → results → ceremony → draft order holds';
+    } finally {
+      SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; SETTINGS.starter = 'none';
+      for (const k in MEDALS) delete MEDALS[k];
+      Object.assign(MEDALS, JSON.parse(savedMedals));
+      saveStore('pkbrk-medals', MEDALS);
+    }
   });
 
   // ---- runner -------------------------------------------------------------

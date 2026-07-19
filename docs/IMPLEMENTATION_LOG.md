@@ -5,6 +5,63 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-18 — Milestone 1 Round A shipped: results, medals, region intros
+
+- **Stage results interstitial**: `G.state === 'results'` between clear and
+  draft. `buildStageResults` (state.js) snapshots the cleared level's
+  ledger + evaluates `stageObjectives(lvl)`; `drawResults` (render.js)
+  renders hero title, ledger rows, objective list with NEW MEDAL / EARNED
+  states, the not-saved notice for trial/daily/cheated, and the next-stage
+  tease; `advanceResults` (input.js — tap, Space, Enter, Esc; 0.45s dwell
+  gate) routes results → pending act ceremony → draft. The ceremony now
+  PENDS (its `G.state='ceremony'` override was removed from the clear
+  block). Paddle/HUD suppressed during results; announces cleared at entry.
+- **Mastery objectives + medals**: `STAGE_OBJECTIVE_SETS` +
+  `DEFAULT_OBJECTIVE_SETS` (data.js), Kanto fully authored; `MEDALS` map
+  persisted at `pkbrk-medals` (DAILY_RECORDS pattern); new ledger counters
+  `intercepts` + `shellCracks` feed the checks.
+- **Region intros**: `REGION_INTROS` (data.js) hero card + `SFX.regionIntro`
+  sting on every arrival wave; junkie arrivals now grant a 3.4s
+  first-volley grace (state.js) so the card honours the lane invariant —
+  CLAUDE.md's hero-announcement rule updated to codify the contract.
+- **Audio**: `SFX.stageClear` fanfare, `SFX.medal` sparkle, `SFX.regionIntro`.
+- **Tests** (suite 48 → 50): results flow (grace window, payload identity,
+  dwell gate, tap-through), medal persistence + repeat-clear EARNED
+  semantics + results→ceremony→draft ordering.
+
+## 2026-07-18 — Milestone 1 planning (Kanto vertical slice)
+
+M1 decomposes into rounds; each ships through the full quality gates:
+
+- **Round A (SHIPPED — see entry above):** stage-results interstitial (`G.state ===
+  'results'` between wave clear and the draft, powered by the M0 ledger),
+  Kanto mastery objectives + persistent medals (`pkbrk-medals`,
+  `STAGE_OBJECTIVE_SETS` in data.js with per-stage-type defaults for
+  unauthored regions), region-intro hero cards (`REGION_INTROS`), and the
+  stage-clear/region/medal audio stings. Results must stay ONE TAP to
+  continue — arcade pacing is a design invariant.
+- **Round B (next):** Kanto authored encounter beats. Arrival: a scripted
+  low-risk BONUS FLOCK beat (a swift crossing line of unevolved birds that
+  don't fire, rewarding group destruction) when the main squad is half
+  down. Challenge: a mid-stage RAID escalation with a warning strip, then
+  a recovery beat (brief calm + guaranteed orb/heal drop). Implemented as
+  a small Kanto-keyed beat controller (`G.beat`) — deliberately minimal,
+  the seed Milestone 3 generalizes into the encounter director.
+- **Round C:** Mewtwo rebuilt as the boss-framework prototype (shared with
+  Milestone 4): P1 precision duel (aimed psy-orb volleys, telegraphed
+  teleports with 0.5s anticipation — exists), P2 last-stand redesign with
+  a normal-fire-answer move (destructible orbital barriers) and a
+  charge-answer move (armored focus core that interrupts the desperation
+  channel). Reduced-flash variants for every new effect.
+- **Round D:** narrative cards + Kanto scenery motion + demo polish pass.
+
+**Decisions:**
+- Medals persist by absolute level key ('1'..'27'), so future region
+  reordering would need a migration — accepted; levels are stable.
+- Trials/dailies/cheated runs EVALUATE objectives on the results screen
+  (labelled "not saved") but never write medals — keeps trial jumps from
+  farming medals with granted builds.
+
 ## 2026-07-18 — Milestone 0 kickoff: baseline audit
 
 **Audit findings (what already exists, to extend rather than duplicate):**
