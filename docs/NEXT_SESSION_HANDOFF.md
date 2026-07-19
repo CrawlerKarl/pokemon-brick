@@ -75,9 +75,28 @@ layering, bespoke defeat animations, practice mode.
 (`4bd7489`) — one selected-mode hero, live gameplay dioramas, three-item
 mode switcher. Their work; treat `config.js`/`menuLayout` as theirs.
 
+**DECIDED by the user (2026-07-19):** the Milestone-10 release-identity
+question is RESOLVED — build an original sci-fi × fantasy skin
+(working title AETHERFALL) behind a runtime skin toggle, alongside the
+Pokémon skin. Full approved design: `docs/ORIGINAL_SKIN_PLAN.md`
+(SKINS registry, per-skin namespaced storage, 18 classes across 3
+disciplines mapping 1:1 onto the type engine, LIGHT/DARK affinity,
+parts-based procedural art, implementation rounds S1–S7). Names in
+that doc are tunable; the structures are locked. Internal keys NEVER
+change — skins are labels/art over the same engine.
+
 ---
 
 ## Pick up here (choose one)
+
+### Option S — AETHERFALL Round S1 (the user's chosen direction)
+Start the original-skin build per `docs/ORIGINAL_SKIN_PLAN.md`: the
+`SKINS` registry + runtime toggle + per-skin namespaced storage is the
+foundation round (S1) everything else hangs off. Read that doc FIRST,
+completely — the prime directive (internal keys never change) and the
+round breakdown are all there. This is the user's explicitly chosen
+direction for release identity; mechanics rounds (below) remain valid
+parallel work.
 
 ### Option A — Milestone 3 Round C: entity-based objective families
 The remaining families all need a **friendly/neutral entity type** (the one
@@ -168,10 +187,14 @@ knockouts, finished 1/4 HP):
 
 ---
 
-## The one decision that is NOT yours to make
+## The release-identity decision (now made — respect its terms)
 
-Release identity (Milestone 10). This is currently a **private Pokémon fan
-project**. Before any public or commercial distribution the user must
-choose between securing authorization and converting to an original
-creature universe. Do not swap the game's identity autonomously — surface
-the choice and keep improving the mechanics either way.
+The user DECIDED (2026-07-19): an original creature universe ships as a
+runtime-selectable skin alongside the Pokémon skin
+(`docs/ORIGINAL_SKIN_PLAN.md`). What remains not yours to decide: any
+PUBLIC or commercial distribution of the Pokémon-branded skin still
+requires the user's explicit call, and the Pokémon skin must remain
+playable locally — never delete or degrade it while building the
+original skin. Names in the skin plan are tunable during
+implementation; its structures (skin registry, key stability, 18
+classes, LIGHT/DARK affinity, procedural art) are locked.
