@@ -5,6 +5,57 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 4 Round B: all six remaining legendaries
+
+Every finale legendary now carries the Mewtwo template. Design:
+`M4_BOSS_KITS.md` ROUND B section. Infrastructure first, then six kits:
+- **Channel params**: `BOSS_CHANNELS` entries take optional
+  `params {count, w, gap, warnMul, bounce, color}`; `spawnChannelPunish`
+  gained `rain` (distinct gameRand lanes, quick sequence — lanes picked
+  by precomputed keys, no gameRand in comparators) and `pincer` (pairs
+  close outer→inner, wider-warned center pair), plus `bounce` on sweep
+  (second pass, reversed lane order). No-params entries bit-identical —
+  the Mewtwo/Lugia/Dialga duel tests all passed untouched.
+- **Rayquaza (L9)**: METEOR SHARDS — feather lifecycle generalized with
+  `accel` (no sway, commit-fall) and `fan` burst count; phase-2 SKY
+  SWEEP drops a 3-comet wake along its path (`boss.sweep.wake`).
+  DRAGON ASCENT sweep {6, 0.24}.
+- **Zekrom (L15)**: CHARGE CONDUITS — descend-and-hold `s.conduit`
+  anchors; each live conduit adds a BOLT STRIKE column at its x.
+  FUSION BOLT rain {7, 0.16, #80d8ff}.
+- **Yveltal (L18)**: DRAIN WISPS — `s.wisp` spirals home; absorb heals
+  +3% maxHp via direct hp mutation (never damageBrick — ledger clean),
+  clamped so healing can't re-cross the current phase's entry
+  threshold. DARK PULSE pincer {6}.
+- **Lunala (L21)**: LUNAR MOTES — `s.mote` anchors exist only during
+  PHANTOM PHASE; destroying 2 snaps `phaseT` to 0; a full-duration
+  phase converts survivors to aimed crescents. MOONGEIST BEAM columns
+  {3, w110, warn×1.3}. **Generic change:** channel-open now clears
+  `boss.phaseT` for every boss — a desperation must never be
+  uninterruptible (no-op for bosses that never phase).
+- **Eternatus (L24)**: VENOM CYSTS — feather-lifecycle drifters flagged
+  `s.cyst`; while one lives the phase-1 toxic rain fires 9 instead of
+  7 (spawnBossFire reads live cysts, mirroring Zekrom's conduit read).
+  ETERNABEAM sweep {4, w90, 0.34}.
+- **Koraidon (L27)**: AFTERIMAGES — WILD CHARGE dashes drop 3
+  stationary orbit-lifecycle launchers along the path (`s.ghost`
+  low-alpha render, single globalAlpha line inside the saved ctx);
+  each launches an aimed heavy shock at 3.5s. COLLISION COURSE sweep
+  {8, 0.18, bounce} = 16 strikes out-and-back. Duel test runs level 27
+  as a trial so `beginEnding()` is never reached.
+- Phase-2 cadence garnishes (Lunala/Koraidon) intentionally inherit the
+  generic last-stand ×0.62 ability-cd multiplier instead of stacking.
+- Verified: suite 59 → 65 (six new duels + all three prior duels as
+  regression guards), browser smoke of all six kits + screenshots
+  (Zekrom conduit-multiplied BOLT STRIKE, Koraidon afterimage wake),
+  console clean, `npm run check`/`verify-assets` green.
+- Implementation ran as three sequential agents (Rayquaza+Zekrom /
+  Yveltal+Lunala / Eternatus+Koraidon) over the shared dispatch, each
+  handing forward the extension shape.
+- Next: mythicals + sentinels on the template; entrance FX for the
+  styles still on the default banner (skycoil, suncharge, maelstrom,
+  timesplit); phase music layering; practice mode.
+
 ## 2026-07-19 — Milestone 4 Round A: Lugia + Dialga on the boss template
 
 The Mewtwo duel template (normal-fire answer + charge-interrupt channel +

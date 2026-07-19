@@ -252,18 +252,62 @@ function spawnBossAngles(br, bx, by, d, spec) {
 // timing/geometry differs so each boss reads differently. `columns` is Mewtwo's
 // original five-simultaneous behaviour (BIT-IDENTICAL), `sweep` is Lugia's
 // traveling wall, `clock` is Dialga's rotating safe lane (Part 2).
-function spawnChannelPunish(boss, pattern) {
-  const color = '#ff5cf0';
+function spawnChannelPunish(boss, pattern, params) {
+  // Optional per-boss data (BOSS_CHANNELS[].params) tunes shared geometry —
+  // count / width / gap / warn multiplier / bounce / column color. Absent
+  // params fall back to the original literals so no-params entries (Mewtwo /
+  // Lugia / Dialga) stay BIT-IDENTICAL.
+  const P = params || {};
+  const color = P.color || '#ff5cf0';
   if (pattern === 'sweep') {
     // AEROBLAST (Lugia): 5 columns fired SEQUENTIALLY as a traveling wall the
     // pilot races. Direction mirrors which half the boss occupies — it sweeps
     // AWAY from the boss's side so the far lane opens first. Same total danger
     // as `columns`, staggered warn times encode the left→right (or →left) read.
-    const n = 5, span = W / n, leftToRight = (boss.bx + G.fx) < W / 2;
+    // `count`/`gap`/`w`/`warnMul` are data; `bounce` fires a second reverse pass
+    // (Koraidon's stampede that charges back — 2×count strikes, same lanes).
+    const n = P.count || 5, span = W / n, gap = P.gap || 0.28, warnMul = P.warnMul || 1;
+    const w = P.w != null ? P.w : Math.min(64, span * 0.42);
+    const leftToRight = (boss.bx + G.fx) < W / 2;
     for (let i = 0; i < n; i++) {
       const idx = leftToRight ? i : (n - 1 - i);
-      G.columnStrikes.push({ x: span * (idx + 0.5), w: Math.min(64, span * 0.42),
-        warn: 1.05 + i * 0.28, strike: 0.42, color });
+      G.columnStrikes.push({ x: span * (idx + 0.5), w,
+        warn: (1.05 + i * gap) * warnMul, strike: 0.42, color });
+    }
+    if (P.bounce) for (let i = 0; i < n; i++) {
+      const idx = leftToRight ? (n - 1 - i) : i; // reverse lane order on the return
+      G.columnStrikes.push({ x: span * (idx + 0.5), w,
+        warn: (1.05 + (n + i) * gap) * warnMul, strike: 0.42, color });
+    }
+    return;
+  }
+  if (pattern === 'rain') {
+    // FUSION BOLT (Zekrom): a thunderstorm — `count` NARROW columns in DISTINCT
+    // lanes firing in quick sequence. Each lane warns before its own strike and
+    // no lane repeats, so it reads despite the short individual warns. Lanes are
+    // drawn by precomputing a random key per lane then SORTING by that key —
+    // gameRand() is never called inside the comparator (sim-determinism invariant).
+    const count = P.count || 7, gap = P.gap || 0.16;
+    const lanes = Math.max(count, Math.floor(W / 64)), span = W / lanes;
+    const w = P.w != null ? P.w : Math.min(40, span * 0.6);
+    const keyed = [];
+    for (let i = 0; i < lanes; i++) keyed.push({ i, k: gameRand() });
+    keyed.sort((a, b) => a.k - b.k);
+    for (let j = 0; j < count; j++) G.columnStrikes.push({
+      x: span * (keyed[j].i + 0.5), w, warn: 0.7 + j * gap, strike: 0.3, color });
+    return;
+  }
+  if (pattern === 'pincer') {
+    // (Yveltal) the wings close: `count` (even) columns fire in PAIRS from the
+    // outer edges inward, the center pair LAST behind a wider warn (warnMul on
+    // the final pair). Escape is through the recently-struck outer lanes.
+    const n = P.count || 6, span = W / n, warnMul = P.warnMul || 1.35;
+    const w = P.w != null ? P.w : Math.min(64, span * 0.42);
+    const pairs = Math.floor(n / 2);
+    for (let p = 0; p < pairs; p++) {
+      const last = p === pairs - 1, warn = (0.9 + p * 0.26) * (last ? warnMul : 1);
+      G.columnStrikes.push({ x: span * (p + 0.5), w, warn, strike: 0.42, color });
+      G.columnStrikes.push({ x: span * (n - 1 - p + 0.5), w, warn, strike: 0.42, color });
     }
     return;
   }
@@ -283,10 +327,12 @@ function spawnChannelPunish(boss, pattern) {
     }
     return;
   }
-  // `columns` (Mewtwo, default): five SIMULTANEOUS warned columns — unchanged.
-  const n = 5, span = W / n;
+  // `columns` (Mewtwo, default): five SIMULTANEOUS warned columns. With params
+  // it also serves WIDE-beam variants (Lunala: fewer, wider, longer-warned).
+  const n = P.count || 5, span = W / n, warnMul = P.warnMul || 1;
+  const w = P.w != null ? P.w : Math.min(64, span * 0.42);
   for (let i = 0; i < n; i++) G.columnStrikes.push({
-    x: span * (i + 0.5), w: Math.min(64, span * 0.42), warn: 1.05, strike: 0.42, color });
+    x: span * (i + 0.5), w, warn: 1.05 * warnMul, strike: 0.42, color });
 }
 
 // Regular boss fire is species-authored. Signature abilities still interrupt
@@ -332,10 +378,13 @@ function spawnBossFire(br, bx, by, d, tg) {
       spawnBossAngles(br, bx, by, d, phase >= 2
         ? { kind: 'eclipse', classKey: 'massive', count: 1, speedMul: 0.42, turn: 0.18 }
         : { kind: 'crescent', classKey: 'standard', count: 3, spread: 0.3, speedMul: 0.75 }); break;
-    case 890: // Eternatus: toxic perimeter rain OR the cannon, never both
+    case 890: // Eternatus: toxic perimeter rain OR the cannon, never both.
+      // VENOM CYSTS thicken the rain: while any cyst lives it fires 9 not 7
+      // (mirrors Zekrom's BOLT STRIKE reading live conduits, case 644).
       spawnBossAngles(br, bx, by, d, phase >= 2
         ? { kind: 'cannon', classKey: 'massive', count: 1, base: Math.PI / 2, speedMul: 0.48 }
-        : { kind: 'toxic', classKey: 'micro', count: 7, spread: 0.11, base: Math.PI / 2, speedMul: 0.86 }); break;
+        : { kind: 'toxic', classKey: 'micro', count: G.enemyShots.some(s => s.cyst && !s.dead) ? 9 : 7,
+            spread: 0.11, base: Math.PI / 2, speedMul: 0.86 }); break;
     case 1007: // Koraidon: dash rubble → sun wheel
       spawnBossAngles(br, bx, by, d, phase >= 2
         ? { kind: 'sunwheel', classKey: 'massive', count: 1, speedMul: 0.46 }
@@ -1276,10 +1325,34 @@ function bossAbility(boss) {
       tone(180, 0.6, 'sawtooth', 0.06, 220);
       break;
     }
-    case 384: // Rayquaza: crosses the playfield
+    case 384: { // Rayquaza: THE SKY SERPENT (Milestone 4 Round B).
+      // Phase 1 alternates METEOR SHARDS (the normal-fire answer) with SKY
+      // SWEEP. Each shard is a 2-HP heavy comet on the feather lifecycle with
+      // sway:0 and a downward ACCELERATION (~60 px/s²) instead of wind coupling
+      // — it starts slow and commits, then bursts into 4 aimed comet micros at
+      // the ship band. Cap 3; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic
+        && (boss.shardTurn = !boss.shardTurn) && !G.enemyShots.some(s => s.feather)) {
+        const shVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx + (i - 1) * 46, y: by + 10, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 384, kind: 'comet', classKey: 'heavy',
+            visualR: 12, hitR: 10, volleyId: shVolley,
+            feather: { t: 0, burstAt: shipY() - 40, sway: 0, accel: 60, vy0: 20, fan: 4, src: boss } });
+        }
+        setCombatNotice('METEOR SHARDS — SHOOT THEM DOWN!', '#ffcc80', 1.8);
+        ringFx(bx, by, '#ffcc80', 6, 120, 3, 0.4);
+        tone(300, 0.24, 'sawtooth', 0.06, 120);
+        break;
+      }
+      // SKY SWEEP: the serpent crosses the whole width. Phase 2+ leaves a
+      // 3-comet micro WAKE evenly along the traveled path (dropped in the sweep
+      // mover) — the serpent's body itself becomes the hazard.
       boss.sweep = { dir: gameRand() < 0.5 ? -1 : 1, t: 2.6 };
+      if (boss.phase >= 2) { boss.sweep.wake = 3; boss.sweep.wakeGap = 2.6 / 4; boss.sweep.wakeT = 2.6 / 4; }
       SFX.roar();
       break;
+    }
     case 483: { // Dialga: THE CLOCKWORK BASTION (Milestone 4).
       // Phase 1 alternates CHRONO GEARS (the normal-fire answer) with TIME
       // DILATION. Two gear nodes orbit FIXED anchors flanking the boss in
@@ -1313,25 +1386,133 @@ function bossAbility(boss) {
       if (!SETTINGS.reduceFlash) G.flashT = Math.max(G.flashT, 0.12);
       break;
     }
-    case 644: // Zekrom: lightning column at your position
+    case 644: { // Zekrom: THE STORM ENGINE (Milestone 4 Round B).
+      // Phase 1 alternates CHARGE CONDUITS (the normal-fire answer) with BOLT
+      // STRIKE. Two conduit nodes descend to fixed mid-field lanes and hold for
+      // 10s (no drip). While a conduit lives, every BOLT STRIKE adds +1 column
+      // anchored at its x — thin the storm before it multiplies. Two basic hits
+      // ground one; cap 2; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic
+        && (boss.conduitTurn = !boss.conduitTurn) && !G.enemyShots.some(s => s.conduit)) {
+        const cVolley = nextEnemyVolley();
+        const holdY = shipY() - 210;
+        for (let i = 0; i < 2; i++) {
+          spawnEnemyShot({ x: W * (i ? 0.68 : 0.32), y: by, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 644, kind: 'plasma', classKey: 'heavy',
+            visualR: 12, hitR: 10, volleyId: cVolley,
+            conduit: { t: 0, life: 10, holdY, src: boss } });
+        }
+        setCombatNotice('CHARGE CONDUITS — SHOOT THEM DOWN!', '#80d8ff', 1.8);
+        ringFx(bx, by, '#80d8ff', 6, 120, 3, 0.4);
+        tone(400, 0.22, 'square', 0.05, 160);
+        break;
+      }
+      // BOLT STRIKE: a lightning column at the pilot's lane, plus +1 column at
+      // each live conduit's x (so 1–2 extra lightning lanes per cast).
       G.columnStrikes.push({ x: G.paddle.x, w: 52, warn: 1.0, strike: 0.32, color: '#80d8ff' });
+      for (const s of G.enemyShots) if (s.conduit && !s.dead)
+        G.columnStrikes.push({ x: s.x, w: 46, warn: 1.15, strike: 0.32, color: '#80d8ff' });
       tone(1200, 0.3, 'square', 0.04, -800);
       break;
-    case 717: // Yveltal: five-shot fan
+    }
+    case 717: { // Yveltal: THE LIFE THIEF (Milestone 4 Round B).
+      // Phase 1 alternates DRAIN WISPS (the normal-fire answer) with OBLIVION
+      // WING. Three 2-HP heavy wisps are exhaled BELOW him and spiral slowly
+      // BACK UP toward him (inverted feathers on the wisp lifecycle); a wisp
+      // that reaches him HEALS +3% maxHp, clamped so it can never re-cross the
+      // current phase's entry threshold. Two basic hits pop one — the first boss
+      // drain: ignoring it costs damage you already dealt. Cap 3; skip the turn
+      // if any survive (mirrors the focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic
+        && (boss.wispTurn = !boss.wispTurn) && !G.enemyShots.some(s => s.wisp)) {
+        const wVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx + (i - 1) * 48, y: by + 96, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 717, kind: 'feather', classKey: 'heavy',
+            visualR: 11, hitR: 9, volleyId: wVolley,
+            wisp: { t: 0, ang: i * Math.PI * 2 / 3, src: boss } });
+        }
+        ringFx(bx, by, '#ef5350', 6, 120, 3, 0.4);
+        tone(240, 0.24, 'sine', 0.05, -140);
+        break;
+      }
+      // OBLIVION WING: the five-shot fan telegraph.
       G.telegraphs.push({ br: boss, boss: true, fan: true, t: 0.6, max: 0.6 });
       break;
-    case 792: // Lunala: phases out — attacks pass through her
+    }
+    case 792: { // Lunala: THE MOON'S VEIL (Milestone 4 Round B).
+      // PHANTOM PHASE turns her intangible (boss.phaseT) — but now the veil has
+      // counterplay. Each cast also manifests 3 LUNAR MOTES: gear-style fixed
+      // anchors (kind 'eclipse', drawn small) ringed around her cast position.
+      // Destroying 2 SNAPS the phase early (phaseT 0); if the phase runs its full
+      // duration, each survivor converts to one aimed crescent. Motes exist ONLY
+      // during the phase (they fizzle the instant phaseT hits 0, for any reason).
+      // Phase-2 garnish (tighter cadence) comes free from the generic lastStand
+      // abilityCD multiplier (×0.62 in phase 2 — a 2-phase legendary's phase 2 IS
+      // its last stand), which already beats the ×0.8 design target.
       boss.phaseT = 2.6;
       tone(520, 0.5, 'sine', 0.05, 300);
+      if (G.mode === 'junkie' && !boss.mythic) {
+        const mVolley = nextEnemyVolley();
+        const mr = Math.max(64, boss.w * 0.9);
+        boss.moteSpawn = 3;
+        for (let i = 0; i < 3; i++) {
+          const a = i * Math.PI * 2 / 3 - Math.PI / 2;
+          spawnEnemyShot({ x: bx, y: by, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 792, kind: 'eclipse', classKey: 'heavy',
+            visualR: 12, hitR: 10, volleyId: mVolley,
+            mote: { t: 0, ox: Math.cos(a) * mr, oy: Math.sin(a) * mr * 0.7, src: boss } });
+        }
+        setCombatNotice('LUNAR MOTES — SHOOT THEM DOWN!', '#b39ddb', 1.8);
+        ringFx(bx, by, '#b39ddb', 6, 120, 3, 0.4);
+      }
       break;
-    case 890: // Eternatus: wide warned beam under itself
+    }
+    case 890: { // Eternatus: THE ETERNAL CANNON (Milestone 4 Round B).
+      // Phase 1 alternates VENOM CYSTS (the normal-fire answer) with DYNAMAX
+      // CANNON. Two cysts drift down on the FEATHER lifecycle (slow fall + gentle
+      // sway) and burst into 3 toxic micros at the ship band. WHILE ANY CYST LIVES
+      // the toxic perimeter rain thickens 7→9 (spawnBossFire case 890 reads the
+      // s.cyst flag, mirroring Zekrom's conduit read). Two basic hits lance one;
+      // cap 2; skip the turn if any survive (focus-orb guard). Galar is already
+      // dense — the buff is the threat, not clutter.
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic
+        && (boss.cystTurn = !boss.cystTurn) && !G.enemyShots.some(s => s.cyst)) {
+        const cyVolley = nextEnemyVolley();
+        for (let i = 0; i < 2; i++) {
+          spawnEnemyShot({ x: bx + (i ? 44 : -44), y: by + 10, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 890, kind: 'toxic', classKey: 'heavy',
+            visualR: 11, hitR: 9, cyst: true, volleyId: cyVolley,
+            feather: { t: 0, burstAt: shipY() - 40, sway: (i ? 0.6 : -0.6) + gameRand() * 0.4, fan: 3, src: boss } });
+        }
+        setCombatNotice('VENOM CYSTS — SHOOT THEM DOWN!', '#b388ff', 1.8);
+        ringFx(bx, by, '#b388ff', 6, 120, 3, 0.4);
+        tone(140, 0.24, 'sawtooth', 0.06, 60);
+        break;
+      }
+      // DYNAMAX CANNON: wide warned beam under itself.
       G.columnStrikes.push({ x: bx, w: Math.max(90, boss.w * 0.6), warn: 1.2, strike: 0.5, color: '#b388ff' });
       tone(90, 0.7, 'sawtooth', 0.08, 40);
       break;
-    case 1007: // Koraidon: wild charge toward you
+    }
+    case 1007: { // Koraidon: THE PARADOX CHARGER (Milestone 4 Round B).
+      // WILD CHARGE is a fast homing dash. Each dash drops 3 AFTERIMAGES evenly
+      // along the traveled path — orbit-lifecycle STATIONARY launchers (kind
+      // 'shock', drawn small + ghosted) that, after 3.5s, each fire one aimed
+      // heavy shock. The dash leaves its danger behind (it's a paradox Pokémon).
+      // Cap: if 3 afterimages already live, the dash drops none. Two basic hits
+      // disperse one. Phase-2 garnish (more dashes) comes free from the generic
+      // lastStand abilityCD multiplier (×0.62 in phase 2 — a 2-phase legendary's
+      // phase 2 IS its last stand), which already beats the spec's ×0.8 target;
+      // do NOT stack another multiplier (Lunala-style inheritance).
       boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.5, fast: true };
+      if (G.mode === 'junkie' && !boss.mythic) {
+        const live = G.enemyShots.reduce((n, s) => n + (s.afterimage && !s.dead ? 1 : 0), 0);
+        if (live < 3) { boss.sweep.imageDrops = 3; boss.sweep.imageGap = 1.5 / 4; boss.sweep.imageT = 1.5 / 4; }
+      }
       SFX.enrage();
       break;
+    }
     default:
       if (boss.mythic) { // MYTHIC BLINK: vanish, reappear, radial burst
         burst(bx, by, '#ff80ab', 26, 300, 0.6);
@@ -3900,6 +4081,9 @@ function update(dt) {
           boss.channel = { t: 0, dur: chDef.dur, pattern: chDef.pattern, name: chDef.name };
           boss.fireQuietT = Math.max(boss.fireQuietT || 0, 3.4);
           boss.teleportAt = null; // the channel roots him
+          boss.phaseT = 0; // a desperation must never be uninterruptible (Lunala's
+          // PHANTOM PHASE gates damage) — clearing an intangibility timer on
+          // channel open is safe for every boss (a no-op for those that never set it)
           setCombatNotice(chDef.name + ' CHANNEL — BREAK IT WITH A CHARGED SHOT!', '#ff5cf0', 2.4);
           SFX.enrage(); haptic('boss');
         }
@@ -3914,7 +4098,7 @@ function update(dt) {
             const pattern = boss.channel.pattern;
             boss.channel = null;
             boss.channelCD = chDef.cd;
-            spawnChannelPunish(boss, pattern);
+            spawnChannelPunish(boss, pattern, chDef.params);
             G.shake = Math.min(G.shake + 8, 14);
             SFX.roar();
           }
@@ -3949,10 +4133,65 @@ function update(dt) {
         if (boss.hx < lim) { boss.hx = lim; boss.sweep.dir = 1; }
         if (boss.hx > W - lim) { boss.hx = W - lim; boss.sweep.dir = -1; }
         boss.bx = boss.hx;
+        // SKY SWEEP WAKE (Rayquaza phase 2+): drop comet micros evenly along the
+        // traveled path so the serpent's body becomes the hazard. Honest enemy
+        // shots in every mode; junkie-safe (boss fire bypasses the threat budget).
+        if (boss.sweep.wake > 0) {
+          boss.sweep.wakeT -= dt * ts;
+          if (boss.sweep.wakeT <= 0) {
+            boss.sweep.wake--;
+            boss.sweep.wakeT = boss.sweep.wakeGap;
+            const wsp = (150 + diff().lv * 8) * diff().shotSpeed;
+            spawnEnemyShot({ x: boss.bx + G.fx, y: boss.by + G.fy, vy: wsp, boss: true,
+              type: boss.poke.t, species: 384, kind: 'comet', classKey: 'micro', volleyId: nextEnemyVolley() });
+            SFX.enemyShot();
+          }
+        }
+        // AFTERIMAGES (Koraidon): drop stationary ghost launchers evenly along
+        // the dash path. A DISTINCT rider from the wake above — these are deferred
+        // orbit-lifecycle launchers (fire an aimed heavy shock after 3.5s), not
+        // the wake's instant micros; both may ride the same sweep without conflict.
+        if (boss.sweep.imageDrops > 0) {
+          boss.sweep.imageT -= dt * ts;
+          if (boss.sweep.imageT <= 0) {
+            boss.sweep.imageDrops--;
+            boss.sweep.imageT = boss.sweep.imageGap;
+            spawnEnemyShot({ x: boss.bx + G.fx, y: boss.by + G.fy, vx: 0, vy: 0, boss: true,
+              type: boss.poke.t, species: 1007, kind: 'shock', classKey: 'heavy',
+              visualR: 10, hitR: 9, ghost: 0.5, afterimage: true, volleyId: nextEnemyVolley(),
+              orbit: { t: 0, launchAt: 3.5, stationary: true, src: boss } });
+            if (!boss.imageAnnounced) { boss.imageAnnounced = true; setCombatNotice('AFTERIMAGES — SHOOT THEM DOWN!', '#ffd54f', 1.8); }
+            SFX.enemyShot();
+          }
+        }
         boss.sweep.t -= dt * ts;
         if (boss.sweep.t <= 0) boss.sweep = null;
       }
-      if (boss.phaseT > 0) boss.phaseT -= dt;
+      if (boss.phaseT > 0) {
+        // LUNAR MOTES (Lunala): normal fire shortens the veil. Shooting 2 of the
+        // 3 motes SNAPS the phase back early (survivors then fizzle in the shot
+        // loop). If the phase instead runs its full duration, each survivor
+        // converts to ONE aimed crescent. `moteSpawn` (the cast count) gates both
+        // and is zeroed once resolved so it fires exactly once per cast.
+        if (boss.moteSpawn) {
+          const live = G.enemyShots.reduce((n, s) => n + (s.mote && !s.dead && s.mote.src === boss ? 1 : 0), 0);
+          if (boss.moteSpawn - live >= 2) { boss.phaseT = 0; boss.moteSpawn = 0; } // snap: 2 destroyed
+        }
+        boss.phaseT -= dt;
+        if (boss.phaseT <= 0 && boss.moteSpawn) {
+          // natural completion: survivors become aimed crescents, then vanish
+          boss.moteSpawn = 0;
+          const csp = (185 + diff().lv * 8) * diff().shotSpeed, cVolley = nextEnemyVolley();
+          for (const s of G.enemyShots) {
+            if (!s.mote || s.dead || s.mote.src !== boss) continue;
+            const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
+            spawnEnemyShot({ x: s.x, y: s.y, vx: Math.cos(aim) * csp, vy: Math.sin(aim) * csp,
+              boss: true, type: boss.poke.t, species: 792, kind: 'crescent', classKey: 'standard', volleyId: cVolley });
+            s.dead = true;
+          }
+          SFX.enemyShot();
+        }
+      }
       boss.fireQuietT = Math.max(0, (boss.fireQuietT || 0) - dt);
       G.bossShotCD -= dt * ts;
       if (G.bossShotCD <= 0 && boss.fireQuietT <= 0) {
@@ -4073,15 +4312,21 @@ function update(dt) {
       const anchor = s.orbit.src;
       if (!anchor || anchor.dead) { s.dead = true; continue; }
       s.orbit.t += dt * ts;
-      const oa = s.orbit.ang + s.orbit.t * 1.4;
-      s.x = anchor.bx + G.fx + Math.cos(oa) * s.orbit.r;
-      s.y = anchor.by + G.fy + Math.sin(oa) * s.orbit.r * 0.62;
+      // AFTERIMAGE (Koraidon): a STATIONARY launcher dropped along the dash path
+      // — it does NOT orbit its summoner; it holds its drop position and, after
+      // launchAt (3.5s), fires one aimed heavy shock (the past catching up).
+      if (!s.orbit.stationary) {
+        const oa = s.orbit.ang + s.orbit.t * 1.4;
+        s.x = anchor.bx + G.fx + Math.cos(oa) * s.orbit.r;
+        s.y = anchor.by + G.fy + Math.sin(oa) * s.orbit.r * 0.62;
+      }
       s.age = 0; // the 9s ballistic cull starts at launch, not at summon
       if (s.orbit.t >= s.orbit.launchAt) {
         const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
         const sp = (195 + diff().lv * 8) * diff().shotSpeed;
         s.vx = Math.cos(aim) * sp; s.vy = Math.sin(aim) * sp;
         s.orbit = null;
+        s.ghost = 0; // the launched shot is real danger — full alpha
         ringFx(s.x, s.y, '#c06cff', 4, 44, 2, 0.3);
         SFX.enemyShot();
       } else continue; // still locked to the summoner — no ballistic motion
@@ -4095,19 +4340,32 @@ function update(dt) {
       const anchor = s.feather.src;
       if (!anchor || anchor.dead) { s.dead = true; continue; }
       s.feather.t += dt * ts;
-      s.y += 60 * ts * dt; // slow descent
-      s.x += Math.sin(s.feather.t * 1.6 + s.feather.sway * 4) * 34 * dt; // sine wander
-      if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) s.x += G.gustDir * 150 * dt; // TAILWIND push
-      s.x = Math.max(16, Math.min(W - 16, s.x));
+      if (s.feather.accel) {
+        // METEOR SHARD (Rayquaza): a straight downward COMMIT — no sine wander
+        // (sway 0), no wind coupling; a downward ACCELERATION builds it (it
+        // starts slow, then commits). vy integrates from vy0.
+        s.feather.vy = (s.feather.vy == null ? (s.feather.vy0 || 0) : s.feather.vy) + s.feather.accel * ts * dt;
+        s.y += s.feather.vy * ts * dt;
+      } else {
+        s.y += 60 * ts * dt; // slow descent
+        s.x += Math.sin(s.feather.t * 1.6 + s.feather.sway * 4) * 34 * dt; // sine wander
+        if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) s.x += G.gustDir * 150 * dt; // TAILWIND push
+        s.x = Math.max(16, Math.min(W - 16, s.x));
+      }
       s.age = 0; // no ballistic 9s cull while it drifts
       if (s.y >= s.feather.burstAt) {
         const fanV = nextEnemyVolley();
         const base = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
         const fsp = (200 + diff().lv * 8) * diff().shotSpeed;
-        for (let k = -1; k <= 1; k++) spawnEnemyShot({ x: s.x, y: s.y,
-          vx: Math.cos(base + k * 0.24) * fsp, vy: Math.sin(base + k * 0.24) * fsp,
-          boss: true, type: 'flying', species: 249, kind: 'aeroring', classKey: 'micro', volleyId: fanV });
-        ringFx(s.x, s.y, '#b3e5fc', 4, 44, 2, 0.3);
+        // fan count is data (Lugia 3, Rayquaza 4); micro kind/type inherit the
+        // shard's own identity so the burst reads as the same projectile family.
+        const fan = s.feather.fan || 3;
+        for (let k = 0; k < fan; k++) {
+          const off = (k - (fan - 1) / 2) * 0.24;
+          spawnEnemyShot({ x: s.x, y: s.y, vx: Math.cos(base + off) * fsp, vy: Math.sin(base + off) * fsp,
+            boss: true, type: s.type, species: s.species, kind: s.kind, classKey: 'micro', volleyId: fanV });
+        }
+        ringFx(s.x, s.y, s.feather.accel ? '#ffcc80' : '#b3e5fc', 4, 44, 2, 0.3);
         SFX.enemyShot();
         s.dead = true;
       }
@@ -4138,6 +4396,68 @@ function update(dt) {
         SFX.enemyShot();
       }
       continue; // gears own their motion — no ballistic integration
+    }
+    // CHARGE CONDUITS (Zekrom duel): a gear-lifecycle anchor that descends to a
+    // fixed mid-field lane and HOLDS it — no metronome drip. While it lives,
+    // every BOLT STRIKE spawns an extra lightning column at its x (see case 644).
+    // Two basic hits ground it (interceptHP 2); it self-expires after 10s (no
+    // burst) or when Zekrom falls. It IS an enemy shot — no flyer system.
+    if (s.conduit) {
+      const anchor = s.conduit.src;
+      if (!anchor || anchor.dead) { s.dead = true; continue; }
+      s.conduit.t += dt * ts;
+      if (s.conduit.t >= s.conduit.life) { s.dead = true; continue; } // expire, no burst
+      if (s.y < s.conduit.holdY) s.y = Math.min(s.conduit.holdY, s.y + 150 * ts * dt); // descend, then hold
+      s.age = 0; // holding a lane — no ballistic 9s cull
+      continue; // conduits own their motion — no ballistic integration
+    }
+    // DRAIN WISPS (Yveltal duel): an exhaled wisp spirals slowly BACK UP toward
+    // its summoner (inverted feather). A wisp reaching him (within ~w*0.4) HEALS
+    // +3% maxHp — clamped just under the CURRENT phase's entry threshold so a
+    // permanent phase transition can never be undone — then fizzles. Two basic
+    // hits pop it first (interceptHP 2, laser loop). Orphan-fizzles if he falls.
+    // The heal mutates hp directly, so the damage ledger never records it.
+    if (s.wisp) {
+      const anchor = s.wisp.src;
+      if (!anchor || anchor.dead) { s.dead = true; continue; }
+      s.wisp.t += dt * ts;
+      const tx = anchor.bx + G.fx, ty = anchor.by + G.fy;
+      const dx = tx - s.x, dy = ty - s.y, dist = Math.hypot(dx, dy) || 1;
+      if (dist < anchor.w * 0.4) {
+        // ABSORB → heal, clamped below the current phase's entry threshold.
+        const phaseCount = bossPhaseCount(anchor);
+        const capFrac = 1 - (anchor.phase - 1) / phaseCount; // entry frac of the current phase
+        const cap = anchor.phase > 1 ? anchor.maxHp * capFrac - anchor.maxHp * 1e-3 : anchor.maxHp;
+        anchor.hp = Math.max(anchor.hp, Math.min(anchor.hp + anchor.maxHp * 0.03, cap));
+        if (!SETTINGS.reduceFlash) { ringFx(tx, ty, '#ef5350', 4, 62, 3, 0.4); sparkle(tx, ty, 5); }
+        addFloater(tx, ty - 18, 'DRAINED', '#ef5350', 13);
+        if (!anchor.wispDrained) { anchor.wispDrained = true; setCombatNotice('DRAIN WISPS — SHOOT THEM DOWN', '#ef5350', 1.8); }
+        SFX.enemyShot();
+        s.dead = true; continue;
+      }
+      // gentle spiral seek: forward toward the boss plus a small perpendicular wobble
+      const nx = dx / dist, ny = dy / dist;
+      const spiral = Math.sin(s.wisp.t * 2.2 + s.wisp.ang) * 0.55;
+      const seekSp = 82;
+      s.x += (nx - ny * spiral) * seekSp * ts * dt;
+      s.y += (ny + nx * spiral) * seekSp * ts * dt;
+      s.age = 0; // seeking home — no ballistic 9s cull
+      continue; // wisps own their motion — no ballistic integration
+    }
+    // LUNAR MOTES (Lunala duel): a gear-style FIXED anchor (no orbit, no drip)
+    // that exists ONLY during PHANTOM PHASE. It holds its offset around her cast
+    // position; the moment phaseT hits 0 for ANY reason (2 motes shot, channel
+    // snap, natural end) it fizzles here. Natural-completion conversion to an
+    // aimed crescent is handled at the phaseT-decrement site (it must run before
+    // this fizzle). Orphan-fizzles if she falls. It IS an enemy shot — no flyer.
+    if (s.mote) {
+      const anchor = s.mote.src;
+      if (!anchor || anchor.dead || !(anchor.phaseT > 0)) { s.dead = true; continue; }
+      s.mote.t += dt * ts;
+      s.x = anchor.bx + G.fx + s.mote.ox;
+      s.y = anchor.by + G.fy + s.mote.oy;
+      s.age = 0; // pinned to her — no ballistic 9s cull
+      continue; // motes own their motion — no ballistic integration
     }
     if (s.turn) {
       const a = s.turn * dt * ts, ca = Math.cos(a), sa = Math.sin(a);

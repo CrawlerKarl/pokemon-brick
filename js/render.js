@@ -2887,6 +2887,7 @@ function drawProjectiles() {
     ctx.rotate(SPINNING_ENEMY_SHOT[kind] ? spin : heading + Math.sin(spin) * 0.05);
     const img = enemyShotSprite(kind, col, r);
     const drawScale = ENEMY_SHOT_DRAW_SCALE[kind] || 1;
+    if (s.ghost) ctx.globalAlpha = s.ghost; // AFTERIMAGE (Koraidon): low-alpha ghost render (no gradient)
     ctx.drawImage(img, -img.width * drawScale / 2, -img.height * drawScale / 2,
       img.width * drawScale, img.height * drawScale);
     ctx.restore();

@@ -155,8 +155,29 @@ Still open (Round C / M9):
   distinct spawn, hazard, victory.
 
 ## Milestone 4 — Full boss overhaul 🔶
-(Round A shipped 2026-07-19 — Lugia + Dialga on the Mewtwo template;
-design doc: `M4_BOSS_KITS.md`)
+(Rounds A+B shipped 2026-07-19 — all NINE finale legendaries on the
+Mewtwo template; design doc: `M4_BOSS_KITS.md`)
+
+Shipped (Round B — the remaining six):
+- [x] **Channel params + two new punish patterns** — `BOSS_CHANNELS`
+  entries carry `params {count,w,gap,warnMul,bounce,color}`;
+  `spawnChannelPunish` gained `rain` (distinct-lane storm) and `pincer`
+  (edges close inward), plus `bounce` on sweep. No-params entries are
+  bit-identical (regression-tested).
+- [x] **Rayquaza**: METEOR SHARDS (accelerating 2-HP calves, 4-micro
+  burst), phase-2 sweep comet wake, DRAGON ASCENT sweep channel.
+- [x] **Zekrom**: CHARGE CONDUITS (2-HP nodes that each add a BOLT
+  STRIKE column), FUSION BOLT rain channel.
+- [x] **Yveltal**: DRAIN WISPS (spiral home, +3% heal clamped at the
+  phase threshold — deny to protect your progress), DARK PULSE pincer.
+- [x] **Lunala**: LUNAR MOTES (kill 2 to snap PHANTOM PHASE early;
+  survivors convert to aimed crescents), MOONGEIST BEAM wide columns;
+  channels always clear `phaseT` (desperations stay interruptible).
+- [x] **Eternatus**: VENOM CYSTS (live cysts thicken the toxic rain
+  7→9), ETERNABEAM wide slow sweep.
+- [x] **Koraidon**: AFTERIMAGES (dashes drop stationary launchers that
+  fire aimed heavies), COLLISION COURSE bounce sweep (16 strikes).
+- [x] Suite 59 → 65; all nine duels covered + three regression guards.
 
 Shipped (Round A):
 - [x] **Data-driven desperation channels** — `BOSS_CHANNELS` (data.js)
@@ -176,9 +197,8 @@ Shipped (Round A):
   ROAR OF TIME clock channel (rotating safe lane).
 - [x] Both duels + the Mewtwo regression covered by the suite (57 → 59).
 
-Prototype set is now Mewtwo (precision duel/teleport control), Lugia
-(pursuit, wind, lane manipulation), Dialga (clockwork timing, arena
-control). Still to roll across every remaining major boss: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
+All nine finale legendaries now carry the template. Still open for
+later rounds — mythicals and sentinels, plus the polish items: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
 three distinct phases (◐ phase framework exists), species projectile family
 (◐ `BOSS_PROJECTILE_KIND`), weak point/opening/interrupt, one move best
 answered by normal fire + one by charge, phase-transition animation, phase

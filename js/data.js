@@ -1304,10 +1304,20 @@ const BOSS_ABILITIES = {
 // the original Psystrike hard-gate). `pattern` selects the punish lane geometry
 // (columns / sweep / clock) fired if the channel is NOT interrupted. The stagger
 // (1.5s ×1.35) is a template constant held in update.js, uniform across bosses.
+// `params` (optional) tunes a shared pattern per boss without new code paths:
+// {count, w, gap, warnMul, bounce, color} consumed by spawnChannelPunish. An
+// entry with NO params keeps today's literal behaviour BIT-IDENTICAL (Mewtwo /
+// Lugia / Dialga below — their duel tests are the guard).
 const BOSS_CHANNELS = {
-  150: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'PSYSTRIKE',    pattern: 'columns' },
-  249: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'AEROBLAST',    pattern: 'sweep'   },
-  483: { hpFrac: 0.15, dur: 2.8, cd: 9, name: 'ROAR OF TIME', pattern: 'clock'   },
+  150: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'PSYSTRIKE',     pattern: 'columns' },
+  249: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'AEROBLAST',     pattern: 'sweep'   },
+  384: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'DRAGON ASCENT', pattern: 'sweep', params: { count: 6, gap: 0.24 } },
+  483: { hpFrac: 0.15, dur: 2.8, cd: 9, name: 'ROAR OF TIME',  pattern: 'clock'   },
+  644: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'FUSION BOLT',   pattern: 'rain', params: { count: 7, gap: 0.16, color: '#80d8ff' } },
+  717: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'DARK PULSE',    pattern: 'pincer', params: { count: 6 } },
+  792: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'MOONGEIST BEAM', pattern: 'columns', params: { count: 3, w: 110, warnMul: 1.3 } },
+  890: { hpFrac: 0.15, dur: 2.8, cd: 9, name: 'ETERNABEAM', pattern: 'sweep', params: { count: 4, w: 90, gap: 0.34 } },
+  1007: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'COLLISION COURSE', pattern: 'sweep', params: { count: 8, gap: 0.18, bounce: true } },
 };
 // ---- how each legendary OWNS its arena: a movement archetype that makes
 // every fight look and feel different — not every boss looms large up top.

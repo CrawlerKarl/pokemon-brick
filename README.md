@@ -436,6 +436,25 @@ case 150, update.js):
 The pattern (one move answered by normal fire, one by charge, desperation
 with readable counterplay) is Milestone 4's template for every boss.
 
+### Round B: the other six legendaries (Milestone 4 — template complete)
+All nine finale legendaries now duel by the template. `BOSS_CHANNELS`
+entries carry optional `params {count,w,gap,warnMul,bounce,color}` and two
+new punish patterns exist: `rain` (distinct-lane storm) and `pincer`
+(edges close inward, wider-warned center pair); `sweep` learned `bounce`
+(out-and-back). Signatures (all 2-HP intercepts, deny with two basic
+hits): **Rayquaza** METEOR SHARDS (accelerating calves, 4-micro burst;
+phase-2 sweeps leave a comet wake) + DRAGON ASCENT sweep. **Zekrom**
+CHARGE CONDUITS (each live node adds a BOLT STRIKE column at its lane) +
+FUSION BOLT rain. **Yveltal** DRAIN WISPS (spiral home; an absorbed wisp
+heals it +3% maxHp, clamped at the phase threshold — shoot them to
+protect your progress) + DARK PULSE pincer. **Lunala** LUNAR MOTES
+(manifest with PHANTOM PHASE; kill 2 to snap her veil early, survivors
+convert to aimed crescents; channels always clear the veil) + MOONGEIST
+BEAM wide columns. **Eternatus** VENOM CYSTS (live cysts thicken the
+toxic rain 7→9) + ETERNABEAM wide slow sweep. **Koraidon** AFTERIMAGES
+(dashes drop ghosted stationary launchers that fire aimed heavies after
+3.5s) + COLLISION COURSE bounce sweep (16 strikes).
+
 ### Lugia and Dialga duels (Milestone 4 Round A — the template rolls out)
 Desperation channels are now data-driven: `BOSS_CHANNELS` (data.js) keys
 `{hpFrac, dur, cd, name, pattern}` per species and `spawnChannelPunish`

@@ -2485,7 +2485,452 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('Rayquaza duel: meteor shards (accel/burst/deny) + Dragon Ascent sweep', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(9, true, { seed: 'rayquaza-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 384, 'round jump did not reach Rayquaza');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      // ---- P1 METEOR SHARDS: three 2-HP heavy comet shards ----
+      boss.abilityCD = 0; boss.shardTurn = false; boss.fireQuietT = 5; G.enemyShots = [];
+      update(1 / 60);
+      let shards = G.enemyShots.filter(s => s.feather);
+      assert(shards.length === 3 && shards.every(s => s.interceptHP === 2 && s.boss && s.kind === 'comet'),
+        'shard turn did not calve three 2-HP boss comet shards');
+      // ACCELERATE: a shard's later per-frame descent exceeds its earliest one
+      boss.abilityCD = 9; G.enemyShots = G.enemyShots.filter(s => s.feather); // isolate + no redeploy
+      G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; // steady time scale for the measurement
+      const sh = shards[0];
+      const y0 = sh.y; update(1 / 60); const dEarly = sh.y - y0;
+      for (let k = 0; k < 10; k++) update(1 / 60);
+      const y1 = sh.y; update(1 / 60); const dLate = sh.y - y1;
+      assert(dLate > dEarly, 'meteor shards did not accelerate downward (later descent not > earlier)');
+      // DENY: two basic intercepts shatter a shard (cheap for normal fire)
+      boss.abilityCD = 0; boss.shardTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      const sd = G.enemyShots.filter(s => s.feather);
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: sd[0].x, y: sd[0].y }]; update(1 / 60); }
+      assert(sd[0].dead, 'two basic hits did not shatter a meteor shard');
+      // BURST: a shard reaching the ship band bursts into 4 aimed comet micros
+      boss.abilityCD = 0; boss.shardTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      const sb = G.enemyShots.find(s => s.feather);
+      assert(sb, 'no shard to drive to the ship band');
+      G.enemyShots = G.enemyShots.filter(s => s.feather); // isolate from baseline fire
+      sb.y = sb.feather.burstAt + 1;
+      update(1 / 60);
+      const micros = G.enemyShots.filter(s => s.classKey === 'micro' && s.kind === 'comet' && !s.feather);
+      assert(sb.dead && micros.length === 4, 'a shard at the ship band did not burst into four aimed comet micros');
+      // ---- P2 DRAGON ASCENT: channel below 15%, charged interrupt, wide sweep ----
+      G.enemyShots = []; G.lasers = [];
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep' && boss.channel.name === 'DRAGON ASCENT',
+        'low HP did not open the DRAGON ASCENT sweep channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // SWEEP SIGNATURE: uninterrupted → SIX warned columns, monotonic warn times
+      boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep', 'the DRAGON ASCENT channel did not recur after cooldown');
+      boss.channel.t = 99; boss.abilityCD = 99; // let only the channel punish push columns this frame
+      const c0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(c0);
+      assert(cols.length === 6, 'an uninterrupted Dragon Ascent did not fire six warned columns');
+      const warns = cols.map(c => c.warn);
+      const mono = a => a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
+      assert(mono(warns), 'the sweep columns did not fire sequentially (non-monotonic warn times)');
+      return 'shards: calve 3 → accelerate → deny (2 hits) → burst 4 comet micros; Dragon Ascent: channel → charged break → 1.35× stagger → 6 sequential wide sweep columns';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Zekrom duel: charge conduits (multiply BOLT STRIKE) + Fusion Bolt rain', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(15, true, { seed: 'zekrom-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 644, 'round jump did not reach Zekrom');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      mouseX = W / 2; G.paddle.x = W / 2;
+      // ---- BOLT STRIKE with NO conduits: exactly one lightning column ----
+      boss.abilityCD = 0; boss.conduitTurn = true; boss.fireQuietT = 5; // toggles false → BOLT STRIKE
+      G.enemyShots = []; G.columnStrikes = [];
+      update(1 / 60);
+      assert(G.columnStrikes.length === 1, 'a conduit-free BOLT STRIKE did not fire exactly one column');
+      // ---- CHARGE CONDUITS: two 2-HP heavy conduit nodes ----
+      boss.abilityCD = 0; boss.conduitTurn = false; boss.fireQuietT = 5; // toggles true → deploy conduits
+      G.enemyShots = []; G.columnStrikes = [];
+      update(1 / 60);
+      const conduits = G.enemyShots.filter(s => s.conduit);
+      assert(conduits.length === 2 && conduits.every(s => s.interceptHP === 2 && s.boss && s.kind === 'plasma'),
+        'conduit turn did not drop two 2-HP boss conduit nodes');
+      // ---- BOLT STRIKE with 2 live conduits: three columns (extras at conduit x) ----
+      boss.abilityCD = 0; boss.conduitTurn = true; boss.fireQuietT = 5; // toggles false → BOLT STRIKE (keep conduits alive)
+      G.columnStrikes = [];
+      update(1 / 60);
+      const strikes = G.columnStrikes;
+      assert(strikes.length === 3, 'a BOLT STRIKE with two live conduits did not fire three columns');
+      const conduitXs = conduits.map(c => c.x);
+      const extras = strikes.filter(c => conduitXs.some(cx => Math.abs(c.x - cx) < 4));
+      assert(extras.length === 2, 'the two extra lightning lanes did not anchor at the conduits\' x positions');
+      // DENY: two basic intercepts ground one conduit; the other survives
+      const k0 = conduits[0], k1 = conduits[1];
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: k0.x, y: k0.y }]; update(1 / 60); }
+      assert(k0.dead && !k1.dead, 'two basic hits did not ground exactly one conduit');
+      // ---- P2 FUSION BOLT: channel below 15%, charged interrupt, rain ----
+      G.enemyShots = []; G.lasers = [];
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'rain' && boss.channel.name === 'FUSION BOLT',
+        'low HP did not open the FUSION BOLT rain channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the rain channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // RAIN SIGNATURE: uninterrupted → 7 strikes in 7 DISTINCT lanes
+      boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'rain', 'the FUSION BOLT channel did not recur after cooldown');
+      boss.channel.t = 99; boss.abilityCD = 99; // let only the channel punish push columns this frame
+      const rc0 = G.columnStrikes.length;
+      update(1 / 60);
+      const rain = G.columnStrikes.slice(rc0);
+      assert(rain.length === 7, 'an uninterrupted Fusion Bolt did not fire seven rain strikes');
+      assert(new Set(rain.map(c => Math.round(c.x))).size === 7, 'the rain strikes did not fall in seven DISTINCT lanes');
+      return 'conduits: BOLT STRIKE 1 col → drop 2 → BOLT STRIKE 3 cols (extras at conduit x) → deny (2 hits, twin lives); Fusion Bolt: rain channel → charged break → 1.35× stagger → 7 distinct-lane strikes';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Yveltal duel: drain wisps (heal/clamp/deny) + Dark Pulse pincer', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(18, true, { seed: 'yveltal-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 717, 'round jump did not reach Yveltal');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      mouseX = W / 2; G.paddle.x = W / 2;
+      // ---- P1 DRAIN WISPS: three 2-HP heavy wisps ----
+      boss.abilityCD = 0; boss.wispTurn = false; boss.fireQuietT = 5; G.enemyShots = [];
+      update(1 / 60);
+      const wisps = G.enemyShots.filter(s => s.wisp);
+      assert(wisps.length === 3 && wisps.every(s => s.interceptHP === 2 && s.boss && s.kind === 'feather'),
+        'wisp turn did not exhale three 2-HP boss wisps');
+      // ---- HEAL: an absorbed wisp restores EXACTLY +3% maxHp (phase 1, uncapped) ----
+      boss.abilityCD = 0; boss.wispTurn = false; boss.fireQuietT = 5; G.enemyShots = [];
+      update(1 / 60);
+      const wHeal = G.enemyShots.find(s => s.wisp);
+      G.enemyShots = [wHeal]; // isolate from baseline fire
+      boss.abilityCD = 99; boss.phase = 1; boss.hp = boss.maxHp * 0.7; boss.wispDrained = false;
+      wHeal.x = boss.bx + G.fx; wHeal.y = boss.by + G.fy; // drop it onto Yveltal
+      const heal0 = boss.hp;
+      update(1 / 60);
+      assert(wHeal.dead, 'a wisp reaching Yveltal did not absorb');
+      assert(Math.abs((boss.hp - heal0) - boss.maxHp * 0.03) < 0.01,
+        'an absorbed wisp did not heal exactly +3% maxHp');
+      // ---- CLAMP: a phase-2 drain can never heal back across the 50% entry threshold ----
+      boss.abilityCD = 0; boss.wispTurn = false; boss.fireQuietT = 5; G.enemyShots = [];
+      boss.phase = 1; // spawn gate wants phase 1
+      update(1 / 60);
+      const wClamp = G.enemyShots.find(s => s.wisp);
+      G.enemyShots = [wClamp];
+      boss.abilityCD = 99; boss.phase = 2; boss.hp = boss.maxHp * 0.5 - boss.maxHp * 0.005; // just below 50%
+      wClamp.x = boss.bx + G.fx; wClamp.y = boss.by + G.fy;
+      update(1 / 60);
+      assert(wClamp.dead && boss.hp < boss.maxHp * 0.5,
+        'a phase-2 drain healed Yveltal back across the 50% entry threshold');
+      // ---- DENIED: a wisp shot down before it arrives heals nothing ----
+      boss.abilityCD = 0; boss.wispTurn = false; boss.fireQuietT = 5; boss.phase = 1; G.enemyShots = [];
+      update(1 / 60);
+      const wDeny = G.enemyShots.find(s => s.wisp);
+      G.enemyShots = [wDeny];
+      boss.abilityCD = 99; boss.hp = boss.maxHp * 0.7;
+      const deny0 = boss.hp;
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: wDeny.x, y: wDeny.y }]; update(1 / 60); }
+      assert(wDeny.dead && Math.abs(boss.hp - deny0) < 1e-6,
+        'a denied wisp still healed Yveltal (two basic hits must pop it for nothing)');
+      // ---- P2 DARK PULSE: channel below 15%, charged interrupt, pincer ----
+      G.enemyShots = []; G.lasers = [];
+      boss.abilityCD = 99; boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'pincer' && boss.channel.name === 'DARK PULSE',
+        'low HP did not open the DARK PULSE pincer channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the pincer channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // PINCER SIGNATURE: uninterrupted → SIX columns in three pairs, outer→inner,
+      // the final CENTER pair carrying the wider warn.
+      boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'pincer', 'the DARK PULSE channel did not recur after cooldown');
+      boss.channel.t = 99; boss.abilityCD = 99; // let only the channel punish push columns this frame
+      const c0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(c0);
+      assert(cols.length === 6, 'an uninterrupted Dark Pulse did not fire six pincer columns');
+      const wn = cols.map(c => c.warn), xs = cols.map(c => c.x), spanW = W / 6;
+      assert(Math.abs(wn[0] - wn[1]) < 1e-6 && Math.abs(wn[2] - wn[3]) < 1e-6 && Math.abs(wn[4] - wn[5]) < 1e-6,
+        'pincer columns did not fire in warned pairs');
+      assert(wn[0] < wn[2] && wn[2] < wn[4], 'pincer pairs did not close from the outer edges inward');
+      assert((wn[4] - wn[2]) > (wn[2] - wn[0]), 'the final center pair did not carry the wider warn');
+      assert(Math.min(xs[0], xs[1]) < spanW && Math.max(xs[0], xs[1]) > W - spanW,
+        'the first pincer pair did not strike the outer edges');
+      return 'wisps: exhale 3 → spiral home → absorb heals +3% (clamped below the phase threshold) → deny (2 hits, 0 heal); Dark Pulse: pincer channel → charged break → 1.35× stagger → 6 columns closing outer→inner, center pair wider-warned';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Lunala duel: lunar motes (snap/convert) + Moongeist Beam wide columns', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(21, true, { seed: 'lunala-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 792, 'round jump did not reach Lunala');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      mouseX = W / 2; G.paddle.x = W / 2;
+      // ---- PHANTOM PHASE manifests 3 lunar motes with the cast ----
+      boss.abilityCD = 0; boss.fireQuietT = 99; G.enemyShots = [];
+      update(1 / 60);
+      const motes = G.enemyShots.filter(s => s.mote);
+      assert(motes.length === 3 && motes.every(s => s.interceptHP === 2 && s.boss && s.kind === 'eclipse'),
+        'the phase cast did not manifest three 2-HP eclipse motes');
+      assert(boss.phaseT > 0, 'PHANTOM PHASE did not turn Lunala intangible');
+      // ---- SNAP: shooting 2 motes zeroes phaseT and fizzles the third ----
+      boss.abilityCD = 99; // no re-cast during the measurement
+      const m0 = motes[0], m1 = motes[1];
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: m0.x, y: m0.y }]; update(1 / 60); }
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: m1.x, y: m1.y }]; update(1 / 60); }
+      assert(m0.dead && m1.dead, 'two basic hits each did not destroy the two targeted motes');
+      assert(boss.phaseT <= 0, 'destroying two motes did not snap PHANTOM PHASE back early');
+      assert(!G.enemyShots.some(s => s.mote && !s.dead), 'the surviving mote did not fizzle on the snap');
+      assert(!G.enemyShots.some(s => s.kind === 'crescent' && !s.mote && (s.vx || s.vy)),
+        'an early snap wrongly converted the survivor into a crescent');
+      // ---- CONVERT: a FULL-duration phase turns each survivor into an aimed crescent ----
+      boss.abilityCD = 0; boss.fireQuietT = 99; G.enemyShots = [];
+      update(1 / 60); // re-cast PHANTOM PHASE + fresh motes
+      assert(G.enemyShots.filter(s => s.mote).length === 3 && boss.phaseT > 0, 'the phase did not re-cast with motes');
+      boss.abilityCD = 99; boss.fireQuietT = 99; // no re-cast, no baseline volley to pollute the count
+      for (let k = 0; k < 220 && boss.phaseT > 0; k++) update(1 / 60); // run to natural completion (kill none)
+      assert(boss.phaseT <= 0, 'the phase never ran to completion');
+      const crescents = G.enemyShots.filter(s => s.kind === 'crescent' && !s.mote && s.boss && (s.vx || s.vy));
+      assert(crescents.length === 3, 'surviving motes did not each convert to one aimed crescent');
+      assert(!G.enemyShots.some(s => s.mote && !s.dead), 'converted motes did not disappear');
+      // ---- P2 MOONGEIST BEAM: channel below 15% CLEARS the phase, then charged interrupt ----
+      G.enemyShots = []; G.lasers = [];
+      boss.abilityCD = 99; boss.phaseT = 1.5; // mid-veil when the desperation triggers
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'columns' && boss.channel.name === 'MOONGEIST BEAM',
+        'low HP did not open the MOONGEIST BEAM channel');
+      assert(boss.phaseT <= 0, 'the channel opened without clearing PHANTOM PHASE (an uninterruptible desperation)');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the MOONGEIST channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // COLUMN SIGNATURE: uninterrupted → THREE WIDE (w 110) moonbeams ----
+      boss.staggerT = 0; boss.channelCD = 0; boss.phaseT = 0; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'columns', 'the MOONGEIST channel did not recur after cooldown');
+      boss.channel.t = 99; boss.abilityCD = 99; // let only the channel punish push columns this frame
+      const cc0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(cc0);
+      assert(cols.length === 3, 'an uninterrupted Moongeist Beam did not fire three wide columns');
+      assert(cols.every(c => Math.abs(c.w - 110) < 0.01), 'the moonbeam columns were not the wide (w 110) beams');
+      return 'motes: cast manifests 3 → shoot 2 snaps phaseT (survivor fizzles, no crescent) → full phase converts survivors to aimed crescents; Moongeist Beam: channel clears the veil → charged break → 1.35× stagger → 3 wide (w110) columns';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Eternatus duel: venom cysts (thicken rain/burst/deny) + Eternabeam sweep', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(24, true, { seed: 'eternatus-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 890, 'round jump did not reach Eternatus');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      mouseX = W / 2; G.paddle.x = W / 2;
+      const bx = boss.bx + G.fx, by = boss.by + G.fy;
+      // ---- BASELINE toxic perimeter rain: 7 shots with NO cyst alive ----
+      boss.phase = 1; G.enemyShots = [];
+      spawnBossFire(boss, bx, by, diff(), {});
+      const rain7 = G.enemyShots.filter(s => s.kind === 'toxic' && s.classKey === 'micro');
+      assert(rain7.length === 7, 'the toxic perimeter rain did not fire seven shots with no cyst alive');
+      // ---- VENOM CYSTS: two 2-HP heavy toxic drifters ----
+      boss.abilityCD = 0; boss.cystTurn = false; boss.fireQuietT = 99; G.enemyShots = []; // toggles true → seed cysts
+      update(1 / 60);
+      const cysts = G.enemyShots.filter(s => s.cyst);
+      assert(cysts.length === 2 && cysts.every(s => s.interceptHP === 2 && s.boss && s.kind === 'toxic'),
+        'the cyst turn did not seed two 2-HP boss toxic cysts');
+      // ---- THICKENED rain: 9 shots WHILE a cyst lives (mirrors Zekrom's conduit read) ----
+      boss.abilityCD = 99; boss.phase = 1;
+      spawnBossFire(boss, bx, by, diff(), {});
+      const rain9 = G.enemyShots.filter(s => s.kind === 'toxic' && s.classKey === 'micro');
+      assert(rain9.length === 9, 'a live cyst did not thicken the toxic perimeter rain from 7 to 9');
+      // ---- BURST: a cyst reaching the ship band bursts into 3 toxic micros ----
+      boss.abilityCD = 0; boss.cystTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      const cb = G.enemyShots.find(s => s.cyst);
+      assert(cb, 'no cyst to drive to the ship band');
+      G.enemyShots = G.enemyShots.filter(s => s.cyst); // isolate from baseline fire
+      boss.abilityCD = 99; boss.fireQuietT = 99; // no re-seed, no baseline volley to pollute
+      cb.y = cb.feather.burstAt + 1;
+      update(1 / 60);
+      const micros = G.enemyShots.filter(s => s.classKey === 'micro' && s.kind === 'toxic' && !s.feather);
+      assert(cb.dead && micros.length === 3, 'a cyst at the ship band did not burst into three toxic micros');
+      // ---- DENY: two basic intercepts lance one cyst ----
+      boss.abilityCD = 0; boss.cystTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      const cd = G.enemyShots.filter(s => s.cyst);
+      boss.abilityCD = 99; // no re-seed during the measurement
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: cd[0].x, y: cd[0].y }]; update(1 / 60); }
+      assert(cd[0].dead, 'two basic hits did not lance a venom cyst');
+      // ---- P2 ETERNABEAM: channel below 15%, charged interrupt, four wide slow beams ----
+      G.enemyShots = []; G.lasers = [];
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep' && boss.channel.name === 'ETERNABEAM',
+        'low HP did not open the ETERNABEAM sweep channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the ETERNABEAM channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // SWEEP SIGNATURE: uninterrupted → FOUR wide (w 90) columns, monotonic warns
+      boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep', 'the ETERNABEAM channel did not recur after cooldown');
+      boss.channel.t = 99; boss.abilityCD = 99; // let only the channel punish push columns this frame
+      const c0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(c0);
+      const mono = a => a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
+      assert(cols.length === 4, 'an uninterrupted Eternabeam did not fire four warned columns');
+      assert(cols.every(c => Math.abs(c.w - 90) < 0.01), 'the Eternabeam columns were not the wide (w 90) beams');
+      assert(mono(cols.map(c => c.warn)), 'the Eternabeam columns did not sweep sequentially (non-monotonic warns)');
+      return 'cysts: baseline rain 7 → seed 2 → rain 9 (thickened) → burst 3 toxic micros → deny (2 hits); Eternabeam: channel → charged break → 1.35× stagger → 4 wide (w90) sequential columns';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Koraidon duel: afterimages (drop/launch/deny) + Collision Course bounce', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(27, true, { seed: 'koraidon-duel' }); // TRIAL: a stage clear must never reach beginEnding()
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 1007, 'round jump did not reach Koraidon');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; // steady time scale for the dash measurement
+      // ---- WILD CHARGE drops 3 afterimages evenly along the dash path ----
+      const runDash = () => {
+        boss.sweep = null; boss.hx = 80; boss.bx = 80; boss.imageAnnounced = false;
+        mouseX = W - 40; G.paddle.x = W - 40; // dash rightward (dir = paddle > boss)
+        boss.abilityCD = 0; boss.fireQuietT = 99; G.enemyShots = [];
+        update(1 / 60);        // triggers WILD CHARGE + arms the drops
+        boss.abilityCD = 99;   // no re-dash during the measurement
+        for (let k = 0; k < 80; k++) update(1 / 60); // let all three drops land
+        return G.enemyShots.filter(s => s.afterimage);
+      };
+      const imgs = runDash();
+      assert(imgs.length === 3 && imgs.every(s => s.interceptHP === 2 && s.boss && s.kind === 'shock'),
+        'a WILD CHARGE dash did not drop three 2-HP boss afterimages');
+      const xs = imgs.map(s => Math.round(s.x));
+      assert(new Set(xs).size === 3, 'the afterimages did not drop at three distinct x positions');
+      assert(Math.max(...xs) - Math.min(...xs) > 50, 'the afterimages did not span the traveled dash path');
+      // ---- LAUNCH: a parked afterimage fires an aimed HEAVY shock after 3.5s ----
+      const img = imgs[0];
+      G.enemyShots = [img]; // isolate one launcher
+      boss.abilityCD = 99; boss.fireQuietT = 99; boss.sweep = null;
+      G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; // steady time scale for the 3.5s launch clock
+      for (let k = 0; k < 230 && img.orbit; k++) update(1 / 60);
+      assert(!img.orbit, 'the afterimage never launched after 3.5s');
+      assert((img.vx || img.vy) && img.classKey === 'heavy' && img.kind === 'shock',
+        'the afterimage did not launch as an aimed heavy shock');
+      // ---- DENY: two basic intercepts disperse one afterimage ----
+      const ad = runDash();
+      assert(ad.length >= 1, 'no afterimage to deny');
+      boss.abilityCD = 99;
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: ad[0].x, y: ad[0].y }]; update(1 / 60); }
+      assert(ad[0].dead, 'two basic hits did not disperse an afterimage');
+      // ---- P2 COLLISION COURSE: channel below 15%, charged interrupt, bounce sweep ----
+      G.enemyShots = []; G.lasers = []; boss.sweep = null;
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep' && boss.channel.name === 'COLLISION COURSE',
+        'low HP did not open the COLLISION COURSE sweep channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the COLLISION COURSE channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // BOUNCE SIGNATURE: uninterrupted → 16 strikes, the return 8 reversing the first 8's lane order
+      boss.staggerT = 0; boss.channelCD = 0; boss.sweep = null; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep', 'the COLLISION COURSE channel did not recur after cooldown');
+      boss.channel.t = 99; boss.abilityCD = 99; // let only the channel punish push columns this frame
+      const c0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(c0);
+      const mono = a => a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
+      assert(cols.length === 16, 'an uninterrupted Collision Course did not fire sixteen strikes (8 out + 8 back)');
+      const first = cols.slice(0, 8).map(c => Math.round(c.x));
+      const second = cols.slice(8).map(c => Math.round(c.x));
+      assert(second.every((x, i) => x === first[7 - i]), 'the return charge did not reverse the first pass\' lane order');
+      assert(mono(cols.map(c => c.warn)), 'the sixteen strikes did not fire in one monotonic sequence');
+      return 'afterimages: dash drops 3 (distinct x span path) → parked launcher fires aimed heavy shock at 3.5s → deny (2 hits); Collision Course: bounce channel → charged break → 1.35× stagger → 16 strikes (return 8 reverse the first 8)';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   test('Kanto distant flocks: capped, high sky, Kanto-only', async () => {
+    SETTINGS.mode = 'junkie';
+    SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';
     resetRun(1, true, { seed: 'flocks' });

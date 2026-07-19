@@ -203,19 +203,30 @@ phone — flag anything only verifiable there.
   → RELEASE! → OVERCHARGE). **Heat fairness is a tested invariant:**
   sustained spam overheats in the 5–10s band on Normal (7.6s today) and a
   fire-rate upgrade may only ever make that band KINDER.
-- **Boss desperation channels are data-driven (M4).** `BOSS_CHANNELS`
-  (data.js) keys the low-HP channel per species; `spawnChannelPunish`
-  (update.js) dispatches the punish pattern (`columns`/`sweep`/`clock`) —
-  all patterns ride `G.columnStrikes`, the single lane-danger primitive.
-  The charged interrupt, 1.5s ×1.35 stagger, and cd 9 are UNIFORM template
-  constants — never tune them per boss. Every finale legendary kit needs a
-  phase-1 normal-fire answer (Mewtwo focus orbs / Lugia STORM FEATHERS /
-  Dialga CHRONO GEARS — all 2-HP intercept shots on the deferred-shot
-  lifecycle, orphan-fizzling, never flyers) + a channel. Lugia's TAILWIND
-  (`G.gustDir`) drifts bolts/micros in shooter modes only and NEVER moves
-  the pilot; Dialga's TIME DILATION (`enemyShotTimeScale()`, deterministic
-  `G.timeWarpClock` square wave) scales displacement at integration time
-  only — never mutate a shot's stored vx/vy.
+- **Boss desperation channels are data-driven (M4) — all NINE finale
+  legendaries carry the template.** `BOSS_CHANNELS` (data.js) keys the
+  low-HP channel per species with optional `params {count,w,gap,warnMul,
+  bounce,color}`; `spawnChannelPunish` (update.js) dispatches the punish
+  (`columns`/`sweep`/`clock`/`rain`/`pincer`) — all patterns ride
+  `G.columnStrikes`, the single lane-danger primitive. The charged
+  interrupt, 1.5s ×1.35 stagger, and cd 9 are UNIFORM template constants —
+  never tune them per boss. Channel-open clears `boss.phaseT` for every
+  boss: a desperation must never be uninterruptible. Every kit pairs a
+  phase-1 NORMAL-FIRE answer with the charge-answer channel; the answers
+  are 2-HP intercept shots on the deferred-shot lifecycle (siblings
+  orbit/feather/gear/conduit/wisp/mote + ghosted stationary launchers),
+  orphan-fizzling, never flyers. Species hooks that must not regress:
+  Lugia TAILWIND (`G.gustDir` drifts bolts/micros in shooter modes only,
+  NEVER moves the pilot); Dialga TIME DILATION (`enemyShotTimeScale()` on
+  the deterministic `G.timeWarpClock` square wave — scale displacement at
+  integration time, never mutate stored vx/vy); Zekrom conduits and
+  Eternatus cysts BUFF the boss's own fire while alive (BOLT STRIKE +1
+  column per conduit; toxic rain 7→9); Yveltal wisps HEAL by direct hp
+  mutation (never damageBrick — ledger stays clean) clamped at the
+  current phase's entry threshold; Lunala motes exist only during
+  PHANTOM PHASE and 2 kills snap it; Koraidon afterimages ride
+  `boss.sweep` drops (`imageDrops` rider — distinct from Rayquaza's
+  instant-micro `wake` rider; the two must never be conflated).
 - **Armor and veil are a matched pair.** SHELL ARMOR rewards the charged
   shot; **SPECTRAL VEIL** (`br.specVeil`/`specVeilActive`, region 3+, ≤2
   spirit flyers) punishes charge-spraying — charged bolts phase THROUGH

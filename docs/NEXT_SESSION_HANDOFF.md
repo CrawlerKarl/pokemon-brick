@@ -1,10 +1,11 @@
 # HANDOFF — Starfighter campaign build-out (next session)
 
-> **STATUS: LIVE through Milestone 4 Round A.** Milestones 0 and 1 are
+> **STATUS: LIVE through Milestone 4 Round B.** Milestones 0 and 1 are
 > COMPLETE; Milestone 2 has its core round shipped; Milestone 3 has
-> Rounds A+B shipped; Milestone 4 Round A (Lugia + Dialga on the Mewtwo
-> template, `BOSS_CHANNELS` refactor) is shipped. Invariant suite
-> **59/59 green**. Everything below is deployed at
+> Rounds A+B shipped; Milestone 4 Rounds A+B are shipped — **all nine
+> finale legendaries carry the boss-duel template** (`BOSS_CHANNELS` +
+> params, five punish patterns, per-boss signatures). Invariant suite
+> **65/65 green**. Everything below is deployed at
 > https://crawlerkarl.github.io/pokemon-brick/.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
@@ -55,15 +56,19 @@ Data-driven beat scripts per region (`REGION_GRAMMAR` → `G.director` →
 the first win-condition-changing objective family (SURVIVE THE MIGRATION
 on Hoenn challenge). *Open:* see "Pick up here".
 
-**Milestone 4 — boss overhaul 🔶** (Round A)
-`BOSS_CHANNELS` made the desperation channel data-driven
-(`spawnChannelPunish`: columns/sweep/clock, all on `G.columnStrikes`);
-Lugia got STORM FEATHERS + TAILWIND (`G.gustDir` bolt drift) + phase-2
-pursuit + AEROBLAST sweep; Dialga got CHRONO GEARS + TIME DILATION
-(`enemyShotTimeScale()` square-wave lurch) + ROAR OF TIME clock. Design
-doc: `docs/M4_BOSS_KITS.md`. *Open:* the remaining 6 legendaries, then
-mythics/sentinels; phase-transition animations, phase music layering,
-bespoke defeat animations, practice mode.
+**Milestone 4 — boss overhaul 🔶** (Rounds A+B)
+`BOSS_CHANNELS` (+ per-entry `params`) drives every finale legendary's
+desperation through `spawnChannelPunish` (columns/sweep±bounce/clock/
+rain/pincer, all on `G.columnStrikes`). Per-boss signatures on the
+deferred-shot lifecycle: Mewtwo orbs, Lugia feathers+TAILWIND, Dialga
+gears+TIME DILATION, Rayquaza shards+sweep wake, Zekrom conduits
+(+BOLT STRIKE columns), Yveltal drain wisps (clamped heal), Lunala
+motes (snap PHANTOM PHASE), Eternatus cysts (rain 7→9), Koraidon
+afterimages (dash-dropped launchers). Design doc:
+`docs/M4_BOSS_KITS.md`. *Open:* mythics/sentinels on the template;
+entrance FX for styles still on the default banner (skycoil, suncharge,
+maelstrom, timesplit); phase-transition animations, phase music
+layering, bespoke defeat animations, practice mode.
 
 **Also shipped by the user:** a mobile-first home/start-flow redesign
 (`4bd7489`) — one selected-mode hero, live gameplay dioramas, three-item
@@ -83,21 +88,21 @@ sequence, weather survival), the remaining 7 region grammars, and the beat
 types not yet built (formation reveal, elite intervention as a distinct
 spawn, hazard, victory).
 
-### Option B — Milestone 4 Round B: the remaining six legendaries
-The template is proven three times over (Mewtwo, Lugia, Dialga): **one
-move best answered by normal fire, one by charge (the `BOSS_CHANNELS`
-desperation), a movement/arena identity, reduced-flash variants.**
-Remaining: Rayquaza, Zekrom, Yveltal, Lunala, Eternatus, Koraidon — then
-mythicals and sentinels. Design kits first in `docs/M4_BOSS_KITS.md`
-(that file is the pattern), then implement. The `spawnChannelPunish`
-dispatch and the deferred-shot lifecycle (orbit/feather/gear siblings)
-make each new boss mostly data + one signature block. Highly
-parallelizable across subagents — but they share update.js/data.js/
-test.html, so run implementers SEQUENTIALLY with a handoff note, or give
-each disjoint bosses and merge carefully.
+### Option B — Milestone 4 Round C: mythics + sentinels, boss polish
+The legendary roster is DONE. Natural next slices: bring the nine
+round-3 **mythicals** up to template depth (they have `MYTHIC_ABILITIES`
+one-liners today — the channel + normal-fire-answer pair is what's
+missing), give **sentinels** one readable typed opening each, and/or the
+polish column: bespoke entrance FX for the styles still on the default
+banner (skycoil, suncharge, maelstrom, timesplit), phase-transition
+animations, phase music layering, defeat animations, practice mode with
+phase selection. The proven loop: design kits in `docs/M4_BOSS_KITS.md`
+first, implement via SEQUENTIAL agents over the shared dispatch
+(update.js/data.js/test.html collide — hand each agent the previous
+one's extension-shape notes).
 
-**Recommendation:** either is a clean slice; B keeps the momentum while
-the template muscle-memory is fresh.
+**Recommendation:** either is a clean slice; the mythics keep the
+combat momentum, the polish column is lower-risk variety.
 
 ---
 
