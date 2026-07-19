@@ -608,20 +608,30 @@ authored **REGION INTRO** hero card (`REGION_INTROS`, data.js + a
 `SFX.regionIntro` sting); junkie arrival waves grant a 3.4s first-volley
 grace so the card never covers live fire.
 
-### Kanto authored encounter beats (Milestone 1 Round B, junkie only)
-Region 1's waves carry authored arcs (`G.beat`, set in `buildLevel`;
-controller `updateKantoBeat`, update.js) — the seed Milestone 3 grows into
-the full encounter director:
-- **Arrival — BONUS FLOCK**: at half strength a line of harmless Pidgey
-  crosses the mid-sky. Crossers (`br.crosser`) have NO flight slot — they
-  live outside the formation system, the separation solver, the shooter
-  pool, and the overlap invariants; they never block a wave clear and
-  escape off-screen if ignored. Chaining them pays +150 score and Mega
-  charge each — zero-risk group-destruction teaching.
-- **Challenge — RAID → RECOVERY**: at ~half strength one squad runs an
-  early raid maneuver behind a warning card; when it recedes, enemy fire
-  holds ~3.4s and a hurt pilot's heal-drop pity primes. Escalation, then a
-  genuine breather.
+### The encounter director (Milestone 3, junkie non-boss stages)
+Every stage runs an authored BEAT SCRIPT (`REGION_GRAMMAR`/`encounterScript`
+in data.js; controller `updateDirector`/`runBeat` in update.js, driving
+`G.director`) so regions read differently without just changing enemy
+counts. A beat fires ONCE at its trigger — `p` (alive/baseline progress
+threshold) or `afterPrev` (seconds after the previous beat). Beat actions:
+- **bonusFlock** — a swift line of harmless Pidgey crosses the mid-sky.
+  Crossers (`br.crosser`) have NO flight slot: outside the formation
+  system, separation solver, shooter pool, and overlap invariants; they
+  never block a clear and escape if ignored. Chaining pays +150 + Mega —
+  zero-risk group-destruction teaching (Kanto arrival).
+- **raid** — one squad dives at the ship band behind a warning card.
+- **surge** — one squad rides its pattern ~1.8× (the flock bolts).
+- **recovery** — enemy fire holds ~3.4s, heal-drop pity primes, and the
+  director threat budget EASES (×0.35) — a genuine breather.
+- **finalPush** — the last stragglers press hard (faster fire, threat
+  budget ×1.4).
+
+The director owns `G.director.threatMul` (× `starThreatCap` via
+`directorThreatMul()`) so it can ease or raise the *simultaneous* threat
+instead of blindly stacking attacks. Authored grammars so far: KANTO
+(teaching — bonus flock; raid → recovery), JOHTO (the hunt — surge; raid
+→ recovery → final push); regions 3-9 use a default escalation → recovery
+arc until their Milestone 9 pass.
 
 ### HUD and first-wave coaching
 The HUD identifies a permanent starter element as **PARTNER** and a temporary

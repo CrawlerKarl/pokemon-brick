@@ -1613,3 +1613,35 @@ const STAGE_FLAVOR = {
   '0:2': '"THE GENETIC POKÉMON WITHDRAWS TO THE EAST. THE BELL TOWERS OF JOHTO ARE RINGING."  — FLIGHT LOG, DAY 3',
 };
 function stageFlavor(lvl) { return STAGE_FLAVOR[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
+// (ENCOUNTER DIRECTOR region grammar appended below — see REGION_GRAMMAR)
+
+// ============================================================
+// ENCOUNTER DIRECTOR (Milestone 3) — every non-boss STARFIGHTER stage runs
+// an authored BEAT SCRIPT, giving it pacing and identity beyond enemy counts.
+// A beat fires ONCE when its trigger is met — `p` (alive/baseline progress
+// threshold) or `afterPrev` (seconds after the previous beat fired) — and
+// runs a typed action (runBeat, update.js). Each region has its own grammar,
+// so regions read differently; the director owns a live THREAT MULTIPLIER so
+// a recovery beat is a real breather and an escalation is a real spike,
+// never blind stacking. Boss stages keep their gauntlet choreography.
+const REGION_GRAMMAR = [
+  // KANTO — the teaching region: a reward flock, then a warned raid with a
+  // genuine breather. Gentle and legible, one idea at a time.
+  { arrival: [{ p: 0.5, type: 'bonusFlock' }],
+    challenge: [{ p: 0.55, type: 'raid' }, { afterPrev: 4.4, type: 'recovery' }] },
+  // JOHTO — the hunt: the beasts BOLT on arrival, and the challenge presses
+  // through a raid, a breather, then a relentless final push.
+  { arrival: [{ p: 0.5, type: 'surge' }],
+    challenge: [{ p: 0.55, type: 'raid' }, { afterPrev: 4.0, type: 'recovery' }, { p: 0.2, type: 'finalPush' }] },
+];
+// Any region without an authored grammar gets a calm arrival and a single
+// escalation → recovery challenge arc — never an empty stage, pending each
+// region's Milestone 9 authoring pass.
+const REGION_GRAMMAR_DEFAULT = {
+  arrival: [],
+  challenge: [{ p: 0.5, type: 'raid' }, { afterPrev: 4.2, type: 'recovery' }],
+};
+function encounterScript(lvl) {
+  const g = REGION_GRAMMAR[regionIdx(lvl)] || REGION_GRAMMAR_DEFAULT;
+  return (stageIdx(lvl) === 0 ? g.arrival : g.challenge) || [];
+}

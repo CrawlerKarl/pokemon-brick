@@ -237,7 +237,7 @@ const G = {
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
   results: null, // stage-results interstitial payload (buildStageResults)
-  beat: null,    // Kanto authored encounter beat (Milestone 1 Round B)
+  director: null, // encounter director: the stage's authored beat script (Milestone 3)
   uiTouchPulse: null, shareToast: 0,
   upgradeFx: null, // short install animation after a permanent draft pick
   // starter partner: which one, its ability tier, Torrent's return counter
@@ -1325,15 +1325,15 @@ function buildLevel(lvl) {
   // live fire (the lane-invariant contract) and arrival reads as a beat of
   // calm before the region's pressure starts.
   if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = stage === 0 ? 3.4 : 0.9;
-  // ---- KANTO AUTHORED BEATS (Milestone 1 Round B, junkie only). Arrival
-  // rewards group destruction with a harmless BONUS FLOCK fly-by at half
-  // strength; Challenge runs a mid-stage RAID escalation then a RECOVERY
-  // breather. Deliberately Kanto-scoped — Milestone 3 grows this into the
-  // full encounter director. Controller: updateKantoBeat (update.js).
-  G.beat = null;
-  if (G.mode === 'junkie' && !hasBoss && regionsIn === 0) {
-    G.beat = { kind: stage === 0 ? 'bonusFlock' : 'raidRecovery',
-      baseline: G.bricks.filter(b => !b.dead && !b.barrier).length, stage: 0, t: 0 };
+  // ---- ENCOUNTER DIRECTOR (Milestone 3, junkie non-boss stages). Every
+  // stage runs its region's authored beat script (encounterScript, data.js);
+  // the director fires beats in order at their triggers and owns a live
+  // threat multiplier. Boss stages keep their gauntlet choreography.
+  G.director = null;
+  if (G.mode === 'junkie' && !hasBoss) {
+    const beats = encounterScript(lvl).map(b => ({ ...b, fired: false }));
+    G.director = { beats, baseline: G.bricks.filter(b => !b.dead && !b.barrier).length,
+      t: 0, lastFireT: 0, threatMul: 1, threatT: 0 };
   }
   // ---- STARFIGHTER FIRST-FLIGHT COACH: five one-line steps taught during
   // Kanto's opening waves (fly → tap fire → hold charge → grab an orb → mega).

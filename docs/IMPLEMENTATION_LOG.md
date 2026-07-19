@@ -5,6 +5,30 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 3 Round A: the reusable encounter director
+
+Generalized Kanto's hardcoded `G.beat` prototype into a data-driven
+director (`G.director`), the foundation every region's pacing rides on.
+- **Data**: `REGION_GRAMMAR` + `encounterScript(lvl)` (data.js) — each
+  region has an `arrival`/`challenge` beat list; unlisted regions fall back
+  to `REGION_GRAMMAR_DEFAULT` (never an empty stage). A beat fires ONCE at
+  its trigger: `p` (alive/baseline progress threshold) or `afterPrev`
+  (seconds after the previous beat fired).
+- **Controller**: `updateDirector`/`runBeat` (update.js, replaced
+  `updateKantoBeat`). Beat actions: `bonusFlock`, `raid`, `surge`,
+  `recovery`, `finalPush` — all reuse existing machinery (spawnBonusFlock,
+  squad maneuvers, enemyShotCD/healthDropPity).
+- **Threat budget**: `G.director.threatMul` (+ `threatT` window) multiplies
+  `starThreatCap` via `directorThreatMul()` — recovery eases it to 0.35,
+  surge/finalPush raise it to 1.25–1.4. The "limit simultaneous threat"
+  contract is now a real, tested knob.
+- **Grammars authored**: Kanto (teaching — bonus flock; raid → recovery),
+  Johto (the hunt — surge; raid → recovery → final push). Regions 3-9 get
+  the default arc until their M9 pass.
+- Behaviour preserved: Kanto's M1 arcs are unchanged, just data-driven.
+- Suite 55 → 56 (Kanto arc via the director; generalization + threat-budget
+  test with Johto's distinct grammar).
+
 ## 2026-07-19 — Mobile-first home and start-flow redesign
 
 - Replaced the crowded three-card title dashboard and duplicate Starfighter

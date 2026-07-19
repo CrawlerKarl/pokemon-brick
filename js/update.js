@@ -1937,18 +1937,86 @@ function updateGauntletEntrance(dt) {
 }
 
 // ============================================================
-// KANTO AUTHORED BEATS (Milestone 1 Round B) — the vertical slice's
-// encounter arcs, junkie-only, set by buildLevel on region-1 waves:
-//  · ARRIVAL   → BONUS FLOCK: at half strength, a swift line of harmless
-//    Pidgey crosses the mid-sky. They never fire, never join formations
-//    (no flight slot → outside the separation solver and the overlap
-//    invariants), never block a clear, and escape if ignored — chaining
-//    them pays score + Mega. Teaches group destruction with zero risk.
-//  · CHALLENGE → RAID then RECOVERY: at ~half strength one flock dives
-//    (the standard raid maneuver, early), announced with a warning; when
-//    it recedes, fire holds for a beat and the drop pity primes — the
-//    escalation → breather arc every stage will eventually get (M3).
+// ENCOUNTER DIRECTOR (Milestone 3) — walks the stage's authored beat script
+// (encounterScript / REGION_GRAMMAR, data.js), firing each beat once when its
+// trigger is met and running its typed action. Junkie non-boss stages only.
+// The director's threat multiplier eases/raises the active fire budget so a
+// recovery beat is a real breather and an escalation is a real spike — the
+// "limit simultaneous threat" contract, not blind stacking.
+// The BONUS FLOCK (Kanto arrival) is a swift line of harmless Pidgey with no
+// flight slot: outside the separation solver, the overlap invariants, the
+// shooter pool, and the clear condition — chaining them pays score + Mega.
 // ============================================================
+function directorThreatMul() { return (G.mode === 'junkie' && G.director) ? G.director.threatMul : 1; }
+// pick the frontmost live settled squad for a maneuver beat
+function directorPickSquad() {
+  const sqs = [...new Set(G.bricks.filter(b => !b.dead && b.flight && b.flight.state === 2 && b.flight.sq != null)
+    .map(b => b.flight.sq))];
+  return sqs.length ? sqs[0] : null;
+}
+function directorRaid() {
+  const sq = directorPickSquad();
+  if (sq == null || G.maneuver) return;
+  const m0 = G.bricks.find(b => !b.dead && b.flight && b.flight.sq === sq);
+  const allowed = m0 ? (PADDLE_Y() - 160) - (m0.flight.cy + m0.flight.ry) : 0;
+  const dy = Math.max(0, Math.min(130, allowed)); // never crowd the ship band
+  G.maneuver = dy >= 30 ? { sq, kind: 'raid', t: 0, dy, dur: 4.2 } : { sq, kind: 'scatter', t: 0, dur: 2.6 };
+  G.maneuverCD = 14;
+}
+function directorSurge() {
+  const sq = directorPickSquad();
+  if (sq == null || G.maneuver) return;
+  for (const br of G.bricks) if (!br.dead && br.flight && br.flight.sq === sq) {
+    br.flight.spd0 = br.flight.spd; setFlightSpd(br.flight, br.flight.spd * 1.8); // phase-preserving
+  }
+  G.maneuver = { sq, kind: 'surge', t: 0, dur: 3 };
+  G.maneuverCD = 14;
+}
+function runBeat(beat) {
+  const D = G.director;
+  switch (beat.type) {
+    case 'bonusFlock':
+      spawnBonusFlock();
+      break;
+    case 'raid':
+      directorRaid();
+      setAnnounce('alert', '#ff8a65', 'THE FLOCK STIRS!', 'A RAID IS COMING — HOLD YOUR LANE AND DODGE', 2.2);
+      tone(240, 0.18, 'triangle', 0.045, -120);
+      break;
+    case 'surge':
+      directorSurge();
+      D.threatMul = 1.25; D.threatT = 4;
+      setAnnounce('swift', '#ffd54f', 'THEY BOLT!', 'THE FLOCK SURGES — KEEP YOUR AIM AHEAD OF IT', 2.2);
+      tone(620, 0.16, 'sawtooth', 0.04, 260);
+      break;
+    case 'recovery':
+      G.enemyShotCD = Math.max(G.enemyShotCD, 3.4);
+      if (G.lives < G.livesMax) G.healthDropPity = Math.max(G.healthDropPity, 9);
+      D.threatMul = 0.35; D.threatT = 4; // the breather EASES the fire budget
+      setAnnounce('heart', '#66bb6a', 'RECOVERY', 'THE SKY CLEARS FOR A MOMENT — PRESS THE ATTACK', 2.0);
+      break;
+    case 'finalPush':
+      G.enemyShotCD = Math.min(G.enemyShotCD, 0.55);
+      D.threatMul = 1.4; D.threatT = 6; // the last stand RAISES it
+      setAnnounce('swift', '#ff7043', 'FINAL PUSH!', 'THE LAST OF THEM MAKE A STAND — FINISH IT', 2.2);
+      tone(180, 0.2, 'sawtooth', 0.05, -60);
+      break;
+  }
+}
+function updateDirector(dt) {
+  const D = G.director;
+  if (!D || G.mode !== 'junkie' || G.state !== 'play') return;
+  D.t += dt;
+  if (D.threatT > 0) { D.threatT -= dt; if (D.threatT <= 0) D.threatMul = 1; }
+  const next = D.beats.find(b => !b.fired);
+  if (!next) return;
+  const aliveNow = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser).length;
+  const prog = D.baseline > 0 ? aliveNow / D.baseline : 0;
+  const trig = next.p != null ? (prog <= next.p && aliveNow > 0)
+    : next.afterPrev != null ? (D.t - D.lastFireT >= next.afterPrev)
+      : true; // no trigger → fires at wave start
+  if (trig) { next.fired = true; D.lastFireT = D.t; runBeat(next); }
+}
 function spawnBonusFlock() {
   const fromLeft = gameRand() < 0.5;
   const y0 = H * (0.3 + gameRand() * 0.1);
@@ -1966,43 +2034,6 @@ function spawnBonusFlock() {
   setAnnounce('swift', '#80d8ff', 'BONUS FLOCK!', 'SWIFT AND HARMLESS — CHAIN THEM FOR REWARDS', 2.4);
   SFX.power();
 }
-function updateKantoBeat(dt) {
-  const B = G.beat;
-  if (!B || G.mode !== 'junkie' || G.state !== 'play') return;
-  B.t += dt;
-  const alive = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser).length;
-  if (B.kind === 'bonusFlock') {
-    if (B.stage === 0 && alive <= Math.ceil(B.baseline * 0.5)) {
-      B.stage = 1; B.t = 0;
-      spawnBonusFlock();
-    }
-  } else if (B.kind === 'raidRecovery') {
-    if (B.stage === 0 && alive <= Math.ceil(B.baseline * 0.55) && alive > 0) {
-      B.stage = 1; B.t = 0;
-      const sqs = [...new Set(G.bricks.filter(b => !b.dead && b.flight && b.flight.state === 2 && b.flight.sq != null)
-        .map(b => b.flight.sq))];
-      if (sqs.length && !G.maneuver) {
-        const sq = sqs[0];
-        const m0 = G.bricks.find(b => !b.dead && b.flight && b.flight.sq === sq);
-        const allowed = m0 ? (PADDLE_Y() - 160) - (m0.flight.cy + m0.flight.ry) : 0;
-        const dy = Math.max(0, Math.min(130, allowed));
-        G.maneuver = dy >= 30 ? { sq, kind: 'raid', t: 0, dy, dur: 4.2 }
-          : { sq, kind: 'scatter', t: 0, dur: 2.6 };
-        G.maneuverCD = 14;
-      }
-      setAnnounce('alert', '#ff8a65', 'THE FLOCK STIRS!', 'A RAID IS COMING — HOLD YOUR LANE AND DODGE', 2.2);
-      tone(240, 0.18, 'triangle', 0.045, -120);
-    } else if (B.stage === 1 && B.t > 4.4) {
-      B.stage = 2; B.t = 0;
-      // RECOVERY: a genuine breather — the next volley holds, and a hurt
-      // pilot's drop pity primes so the pause can actually restore
-      G.enemyShotCD = Math.max(G.enemyShotCD, 3.4);
-      if (G.lives < G.livesMax) G.healthDropPity = Math.max(G.healthDropPity, 9);
-      setAnnounce('heart', '#66bb6a', 'RECOVERY', 'THE SKY CLEARS FOR A MOMENT — PRESS THE ATTACK', 2.0);
-    }
-  }
-}
-
 // ---- gauntlet round transitions — used by the controller AND trial jumps
 // Jump a freshly built legendary stage straight to a later gauntlet round:
 // 1 = the legendary, 2 = the mythical, 3 = the Kanto Mew VMAX secret.
@@ -2439,7 +2470,7 @@ function update(dt) {
     }
   }
 
-  updateKantoBeat(dt);
+  updateDirector(dt);
   // bonus crossers: straight harmless fly-bys — no formation slot, so the
   // separation solver and the overlap invariants never see them; escaping
   // off-screen retires them quietly (no faint, no reward)
@@ -3782,7 +3813,7 @@ function update(dt) {
           if (G.mode === 'junkie') {
             const pattern = starEnemyPattern(shooter);
             const threat = patternThreat(pattern);
-            if (activeEnemyThreat() + threat <= d.starThreatCap + 0.01) {
+            if (activeEnemyThreat() + threat <= d.starThreatCap * directorThreatMul() + 0.01) {
               const warn = pattern.warn || (pattern.classKey === 'micro' ? 0.4 : pattern.classKey === 'massive' ? 0.92 : 0.58);
               G.telegraphs.push({ br: shooter, boss: false, pattern, threat, volleyId: nextEnemyVolley(), t: warn, max: warn });
             }

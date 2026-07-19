@@ -2146,18 +2146,20 @@ window.requestAnimationFrame = function () { return 0; };
     }
   });
 
-  test('Kanto authored beats: bonus flock + raid/recovery arc', async () => {
+  test('encounter director: Kanto arc (bonus flock + raid → recovery)', async () => {
     const oldPreset = SETTINGS.preset;
     try {
       SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
-      // ---- ARRIVAL: half strength summons the harmless bonus flock
+      // ---- ARRIVAL: the director's first beat is the harmless bonus flock
       resetRun(1, true, { seed: 'beats-arrival' });
       paused = false; G.freeze = 0;
-      assert(G.beat && G.beat.kind === 'bonusFlock', 'Kanto arrival did not arm the bonus-flock beat');
+      assert(G.director && G.director.beats[0] && G.director.beats[0].type === 'bonusFlock',
+        'Kanto arrival director did not script the bonus-flock beat');
       const targets = G.bricks.filter(b => !b.dead && !b.barrier);
       for (let i = 0; i < Math.ceil(targets.length * 0.6); i++)
         damageBrick(targets[i], 9999, 0, 0, null, { ignorePhaseGate: true });
       await runFrames(30);
+      assert(G.director.beats[0].fired, 'the bonus-flock beat did not fire at half strength');
       const crossers = G.bricks.filter(b => b.crosser && !b.dead);
       assert(crossers.length >= 4, 'bonus flock did not appear at half strength');
       assert(crossers.every(b => !b.flight && b.bare), 'crossers must stay OUT of the formation/solver system');
@@ -2181,24 +2183,53 @@ window.requestAnimationFrame = function () { return 0; };
       });
       assert(G.state === 'results', 'a live crosser blocked the stage clear');
       skipResults();
-      // ---- CHALLENGE: raid escalation then the recovery breather
+      // ---- CHALLENGE: raid escalation then the recovery breather (2 beats)
       resetRun(2, true, { seed: 'beats-challenge' });
       paused = false; G.freeze = 0;
-      assert(G.beat && G.beat.kind === 'raidRecovery', 'Kanto challenge did not arm the raid beat');
+      assert(G.director && G.director.beats.map(b => b.type).join(',') === 'raid,recovery',
+        'Kanto challenge director did not script raid → recovery');
       await runFrames(300); // squads settle into their slots
       const t3 = G.bricks.filter(b => !b.dead && !b.barrier);
       for (let i = 0; i < Math.ceil(t3.length * 0.55); i++)
         damageBrick(t3[i], 9999, 0, 0, null, { ignorePhaseGate: true });
       await runFrames(40);
-      assert(G.beat.stage === 1, 'half strength did not trigger the raid escalation');
+      assert(G.director.beats[0].fired, 'half strength did not trigger the raid escalation');
       assert(G.maneuver && (G.maneuver.kind === 'raid' || G.maneuver.kind === 'scatter'),
         'the raid beat did not drive a squad maneuver');
-      let recoveryCD = 0;
+      let easedThreat = 0, recoveryCD = 0;
       await runFrames(400, () => {
-        if (G.beat.stage === 2) { recoveryCD = G.enemyShotCD; return false; }
+        if (G.director.beats[1].fired) { recoveryCD = G.enemyShotCD; easedThreat = G.director.threatMul; return false; }
       });
-      assert(G.beat.stage === 2 && recoveryCD >= 3, 'recovery did not hold enemy fire after the raid');
-      return 'arrival: harmless chainable flock (escapes, never blocks clears); challenge: raid → recovery arc';
+      assert(G.director.beats[1].fired && recoveryCD >= 3, 'recovery did not hold enemy fire after the raid');
+      assert(easedThreat < 0.6, 'recovery did not ease the director threat budget');
+      return 'arrival: chainable flock (escapes, never blocks clears); challenge: raid → recovery, threat eased';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('encounter director generalizes: distinct region grammars + threat budget', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      // regions carry DISTINCT scripts, not just bigger numbers
+      assert(encounterScript(1).map(b => b.type).join(',') === 'bonusFlock', 'Kanto arrival script changed');
+      assert(encounterScript(4).map(b => b.type).join(',') === 'surge', 'Johto arrival is not a distinct surge beat');
+      assert(encounterScript(5).map(b => b.type).join(',') === 'raid,recovery,finalPush',
+        'Johto challenge is not the raid → recovery → final-push arc');
+      assert(encounterScript(8).length > 0, 'a later region fell back to an EMPTY challenge script');
+      // JOHTO arrival SURGE: a speed maneuver + a raised threat budget
+      resetRun(4, true, { seed: 'dir-johto' });
+      paused = false; G.freeze = 0;
+      await runFrames(260); // settle
+      const jt = G.bricks.filter(b => !b.dead && !b.barrier);
+      for (let i = 0; i < Math.ceil(jt.length * 0.55); i++)
+        damageBrick(jt[i], 9999, 0, 0, null, { ignorePhaseGate: true });
+      await runFrames(30);
+      assert(G.director.beats[0].fired && G.maneuver && G.maneuver.kind === 'surge',
+        'Johto arrival surge beat did not fire a surge maneuver');
+      assert(G.director.threatMul > 1, 'surge did not raise the director threat budget');
+      // directorThreatMul multiplies the live fire cap
+      assert(directorThreatMul() === G.director.threatMul, 'threat budget hook is not wired to the fire director');
+      return 'Kanto ≠ Johto grammar; surge/finalPush raise & recovery eases the shared threat budget';
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
