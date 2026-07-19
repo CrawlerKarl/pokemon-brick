@@ -2133,6 +2133,62 @@ window.requestAnimationFrame = function () { return 0; };
     }
   });
 
+  test('Kanto authored beats: bonus flock + raid/recovery arc', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      // ---- ARRIVAL: half strength summons the harmless bonus flock
+      resetRun(1, true, { seed: 'beats-arrival' });
+      paused = false; G.freeze = 0;
+      assert(G.beat && G.beat.kind === 'bonusFlock', 'Kanto arrival did not arm the bonus-flock beat');
+      const targets = G.bricks.filter(b => !b.dead && !b.barrier);
+      for (let i = 0; i < Math.ceil(targets.length * 0.6); i++)
+        damageBrick(targets[i], 9999, 0, 0, null, { ignorePhaseGate: true });
+      await runFrames(30);
+      const crossers = G.bricks.filter(b => b.crosser && !b.dead);
+      assert(crossers.length >= 4, 'bonus flock did not appear at half strength');
+      assert(crossers.every(b => !b.flight && b.bare), 'crossers must stay OUT of the formation/solver system');
+      const s0 = G.score;
+      damageBrick(crossers[0], 9, crossers[0].bx, crossers[0].by, null, {});
+      assert(G.score - s0 >= 150, 'chaining a crosser did not pay the bonus');
+      await runFrames(700, () => G.bricks.some(b => b.crosser && !b.dead) ? undefined : false);
+      assert(!G.bricks.some(b => b.crosser && !b.dead), 'ignored crossers did not escape off-screen');
+      // crossers never hold a wave hostage: clear with one mid-flight
+      resetRun(1, true, { seed: 'beats-clear' });
+      paused = false; G.freeze = 0;
+      const t2 = G.bricks.filter(b => !b.dead && !b.barrier);
+      for (let i = 0; i < Math.ceil(t2.length * 0.6); i++)
+        damageBrick(t2[i], 9999, 0, 0, null, { ignorePhaseGate: true });
+      await runFrames(20);
+      assert(G.bricks.some(b => b.crosser && !b.dead), 'second flock did not spawn');
+      await runFrames(300, () => {
+        G.reinforce = 0;
+        for (const b of G.bricks) if (!b.dead && !b.crosser) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
+        return G.state === 'play' ? undefined : false;
+      });
+      assert(G.state === 'results', 'a live crosser blocked the stage clear');
+      skipResults();
+      // ---- CHALLENGE: raid escalation then the recovery breather
+      resetRun(2, true, { seed: 'beats-challenge' });
+      paused = false; G.freeze = 0;
+      assert(G.beat && G.beat.kind === 'raidRecovery', 'Kanto challenge did not arm the raid beat');
+      await runFrames(300); // squads settle into their slots
+      const t3 = G.bricks.filter(b => !b.dead && !b.barrier);
+      for (let i = 0; i < Math.ceil(t3.length * 0.55); i++)
+        damageBrick(t3[i], 9999, 0, 0, null, { ignorePhaseGate: true });
+      await runFrames(40);
+      assert(G.beat.stage === 1, 'half strength did not trigger the raid escalation');
+      assert(G.maneuver && (G.maneuver.kind === 'raid' || G.maneuver.kind === 'scatter'),
+        'the raid beat did not drive a squad maneuver');
+      let recoveryCD = 0;
+      await runFrames(400, () => {
+        if (G.beat.stage === 2) { recoveryCD = G.enemyShotCD; return false; }
+      });
+      assert(G.beat.stage === 2 && recoveryCD >= 3, 'recovery did not hold enemy fire after the raid');
+      return 'arrival: harmless chainable flock (escapes, never blocks clears); challenge: raid → recovery arc';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

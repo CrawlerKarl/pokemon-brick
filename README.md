@@ -569,6 +569,21 @@ authored **REGION INTRO** hero card (`REGION_INTROS`, data.js + a
 `SFX.regionIntro` sting); junkie arrival waves grant a 3.4s first-volley
 grace so the card never covers live fire.
 
+### Kanto authored encounter beats (Milestone 1 Round B, junkie only)
+Region 1's waves carry authored arcs (`G.beat`, set in `buildLevel`;
+controller `updateKantoBeat`, update.js) — the seed Milestone 3 grows into
+the full encounter director:
+- **Arrival — BONUS FLOCK**: at half strength a line of harmless Pidgey
+  crosses the mid-sky. Crossers (`br.crosser`) have NO flight slot — they
+  live outside the formation system, the separation solver, the shooter
+  pool, and the overlap invariants; they never block a wave clear and
+  escape off-screen if ignored. Chaining them pays +150 score and Mega
+  charge each — zero-risk group-destruction teaching.
+- **Challenge — RAID → RECOVERY**: at ~half strength one squad runs an
+  early raid maneuver behind a warning card; when it recedes, enemy fire
+  holds ~3.4s and a hurt pilot's heal-drop pity primes. Escalation, then a
+  genuine breather.
+
 ### HUD and first-wave coaching
 The HUD identifies a permanent starter element as **PARTNER** and a temporary
 override as **POWER-UP**/**ITEM** with its remaining duration. Mega shows a

@@ -232,6 +232,7 @@ const G = {
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
   results: null, // stage-results interstitial payload (buildStageResults)
+  beat: null,    // Kanto authored encounter beat (Milestone 1 Round B)
   uiTouchPulse: null, shareToast: 0,
   upgradeFx: null, // short install animation after a permanent draft pick
   // starter partner: which one, its ability tier, Torrent's return counter
@@ -1292,6 +1293,16 @@ function buildLevel(lvl) {
   // live fire (the lane-invariant contract) and arrival reads as a beat of
   // calm before the region's pressure starts.
   if (G.mode === 'junkie' && !hasBoss) G.enemyShotCD = stage === 0 ? 3.4 : 0.9;
+  // ---- KANTO AUTHORED BEATS (Milestone 1 Round B, junkie only). Arrival
+  // rewards group destruction with a harmless BONUS FLOCK fly-by at half
+  // strength; Challenge runs a mid-stage RAID escalation then a RECOVERY
+  // breather. Deliberately Kanto-scoped — Milestone 3 grows this into the
+  // full encounter director. Controller: updateKantoBeat (update.js).
+  G.beat = null;
+  if (G.mode === 'junkie' && !hasBoss && regionsIn === 0) {
+    G.beat = { kind: stage === 0 ? 'bonusFlock' : 'raidRecovery',
+      baseline: G.bricks.filter(b => !b.dead && !b.barrier).length, stage: 0, t: 0 };
+  }
   // ---- STARFIGHTER FIRST-FLIGHT COACH: five one-line steps taught during
   // Kanto's opening waves (fly → tap fire → hold charge → grab an orb → mega).
   // Each step advances on the ACTION it teaches (progression in update.js,

@@ -587,6 +587,12 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     haptic(br.isBoss ? 'boss' : 'break');
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
+    // BONUS FLOCK reward: chaining the harmless crossers pays score + Mega
+    if (br.crosser) {
+      G.score += 150;
+      addFloater(br.bx + G.fx, br.by + G.fy - 20, '+150 BONUS', '#80d8ff', 13);
+      if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.03);
+    }
     if (G.starter) {
       G.starterKOs = (G.starterKOs || 0) + 1;
       const chillEvery = starterMod('chillEvery', 0);
@@ -701,8 +707,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
       }
     }
-    // last brick → dramatic slow-mo
-    if (!G.bricks.some(b => !b.dead && !b.barrier)) G.dramaticT = 0.9;
+    // last brick → dramatic slow-mo (harmless bonus crossers don't hold it)
+    if (!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser)) G.dramaticT = 0.9;
   } else {
     burst(sx, sy, col, 8, 180, 0.4);
     SFX.hit(G.combo);
@@ -1911,6 +1917,73 @@ function updateGauntletEntrance(dt) {
   }
 }
 
+// ============================================================
+// KANTO AUTHORED BEATS (Milestone 1 Round B) — the vertical slice's
+// encounter arcs, junkie-only, set by buildLevel on region-1 waves:
+//  · ARRIVAL   → BONUS FLOCK: at half strength, a swift line of harmless
+//    Pidgey crosses the mid-sky. They never fire, never join formations
+//    (no flight slot → outside the separation solver and the overlap
+//    invariants), never block a clear, and escape if ignored — chaining
+//    them pays score + Mega. Teaches group destruction with zero risk.
+//  · CHALLENGE → RAID then RECOVERY: at ~half strength one flock dives
+//    (the standard raid maneuver, early), announced with a warning; when
+//    it recedes, fire holds for a beat and the drop pity primes — the
+//    escalation → breather arc every stage will eventually get (M3).
+// ============================================================
+function spawnBonusFlock() {
+  const fromLeft = gameRand() < 0.5;
+  const y0 = H * (0.3 + gameRand() * 0.1);
+  for (let i = 0; i < 6; i++) {
+    G.bricks.push({
+      bx: fromLeft ? -50 - i * 48 : W + 50 + i * 48, by: y0,
+      hx: 0, hy: 0, row: 0, col: i, w: 34, h: 30, hp: 1, maxHp: 1,
+      poke: { id: 16, t: 'flying' }, flash: 0, wobble: gameRand() * Math.PI * 2,
+      bare: true,
+      // viewport-proportional speed: the fly-by lasts ~5s on every device
+      crosser: { vx: (fromLeft ? 1 : -1) * Math.max(150, W * 0.2), bobPh: i * 0.9 },
+    });
+    getSprite(16);
+  }
+  setAnnounce('swift', '#80d8ff', 'BONUS FLOCK!', 'SWIFT AND HARMLESS — CHAIN THEM FOR REWARDS', 2.4);
+  SFX.power();
+}
+function updateKantoBeat(dt) {
+  const B = G.beat;
+  if (!B || G.mode !== 'junkie' || G.state !== 'play') return;
+  B.t += dt;
+  const alive = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser).length;
+  if (B.kind === 'bonusFlock') {
+    if (B.stage === 0 && alive <= Math.ceil(B.baseline * 0.5)) {
+      B.stage = 1; B.t = 0;
+      spawnBonusFlock();
+    }
+  } else if (B.kind === 'raidRecovery') {
+    if (B.stage === 0 && alive <= Math.ceil(B.baseline * 0.55) && alive > 0) {
+      B.stage = 1; B.t = 0;
+      const sqs = [...new Set(G.bricks.filter(b => !b.dead && b.flight && b.flight.state === 2 && b.flight.sq != null)
+        .map(b => b.flight.sq))];
+      if (sqs.length && !G.maneuver) {
+        const sq = sqs[0];
+        const m0 = G.bricks.find(b => !b.dead && b.flight && b.flight.sq === sq);
+        const allowed = m0 ? (PADDLE_Y() - 160) - (m0.flight.cy + m0.flight.ry) : 0;
+        const dy = Math.max(0, Math.min(130, allowed));
+        G.maneuver = dy >= 30 ? { sq, kind: 'raid', t: 0, dy, dur: 4.2 }
+          : { sq, kind: 'scatter', t: 0, dur: 2.6 };
+        G.maneuverCD = 14;
+      }
+      setAnnounce('alert', '#ff8a65', 'THE FLOCK STIRS!', 'A RAID IS COMING — HOLD YOUR LANE AND DODGE', 2.2);
+      tone(240, 0.18, 'triangle', 0.045, -120);
+    } else if (B.stage === 1 && B.t > 4.4) {
+      B.stage = 2; B.t = 0;
+      // RECOVERY: a genuine breather — the next volley holds, and a hurt
+      // pilot's drop pity primes so the pause can actually restore
+      G.enemyShotCD = Math.max(G.enemyShotCD, 3.4);
+      if (G.lives < G.livesMax) G.healthDropPity = Math.max(G.healthDropPity, 9);
+      setAnnounce('heart', '#66bb6a', 'RECOVERY', 'THE SKY CLEARS FOR A MOMENT — PRESS THE ATTACK', 2.0);
+    }
+  }
+}
+
 // ---- gauntlet round transitions — used by the controller AND trial jumps
 // Jump a freshly built legendary stage straight to a later gauntlet round:
 // 1 = the legendary, 2 = the mythical, 3 = the Kanto Mew VMAX secret.
@@ -2337,6 +2410,16 @@ function update(dt) {
     }
   }
 
+  updateKantoBeat(dt);
+  // bonus crossers: straight harmless fly-bys — no formation slot, so the
+  // separation solver and the overlap invariants never see them; escaping
+  // off-screen retires them quietly (no faint, no reward)
+  for (const br of G.bricks) {
+    if (br.dead || !br.crosser) continue;
+    br.bx += br.crosser.vx * dt * ts;
+    br.by += Math.sin(G.time * 4 + br.crosser.bobPh) * 22 * dt * ts;
+    if ((br.crosser.vx > 0 && br.bx > W + 80) || (br.crosser.vx < 0 && br.bx < -80)) br.dead = true;
+  }
   // ---- SPACE JUNKIE squad maneuvers: every so often one flock does
   // something unexpected — startle-SCATTERS (the knot swells then contracts),
   // SURGES (rides its pattern nearly double-speed), or, deeper in, dips into
@@ -2892,6 +2975,7 @@ function update(dt) {
         continue;
       }
       if (flying(br)) continue; // flyers are positioned by their pattern
+      if (br.crosser) continue; // bonus crossers own their fly-by path
       let ox = 0, oy = 0;
       if (G.blocksStatic) {
         // Slider behaviors are the exception to the anchored wall: they move
@@ -3602,7 +3686,7 @@ function update(dt) {
           : d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
-          && !b.barrier && !b.dormant && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
+          && !b.barrier && !b.dormant && !b.crosser && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
           && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
             && G.encounter.squads[b.flight.sq].silenceT > 0));
         // cap concurrent warnings so the board never fills with warning lines
@@ -3813,7 +3897,7 @@ function update(dt) {
   G.powerups = G.powerups.filter(p => !p.dead);
 
   // ---- level clear → reinforcements first, then draft and move on ----
-  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier)) {
+  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier || b.crosser)) {
     // the enemies are gone — any ROCK TOMB barriers crumble on their own
     for (const b of G.bricks) if (!b.dead && b.barrier) { b.dead = true; burst(b.bx + G.fx, b.by + G.fy, '#a1887f', 12, 180, 0.5); }
     if (G.reinforce > 0) {

@@ -5,6 +5,18 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-18 — Milestone 1 Round B shipped: Kanto authored beats
+
+- `G.beat` (buildLevel, junkie region-1 non-boss) + `updateKantoBeat`
+  (update.js): Arrival's BONUS FLOCK (harmless `br.crosser` fly-bys —
+  no flight slot, excluded from the shooter pool, the blocksStatic
+  position snap, the dramatic slow-mo, and the clear condition; +150 and
+  Mega per chain kill, escape off-screen if ignored) and Challenge's
+  RAID → RECOVERY arc (early raid maneuver with warning, then a 3.4s
+  fire hold + primed heal pity).
+- Suite 50 → 51 (beat arcs, crosser isolation, clear exemption).
+- Deliberately Kanto-scoped; Milestone 3 generalizes the grammar.
+
 ## 2026-07-18 — Milestone 1 Round A shipped: results, medals, region intros
 
 - **Stage results interstitial**: `G.state === 'results'` between clear and
