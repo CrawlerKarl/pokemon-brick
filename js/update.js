@@ -391,6 +391,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // explosions) without recreating the old giant weapon-capstone spike.
   if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
   if (dmg < 90 && G.secretUpg.lens) dmg *= 1.15;
+  if (br.staggerT > 0 && dmg < 90) dmg *= 1.35; // Psystrike stagger: the interrupt's reward window
   const starterDirect = dmg < 90 && !meta.starterChain && !meta.behavior && !meta.linked;
   if (starterDirect && G.starter) {
     G.starterHits = (G.starterHits || 0) + 1;
@@ -1150,8 +1151,26 @@ function bossAbility(boss) {
         type: 'poison', species: 1025, kind: 'toxic', classKey: 'standard', volleyId: mochiVolley, wave: 16 }); }
       break;
     }
-    case 150: { // Mewtwo: teleport — a 0.5s anticipation (guards compress,
-      // psychic flash) THEN the jump, so the wings vanish and reform WITH it
+    case 150: { // Mewtwo: the precision duel (Milestone 1 Round C).
+      // STARFIGHTER phase 1 alternates TELEPORT with FOCUS ORBS — three
+      // slow psychic charges that orbit him. Two basic hits deny an orb;
+      // ignored ~4s, each launches as an aimed HEAVY shot. This is normal
+      // fire's showcase move — charge is wasted on 2-HP targets.
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic && (boss.orbTurn = !boss.orbTurn)
+        && !G.enemyShots.some(s => s.orbit)) {
+        const orbVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx, y: by, vx: 0, vy: 0, boss: true, type: 'psychic',
+            species: 150, kind: 'prism', classKey: 'heavy', volleyId: orbVolley,
+            orbit: { t: 0, launchAt: 4, ang: i * Math.PI * 2 / 3, r: Math.max(72, boss.w * 0.8), src: boss } });
+        }
+        setCombatNotice('FOCUS ORBS — SHOOT THEM DOWN!', '#c06cff', 1.8);
+        ringFx(bx, by, '#c06cff', 6, 120, 3, 0.4);
+        tone(660, 0.22, 'sine', 0.06, 220);
+        break;
+      }
+      // teleport — a 0.5s anticipation (guards compress, psychic flash)
+      // THEN the jump, so the wings vanish and reform WITH it
       burst(bx, by, '#ec407a', 20, 260, 0.5);
       const lim = boss.w / 2 + 20;
       boss.tpX = lim + gameRand() * (W - lim * 2) - G.fx;
@@ -3445,6 +3464,18 @@ function update(dt) {
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'),
           { source: L.charged ? 'charge' : L.basic ? 'bolt' : 'other' });
+        // PSYSTRIKE interrupt: a charged hit lands mid-channel — the
+        // desperation BREAKS and Mewtwo staggers open (bonus-damage window)
+        if (L.charged && br.channel && !br.dead) {
+          br.channel = null; br.channelCD = 9; br.staggerT = 1.5;
+          br.flash = 1;
+          br.fireQuietT = Math.max(br.fireQuietT || 0, 1.6);
+          addFloater(bx, by - br.h / 2 - 16, 'CHANNEL BROKEN!', '#80d8ff', 16);
+          setCombatNotice('STAGGERED — STRIKE NOW!', '#80d8ff', 1.4);
+          ringFx(bx, by, '#80d8ff', 8, 130, 4, 0.5);
+          G.freeze = Math.max(G.freeze, 0.1);
+          SFX.wall(); haptic('boss');
+        }
         // MOMENTUM: in the shooter modes there are no paddle returns, so
         // blaster hits carry the whole tier — twice the classic trickle
         if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + (G.mode !== 'classic' ? 0.004 : 0.002));
@@ -3632,9 +3663,42 @@ function update(dt) {
     const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (boss) {
       // signature ability (teleport, winds, sweeps, time warp...)
+      // PSYSTRIKE CHANNEL (Mewtwo duel, STARFIGHTER): below 15% HP the
+      // desperation begins — a rooted 2.6s channel behind a loud warning.
+      // Uninterrupted, it fires five warned columns with real dodge lanes.
+      // A CHARGED shot landing mid-channel BREAKS it (see the bolt block)
+      // and staggers Mewtwo — the interrupt is charge's showcase answer.
+      if (G.mode === 'junkie' && boss.poke.id === 150 && !boss.mythic && !boss.secretBoss) {
+        if (boss.staggerT > 0) boss.staggerT -= dt * ts;
+        if (!boss.channel && (boss.channelCD || 0) > 0) boss.channelCD -= dt * ts;
+        if (!boss.channel && boss.hp / boss.maxHp <= 0.15 && (boss.channelCD || 0) <= 0 && !(boss.staggerT > 0)) {
+          boss.channel = { t: 0, dur: 2.6 };
+          boss.fireQuietT = Math.max(boss.fireQuietT || 0, 3.4);
+          boss.teleportAt = null; // the channel roots him
+          setCombatNotice('PSYSTRIKE CHANNEL — BREAK IT WITH A CHARGED SHOT!', '#ff5cf0', 2.4);
+          SFX.enrage(); haptic('boss');
+        }
+        if (boss.channel) {
+          const t0 = boss.channel.t;
+          boss.channel.t += dt * ts;
+          // channel pulse: one modest ring every 0.45s (skipped by reduceFlash —
+          // the combat notice + warned columns carry the information)
+          if (!SETTINGS.reduceFlash && Math.floor(boss.channel.t / 0.45) !== Math.floor(t0 / 0.45))
+            ringFx(boss.bx + G.fx, boss.by + G.fy, '#ff5cf0', 5, 130, 3, 0.4);
+          if (boss.channel.t >= boss.channel.dur) {
+            boss.channel = null;
+            boss.channelCD = 9;
+            const n = 5, span = W / n;
+            for (let i = 0; i < n; i++) G.columnStrikes.push({
+              x: span * (i + 0.5), w: Math.min(64, span * 0.42), warn: 1.05, strike: 0.42, color: '#ff5cf0' });
+            G.shake = Math.min(G.shake + 8, 14);
+            SFX.roar();
+          }
+        }
+      }
       if (BOSS_ABILITIES[boss.poke.id] || boss.mythic || boss.secretBoss) {
         boss.abilityCD -= dt * ts;
-        if (boss.abilityCD <= 0) {
+        if (boss.abilityCD <= 0 && !boss.channel && !(boss.staggerT > 0)) {
           const abilityBase = boss.secretBoss ? 5.4
             : boss.mythic ? (MYTHIC_ABILITIES[boss.poke.id]?.cd || 5)
               : (BOSS_ABILITIES[boss.poke.id]?.cd || 5);
@@ -3771,6 +3835,30 @@ function update(dt) {
   G.columnStrikes = G.columnStrikes.filter(cs => cs.warn > 0 || cs.strike > 0);
   for (const s of G.enemyShots) {
     s.age = (s.age || 0) + dt * ts;
+    // FOCUS ORBS (Mewtwo duel): the orb rides its summoner until the lock
+    // completes, then launches as an ordinary aimed heavy shot. It can be
+    // intercepted the whole time (2 basic hits); if the boss falls first,
+    // the orbs fizzle harmlessly.
+    if (s.orbit) {
+      // bound to the SUMMONER, not "whatever boss is alive" — when Mewtwo
+      // falls mid-volley his orbs fizzle instead of re-anchoring to the
+      // mythic the gauntlet summons in his place
+      const anchor = s.orbit.src;
+      if (!anchor || anchor.dead) { s.dead = true; continue; }
+      s.orbit.t += dt * ts;
+      const oa = s.orbit.ang + s.orbit.t * 1.4;
+      s.x = anchor.bx + G.fx + Math.cos(oa) * s.orbit.r;
+      s.y = anchor.by + G.fy + Math.sin(oa) * s.orbit.r * 0.62;
+      s.age = 0; // the 9s ballistic cull starts at launch, not at summon
+      if (s.orbit.t >= s.orbit.launchAt) {
+        const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
+        const sp = (195 + diff().lv * 8) * diff().shotSpeed;
+        s.vx = Math.cos(aim) * sp; s.vy = Math.sin(aim) * sp;
+        s.orbit = null;
+        ringFx(s.x, s.y, '#c06cff', 4, 44, 2, 0.3);
+        SFX.enemyShot();
+      } else continue; // still locked to the summoner — no ballistic motion
+    }
     if (s.turn) {
       const a = s.turn * dt * ts, ca = Math.cos(a), sa = Math.sin(a);
       const vx = s.vx || 0, vy = s.vy || 0;

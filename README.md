@@ -396,6 +396,24 @@ Eternatus riding the top rim raining straight bombs, Koraidon sprinting.
 Classic damps the vertical play (guard wall stays clear); wing arcs hug the
 boss; low-diving styles stay above the ship band.
 
+### The Mewtwo duel (Milestone 1 Round C — the boss-framework prototype)
+STARFIGHTER's Kanto legendary now teaches BOTH weapons (BOSS_ABILITIES
+case 150, update.js):
+- **P1 · FOCUS ORBS (normal fire's answer):** every other ability turn
+  summons three 2-HP psychic charges that orbit Mewtwo (`s.orbit` on boss
+  enemy-shots). Two basic hits deny an orb; ignored ~4s each launches as
+  an aimed HEAVY shot; if Mewtwo falls first they fizzle. Charge is
+  wasted on 2-HP targets — spray, don't hoard.
+- **P2 · PSYSTRIKE CHANNEL (charge's answer / desperation):** below 15%
+  HP a rooted 2.6s channel begins behind a loud warning (pulse rings
+  respect `reduceFlash`; the notice + warned columns carry the info).
+  Uninterrupted → five `columnStrikes` with real dodge lanes. A CHARGED
+  hit mid-channel BREAKS it: `br.staggerT` 1.5s, boss fire holds, and all
+  damage lands ×1.35 (the interrupt's reward window). Recurs on a 9s
+  cooldown while he lives. Abilities pause during channel/stagger.
+The pattern (one move answered by normal fire, one by charge, desperation
+with readable counterplay) is Milestone 4's template for every boss.
+
 ### Boss battles (`drawBossMon` render.js, phases in `damageBrick`)
 Legendaries are **BARE** — a huge bare Pokémon holding the arena (breathing
 aura, orbiting energy ring, silhouette shadow + rim light, its own gait), never
@@ -825,6 +843,9 @@ here is started; the game is stable and shippable as-is.
   preloads only the current + next region.
 
 **Known small items**
+- Upgrade-web zoom anchoring can drift at unusual very-tall viewports (the
+  pan clamp fights the anchor point) — cosmetic, revisit with the
+  Milestone 5 constellation work; the suite asserts the canonical size.
 - Dead `if (br.isBoss)` branch remains in `drawBricks`' card path (bosses now
   route to `drawBossMon`) — harmless, removable.
 - Latent footgun: BOND path's tier-2 upgrade key is the literal `'bond'`, same

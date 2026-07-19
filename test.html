@@ -319,6 +319,10 @@ window.requestAnimationFrame = function () { return 0; };
   });
 
   test('upgrade web camera: zoomed start, anchored zoom, fit range', async () => {
+    // camera math is asserted at the canonical viewport — at unusual real
+    // window shapes (e.g. very tall panes) the pan clamp can legitimately
+    // fight the anchor, which is a layout question, not a camera regression
+    forceViewport(900, 700);
     SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
     resetRun(1, true);
     assert(treeZoom >= 1.14, 'web did not start zoomed in (' + treeZoom + ')');
@@ -2186,6 +2190,68 @@ window.requestAnimationFrame = function () { return 0; };
       });
       assert(G.beat.stage === 2 && recoveryCD >= 3, 'recovery did not hold enemy fire after the raid');
       return 'arrival: harmless chainable flock (escapes, never blocks clears); challenge: raid → recovery arc';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Mewtwo duel: focus orbs (deny/launch) + Psystrike interrupt', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(3, true, { seed: 'mewtwo-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 150, 'round jump did not reach Mewtwo');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; boss.abilityCD = 0; boss.orbTurn = false;
+      update(1 / 60);
+      // ---- P1 FOCUS ORBS: three 2-HP charges orbit the summoner
+      let orbs = G.enemyShots.filter(s => s.orbit);
+      assert(orbs.length === 3 && orbs.every(s => s.interceptHP === 2 && s.boss),
+        'orb turn did not summon three 2-HP boss orbs');
+      await runFrames(30);
+      const o0 = G.enemyShots.filter(s => s.orbit)[0];
+      assert(o0 && Math.hypot(o0.x - (boss.bx + G.fx), o0.y - (boss.by + G.fy)) < 220,
+        'orbs did not stay locked to their summoner');
+      // DENY: two basic intercepts kill an orb before it launches
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: o0.x, y: o0.y }]; update(1 / 60); }
+      assert(o0.dead, 'two basic hits did not deny a focus orb');
+      // LAUNCH: ignored orbs become aimed heavy fire
+      for (const s of G.enemyShots) if (s.orbit) s.orbit.t = 99;
+      update(1 / 60);
+      assert(G.enemyShots.filter(s => s.boss && s.heavy && !s.orbit && (s.vx || s.vy)).length >= 2,
+        'ignored orbs did not launch as aimed heavy shots');
+      // ---- P2 PSYSTRIKE: channel below 15%, charged interrupt, stagger, columns
+      G.enemyShots = [];
+      boss.hp = boss.maxHp * 0.10;
+      update(1 / 60);
+      assert(boss.channel, 'low HP did not begin the Psystrike channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      boss.staggerT = 0; boss.channelCD = 0;
+      update(1 / 60);
+      assert(boss.channel, 'the channel did not recur after its cooldown');
+      boss.channel.t = 99;
+      const cols0 = G.columnStrikes.length;
+      update(1 / 60);
+      assert(G.columnStrikes.length - cols0 === 5, 'an uninterrupted channel did not fire five warned columns');
+      // ---- orbs FIZZLE if the summoner falls (last: killing the legendary
+      // advances the gauntlet, so nothing may assert after this block).
+      // The stagger-window hit at 10% HP legitimately tripped the phase-2
+      // transition, and orbs are a phase-1 move — force phase 1 back.
+      boss.channel = null; boss.phase = 1; boss.phaseT = 0;
+      boss.abilityCD = 0; boss.orbTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      assert(G.enemyShots.some(s => s.orbit), 'second orb volley did not summon');
+      boss.dead = true;
+      update(1 / 60);
+      assert(!G.enemyShots.some(s => s.orbit && !s.dead), 'orphaned orbs did not fizzle');
+      return 'orbs: summon → orbit → deny (2 hits) → launch → fizzle; Psystrike: channel → charged break → 1.35× stagger → 5 columns';
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 

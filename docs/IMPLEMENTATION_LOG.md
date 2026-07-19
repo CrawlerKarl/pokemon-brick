@@ -5,6 +5,23 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-18 — Milestone 1 Round C shipped: the Mewtwo duel
+
+- **Focus orbs** (bossAbility case 150 + `s.orbit` handling in the
+  enemy-shot loop): P1 alternates teleport with a three-orb summon —
+  2-HP boss shots that ride the summoner (age-frozen while orbiting, so
+  the 9s ballistic cull starts at launch), deniable by basic fire,
+  launching as aimed heavy shots after ~4s, fizzling if Mewtwo dies.
+- **Psystrike channel** (boss block + bolt-block interrupt): <15% HP →
+  rooted 2.6s channel (fire quiets, teleport cancelled, abilities pause);
+  complete → five warned columns with dodge lanes; a charged hit breaks
+  it → 1.5s stagger, boss fire holds, damage ×1.35 (multiplier lives in
+  damageBrick next to the mastery stacks). 9s recur cooldown.
+- reduceFlash: channel pulse rings are skipped; combat notices + the
+  column warn phases carry the danger information.
+- Suite 51 → 52 (summon/orbit/deny/launch/fizzle + channel/break/
+  stagger-window/columns). Two-phase legendary contract preserved.
+
 ## 2026-07-18 — Milestone 1 Round B shipped: Kanto authored beats
 
 - `G.beat` (buildLevel, junkie region-1 non-boss) + `updateKantoBeat`
