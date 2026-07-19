@@ -76,7 +76,8 @@ To build:
 Done when: a dev can reproduce a level/boss from a seed; reports identify
 why a run ended; galleries expose unreadable attacks; existing tests pass.
 
-## Milestone 1 — Gold-standard Kanto vertical slice ⬜
+## Milestone 1 — Gold-standard Kanto vertical slice ✅
+(shipped 2026-07-19 across four rounds; tuning notes folded into M9)
 
 Kanto's three stages become the quality template: Arrival teaches movement +
 normal fire through play; Challenge teaches armor/shield openings, charge,

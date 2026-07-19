@@ -536,8 +536,51 @@ function buildStars() {
 // ---- per-region ambient weather + shooting stars ----
 const AMBIENT_TYPES = ['firefly', 'petal', 'rain', 'snow', 'neon', 'sparkle', 'ember', 'mist', 'dust'];
 let ambient = [], ambientGen = -1, shootStars = [];
+// KANTO DISTANT FLOCKS (Milestone 1): every so often a loose V of tiny bird
+// silhouettes drifts across the high sky over the hills — pure background
+// life. Cheap on purpose: ≤2 flocks × 5 birds, two strokes per bird, no
+// gradients, drawn behind everything with low alpha.
+let flocks = [], flockCD = 6;
+function updateFlocks(dt, genIdx) {
+  if (genIdx !== 0) { flocks = []; return; }
+  flockCD -= dt;
+  if (flockCD <= 0 && flocks.length < 2) {
+    flockCD = 14 + Math.random() * 12;
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const y0 = H * (0.1 + Math.random() * 0.16);
+    const x0 = dir > 0 ? -70 : W + 70;
+    const n = 4 + Math.floor(Math.random() * 2);
+    const birds = [];
+    for (let i = 0; i < n; i++) {
+      // a loose trailing V: alternate sides, fall back with rank
+      const rank = Math.ceil(i / 2), side = i % 2 ? 1 : -1;
+      birds.push({ ox: -dir * rank * 14, oy: side * rank * 6 + (Math.random() - 0.5) * 3, ph: Math.random() * Math.PI * 2 });
+    }
+    flocks.push({ x: x0, y: y0, vx: dir * (26 + Math.random() * 12), birds, t: 0 });
+  }
+  for (const f of flocks) { f.t += dt; f.x += f.vx * dt; f.y += Math.sin(f.t * 0.5) * 2.5 * dt; }
+  flocks = flocks.filter(f => f.x > -140 && f.x < W + 140);
+}
+function drawFlocks() {
+  if (!flocks.length) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(10,18,34,0.5)';
+  ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+  for (const f of flocks) {
+    for (const b of f.birds) {
+      const bx = f.x + b.ox, by = f.y + b.oy;
+      const flap = Math.sin(f.t * 7 + b.ph) * 2.6; // wingbeat
+      ctx.beginPath();
+      ctx.moveTo(bx - 3.6, by - flap);
+      ctx.quadraticCurveTo(bx, by + 1.2, bx + 3.6, by - flap);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 function updateAmbient(dt, genIdx) {
   if (ambientGen !== genIdx) { ambient = []; ambientGen = genIdx; }
+  updateFlocks(dt, genIdx);
   const type = AMBIENT_TYPES[genIdx];
   const cap = type === 'rain' ? 64 : type === 'mist' ? 10 : 34;
   if (ambient.length < cap && Math.random() < dt * (type === 'rain' ? 60 : 14)) {
@@ -568,6 +611,7 @@ function updateAmbient(dt, genIdx) {
   shootStars = shootStars.filter(s => s.life > 0);
 }
 function drawAmbient(genIdx) {
+  if (genIdx === 0) drawFlocks(); // Kanto: distant birds behind the weather
   const type = AMBIENT_TYPES[genIdx];
   const accent = GENS[genIdx].accent;
   for (const a of ambient) {

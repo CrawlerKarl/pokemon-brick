@@ -2257,6 +2257,24 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('Kanto distant flocks: capped, high sky, Kanto-only', async () => {
+    SETTINGS.mode = 'junkie';
+    resetRun(1, true, { seed: 'flocks' });
+    paused = false; G.freeze = 0;
+    flockCD = 0;
+    await runFrames(90);
+    flockCD = 0;
+    await runFrames(600);
+    assert(flocks.length >= 1 && flocks.length <= 2, 'flock cap violated (' + flocks.length + ')');
+    assert(flocks.every(f => f.birds.length <= 5 && f.y < H * 0.32),
+      'flock size/altitude broke the background-life contract');
+    resetRun(4, true, { seed: 'flocks2' }); // Johto — no Kanto sky life
+    paused = false; G.freeze = 0;
+    await runFrames(120);
+    assert(flocks.length === 0, 'distant flocks leaked outside Kanto');
+    return '≤2 flocks × ≤5 birds, top third of the sky, Kanto only';
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

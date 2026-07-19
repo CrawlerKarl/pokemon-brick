@@ -5,6 +5,29 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 1 Round D (part 2): Kanto sky life + demo audit
+
+- **Distant flocks** (scenery.js `updateFlocks`/`drawFlocks`): loose V
+  formations of tiny stroke-drawn bird silhouettes drift across Kanto's
+  high sky (≤2 flocks × 5 birds, no gradients, behind the weather layer,
+  Kanto-gated). Background life with zero readability cost.
+- **Kanto demo audit** (scripted bot, Normal, seed KANTO-AUDIT, fire
+  starter, naive steering/dodging, blind 7s charges, no Mega): full
+  Kanto in ~205s play, 2 knockouts, finished 1/4 HP, 79 kills. Damage
+  taken = micro-class fire almost exclusively (fist/prism/wisp/boulder)
+  + 2 Psystrike columns — the readable-danger contract holds. Boss
+  clocks: Mewtwo P1 2.8s / P2 14.7s; Mew 11.4/6.1/15.6s. Spam fire →
+  27 overheats / 54s locked (the heat lesson bites as designed).
+- **Tuning notes for the Milestone 9 pass** (not bugs): Mewtwo P1 melts
+  too fast for the focus-orb showcase to breathe (consider +P1 HP share
+  or first-orb-volley-on-engage); stage-3 entry pressure can spike a
+  1-HP carryover pilot (crystal/heavy at 9s) — potion pity into finales
+  may deserve a nudge.
+- **Milestone 1 declared COMPLETE**: results/medals/intros (A), authored
+  beats (B), the Mewtwo duel (C), flight log + sky life + audited demo
+  baseline (D). Remaining Kanto polish rides M2 (combat ecology) and the
+  M9 balance pass.
+
 ## 2026-07-19 — Milestone 1 Round D (part 1): the flight-log narrative
 
 - `STAGE_FLAVOR`/`stageFlavor` (data.js): one authored expedition-log line
