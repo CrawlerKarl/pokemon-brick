@@ -59,12 +59,23 @@ M1 decomposes into rounds; each ships through the full quality gates:
   a recovery beat (brief calm + guaranteed orb/heal drop). Implemented as
   a small Kanto-keyed beat controller (`G.beat`) — deliberately minimal,
   the seed Milestone 3 generalizes into the encounter director.
-- **Round C:** Mewtwo rebuilt as the boss-framework prototype (shared with
-  Milestone 4): P1 precision duel (aimed psy-orb volleys, telegraphed
-  teleports with 0.5s anticipation — exists), P2 last-stand redesign with
-  a normal-fire-answer move (destructible orbital barriers) and a
-  charge-answer move (armored focus core that interrupts the desperation
-  channel). Reduced-flash variants for every new effect.
+- **Round C (NEXT — design locked):** Mewtwo rebuilt as the boss-framework
+  prototype (shared with Milestone 4). Keep the two-phase STARFIGHTER
+  legendary contract (the boss-harness test asserts it; Mew stays the
+  three-phase finale) but make the phases mechanically DISTINCT:
+  - **P1 · FOCUS ORBS (normal-fire answer):** Mewtwo periodically summons
+    three slow psy-orbs that orbit him (spawned as boss enemy-shots with
+    `interceptHP 2`, zero velocity + orbit fields). Shot down in time =
+    clean deny; ignored ~4s = they launch as aimed HEAVY shots. Teaches
+    "normal fire clears the sky".
+  - **P2 · PSYSTRIKE CHANNEL (charge answer / desperation):** below ~15%
+    HP Mewtwo channels 2.6s behind a big telegraph; uninterrupted, it
+    fires a five-column barrage (reuse `G.columnStrikes`); a CHARGED hit
+    landing during the channel CANCELS it and staggers him 1.5s (bonus
+    window). Implement via `br.channel {t,dur}`, cancel check in the bolt
+    block where `L.charged` lands on a channelling boss.
+  - Reduced-flash variants for every new effect; boss-harness tests for
+    orb deny, orb launch, channel fire, channel interrupt.
 - **Round D:** narrative cards + Kanto scenery motion + demo polish pass.
 
 **Decisions:**
