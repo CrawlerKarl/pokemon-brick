@@ -61,11 +61,14 @@ const SKIN_EDITION = 'POKÉMON EDITION';
 // (classic / blaster / junkie) are storage-stable: saved settings, run
 // checkpoints and tests reference them, so never rename a key.
 const MODES = [
-  { key: 'junkie',  label: 'STARFIGHTER', desc: '★ FEATURED · FLYING SHOOTER', mechanic: 'YOU FLY + FIRE', accent: '#c06cff',
+  { key: 'junkie',  label: 'STARFIGHTER', desc: 'POKÉMON FLIGHT SHOOTER', mechanic: 'MOVE + FIRE · HOLD TO CHARGE', accent: '#c879ff',
+    summary: ['Pilot your partner through enemy squadrons', 'in a 27-wave journey across nine regions.'],
     lines: ['PILOT A POKÉMON · DODGE ENEMY FIRE', 'TAP TO ATTACK · HOLD FOR PIERCING CHARGE'] },
-  { key: 'classic', label: 'BREAKER', desc: 'CLASSIC · BRICK BREAKER', mechanic: 'BALL + PADDLE', accent: '#ffd54f',
+  { key: 'classic', label: 'BREAKER', desc: 'CLASSIC BRICK BREAKER', mechanic: 'BALL + PADDLE', accent: '#ffd54f',
+    summary: ['Keep the rally alive, crack Pokémon walls,', 'and take on legendary boss battles.'],
     lines: ['BOUNCE THE BALL · BREAK EVERY BLOCK', 'MOVE THE PADDLE · BUILD RALLIES'] },
-  { key: 'blaster', label: 'BLASTER', desc: 'ARCADE · WALL SHOOTER', mechanic: 'NO BALL · DIRECT FIRE', accent: '#4dd0e1',
+  { key: 'blaster', label: 'BLASTER', desc: 'ARCADE WALL SHOOTER', mechanic: 'MOVE + FIRE · HOLD TO CHARGE', accent: '#4de0f2',
+    summary: ['Skip the ball and blast the wall directly', 'with quick volleys and piercing charge shots.'],
     lines: ['SHOOT THE BLOCK WALL DIRECTLY', 'TAP TO FIRE · HOLD FOR PIERCING CHARGE'] },
 ];
 if (!MODES.some(m => m.key === SETTINGS.mode)) SETTINGS.mode = 'junkie';
@@ -166,66 +169,62 @@ function activeToggles() { return settingsPage === 1 ? TOUCH_TOGGLES : TOGGLES; 
 // to the menu resets to the featured title hub.
 let menuPage = 'modes';
 let setupStep = 'pilot'; // setup is a two-screen flow: all pilots → challenge
-// PAGE 1 — title + mode select. Responsive layout shared by rendering and
-// hit-testing so nothing drifts off-screen. Concerns:
-//  • SHORT viewports (landscape phones) compress every gap and collapse the
-//    footer links into a single row — the whole page must fit H<400.
-//  • NARROW phones stack the STARFIGHTER hero above two arcade cards.
-//  • a saved run adds a CONTINUE button below the cards (RUN_CKPT, state.js).
+// PAGE 1 — one selected-game hero. The old home screen repeated the featured
+// mode as both a quick-start button and a giant card, then surrounded it with
+// three dense status bands. This layout gives one idea the stage at a time:
+// a readable description + action, a generous gameplay diorama, and three
+// compact mode switches. Rendering and hit-testing share these rectangles.
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
-  const short = H < 560;
-  const stacked = W < 620; // three cards in a row, or a column on phones
-  const s = Math.max(0.62, Math.min(1, H / 820, W / 760));
-  const titleSize = short ? Math.min(24, W / 18) : Math.min(44, W / 13) * Math.max(0.8, s);
-  const titleY = short ? 18 : Math.max(36, H * 0.055);
-  const tagY = titleY + titleSize * (short ? 1.05 : 1.42) + (short ? 4 : 8);
-  // the three mode cards FILL everything between the title band and the
-  // bottom stack (continue → footer row) — no dead space
-  const gap = short ? 10 : 16;
-  const resumeH = hasCkpt ? (short ? 30 : 44) : 0;
-  const footerH = short ? 28 : 34;
-  const progressH = short ? 28 : 42;
-  const padB = short ? 6 : 14;
-  const cardsY = tagY + (short ? 10 : 16);
-  const quickH = short ? 28 : 40;
-  const quickRowW = Math.min(440, W * 0.92), quickGap = short ? 7 : 10;
-  const quickW = (quickRowW - quickGap) * 0.58;
-  const dailyW = quickRowW - quickGap - quickW;
-  const quickY = cardsY;
-  const heroY = quickY + quickH + (short ? 7 : 10);
-  const bottom = H - padB;
-  const footerY = bottom - footerH;
-  const progressY = footerY - progressH - (short ? 5 : 8);
-  const resumeY = progressY - (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
-  const cardsBot = (hasCkpt ? resumeY : progressY) - (short ? 6 : 12);
-  const modesW = Math.min(W * 0.96, 1240);
-  const cardW = stacked ? Math.min(W * 0.94, 540) : modesW;
-  const cardsH = Math.max(short ? 110 : 190, cardsBot - heroY);
-  const primaryH = stacked ? Math.max(cardsH * 0.58, short ? 70 : 150) : cardsH;
-  const secondaryH = stacked ? Math.max(48, cardsH - primaryH - gap) : (cardsH - gap) / 2;
-  const primaryW = stacked ? cardW : modesW * 0.66;
-  const secondaryW = stacked ? (cardW - gap) / 2 : modesW - primaryW - gap;
-  const left = W / 2 - cardW / 2;
-  const desktopLeft = W / 2 - modesW / 2;
-  const resumeW = Math.min(380, W * 0.86);
-  const fW = Math.min(230, (W - 44) / 2);
+  const narrow = W < 720;
+  const short = H < 560 || (narrow && H < 650);
+  const pad = narrow ? 12 : short ? 18 : Math.max(24, Math.min(38, W * 0.028));
+  const gap = narrow ? 8 : 12;
+  const headerH = short ? 40 : narrow ? 52 : 58;
+  const headerY = narrow ? 10 : short ? 10 : 16;
+  const footerH = short ? (narrow ? 44 : 36) : narrow ? 58 : 54;
+  const footerY = H - pad - footerH;
+  const heroY = headerY + headerH + (short ? 7 : 13);
+  const hero = { x: pad, y: heroY, w: W - pad * 2, h: Math.max(220, footerY - heroY - (short ? 7 : 12)) };
+  const modeH = short ? 46 : narrow ? 58 : 64;
+  const modeGap = narrow ? 6 : 10;
+  const modePad = narrow ? 10 : 18;
+  const modeW = (hero.w - modePad * 2 - modeGap * 2) / 3;
+  const modeY = hero.y + hero.h - modeH - (narrow ? 10 : 16);
+  const copy = narrow
+    ? { x: hero.x + 18, y: hero.y + Math.min(short ? 112 : 276, hero.h * (short ? 0.38 : 0.41)),
+        w: hero.w - 36, h: modeY - hero.y - Math.min(short ? 112 : 276, hero.h * (short ? 0.38 : 0.41)) - 8 }
+    : { x: hero.x + Math.max(28, hero.w * 0.03), y: hero.y + (short ? 20 : 38),
+        w: hero.w * 0.34, h: modeY - hero.y - (short ? 28 : 48) };
+  const preview = narrow
+    ? { x: hero.x + 10, y: hero.y + 10, w: hero.w - 20,
+        h: Math.max(82, copy.y - hero.y - 20) }
+    : { x: hero.x + hero.w * 0.385, y: hero.y + 16, w: hero.w * 0.595 - 16,
+        h: modeY - hero.y - 30 };
+  const startH = short ? (narrow ? 46 : 38) : narrow ? 50 : 54;
+  const startW = narrow ? copy.w : Math.min(330, copy.w);
+  const secondaryH = short ? (narrow ? 44 : 32) : narrow ? 42 : 38;
+  const startY = modeY - startH - secondaryH - (short ? 14 : 22);
+  const secondaryY = startY + startH + (short ? 5 : 8);
+  const secondaryW = hasCkpt ? (startW - gap) / 2 : startW;
+  const titleSize = short ? Math.min(25, W / 18) : narrow ? Math.min(30, W / 11) : Math.min(34, W / 24);
+  const titleY = headerY + headerH / 2;
+  const utilityW = short ? 94 : 122;
+  const dex = narrow
+    ? { x: pad, y: footerY, w: (W - pad * 2 - gap) / 2, h: footerH }
+    : { x: W - pad - utilityW * 2 - gap, y: headerY + 8, w: utilityW, h: headerH - 16 };
+  const adv = narrow
+    ? { x: pad + (W - pad * 2 - gap) / 2 + gap, y: footerY, w: (W - pad * 2 - gap) / 2, h: footerH }
+    : { x: W - pad - utilityW, y: headerY + 8, w: utilityW, h: headerH - 16 };
   return {
-    s, short, stacked, titleY, titleSize, tagY,
-    quick: { x: W / 2 - quickRowW / 2, y: quickY, w: quickW, h: quickH },
-    daily: { x: W / 2 - quickRowW / 2 + quickW + quickGap, y: quickY, w: dailyW, h: quickH },
-    card: i => stacked
-      ? i === 0
-        ? { x: left, y: heroY, w: cardW, h: primaryH }
-        : { x: left + (i - 1) * (secondaryW + gap), y: heroY + primaryH + gap, w: secondaryW, h: secondaryH }
-      : i === 0
-        ? { x: desktopLeft, y: heroY, w: primaryW, h: cardsH }
-        : { x: desktopLeft + primaryW + gap, y: heroY + (i - 1) * (secondaryH + gap), w: secondaryW, h: secondaryH },
-    resume: hasCkpt ? { x: W / 2 - resumeW / 2, y: resumeY, w: resumeW, h: resumeH } : null,
-    progress: { x: Math.max(10, W / 2 - Math.min(920, W * 0.94) / 2), y: progressY,
-      w: Math.min(920, W * 0.94), h: progressH },
-    dex: { x: W / 2 - fW - 10, y: footerY, w: fW, h: footerH },
-    adv: { x: W / 2 + 10, y: footerY, w: fW, h: footerH },
+    s: Math.max(0.72, Math.min(1, H / 760)), short, narrow, stacked: narrow,
+    pad, headerY, headerH, titleY, titleSize, hero, copy, preview, modeY,
+    quick: { x: copy.x, y: startY, w: startW, h: startH },
+    daily: { x: copy.x, y: secondaryY, w: secondaryW, h: secondaryH },
+    card: i => ({ x: hero.x + modePad + i * (modeW + modeGap), y: modeY, w: modeW, h: modeH }),
+    resume: hasCkpt ? { x: copy.x + secondaryW + gap, y: secondaryY, w: secondaryW, h: secondaryH } : null,
+    progress: narrow ? null : { x: pad, y: footerY, w: Math.max(280, W - pad * 2), h: footerH },
+    dex, adv,
   };
 }
 // PAGE 2 — a two-step setup wizard. Pilot choice gets the whole screen so all
@@ -246,7 +245,9 @@ function setupLayout() {
   const bottomPad = short ? 8 : narrow ? 12 : 18;
 
   if (setupStep === 'pilot') {
-    const cols = narrow ? 3 : W < 900 ? 6 : 9;
+    // Six roomy columns on desktop are more legible than the old nine-card
+    // strip. Phones keep three large touch targets per row.
+    const cols = narrow ? 3 : W < 900 ? 4 : 6;
     const rows = Math.ceil(STARTERS.length / cols);
     const gap = short ? 5 : narrow ? 7 : 10;
     const gridY = sectionY + (short ? 14 : 24);

@@ -30,8 +30,8 @@ is THE GAUNTLET: a three-round title fight (sub-legendary sentinels → the
 legendary → the mythical). Kanto also reveals one guaranteed **Rift Shard** in
 each of its three stages. Catch all three during their generous rift windows
 and the ordinary Mew round is
-replaced by a neon-rift **Mew VMAX** secret fight; victory adds a fixed draft
-of three Rift-exclusive permanent upgrades before the normal Kanto draft.
+replaced by a neon-rift **Mew VMAX** secret fight; victory grants two
+back-to-back normal constellation drafts before the journey moves on.
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -112,22 +112,21 @@ roadmap and per-round log).
 ---
 
 ## Game modes (`SETTINGS.mode`, picked on the title screen)
-The opening is STARFIGHTER-first. Page 1 gives STARFIGHTER the large featured
-campaign card and the primary **START STARFIGHTER** action; BREAKER and BLASTER
-remain available in a compact arcade rail. The three `drawModeCard` dioramas
-sit on a bright morning adventure map with clouds, rolling regional ridges, a
-winding nine-node route, and drifting leaves (`drawMenuAdventureBackdrop`) —
-the title no longer reads as a dark pause screen. The STARFIGHTER diorama uses
-a luminous sunset flight corridor while retaining strong projectile contrast.
-All three cards lead with their literal game type and input recipe: **FLYING SHOOTER / YOU
-FLY + FIRE**, **BRICK BREAKER / BALL + PADDLE**, and **WALL SHOOTER / NO BALL**.
-STARFIGHTER no longer uses Rayquaza as an ambiguous mascot. It rotates actual
-partner choices inside a custom wing-and-thruster flight rig while the preview
-shows strafing, incoming enemy fire, basic attacks, and a piercing charge.
-BREAKER rallies a ball through a wall, and BLASTER winds a charge shot between
-volleys. With no hover, STARFIGHTER remains animated; a
-hovered arcade card takes focus. `reduceFlash` freezes previews. The dashboard
-strip below still shows the saved journey, research progress, and Daily status.
+The opening is STARFIGHTER-first, but the home screen presents only one selected
+game at a time. A large, animated gameplay diorama shows the literal loop — a
+Pokémon pilot dodging crossfire, a ball rallying through a Pokémon wall, or a
+turret sending volleys and a charge shot into that wall. A three-item switcher
+changes the selected mode without launching it; one large **START [MODE]**
+button then enters setup. This removes the old duplicate Starfighter action and
+dense three-card dashboard while keeping Daily, Continue, Pokédex, Settings,
+journey progress, and research visible in quieter secondary positions.
+
+The home flow is mobile-first: phone layouts stack preview, readable mode copy,
+44–50px actions, and three thumb-sized mode switches inside one surface. Partner
+selection uses three cards per row on phones and six roomy columns on desktop;
+challenge selection is a 2×2 phone grid. `reduceFlash` freezes the animated
+previews. STARFIGHTER still rotates actual partner choices inside a custom
+wing-and-thruster flight rig rather than using Rayquaza as an ambiguous mascot.
 
 Selecting a game opens a two-step setup wizard (`setupStep`, `setupLayout`):
 **1 · PARTNER** shows all 18 partners on one screen, then **2 · CHALLENGE**
@@ -390,10 +389,13 @@ for a generous, homing shard catch window; Mewtwo reveals the third between
 Rounds 2 and 3. Let a shard pass and the journey continues toward the normal
 Mew finale. A complete key makes `gauntletSummonMythic()` spawn Mew VMAX instead
 of Mew (minimum 18 HP, custom Rift arena and sprite, readable seven-shot MAX
-MIRAGE pattern). Defeating it awards +3000 and a no-reroll choice of
-**PARADOX HEART** (+1 max HP, full heal/Mega), **RIFT LENS** (+15% damage,
-ignore resistance), or **ECHO RELAY** (every seventh hit chains twice). The
-chosen reward and completed Rift state are carried by checkpoint v2; v1 saves
+MIRAGE pattern). Defeating it awards +3000 and **TWO back-to-back normal
+constellation drafts** (`G.secret.bonusDrafts`; the second chains in via
+`chainBonusDraft` after the first pick) before the journey moves on to Johto —
+a generous but not run-warping payoff. (The old one-off superpowers —
+Paradox Heart / Rift Lens / Echo Relay — are retired for new runs;
+`SECRET_UPGRADES`/`applySecretUpgrade` stay only to honour saves that already
+earned one.) The completed Rift state is carried by checkpoint v2; v1 saves
 remain accepted. STARFIGHTER Trial exposes Mew VMAX directly as a fourth
 Kanto finale choice; that practice encounter never changes persistent Rift
 progress. Daily runs preserve the normal Mew finale.

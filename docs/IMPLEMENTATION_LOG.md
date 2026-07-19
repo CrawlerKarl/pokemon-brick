@@ -5,6 +5,27 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Mobile-first home and start-flow redesign
+
+- Replaced the crowded three-card title dashboard and duplicate Starfighter
+  quick-start with one selected-mode hero: readable description, a single
+  **START [MODE]** action, and an equal three-item mode switcher.
+- Added large live gameplay dioramas for all modes. Starfighter shows the
+  player rig, enemy formation, friendly fire, and incoming shots; Breaker
+  shows a Pokémon wall, paddle, rally line, and ball; Blaster shows direct
+  volleys and its charged shot.
+- Reduced secondary chrome: Daily/Continue sit below the main action,
+  Pokédex/Settings move to stable utility targets, and roomy screens use one
+  quiet journey/research footer rather than three competing status bands.
+- Mobile is the reference layout: stacked preview and copy, 44–50px primary
+  touch targets (including the 320×568 compact layout), three partner cards
+  per row, and a two-by-two challenge grid. Desktop partner selection moves
+  from nine cramped columns to six readable columns.
+- Mode selection no longer launches setup immediately; it updates the hero,
+  and the primary action opens the selected mode's Partner → Challenge flow.
+- Visual QA covered 320×568, 360×800, 390×700, 390×844, and 1280×720;
+  browser console stayed clean and the invariant suite remains **55/55**.
+
 ## 2026-07-19 — Polish pass: UI fixes + Mew VMAX reward rebalance
 
 Four player-reported items:
