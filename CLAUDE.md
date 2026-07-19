@@ -203,6 +203,19 @@ phone — flag anything only verifiable there.
   → RELEASE! → OVERCHARGE). **Heat fairness is a tested invariant:**
   sustained spam overheats in the 5–10s band on Normal (7.6s today) and a
   fire-rate upgrade may only ever make that band KINDER.
+- **Boss desperation channels are data-driven (M4).** `BOSS_CHANNELS`
+  (data.js) keys the low-HP channel per species; `spawnChannelPunish`
+  (update.js) dispatches the punish pattern (`columns`/`sweep`/`clock`) —
+  all patterns ride `G.columnStrikes`, the single lane-danger primitive.
+  The charged interrupt, 1.5s ×1.35 stagger, and cd 9 are UNIFORM template
+  constants — never tune them per boss. Every finale legendary kit needs a
+  phase-1 normal-fire answer (Mewtwo focus orbs / Lugia STORM FEATHERS /
+  Dialga CHRONO GEARS — all 2-HP intercept shots on the deferred-shot
+  lifecycle, orphan-fizzling, never flyers) + a channel. Lugia's TAILWIND
+  (`G.gustDir`) drifts bolts/micros in shooter modes only and NEVER moves
+  the pilot; Dialga's TIME DILATION (`enemyShotTimeScale()`, deterministic
+  `G.timeWarpClock` square wave) scales displacement at integration time
+  only — never mutate a shot's stored vx/vy.
 - **Armor and veil are a matched pair.** SHELL ARMOR rewards the charged
   shot; **SPECTRAL VEIL** (`br.specVeil`/`specVeilActive`, region 3+, ≤2
   spirit flyers) punishes charge-spraying — charged bolts phase THROUGH

@@ -302,7 +302,7 @@ const G = {
   secretUpg: { heart: false, lens: false, echo: false }, secretHit: 0,
   shieldRegenT: 10,
   telegraphs: [],           // pre-shot warning markers
-  gustT: 0, timeWarpT: 0,   // Lugia / Dialga signature effects
+  gustT: 0, gustDir: 0, timeWarpT: 0, timeWarpClock: 0,   // Lugia / Dialga signature effects (gustDir = TAILWIND lane push ±1; timeWarpClock = TIME DILATION metronome accumulator)
   columnStrikes: [],        // Zekrom / Eternatus warned beams
 };
 function setCombatNotice(text, color, duration = 1.15) {
@@ -762,7 +762,7 @@ function buildLevel(lvl) {
   G.secret.pendingShard = null; G.secret.vmax = false; G.secret.rewardDraft = false;
   G.secret.deferredChoices = null;
   if (stageIdx(lvl) !== 2) G.gauntlet = null;
-  G.gustT = 0; G.timeWarpT = 0; G.gridRect = null;
+  G.gustT = 0; G.timeWarpT = 0; G.timeWarpClock = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
   // pack or type cluster, so Pokémon that belong together appear together

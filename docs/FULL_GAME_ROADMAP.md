@@ -154,11 +154,31 @@ Still open (Round C / M9):
 - [ ] Beat types not yet built: formation reveal, elite intervention as a
   distinct spawn, hazard, victory.
 
-## Milestone 4 — Full boss overhaul ⬜
+## Milestone 4 — Full boss overhaul 🔶
+(Round A shipped 2026-07-19 — Lugia + Dialga on the Mewtwo template;
+design doc: `M4_BOSS_KITS.md`)
 
-Prototype with Mewtwo (precision duel/teleport control), Lugia (pursuit,
-wind, lane manipulation), Dialga (clockwork timing, arena control). Every
-major boss: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
+Shipped (Round A):
+- [x] **Data-driven desperation channels** — `BOSS_CHANNELS` (data.js)
+  replaces the `id===150` hard-gates; punish patterns dispatch through
+  `spawnChannelPunish` (`columns` / `sweep` / `clock`), all riding the
+  `G.columnStrikes` lane machinery. Mewtwo unchanged (tested).
+- [x] **Lugia — THE STORM THAT HUNTS**: STORM FEATHERS (2-HP intercept
+  shed, burst into micro fans at the ship band — the normal-fire answer),
+  TAILWIND CURRENT (`G.gustDir` drifts player bolts + enemy micros in
+  shooter modes — the previously ball-only gust now matters in
+  STARFIGHTER), phase-2 pursuit (patrol center hunts the pilot),
+  AEROBLAST sweep channel (sequential traveling wall).
+- [x] **Dialga — THE CLOCKWORK BASTION**: CHRONO GEARS (2 anti-phase
+  orbiting 2-HP nodes dripping metronome shots), TIME DILATION
+  (`enemyShotTimeScale()` square-wave lurch, 0.45s period, displacement
+  scaled at integration time only), phase-2 volley tightening ×0.85,
+  ROAR OF TIME clock channel (rotating safe lane).
+- [x] Both duels + the Mewtwo regression covered by the suite (57 → 59).
+
+Prototype set is now Mewtwo (precision duel/teleport control), Lugia
+(pursuit, wind, lane manipulation), Dialga (clockwork timing, arena
+control). Still to roll across every remaining major boss: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
 three distinct phases (◐ phase framework exists), species projectile family
 (◐ `BOSS_PROJECTILE_KIND`), weak point/opening/interrupt, one move best
 answered by normal fire + one by charge, phase-transition animation, phase

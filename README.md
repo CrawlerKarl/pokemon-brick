@@ -436,6 +436,28 @@ case 150, update.js):
 The pattern (one move answered by normal fire, one by charge, desperation
 with readable counterplay) is Milestone 4's template for every boss.
 
+### Lugia and Dialga duels (Milestone 4 Round A — the template rolls out)
+Desperation channels are now data-driven: `BOSS_CHANNELS` (data.js) keys
+`{hpFrac, dur, cd, name, pattern}` per species and `spawnChannelPunish`
+(update.js) dispatches the punish — `columns` (Mewtwo, unchanged), `sweep`
+(five sequential columns, a traveling wall), `clock` (six clockwise
+strikes, one rotating safe lane starting at the pilot's column). Interrupt
+mechanics (charged hit → 1.5s ×1.35 stagger, cd 9) are uniform template
+constants. Kit design docs live in `docs/M4_BOSS_KITS.md`.
+- **Lugia — THE STORM THAT HUNTS (L6):** STORM FEATHERS (three 2-HP
+  `aeroring` shots drift down on the wind; each that reaches the ship band
+  bursts into three aimed micros — normal fire's answer), TAILWIND CURRENT
+  (`G.gustT`+`G.gustDir` drift player bolts AND enemy micros ±150/s in the
+  shooter modes; the ball-curve gust is untouched; the pilot is never
+  pushed), phase-2 pursuit (the infinity patrol's center hunts the pilot),
+  AEROBLAST sweep channel.
+- **Dialga — THE CLOCKWORK BASTION (L12):** CHRONO GEARS (two anti-phase
+  2-HP `time` nodes orbit fixed flanks and drip a metronome micro each
+  0.45s tick; 9s self-expiry), TIME DILATION (`enemyShotTimeScale()` —
+  square-wave lurch ×1.7/×0.15 on the deterministic `G.timeWarpClock`;
+  displacement scaled at integration time, stored velocities never
+  mutated), phase-2 volley period ×0.85, ROAR OF TIME clock channel.
+
 ### Boss battles (`drawBossMon` render.js, phases in `damageBrick`)
 Legendaries are **BARE** — a huge bare Pokémon holding the arena (breathing
 aura, orbiting energy ring, silhouette shadow + rim light, its own gait), never

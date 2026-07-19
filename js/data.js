@@ -1297,6 +1297,18 @@ const BOSS_ABILITIES = {
   890:  { cd: 8,   name: 'DYNAMAX CANNON' },  // Eternatus fires a warned beam
   1007: { cd: 7,   name: 'WILD CHARGE' },     // Koraidon dashes across the arena
 };
+// ---- DESPERATION CHANNELS (Milestone 4): the shared low-HP CHANNEL best
+// answered by CHARGE (Mewtwo's Psystrike, rolled across the roster). Keyed by
+// legendary id; the channel + charged-interrupt machinery in update.js is
+// data-driven off this table (junkie, non-mythic, non-secret — same gates as
+// the original Psystrike hard-gate). `pattern` selects the punish lane geometry
+// (columns / sweep / clock) fired if the channel is NOT interrupted. The stagger
+// (1.5s ×1.35) is a template constant held in update.js, uniform across bosses.
+const BOSS_CHANNELS = {
+  150: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'PSYSTRIKE',    pattern: 'columns' },
+  249: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'AEROBLAST',    pattern: 'sweep'   },
+  483: { hpFrac: 0.15, dur: 2.8, cd: 9, name: 'ROAR OF TIME', pattern: 'clock'   },
+};
 // ---- how each legendary OWNS its arena: a movement archetype that makes
 // every fight look and feel different — not every boss looms large up top.
 // 'anchor' = the classic high patrol; the rest are read by the boss patrol

@@ -2324,7 +2324,169 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('Lugia duel: storm feathers + tailwind drift + Aeroblast sweep', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(6, true, { seed: 'lugia-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 249, 'round jump did not reach Lugia');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0;
+      // ---- P1 STORM FEATHERS: three 2-HP heavy feathers drift down ----
+      boss.abilityCD = 0; boss.featherTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      let feathers = G.enemyShots.filter(s => s.feather);
+      assert(feathers.length === 3 && feathers.every(s => s.interceptHP === 2 && s.boss),
+        'feather turn did not shed three 2-HP boss feathers');
+      // DENY: two basic intercepts destroy a feather (cheap for normal fire)
+      const f0 = feathers[0];
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: f0.x, y: f0.y }]; update(1 / 60); }
+      assert(f0.dead, 'two basic hits did not deny a storm feather');
+      // BURST: a feather reaching the ship band bursts into 3 aimed micros
+      boss.abilityCD = 0; boss.featherTurn = false; G.enemyShots = [];
+      update(1 / 60);
+      const fb = G.enemyShots.find(s => s.feather);
+      assert(fb, 'no feather to drive to the ship band');
+      G.enemyShots = G.enemyShots.filter(s => s.feather); // isolate from baseline fire
+      fb.y = fb.feather.burstAt + 1;
+      update(1 / 60);
+      const micros = G.enemyShots.filter(s => s.classKey === 'micro' && s.kind === 'aeroring' && !s.feather);
+      assert(fb.dead && micros.length === 3, 'a feather at the ship band did not burst into three aimed micros');
+      // ---- TAILWIND CURRENT: a wind lane push drifts the pilot's bolts ----
+      G.enemyShots = []; G.lasers = [];
+      boss.abilityCD = 0; boss.featherTurn = true; // toggles to false → gust branch
+      update(1 / 60);
+      assert((G.gustDir === 1 || G.gustDir === -1) && G.gustT > 0, 'gust turn did not arm a directional tailwind');
+      G.enemyShots = []; G.telegraphs = []; boss.fireQuietT = 5; // isolate the bolt from baseline fire
+      const bolt = { basic: true, x: W / 2, y: shipY() - 60, vx: 0 };
+      G.lasers = [bolt];
+      const x0 = bolt.x;
+      await runFrames(30);
+      assert(Math.abs(bolt.x - x0) > 1 && Math.sign(bolt.x - x0) === G.gustDir,
+        'a player bolt did not drift downwind under tailwind');
+      // ---- P2 AEROBLAST: channel below 15%, charged interrupt, sweep ----
+      G.enemyShots = []; G.lasers = []; G.gustT = 0;
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep', 'low HP did not open the AEROBLAST sweep channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // SWEEP SIGNATURE: uninterrupted → 5 columns firing in sequence (a
+      // traveling wall — monotonic warn times AND ordered x positions)
+      boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'sweep', 'the AEROBLAST channel did not recur after cooldown');
+      boss.channel.t = 99;
+      const c0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(c0);
+      assert(cols.length === 5, 'an uninterrupted Aeroblast did not fire five warned columns');
+      const warns = cols.map(c => c.warn), xs = cols.map(c => c.x);
+      const mono = a => a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
+      assert(mono(warns), 'the sweep columns did not fire sequentially (non-monotonic warn times)');
+      assert(mono(xs), 'the sweep columns are not a spatially ordered traveling wall');
+      return 'feathers: shed → drift → deny (2 hits) → burst 3 micros; tailwind drifts bolts; Aeroblast: channel → charged break → 1.35× stagger → 5 sequential sweep columns';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('Dialga duel: chrono gears + time dilation lurch + Roar of Time clock', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(12, true, { seed: 'dialga-duel' });
+      jumpToGauntletRound(1);
+      paused = false; G.freeze = 0;
+      const boss = G.bricks.find(b => b.isBoss && !b.dead);
+      assert(boss && boss.poke.id === 483, 'round jump did not reach Dialga');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+      // ---- P1 CHRONO GEARS: two 2-HP heavy gears orbit flanks in ANTI-PHASE ----
+      boss.abilityCD = 0; boss.gearTurn = false; boss.fireQuietT = 5; G.enemyShots = [];
+      update(1 / 60);
+      let gears = G.enemyShots.filter(s => s.gear);
+      assert(gears.length === 2 && gears.every(s => s.interceptHP === 2 && s.boss),
+        'gear turn did not deploy two 2-HP boss gears');
+      assert(Math.abs(Math.abs(gears[0].gear.ang - gears[1].gear.ang) - Math.PI) < 1e-6,
+        'the two gears are not in anti-phase (180°)');
+      // METRONOME DRIP: a live gear emits one aimed micro 'time' shot per beat
+      boss.abilityCD = 5; // don't redeploy while we watch the drip
+      const drips0 = G.enemyShots.filter(s => s.classKey === 'micro' && s.kind === 'time' && !s.gear).length;
+      await runFrames(40);
+      const drips1 = G.enemyShots.filter(s => s.classKey === 'micro' && s.kind === 'time' && !s.gear).length;
+      assert(drips1 > drips0, 'live gears did not drip aimed micro time shots on the metronome beat');
+      // DENY: two basic intercepts destroy one gear; its anti-phase twin survives
+      G.enemyShots = G.enemyShots.filter(s => s.gear); gears = G.enemyShots;
+      const g0 = gears[0], g1 = gears[1];
+      for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: g0.x, y: g0.y }]; update(1 / 60); }
+      assert(g0.dead && !g1.dead, 'two basic hits did not destroy exactly one gear');
+      // ---- TIME DILATION: enemy-shot displacement rides the metronome square wave ----
+      G.enemyShots = []; G.lasers = []; G.telegraphs = [];
+      boss.gearTurn = true; boss.abilityCD = 0; boss.fireQuietT = 5; // toggles false → dilation branch
+      update(1 / 60);
+      assert(G.timeWarpT > 0, 'the dilation turn did not warp the arena clock');
+      // a controlled straight shot; measure its per-frame descent fast vs slow
+      G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; G.invuln = 999;
+      G.enemyShots = [{ x: W / 2, y: H * 0.3, vx: 0, vy: 200, classKey: 'standard',
+        hitR: 7.5, interceptHP: 1, threat: 1, boss: true, type: 'dragon', kind: 'time', age: 0 }];
+      const shot = G.enemyShots[0];
+      G.timeWarpT = 3.2; G.timeWarpClock = 0;               // fast half (phase 0)
+      const yFast0 = shot.y; update(1 / 60); const dFast = shot.y - yFast0;
+      G.timeWarpT = 3.2; G.timeWarpClock = TICK_PERIOD * 0.75; // slow half
+      const ySlow0 = shot.y; update(1 / 60); const dSlow = shot.y - ySlow0;
+      assert(dFast > dSlow * 3, 'the fast half-period did not move the shot >3× the slow half');
+      assert(shot.vx === 0 && shot.vy === 200, 'time dilation mutated a shot\'s stored vx/vy');
+      // dilation OFF → uniform displacement (integration-time scaling only)
+      G.timeWarpT = 0; G.timeWarpClock = 0;
+      const yOff0 = shot.y; update(1 / 60); const dOff1 = shot.y - yOff0;
+      const yOff1 = shot.y; update(1 / 60); const dOff2 = shot.y - yOff1;
+      assert(Math.abs(dOff1 - dOff2) < 1e-6, 'displacement was not uniform with dilation off');
+      // ---- P2 ROAR OF TIME: channel below 15%, clock punish, charged interrupt ----
+      G.enemyShots = []; G.lasers = []; G.timeWarpT = 0;
+      mouseX = W / 2; G.paddle.x = W / 2; // pin the pilot to the middle lane
+      boss.hp = boss.maxHp * 0.10;
+      boss.channel = null; boss.channelCD = 0; boss.staggerT = 0;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'clock', 'low HP did not open the ROAR OF TIME clock channel');
+      G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+        x: boss.bx + G.fx, y: boss.by + G.fy }];
+      update(1 / 60);
+      assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the clock channel');
+      const hp0 = boss.hp;
+      damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+      assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+      // CLOCK SIGNATURE: uninterrupted → 6 sequential strikes, one lane each, the
+      // safe lane starting at the pilot's column and rotating one slot per strike
+      boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+      mouseX = W / 2; G.paddle.x = W / 2;
+      update(1 / 60);
+      assert(boss.channel && boss.channel.pattern === 'clock', 'the clock channel did not recur after cooldown');
+      boss.channel.t = 99;
+      const cc0 = G.columnStrikes.length;
+      update(1 / 60);
+      const cols = G.columnStrikes.slice(cc0);
+      assert(cols.length === 6, 'an uninterrupted Roar of Time did not fire six warned strikes');
+      const span = W / 6;
+      const lanes = cols.slice().sort((a, b) => a.warn - b.warn).map(c => Math.round(c.x / span - 0.5));
+      assert(new Set(lanes).size === 6, 'the clock did not leave exactly one rotating safe lane (lanes not distinct)');
+      assert(lanes.every((L, i) => i === 0 || L === (lanes[i - 1] + 1) % 6),
+        'the clock safe lane did not rotate one slot per strike');
+      const pLane = Math.floor((W / 2) / span);
+      assert(lanes[lanes.length - 1] === pLane, 'the clock did not start its safe lane at the pilot\'s column');
+      return 'gears: deploy 2 anti-phase → metronome drip → deny (2 hits, twin lives); dilation lurches shots >3× on the square wave (stored vx/vy intact); Roar of Time: clock channel → charged break → 1.35× stagger → 6 rotating-safe-lane strikes';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   test('Kanto distant flocks: capped, high sky, Kanto-only', async () => {
+    SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';
     resetRun(1, true, { seed: 'flocks' });
     paused = false; G.freeze = 0;

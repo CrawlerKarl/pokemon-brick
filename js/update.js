@@ -12,6 +12,19 @@ function timeScale() {
 }
 // Dialga's Roar of Time slows only the balls, not the player
 function ballTimeScale() { return G.timeWarpT > 0 ? 0.55 : 1; }
+// Dialga's TIME DILATION (Milestone 4): ONE shared metronome period drives both
+// the enemy-shot lurch and the chrono-gear drip, so the whole board pulses in
+// sync — a rhythm the pilot dodges ON, never a hidden speedup.
+const TICK_PERIOD = 0.45;
+// TIME DILATION scales enemy-shot DISPLACEMENT at integration time only — never
+// the stored vx/vy. Lugia's TAILWIND mutates vx at the very same block (a real
+// push); scaling displacement here keeps the two independent and stops shots
+// desyncing on expiry. Shooter modes only; ball modes keep the ball-slow. First
+// half of each period ×1.7, second half ×0.15 (avg ≈ 0.93 — no net speedup).
+function enemyShotTimeScale() {
+  if (G.timeWarpT <= 0 || G.mode === 'classic') return 1;
+  return ((G.timeWarpClock || 0) % TICK_PERIOD) < TICK_PERIOD / 2 ? 1.7 : 0.15;
+}
 function scoreMult() {
   // RALLY MASTER's shooter translation: no ball rallies there, so the kill
   // combo carries its +50% score identity instead
@@ -55,6 +68,16 @@ function tickEffects(dt) {
     G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? (preset().heatCool || 0.28) : 0.22));
   }
   G.gustT = Math.max(0, G.gustT - dt);
+  // TIME DILATION metronome (Dialga): a dedicated, deterministic accumulator so
+  // every enemy shot lurches on ONE square wave and an audible tick lands at
+  // each period start. Resets when the warp lapses, so a fresh cast always
+  // opens on the fast downbeat (phase 0).
+  if (G.timeWarpT > 0) {
+    const prevClock = G.timeWarpClock || 0;
+    G.timeWarpClock = prevClock + dt;
+    if (G.mode !== 'classic' && Math.floor(G.timeWarpClock / TICK_PERIOD) !== Math.floor(prevClock / TICK_PERIOD))
+      tone(1500, 0.03, 'square', 0.03); // metronome click — base tone bus, no new SFX machinery
+  } else G.timeWarpClock = 0;
   G.timeWarpT = Math.max(0, G.timeWarpT - dt);
   G.reactiveCD = Math.max(0, (G.reactiveCD || 0) - dt); // REACTIVE OVERDRIVE regrow clock
   // ---- FUSION / APEX clocks ----
@@ -221,6 +244,49 @@ function spawnBossAngles(br, bx, by, d, spec) {
       classKey: spec.classKey || 'standard', volleyId,
       turn: spec.turn || 0, wave: spec.wave || 0, wavePhase: i * 0.9 });
   }
+}
+
+// CHANNEL PUNISH (Milestone 4): an uninterrupted desperation channel resolves
+// into a warned column pattern. ALL patterns reuse G.columnStrikes (the single
+// lane-danger primitive) with the standard warn→strike lifecycle; only the
+// timing/geometry differs so each boss reads differently. `columns` is Mewtwo's
+// original five-simultaneous behaviour (BIT-IDENTICAL), `sweep` is Lugia's
+// traveling wall, `clock` is Dialga's rotating safe lane (Part 2).
+function spawnChannelPunish(boss, pattern) {
+  const color = '#ff5cf0';
+  if (pattern === 'sweep') {
+    // AEROBLAST (Lugia): 5 columns fired SEQUENTIALLY as a traveling wall the
+    // pilot races. Direction mirrors which half the boss occupies — it sweeps
+    // AWAY from the boss's side so the far lane opens first. Same total danger
+    // as `columns`, staggered warn times encode the left→right (or →left) read.
+    const n = 5, span = W / n, leftToRight = (boss.bx + G.fx) < W / 2;
+    for (let i = 0; i < n; i++) {
+      const idx = leftToRight ? i : (n - 1 - i);
+      G.columnStrikes.push({ x: span * (idx + 0.5), w: Math.min(64, span * 0.42),
+        warn: 1.05 + i * 0.28, strike: 0.42, color });
+    }
+    return;
+  }
+  if (pattern === 'clock') {
+    // ROAR OF TIME (Dialga): six lanes around the arena strike CLOCKWISE in
+    // sequence — exactly one lane fires per beat, so the pilot always has a
+    // single readable safe slot that ROTATES one lane per strike (the same
+    // escape-spoke read as a phase shockwave). The clock hand starts just past
+    // the pilot and sweeps around, hitting the pilot's OWN lane LAST — so the
+    // safe lane "starts at the pilot's current column."
+    const n = 6, span = W / n;
+    const p = Math.max(0, Math.min(n - 1, Math.floor(G.paddle.x / span)));
+    for (let i = 0; i < n; i++) {
+      const lane = (p + 1 + i) % n; // clockwise from past the pilot; pilot's lane is i === n-1
+      G.columnStrikes.push({ x: span * (lane + 0.5), w: Math.min(60, span * 0.4),
+        warn: 1.05 + i * 0.26, strike: 0.4, color });
+    }
+    return;
+  }
+  // `columns` (Mewtwo, default): five SIMULTANEOUS warned columns — unchanged.
+  const n = 5, span = W / n;
+  for (let i = 0; i < n; i++) G.columnStrikes.push({
+    x: span * (i + 0.5), w: Math.min(64, span * 0.42), warn: 1.05, strike: 0.42, color });
 }
 
 // Regular boss fire is species-authored. Signature abilities still interrupt
@@ -1179,19 +1245,74 @@ function bossAbility(boss) {
       tone(880, 0.18, 'sine', 0.06, -400);
       break;
     }
-    case 249: // Lugia: gusting winds curve the ball
+    case 249: { // Lugia: THE STORM THAT HUNTS (Milestone 4).
+      // Phase 1 alternates STORM FEATHERS (the normal-fire answer) with
+      // TAILWIND; phase 2+ is all TAILWIND (feathers are a phase-1 move). Each
+      // feather is a 2-HP heavy shot that drifts DOWN on a sine path (pushed by
+      // the active wind) and bursts into an aimed micro FAN at the ship band —
+      // cheap for normal fire, wasteful for a charge line. Cap 3, skip the turn
+      // if any survive (mirrors Mewtwo's focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic
+        && (boss.featherTurn = !boss.featherTurn) && !G.enemyShots.some(s => s.feather)) {
+        const fVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx + (i - 1) * 42, y: by + 10, vx: 0, vy: 0, boss: true,
+            type: 'flying', species: 249, kind: 'aeroring', classKey: 'heavy',
+            visualR: 13, hitR: 10, volleyId: fVolley,
+            feather: { t: 0, burstAt: shipY() - 40, sway: (i - 1) * 0.7 + gameRand() * 0.5, src: boss } });
+        }
+        setCombatNotice('STORM FEATHERS — SHOOT THEM DOWN!', '#b3e5fc', 1.8);
+        ringFx(bx, by, '#b3e5fc', 6, 120, 3, 0.4);
+        tone(720, 0.2, 'sine', 0.05, 180);
+        break;
+      }
+      // TAILWIND CURRENT: a lane push toward whichever side has more open space,
+      // so it off-centers the pilot's aim. In shooter modes it drifts the
+      // pilot's bolts AND enemy micro shots alike (fair both ways); the ball
+      // modes keep the untouched gust ball-curve. It NEVER moves the ship.
       G.gustT = 4;
+      G.gustDir = (G.paddle.x < W / 2) ? 1 : -1;
+      setCombatNotice(G.gustDir > 0 ? 'TAILWIND →' : '← TAILWIND', '#b3e5fc', 2);
       tone(180, 0.6, 'sawtooth', 0.06, 220);
       break;
+    }
     case 384: // Rayquaza: crosses the playfield
       boss.sweep = { dir: gameRand() < 0.5 ? -1 : 1, t: 2.6 };
       SFX.roar();
       break;
-    case 483: // Dialga: Roar of Time slows every ball
+    case 483: { // Dialga: THE CLOCKWORK BASTION (Milestone 4).
+      // Phase 1 alternates CHRONO GEARS (the normal-fire answer) with TIME
+      // DILATION. Two gear nodes orbit FIXED anchors flanking the boss in
+      // ANTI-PHASE (180°) — one charged line can't skewer both. Each metronome
+      // beat a live gear drips one aimed micro 'time' shot (a drip that stacks
+      // up if ignored); two basic hits deny a gear (interceptHP 2, heavy class).
+      // Gears fizzle after 9s (no burst) or if Dialga falls; skip the turn if
+      // any gear lives (mirrors the focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1 && !boss.mythic
+        && (boss.gearTurn = !boss.gearTurn) && !G.enemyShots.some(s => s.gear)) {
+        const gVolley = nextEnemyVolley();
+        const gr = Math.max(58, boss.w * 0.55), flank = Math.max(70, boss.w * 0.85);
+        for (let i = 0; i < 2; i++) {
+          spawnEnemyShot({ x: bx, y: by, vx: 0, vy: 0, boss: true, type: boss.poke.t,
+            species: 483, kind: 'time', classKey: 'heavy', volleyId: gVolley,
+            gear: { t: 0, life: 9, ang: i * Math.PI, r: gr, ox: (i ? 1 : -1) * flank, beat: 0, src: boss } });
+        }
+        setCombatNotice('CHRONO GEARS — SHOOT THEM DOWN!', '#8ecae6', 1.8);
+        ringFx(bx, by, '#8ecae6', 6, 120, 3, 0.4);
+        tone(680, 0.2, 'square', 0.05, 120);
+        break;
+      }
+      // TIME DILATION: warps the arena clock. Ball modes keep the untouched
+      // ball-slow; in shooter modes every enemy shot lurches on the metronome
+      // square wave (enemyShotTimeScale) — the lurch IS the tell, so the cast
+      // flash is reduceFlash-gated. Announced on the compact strip only.
       G.timeWarpT = 3.2;
+      G.timeWarpClock = 0; // open on the fast downbeat
+      setCombatNotice('TIME DILATION', '#8ecae6', 2);
       tone(70, 0.8, 'sawtooth', 0.1, -20);
-      G.flashT = Math.max(G.flashT, 0.12);
+      if (!SETTINGS.reduceFlash) G.flashT = Math.max(G.flashT, 0.12);
       break;
+    }
     case 644: // Zekrom: lightning column at your position
       G.columnStrikes.push({ x: G.paddle.x, w: 52, warn: 1.0, strike: 0.32, color: '#80d8ff' });
       tone(1200, 0.3, 'square', 0.04, -800);
@@ -2967,6 +3088,14 @@ function update(dt) {
         ? (MYTHIC_BATTLE_STYLES[boss.poke.id] || 'mythic') : (BOSS_STYLE[boss.poke.id] || 'anchor');
       switch (style) {
         case 'infinity': // a wide figure-eight through mid-air
+          // THE HUNT (Lugia, phase 2+): tighten the patrol by chasing the
+          // pilot's x with a soft lerp of the pattern center — the pilot can no
+          // longer camp one lane. Guard wings re-tether automatically.
+          if (jk3 && bp >= 2) {
+            const hlim = boss.w / 2 + 30;
+            boss.hx += (G.paddle.x - G.fx - boss.hx) * 0.4 * dt;
+            boss.hx = Math.max(hlim, Math.min(W - hlim, boss.hx));
+          }
           boss.bx = boss.hx + Math.sin(t2 * sp2) * W * (0.16 + bp * 0.02);
           boss.by = boss.hy + (30 + Math.sin(t2 * sp2 * 2) * 52) * yAmp;
           break;
@@ -3428,6 +3557,10 @@ function update(dt) {
   }
   for (const L of G.lasers) {
     L.y -= 900 * ts * dt;
+    // TAILWIND CURRENT (Lugia): the pilot's bolts drift downwind in shooter
+    // modes — aim upwind to hit. Accumulates a lateral vx, integrated below.
+    if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) L.vx = (L.vx || 0) + G.gustDir * 150 * dt;
+    if (L.vx) L.x += L.vx * ts * dt;
     // bolts intercept enemy fire — shoot the shots down!
     // (Interceptor upgrade lets one bolt take out several shots)
     for (const s of G.enemyShots) {
@@ -3752,19 +3885,22 @@ function update(dt) {
     const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (boss) {
       // signature ability (teleport, winds, sweeps, time warp...)
-      // PSYSTRIKE CHANNEL (Mewtwo duel, STARFIGHTER): below 15% HP the
-      // desperation begins — a rooted 2.6s channel behind a loud warning.
-      // Uninterrupted, it fires five warned columns with real dodge lanes.
-      // A CHARGED shot landing mid-channel BREAKS it (see the bolt block)
-      // and staggers Mewtwo — the interrupt is charge's showcase answer.
-      if (G.mode === 'junkie' && boss.poke.id === 150 && !boss.mythic && !boss.secretBoss) {
+      // DESPERATION CHANNEL (BOSS_CHANNELS, data.js — Mewtwo's PSYSTRIKE rolled
+      // across the roster): below hpFrac HP the desperation begins — a rooted
+      // channel behind a loud warning. Uninterrupted, it fires a warned column
+      // pattern (columns / sweep / clock) with real dodge lanes. A CHARGED shot
+      // landing mid-channel BREAKS it (see the bolt block) and staggers the boss
+      // — the interrupt is charge's showcase answer. Same gates as the original
+      // Psystrike hard-gate (junkie, non-mythic, non-secret).
+      const chDef = BOSS_CHANNELS[boss.poke.id];
+      if (G.mode === 'junkie' && chDef && !boss.mythic && !boss.secretBoss) {
         if (boss.staggerT > 0) boss.staggerT -= dt * ts;
         if (!boss.channel && (boss.channelCD || 0) > 0) boss.channelCD -= dt * ts;
-        if (!boss.channel && boss.hp / boss.maxHp <= 0.15 && (boss.channelCD || 0) <= 0 && !(boss.staggerT > 0)) {
-          boss.channel = { t: 0, dur: 2.6 };
+        if (!boss.channel && boss.hp / boss.maxHp <= chDef.hpFrac && (boss.channelCD || 0) <= 0 && !(boss.staggerT > 0)) {
+          boss.channel = { t: 0, dur: chDef.dur, pattern: chDef.pattern, name: chDef.name };
           boss.fireQuietT = Math.max(boss.fireQuietT || 0, 3.4);
           boss.teleportAt = null; // the channel roots him
-          setCombatNotice('PSYSTRIKE CHANNEL — BREAK IT WITH A CHARGED SHOT!', '#ff5cf0', 2.4);
+          setCombatNotice(chDef.name + ' CHANNEL — BREAK IT WITH A CHARGED SHOT!', '#ff5cf0', 2.4);
           SFX.enrage(); haptic('boss');
         }
         if (boss.channel) {
@@ -3775,11 +3911,10 @@ function update(dt) {
           if (!SETTINGS.reduceFlash && Math.floor(boss.channel.t / 0.45) !== Math.floor(t0 / 0.45))
             ringFx(boss.bx + G.fx, boss.by + G.fy, '#ff5cf0', 5, 130, 3, 0.4);
           if (boss.channel.t >= boss.channel.dur) {
+            const pattern = boss.channel.pattern;
             boss.channel = null;
-            boss.channelCD = 9;
-            const n = 5, span = W / n;
-            for (let i = 0; i < n; i++) G.columnStrikes.push({
-              x: span * (i + 0.5), w: Math.min(64, span * 0.42), warn: 1.05, strike: 0.42, color: '#ff5cf0' });
+            boss.channelCD = chDef.cd;
+            spawnChannelPunish(boss, pattern);
             G.shake = Math.min(G.shake + 8, 14);
             SFX.roar();
           }
@@ -3823,7 +3958,10 @@ function update(dt) {
       if (G.bossShotCD <= 0 && boss.fireQuietT <= 0) {
         const bossBase = G.mode === 'junkie' ? d.starBossShotInt : d.bossShotInt;
         G.bossShotCD = bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
-          * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1);
+          * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1)
+          // BASTION: Dialga's clockwork volley tightens once phase 2 opens — its
+          // arena control comes from gears + dilation, so the cadence, not chasing.
+          * (boss.poke.id === 483 && boss.phase >= 2 ? 0.85 : 1);
         const warn = G.mode === 'junkie' ? 0.72 : 0.55;
         G.telegraphs.push({ br: boss, boss: true, t: warn, max: warn });
       }
@@ -3948,13 +4086,75 @@ function update(dt) {
         SFX.enemyShot();
       } else continue; // still locked to the summoner — no ballistic motion
     }
+    // STORM FEATHERS (Lugia duel): a shed feather drifts DOWN on a sine path,
+    // pushed laterally by the active TAILWIND, and bursts into an aimed fan of
+    // 3 micro shots when it reaches the ship band. Two basic hits deny it first
+    // (interceptHP 2, handled in the laser loop). Bound to its summoner — Lugia
+    // falling fizzles it. It IS an enemy shot; it enters no flyer system.
+    if (s.feather) {
+      const anchor = s.feather.src;
+      if (!anchor || anchor.dead) { s.dead = true; continue; }
+      s.feather.t += dt * ts;
+      s.y += 60 * ts * dt; // slow descent
+      s.x += Math.sin(s.feather.t * 1.6 + s.feather.sway * 4) * 34 * dt; // sine wander
+      if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) s.x += G.gustDir * 150 * dt; // TAILWIND push
+      s.x = Math.max(16, Math.min(W - 16, s.x));
+      s.age = 0; // no ballistic 9s cull while it drifts
+      if (s.y >= s.feather.burstAt) {
+        const fanV = nextEnemyVolley();
+        const base = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
+        const fsp = (200 + diff().lv * 8) * diff().shotSpeed;
+        for (let k = -1; k <= 1; k++) spawnEnemyShot({ x: s.x, y: s.y,
+          vx: Math.cos(base + k * 0.24) * fsp, vy: Math.sin(base + k * 0.24) * fsp,
+          boss: true, type: 'flying', species: 249, kind: 'aeroring', classKey: 'micro', volleyId: fanV });
+        ringFx(s.x, s.y, '#b3e5fc', 4, 44, 2, 0.3);
+        SFX.enemyShot();
+        s.dead = true;
+      }
+      continue; // feathers own their motion — no ballistic integration
+    }
+    // CHRONO GEARS (Dialga duel): a gear orbits a FIXED anchor flanking the
+    // boss and drips one aimed micro 'time' shot each metronome beat — a drip
+    // that stacks up if ignored. Two basic hits deny it (interceptHP 2, laser
+    // loop); it expires after 9s (no burst) or when Dialga falls. The two gears
+    // orbit in ANTI-PHASE so one charged line can't skewer both. It IS an enemy
+    // shot — it enters no flyer system.
+    if (s.gear) {
+      const anchor = s.gear.src;
+      if (!anchor || anchor.dead) { s.dead = true; continue; }
+      s.gear.t += dt * ts;
+      if (s.gear.t >= s.gear.life) { s.dead = true; continue; } // expire, no burst
+      const ga = s.gear.ang + s.gear.t * 1.4;
+      s.x = anchor.bx + G.fx + s.gear.ox + Math.cos(ga) * s.gear.r;
+      s.y = anchor.by + G.fy + Math.sin(ga) * s.gear.r * 0.62;
+      s.age = 0; // orbiting — no ballistic 9s cull while it drips
+      const beat = Math.floor(s.gear.t / TICK_PERIOD);
+      if (beat !== s.gear.beat) {
+        s.gear.beat = beat;
+        const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
+        const gsp = (170 + diff().lv * 8) * diff().shotSpeed;
+        spawnEnemyShot({ x: s.x, y: s.y, vx: Math.cos(aim) * gsp, vy: Math.sin(aim) * gsp,
+          boss: true, type: s.type, species: 483, kind: 'time', classKey: 'micro', volleyId: nextEnemyVolley() });
+        SFX.enemyShot();
+      }
+      continue; // gears own their motion — no ballistic integration
+    }
     if (s.turn) {
       const a = s.turn * dt * ts, ca = Math.cos(a), sa = Math.sin(a);
       const vx = s.vx || 0, vy = s.vy || 0;
       s.vx = vx * ca - vy * sa; s.vy = vx * sa + vy * ca;
     }
-    s.y += (s.vy || 0) * ts * dt;
-    if (s.vx != null) s.x += s.vx * ts * dt;
+    // TAILWIND CURRENT drifts enemy micro fire the same amount as the pilot's
+    // bolts (fair both ways) — shooter modes only; ball modes keep the gust
+    // ball-curve. Mutates stored vx (a real wind push, not integration-scaling).
+    if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir && s.classKey === 'micro' && s.vx != null)
+      s.vx += G.gustDir * 150 * dt;
+    // TIME DILATION (Dialga): scale DISPLACEMENT on the metronome square wave —
+    // stored vx/vy are never touched here (that keeps it independent of the
+    // TAILWIND vx-mutation two lines up). Returns 1 outside the warp / ball modes.
+    const ets = enemyShotTimeScale();
+    s.y += (s.vy || 0) * ts * ets * dt;
+    if (s.vx != null) s.x += s.vx * ts * ets * dt;
     else s.x += Math.sin(s.y * 0.03) * 30 * dt;
     if (s.wave) s.x += Math.sin(s.age * 5 + (s.wavePhase || 0)) * s.wave * dt;
     if (s.kind === 'mochi' && (s.x < 24 || s.x > W - 24)) s.vx = -s.vx;

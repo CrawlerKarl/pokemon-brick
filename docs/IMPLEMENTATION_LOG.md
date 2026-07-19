@@ -5,6 +5,44 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 4 Round A: Lugia + Dialga on the boss template
+
+The Mewtwo duel template (normal-fire answer + charge-interrupt channel +
+movement identity + reduced-flash variant) rolled onto the next two
+prototype bosses. Design doc: `M4_BOSS_KITS.md`.
+- **Shared refactor**: `BOSS_CHANNELS` (data.js) makes the desperation
+  channel data-driven — `spawnChannelPunish(boss, pattern)` (update.js)
+  dispatches `columns` (Mewtwo, unchanged), `sweep` (5 sequential columns,
+  a traveling wall mirrored by boss half), and `clock` (6 clockwise
+  strikes, one rotating safe lane starting at the pilot's column). The
+  charged-hit interrupt / 1.5s ×1.35 stagger / cd 9 stay uniform template
+  constants. Mewtwo's duel test passed untouched — bit-identical.
+- **Lugia (L6)**: previously its gust only curved the ball — inert in
+  STARFIGHTER. Now: STORM FEATHERS (3 heavy-class 2-HP `aeroring` shots
+  on the deferred-shot lifecycle, sine-drift down, burst into 3 aimed
+  micros at the ship band, orphan-fizzle, capped at 3), TAILWIND CURRENT
+  (`G.gustDir` — player bolts and enemy micros drift ±150/s in shooter
+  modes; ball modes untouched; the pilot is never pushed), phase-2
+  pursuit (infinity patrol center lerps toward the pilot), AEROBLAST
+  sweep channel.
+- **Dialga (L12)**: previously `timeWarpT` only slowed the ball — inert
+  in STARFIGHTER. Now: CHRONO GEARS (2 anti-phase orbiting 2-HP nodes on
+  fixed flank anchors, metronome micro drip, 9s self-expiry), TIME
+  DILATION (`enemyShotTimeScale()` next to `ballTimeScale` — square wave
+  ×1.7/×0.15 over a 0.45s tick driven by the deterministic
+  `G.timeWarpClock`; displacement scaled at integration time, stored
+  vx/vy never mutated, audible tick, cast flash now reduceFlash-gated),
+  phase-2 volley period ×0.85, ROAR OF TIME clock channel.
+- **Side effect noted**: Celebi also sets `timeWarpT`, so its warp now
+  lurches shots in shooter modes too — previously inert there;
+  thematically consistent, kept.
+- Verified: suite 57 → 59 (both new duels + Mewtwo regression green),
+  browser duels driven live at desktop/390×844/844×390, console clean,
+  reduceFlash checked, `npm run check` + `verify-assets` green.
+- Next round: Round B rolls the template across the remaining 6
+  legendaries (Rayquaza, Zekrom, Yveltal, Lunala, Eternatus, Koraidon),
+  then mythics/sentinels.
+
 ## 2026-07-19 — Milestone 3 Round B: objective families (survive)
 
 The first LIVE in-wave objective — a family that changes the win
