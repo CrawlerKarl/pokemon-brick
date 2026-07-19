@@ -436,6 +436,21 @@ case 150, update.js):
 The pattern (one move answered by normal fire, one by charge, desperation
 with readable counterplay) is Milestone 4's template for every boss.
 
+### Round C: the nine mythicals (Milestone 4 — round 3 gets teeth)
+Every gauntlet's mythical now duels by the template — lighter kits than
+the legendaries (shorter fights), all riding the same machinery with
+params. Signatures: Mew's ECHO BUBBLES pop into halos, Celebi's BLOOM
+PODS drip seeds, Jirachi's WISH STARS come due as Doom Desire lanes if
+ignored (`s.orbit.launchType:'column'`), Darkrai's HAUNTING WISPS stalk
+your lane (`s.feather.home`), Victini's V-SPARKS orbit and launch,
+Diancie's JEWEL TURRETS add a DIAMOND STORM column each, Marshadow's
+rushes drop fist afterimages, Zarude's BINDING VINES lash every other
+beat, Pecharunt's MOCHI PUPPETS wobble down heavy. Channels (dur 2.4):
+GENESIS WAVE / LEAF STORM / MILLENNIUM COMET / DARK VOID / V-CREATE /
+MOONBLAST / SPECTRAL THIEF / POWER WHIP / MALIGNANT CHAIN. The
+channel-open gate is `BOSS_CHANNELS entry + !secretBoss` — Mew VMAX
+shares id 151 and stays channel-free (tested).
+
 ### Round B: the other six legendaries (Milestone 4 — template complete)
 All nine finale legendaries now duel by the template. `BOSS_CHANNELS`
 entries carry optional `params {count,w,gap,warnMul,bounce,color}` and two

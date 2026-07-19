@@ -155,8 +155,27 @@ Still open (Round C / M9):
   distinct spawn, hazard, victory.
 
 ## Milestone 4 — Full boss overhaul 🔶
-(Rounds A+B shipped 2026-07-19 — all NINE finale legendaries on the
-Mewtwo template; design doc: `M4_BOSS_KITS.md`)
+(Rounds A+B+C shipped 2026-07-19 — all NINE finale legendaries AND all
+NINE mythicals on the template; design doc: `M4_BOSS_KITS.md`)
+
+Shipped (Round C — the nine mythicals):
+- [x] **Channel gate opened to mythics** — the channel-open gate keys
+  on a `BOSS_CHANNELS` entry + `!secretBoss` only (Mew VMAX shares id
+  151 and stays channel-free; tested).
+- [x] **Infra**: `s.orbit.launchType:'column'` (deferred lane strikes),
+  `s.feather.home` (slow pilot-stalk), `s.feather.swayAmp`,
+  `s.gear.dripEvery`, parameterized `boss.sweep.image*` drops.
+- [x] **Nine light kits** (signature / channel, all dur 2.4): Mew ECHO
+  BUBBLES / GENESIS WAVE rain; Celebi BLOOM PODS / LEAF STORM pincer;
+  Jirachi WISH STARS (deferred Doom Desire lanes) / MILLENNIUM COMET
+  columns; Darkrai HAUNTING WISPS (stalking) / DARK VOID pincer;
+  Victini V-SPARKS / V-CREATE sweep; Diancie JEWEL TURRETS (+1 DIAMOND
+  STORM column per live node) / MOONBLAST rain; Marshadow SHADOW SNEAK
+  (rush afterimages) / SPECTRAL THIEF clock; Zarude BINDING VINES
+  (every-other-beat drip) / POWER WHIP pincer; Pecharunt MOCHI PUPPETS
+  / MALIGNANT CHAIN rain.
+- [x] Suite 65 → 67 (two looping mythic-duel tests + VMAX exclusion);
+  all nine legendary duels stand as regression guards.
 
 Shipped (Round B — the remaining six):
 - [x] **Channel params + two new punish patterns** — `BOSS_CHANNELS`
@@ -197,8 +216,8 @@ Shipped (Round A):
   ROAR OF TIME clock channel (rotating safe lane).
 - [x] Both duels + the Mewtwo regression covered by the suite (57 → 59).
 
-All nine finale legendaries now carry the template. Still open for
-later rounds — mythicals and sentinels, plus the polish items: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
+All nine legendaries and all nine mythicals now carry the template.
+Still open for later rounds — sentinels, plus the polish items: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
 three distinct phases (◐ phase framework exists), species projectile family
 (◐ `BOSS_PROJECTILE_KIND`), weak point/opening/interrupt, one move best
 answered by normal fire + one by charge, phase-transition animation, phase
@@ -266,6 +285,10 @@ this is currently a private Pokémon fan project (README already flags
 licensing). Before any public/commercial distribution the user must choose
 between securing authorization or converting to an original creature
 universe. Mechanics work continues regardless.
+**DECIDED 2026-07-19:** build an original sci-fi × fantasy skin behind a
+runtime toggle — full design in `docs/ORIGINAL_SKIN_PLAN.md` (skin
+registry, per-skin storage, 18 classes / 3 disciplines, LIGHT/DARK
+affinity, procedural art, rounds S1–S7).
 
 ---
 

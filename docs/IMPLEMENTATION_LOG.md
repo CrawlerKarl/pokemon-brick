@@ -5,6 +5,48 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 4 Round C: the nine mythicals
+
+Round 3 of every gauntlet now duels by the template — lighter kits
+(mythics are 0.82× HP, 3-phase), every signature a sibling reuse.
+Design: `M4_BOSS_KITS.md` ROUND C.
+- **Gate**: channel-open now keys on a `BOSS_CHANNELS` entry +
+  `!secretBoss` only (dropped `!mythic`). Mew VMAX shares `poke.id`
+  151 with Mew — the `!secretBoss` clause is load-bearing and TESTED
+  (VMAX runs to 8% HP with `BOSS_CHANNELS[151]` present and never
+  opens a channel).
+- **Infra**: `s.orbit.launchType:'column'` (at launchAt the shot
+  becomes a warned lane strike at its x — "the wish comes due");
+  `s.feather.home` (capped ~40 px/s stalk toward the pilot);
+  `s.feather.swayAmp` (real sway amplitude; old feathers bit-identical
+  at 34); `s.gear.dripEvery` (drip every Nth beat; default 1);
+  `boss.sweep.image{Species,Kind,LaunchAt,Notice}` (afterimage drops
+  parameterized; Koraidon defaults bit-identical). Gear drip inherits
+  `s.species`/`s.kind` (Dialga unchanged).
+- **Kits** (signature / channel, all `dur 2.4, cd 9, hpFrac 0.15`):
+  Mew ECHO BUBBLES (high-sway feathers, fan 4) / GENESIS WAVE rain 6;
+  Celebi BLOOM PODS (dripping gears, seed) / LEAF STORM pincer 4;
+  Jirachi WISH STARS (stationary orbit anchors, launchType column,
+  4.0s) / MILLENNIUM COMET columns 5 ×1.2; Darkrai HAUNTING WISPS
+  (homing feathers) / DARK VOID pincer 6 ×1.5; Victini V-SPARKS
+  (orbiting launchers, 3.5s) / V-CREATE sweep 6; Diancie JEWEL
+  TURRETS (conduits; DIAMOND STORM +1 column per live node) /
+  MOONBLAST rain 5; Marshadow SHADOW SNEAK (rush drops 2 fist
+  afterimages, 3.0s) / SPECTRAL THIEF clock; Zarude BINDING VINES
+  (vine gears, dripEvery 2) / POWER WHIP pincer 6; Pecharunt MOCHI
+  PUPPETS (swayAmp 55 feathers, fan 3) / MALIGNANT CHAIN rain 7.
+- **Pairing rule held**: no mythic clones its own gauntlet's legendary
+  mechanic; cross-gauntlet sibling reuse only.
+- **Tests**: two looping duels (A: Kanto–Unova; B: Kalos–Paldea +
+  VMAX exclusion), suite 65 → 67. One test-only fix from the first
+  run: a warn-value assert had to tolerate the same-frame dt decrement
+  (column warns tick down within the spawn frame — assert simultaneity
+  + the multiplier's floor, not an absolute value).
+- Implementation: two sequential agents (Mew–Victini + infra,
+  Diancie–Pecharunt + VMAX guard) over the shared dispatch.
+- Next: sentinel openings; entrance-FX/polish column; phase music
+  layering; practice mode.
+
 ## 2026-07-19 — Milestone 4 Round B: all six remaining legendaries
 
 Every finale legendary now carries the Mewtwo template. Design:

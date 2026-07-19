@@ -1318,6 +1318,19 @@ const BOSS_CHANNELS = {
   792: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'MOONGEIST BEAM', pattern: 'columns', params: { count: 3, w: 110, warnMul: 1.3 } },
   890: { hpFrac: 0.15, dur: 2.8, cd: 9, name: 'ETERNABEAM', pattern: 'sweep', params: { count: 4, w: 90, gap: 0.34 } },
   1007: { hpFrac: 0.15, dur: 2.6, cd: 9, name: 'COLLISION COURSE', pattern: 'sweep', params: { count: 8, gap: 0.18, bounce: true } },
+  // ---- Round C: the nine MYTHICS carry the template too (gauntlet round 3).
+  // Shorter channels (dur 2.4); the interrupt constants (1.5s ×1.35, cd 9) stay
+  // uniform. Keyed by mythic id — Mew VMAX ALSO has id 151, so the channel-open
+  // gate keeps `!boss.secretBoss` to keep the secret reward channel-free.
+  151: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'GENESIS WAVE',     pattern: 'rain',    params: { count: 6, gap: 0.14 } },
+  251: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'LEAF STORM',       pattern: 'pincer',  params: { count: 4 } },
+  385: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'MILLENNIUM COMET', pattern: 'columns', params: { count: 5, warnMul: 1.2 } },
+  491: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'DARK VOID',        pattern: 'pincer',  params: { count: 6, warnMul: 1.5 } },
+  494: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'V-CREATE',         pattern: 'sweep',   params: { count: 6, gap: 0.2 } },
+  719: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'MOONBLAST',        pattern: 'rain',    params: { count: 5, gap: 0.2, color: '#f8bbd0' } },
+  802: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'SPECTRAL THIEF',   pattern: 'clock',   params: { count: 6 } },
+  893: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'POWER WHIP',       pattern: 'pincer',  params: { count: 6 } },
+  1025: { hpFrac: 0.15, dur: 2.4, cd: 9, name: 'MALIGNANT CHAIN', pattern: 'rain',    params: { count: 7, gap: 0.14, color: '#ce93d8' } },
 };
 // ---- how each legendary OWNS its arena: a movement archetype that makes
 // every fight look and feel different — not every boss looms large up top.

@@ -204,7 +204,15 @@ phone — flag anything only verifiable there.
   sustained spam overheats in the 5–10s band on Normal (7.6s today) and a
   fire-rate upgrade may only ever make that band KINDER.
 - **Boss desperation channels are data-driven (M4) — all NINE finale
-  legendaries carry the template.** `BOSS_CHANNELS` (data.js) keys the
+  legendaries AND all NINE mythicals carry the template.** The
+  channel-open gate keys on a `BOSS_CHANNELS` entry + `!boss.secretBoss`
+  ONLY — Mew VMAX shares `poke.id` 151 with Mew, so the `!secretBoss`
+  clause is load-bearing (tested; never re-add a `!mythic` gate, never
+  drop `!secretBoss`). Mythic signatures are sibling REUSES with params
+  (`s.orbit.launchType:'column'`, `s.feather.home`/`swayAmp`,
+  `s.gear.dripEvery`, `boss.sweep.image*`) — defaults keep every
+  legendary bit-identical. A mythic must never clone its own gauntlet's
+  legendary mechanic (cross-gauntlet reuse only). `BOSS_CHANNELS` (data.js) keys the
   low-HP channel per species with optional `params {count,w,gap,warnMul,
   bounce,color}`; `spawnChannelPunish` (update.js) dispatches the punish
   (`columns`/`sweep`/`clock`/`rain`/`pincer`) — all patterns ride

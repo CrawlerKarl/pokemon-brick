@@ -355,3 +355,96 @@ staggerT > 1 / ×1.35 / uninterrupted punish geometry):
 params extension must leave no-params entries bit-identical); projectile
 grammar (all six kinds exist); junkie finale entrances/phases; flyer
 overlap invariants; heat band; ledger.
+
+---
+---
+
+# ROUND C — the nine mythicals
+
+Round 3 of every gauntlet gets template depth. Mythics are shorter
+fights (0.82× legendary HP, 3 phases), so kits are LIGHTER: every
+signature reuses an existing sibling with params, channels are slightly
+shorter (`dur 2.4`), and the interrupt constants stay uniform.
+**Pairing rule:** a mythic must not clone its own gauntlet's legendary
+mechanic (Mew ≠ orbs-like-Mewtwo in feel, Celebi ≠ feathers-like-Lugia,
+etc.) — cross-gauntlet sibling reuse is fine.
+
+## Infrastructure
+
+1. **Gate relaxation:** the channel-open gate becomes
+   `chDef && !boss.secretBoss` (drop `!boss.mythic`). `BOSS_CHANNELS`
+   only holds authored ids, and **Mew VMAX shares id 151** — the
+   `!secretBoss` clause is what keeps VMAX channel-free; it must stay
+   and be TESTED.
+2. **Orbit launch types:** `s.orbit.launchType:'column'` — at launchAt
+   the shot converts to a warned `columnStrike` at its x (w 34, its
+   color) instead of an aimed shot. (Jirachi.)
+3. **Feather homing:** optional `s.feather.home` — sway drifts the
+   shot's x toward the pilot's x at ~40 px/s (a slow stalk, not a
+   missile). (Darkrai.)
+4. **`boss.sweep.imageDrops` is per-boss data** — Marshadow sets it too
+   (2 drops, launchAt 3.0); the rider is already generic.
+5. Mythic signature blocks live inside each mythic's `bossAbility`
+   case, gated `G.mode==='junkie' && boss.phase===1` + the alternating
+   turn toggle + skip-if-alive — same shape as the legendaries. All
+   signatures: `classKey:'heavy'` (interceptHP 2), drawn small,
+   orphan-fizzle, capped, ledger-wired, strip-announced with the
+   `— SHOOT THEM DOWN!` convention.
+
+## The nine kits (signature / channel)
+
+- **MEW 151 (Kanto L3, bubble):** **ECHO BUBBLES** — 3 wobbly bubbles
+  (feather lifecycle, HIGH sway, slow fall, `fan:4` radial micro pop at
+  the ship band). / **GENESIS WAVE** — `rain {count:6, gap:0.14}`.
+- **CELEBI 251 (Johto L6, seed):** **BLOOM PODS** — 2 pods (gear
+  lifecycle WITH drip, kind `seed`: 1 aimed seed micro every beat).
+  / **LEAF STORM** — `pincer {count:4}` (light, fast).
+- **JIRACHI 385 (Hoenn L9, star):** **WISH STARS** — 3 star anchors
+  (orbit lifecycle, stationary, `launchType:'column'`, launchAt 4.0 —
+  ignored wishes come due as Doom Desire columns at their lanes).
+  / **MILLENNIUM COMET** — `columns {count:5, warnMul:1.2}`.
+- **DARKRAI 491 (Sinnoh L12, wisp):** **HAUNTING WISPS** — 3 wisps
+  (feather lifecycle + `home`: they stalk the pilot's lane, burst
+  `fan:3` at the band). / **DARK VOID** — `pincer {count:6,
+  warnMul:1.5}` (the darkness closes in).
+- **VICTINI 494 (Unova L15, ember):** **V-SPARKS** — 3 sparks orbit
+  Victini (orbit lifecycle, classic launchAt 3.5 → aimed heavy ember).
+  / **V-CREATE** — `sweep {count:6, gap:0.2}`.
+- **DIANCIE 719 (Kalos L18, crystal):** **JEWEL TURRETS** — 2 crystal
+  nodes (conduit lifecycle); while one lives, DIAMOND STORM fires +1
+  flanking column per live node (Zekrom's buff-read, cross-gauntlet).
+  / **MOONBLAST** — `rain {count:5, gap:0.2, color:'#f8bbd0'}`.
+- **MARSHADOW 802 (Alola L21, fist):** **SHADOW SNEAK** — each rush
+  drops 2 shadow afterimages (`imageDrops:2`, launchAt 3.0 → aimed
+  heavy fist). / **SPECTRAL THIEF** — `clock {count:6}`.
+- **ZARUDE 893 (Galar L24, vine):** **BINDING VINES** — 2 vine anchors
+  (gear lifecycle WITH drip, kind `vine`, drip every other beat).
+  / **POWER WHIP** — `pincer {count:6}`.
+- **PECHARUNT 1025 (Paldea L27, mochi/toxic):** **MOCHI PUPPETS** — 3
+  mochi (feather lifecycle, heavy sway, `fan:3` toxic burst).
+  / **MALIGNANT CHAIN** — `rain {count:7, gap:0.14, color:'#ce93d8'}`.
+
+All channel entries: `hpFrac 0.15, dur 2.4, cd 9`.
+
+## Tests (suite 65 → 67)
+
+Two looping duel tests cloning the legendary skeleton but with
+`jumpToGauntletRound(2)`:
+- **`mythic duels A (Kanto–Unova)`** — Mew, Celebi, Jirachi, Darkrai,
+  Victini. Per mythic: correct id + `phaseCount 3`; signature spawns
+  with `interceptHP 2` and the right flavor (bubble sway / pod drip /
+  star column-launch / wisp homing toward pilot x / spark launch);
+  two-basic-hit deny; hp→10% → channel opens with the right
+  name+pattern; charged break → `staggerT>1` ×1.35; uninterrupted
+  punish geometry (count/params).
+- **`mythic duels B (Kalos–Paldea) + VMAX exclusion`** — Diancie
+  (turret buff: DIAMOND STORM columns +1 per live node), Marshadow
+  (rush drops 2 afterimages), Zarude, Pecharunt. Then the guard:
+  `jumpToGauntletRound(3)` at L3 (secret Mew VMAX, id 151) → hp→10% →
+  run → assert **no channel ever opens** (`!boss.channel`) and no
+  BOSS_CHANNELS behavior leaks onto `secretBoss`.
+
+**Guards:** all NINE legendary duel tests + Mewtwo/Lugia/Dialga
+(untouched); junkie choreography + unique-entrances tests (mythic
+phaseCount/entrances unchanged); projectile grammar; flyer overlap;
+heat band; ledger.

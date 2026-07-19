@@ -1,11 +1,12 @@
 # HANDOFF — Starfighter campaign build-out (next session)
 
-> **STATUS: LIVE through Milestone 4 Round B.** Milestones 0 and 1 are
+> **STATUS: LIVE through Milestone 4 Round C.** Milestones 0 and 1 are
 > COMPLETE; Milestone 2 has its core round shipped; Milestone 3 has
-> Rounds A+B shipped; Milestone 4 Rounds A+B are shipped — **all nine
-> finale legendaries carry the boss-duel template** (`BOSS_CHANNELS` +
-> params, five punish patterns, per-boss signatures). Invariant suite
-> **65/65 green**. Everything below is deployed at
+> Rounds A+B shipped; Milestone 4 Rounds A+B+C are shipped — **all nine
+> finale legendaries AND all nine mythicals carry the boss-duel
+> template** (`BOSS_CHANNELS` + params, five punish patterns, per-boss
+> signatures; Mew VMAX stays channel-free via `!secretBoss`, tested).
+> Invariant suite **67/67 green**. Everything below is deployed at
 > https://crawlerkarl.github.io/pokemon-brick/.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
@@ -88,21 +89,22 @@ sequence, weather survival), the remaining 7 region grammars, and the beat
 types not yet built (formation reveal, elite intervention as a distinct
 spawn, hazard, victory).
 
-### Option B — Milestone 4 Round C: mythics + sentinels, boss polish
-The legendary roster is DONE. Natural next slices: bring the nine
-round-3 **mythicals** up to template depth (they have `MYTHIC_ABILITIES`
-one-liners today — the channel + normal-fire-answer pair is what's
-missing), give **sentinels** one readable typed opening each, and/or the
-polish column: bespoke entrance FX for the styles still on the default
-banner (skycoil, suncharge, maelstrom, timesplit), phase-transition
-animations, phase music layering, defeat animations, practice mode with
-phase selection. The proven loop: design kits in `docs/M4_BOSS_KITS.md`
-first, implement via SEQUENTIAL agents over the shared dispatch
+### Option B — Milestone 4 Round D: sentinels + boss polish
+Legendaries AND mythics are DONE. Remaining M4 surface: give the
+round-1 **sentinels** one readable typed opening each (they have
+`subAbility` typed specials — a light template pass, not full duels),
+and the polish column: bespoke entrance FX for styles still on the
+default banner (skycoil, suncharge, maelstrom, timesplit),
+phase-transition animations, phase music layering, bespoke defeat
+animations, practice mode with phase selection (trial round picker is
+the base). The proven loop: design in `docs/M4_BOSS_KITS.md` first,
+implement via SEQUENTIAL agents over the shared dispatch
 (update.js/data.js/test.html collide — hand each agent the previous
 one's extension-shape notes).
 
-**Recommendation:** either is a clean slice; the mythics keep the
-combat momentum, the polish column is lower-risk variety.
+**Recommendation:** the polish column is now the bigger win — the
+combat template is complete across 18 bosses; entrances/music/defeat
+ceremonies are where the finale presentation still lags the mechanics.
 
 ---
 

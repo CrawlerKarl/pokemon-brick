@@ -1199,7 +1199,28 @@ function bossAbility(boss) {
     ringFx(nx, by, '#ffffff', 10, 170, 4, 0.55);
     tone(980, 0.2, 'sine', 0.07, -480);
   } else switch (id) {
-    case 151: { // Mew: a rotating halo with one generous missing spoke
+    case 151: { // Mew: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates ECHO BUBBLES (the normal-fire answer) with the halo.
+      // Three wobbly bubbles ride the FEATHER lifecycle with HIGH sway + a slow
+      // fall, bursting into a 4-way radial micro POP at the ship band — cheap for
+      // normal fire, wasteful for a charge line. Pairing rule: Mew must NOT feel
+      // like Mewtwo's orbs, so it borrows Lugia's feather (cross-gauntlet reuse).
+      // Cap 3; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.bubbleTurn = !boss.bubbleTurn) && !G.enemyShots.some(s => s.feather)) {
+        const bVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx + (i - 1) * 44, y: by + 10, vx: 0, vy: 0, boss: true,
+            type: 'psychic', species: 151, kind: 'bubble', classKey: 'heavy',
+            visualR: 12, hitR: 10, volleyId: bVolley,
+            feather: { t: 0, burstAt: shipY() - 40, sway: 1.4 + i * 0.5 + gameRand() * 0.3, fan: 4, src: boss } });
+        }
+        setCombatNotice('ECHO BUBBLES — SHOOT THEM DOWN!', '#b3e5fc', 1.8);
+        ringFx(bx, by, '#b3e5fc', 6, 120, 3, 0.4);
+        tone(760, 0.2, 'sine', 0.05, 240);
+        break;
+      }
+      // GENESIS HALO: a rotating halo with one generous missing spoke
       const lim = boss.w / 2 + 24;
       boss.hx = lim + gameRand() * Math.max(1, W - lim * 2) - G.fx; boss.bx = boss.hx;
       const sp = (190 + diff().lv * 8) * diff().shotSpeed, rot = G.time * 0.7;
@@ -1210,7 +1231,29 @@ function bossAbility(boss) {
       }
       ringFx(boss.bx + G.fx, by, '#ff80ab', 8, 145, 4, 0.5); break;
     }
-    case 251: { // Celebi: slows time, then plants a slow spiralling seed bloom
+    case 251: { // Celebi: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates BLOOM PODS (the normal-fire answer) with the seed
+      // bloom. Two pods orbit FIXED anchors flanking the boss in ANTI-PHASE on
+      // the GEAR lifecycle, each dripping one aimed seed micro per metronome beat
+      // — a drip that stacks up if ignored. Two basic hits deny a pod (heavy,
+      // interceptHP 2); pods fizzle after 9s or if Celebi falls. Pairing rule:
+      // Celebi must NOT feel like Lugia's feathers — it borrows Dialga's gear.
+      // Cap 2; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.podTurn = !boss.podTurn) && !G.enemyShots.some(s => s.gear)) {
+        const pVolley = nextEnemyVolley();
+        const gr = Math.max(58, boss.w * 0.55), flank = Math.max(70, boss.w * 0.85);
+        for (let i = 0; i < 2; i++) {
+          spawnEnemyShot({ x: bx, y: by, vx: 0, vy: 0, boss: true, type: 'grass',
+            species: 251, kind: 'seed', classKey: 'heavy', visualR: 12, hitR: 10, volleyId: pVolley,
+            gear: { t: 0, life: 9, ang: i * Math.PI, r: gr, ox: (i ? 1 : -1) * flank, beat: 0, src: boss } });
+        }
+        setCombatNotice('BLOOM PODS — SHOOT THEM DOWN!', '#9ccc65', 1.8);
+        ringFx(bx, by, '#9ccc65', 6, 120, 3, 0.4);
+        tone(560, 0.2, 'triangle', 0.05, 140);
+        break;
+      }
+      // TIME BLOOM: slows time, then plants a slow spiralling seed bloom
       G.timeWarpT = 2.4;
       const sp = 145 * diff().shotSpeed;
       const seedVolley = nextEnemyVolley();
@@ -1219,18 +1262,81 @@ function bossAbility(boss) {
         kind: 'seed', classKey: 'standard', volleyId: seedVolley, turn: 0.2 }); }
       ringFx(bx, by, '#9ccc65', 10, 180, 4, 0.7); break;
     }
-    case 385: { // Jirachi: three readable falling-star lanes
+    case 385: { // Jirachi: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates WISH STARS (the normal-fire answer) with the falling-
+      // star lanes. Three star anchors park near the boss's flanks on the ORBIT
+      // lifecycle (stationary, ghosted, drawn small) and — after launchAt 4.0 —
+      // an ignored wish comes due as a Doom Desire COLUMN at its lane (orbit
+      // launchType:'column'), not an aimed shot. Two basic hits deny one (heavy,
+      // interceptHP 2); orphan-fizzle if Jirachi falls. Cap 3; skip the turn if
+      // any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.wishTurn = !boss.wishTurn) && !G.enemyShots.some(s => s.orbit)) {
+        const wVolley = nextEnemyVolley();
+        const flank = Math.max(80, boss.w * 0.7);
+        for (let i = 0; i < 3; i++) {
+          const sx = Math.max(30, Math.min(W - 30, bx + (i - 1) * flank));
+          spawnEnemyShot({ x: sx, y: by + 20, vx: 0, vy: 0, boss: true, type: boss.poke.t,
+            species: 385, kind: 'star', classKey: 'heavy', visualR: 11, hitR: 9, ghost: 0.5, volleyId: wVolley,
+            orbit: { t: 0, launchAt: 4.0, stationary: true, launchType: 'column', color: '#ffd54f', src: boss } });
+        }
+        setCombatNotice('WISH STARS — SHOOT THEM DOWN!', '#ffd54f', 1.8);
+        ringFx(bx, by, '#ffd54f', 6, 120, 3, 0.4);
+        tone(880, 0.22, 'sine', 0.05, 200);
+        break;
+      }
+      // DOOM DESIRE: three readable falling-star lanes
       const gap = Math.min(120, W * 0.16);
       for (const off of [-gap, 0, gap]) G.columnStrikes.push({ x: Math.max(28, Math.min(W - 28, G.paddle.x + off)), w: 34, warn: 1.15, strike: 0.26, color: '#ffd54f' });
       break;
     }
-    case 491: { // Darkrai: vanishes, crosses behind you, returns with a dark fan
+    case 491: { // Darkrai: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates HAUNTING WISPS (the normal-fire answer) with the dark
+      // fan. Three wisps ride the FEATHER lifecycle with `home` — they STALK the
+      // pilot's lane (~40 px/s drift toward the ship's x) and burst into a 3-way
+      // fan at the ship band. The stalk makes camping one lane fatal; normal fire
+      // clears them cheaply. Two basic hits deny one (heavy, interceptHP 2);
+      // orphan-fizzle if Darkrai falls. Cap 3; skip the turn if any survive.
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.hauntTurn = !boss.hauntTurn) && !G.enemyShots.some(s => s.feather)) {
+        const hVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx + (i - 1) * 46, y: by + 10, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 491, kind: 'wisp', classKey: 'heavy',
+            visualR: 11, hitR: 9, volleyId: hVolley,
+            feather: { t: 0, burstAt: shipY() - 40, sway: (i - 1) * 0.6 + gameRand() * 0.4, fan: 3, home: true, src: boss } });
+        }
+        setCombatNotice('HAUNTING WISPS — SHOOT THEM DOWN!', '#9575cd', 1.8);
+        ringFx(bx, by, '#9575cd', 6, 120, 3, 0.4);
+        tone(300, 0.22, 'sine', 0.05, -120);
+        break;
+      }
+      // NIGHT TERROR: vanishes, crosses behind you, returns with a dark fan
       boss.phaseT = 1.5;
       boss.hx = Math.max(boss.w / 2, Math.min(W - boss.w / 2, W - G.paddle.x)) - G.fx; boss.bx = boss.hx;
       G.telegraphs.push({ br: boss, boss: true, fan: true, t: 0.85, max: 0.85 });
       burst(boss.bx + G.fx, by, '#5c4b8a', 28, 280, 0.7); break;
     }
-    case 494: { // Victini: a fast victory lap leaves a five-way flame wake
+    case 494: { // Victini: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates V-SPARKS (the normal-fire answer) with the victory
+      // lap. Three sparks orbit Victini on the ORBIT lifecycle and — after
+      // launchAt 3.5 — each launches as an aimed HEAVY ember. Two basic hits deny
+      // one before it fires (heavy, interceptHP 2); orphan-fizzle if Victini
+      // falls. Cap 3; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.sparkTurn = !boss.sparkTurn) && !G.enemyShots.some(s => s.orbit)) {
+        const sVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx, y: by, vx: 0, vy: 0, boss: true, type: 'fire',
+            species: 494, kind: 'ember', classKey: 'heavy', visualR: 12, hitR: 10, volleyId: sVolley,
+            orbit: { t: 0, launchAt: 3.5, ang: i * Math.PI * 2 / 3, r: Math.max(72, boss.w * 0.8), src: boss } });
+        }
+        setCombatNotice('V-SPARKS — SHOOT THEM DOWN!', '#ffb74d', 1.8);
+        ringFx(bx, by, '#ffb74d', 6, 120, 3, 0.4);
+        tone(660, 0.22, 'sine', 0.06, 220);
+        break;
+      }
+      // VICTORY BURN: a fast victory lap leaves a five-way flame wake
       boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.8, fast: true };
       const aim = Math.atan2(shipY() - by, G.paddle.x - bx), sp = 225 * diff().shotSpeed;
       const vVolley = nextEnemyVolley();
@@ -1239,16 +1345,81 @@ function bossAbility(boss) {
         kind: 'ember', classKey: 'standard', volleyId: vVolley });
       break;
     }
-    case 719: { // Diancie: crystal facets close around the player's lane
+    case 719: { // Diancie: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates JEWEL TURRETS (the normal-fire answer) with DIAMOND
+      // STORM. Two crystal nodes descend to fixed arena flanks and HOLD on the
+      // CONDUIT lifecycle (no drip, 10s self-expiry). While a node lives, every
+      // DIAMOND STORM adds +1 flanking column at that node's x — Zekrom's buff-
+      // read (cross-gauntlet reuse). Pairing rule: Diancie must NOT feel like
+      // Yveltal's drain wisps — it borrows Zekrom's conduit. Two basic hits
+      // shatter one (heavy, interceptHP 2); orphan-fizzle if Diancie falls.
+      // Cap 2; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.jewelTurn = !boss.jewelTurn) && !G.enemyShots.some(s => s.conduit)) {
+        const jVolley = nextEnemyVolley();
+        const holdY = shipY() - 210;
+        for (let i = 0; i < 2; i++) {
+          spawnEnemyShot({ x: W * (i ? 0.72 : 0.28), y: by, vx: 0, vy: 0, boss: true,
+            type: boss.poke.t, species: 719, kind: 'crystal', classKey: 'heavy',
+            visualR: 12, hitR: 10, volleyId: jVolley,
+            conduit: { t: 0, life: 10, holdY, src: boss } });
+        }
+        setCombatNotice('JEWEL TURRETS — SHOOT THEM DOWN!', '#f8bbd0', 1.8);
+        ringFx(bx, by, '#f8bbd0', 6, 120, 3, 0.4);
+        tone(820, 0.2, 'sine', 0.05, 180);
+        break;
+      }
+      // DIAMOND STORM: two facets close around the pilot's lane + a center gleam,
+      // plus +1 column at each live JEWEL TURRET's x (so 1–2 extra facets).
       const gap = Math.min(105, W * 0.14);
       for (const off of [-gap, gap]) G.columnStrikes.push({ x: Math.max(30, Math.min(W - 30, G.paddle.x + off)), w: 48, warn: 1.2, strike: 0.42, color: '#f8bbd0' });
-      G.columnStrikes.push({ x: G.paddle.x, w: 26, warn: 1.65, strike: 0.28, color: '#80d8ff' }); break;
+      G.columnStrikes.push({ x: G.paddle.x, w: 26, warn: 1.65, strike: 0.28, color: '#80d8ff' });
+      for (const s of G.enemyShots) if (s.conduit && !s.dead)
+        G.columnStrikes.push({ x: s.x, w: 46, warn: 1.35, strike: 0.42, color: '#f8bbd0' });
+      break;
     }
-    case 802: { // Marshadow: short, direct rush followed by a tight combo
+    case 802: { // Marshadow: MYTHIC DUEL (Milestone 4 Round C).
+      // SHADOW SNEAK — the short, direct rush now leaves 2 shadow afterimages
+      // along its path (Koraidon's imageDrops rider, parameterized: kind 'fist',
+      // species 802, launchAt 3.0 → each fires an aimed heavy fist). Pairing rule:
+      // Marshadow must NOT feel like Lunala's motes — it borrows Koraidon's dash
+      // wake (cross-gauntlet reuse). Two basic hits disperse one; cap: no drops
+      // if 2 afterimages already live (the rush's own skip-if-alive guard).
       boss.sweep = { dir: G.paddle.x > bx ? 1 : -1, t: 1.15, fast: true };
+      if (G.mode === 'junkie' && boss.phase === 1) {
+        const live = G.enemyShots.reduce((n, s) => n + (s.afterimage && !s.dead ? 1 : 0), 0);
+        if (live < 2) {
+          boss.sweep.imageDrops = 2; boss.sweep.imageGap = 1.15 / 3; boss.sweep.imageT = 1.15 / 3;
+          boss.sweep.imageKind = 'fist'; boss.sweep.imageSpecies = 802; boss.sweep.imageLaunchAt = 3.0;
+          boss.sweep.imageNotice = 'SHADOW SNEAK — SHOOT THEM DOWN!';
+        }
+      }
       G.telegraphs.push({ br: boss, boss: true, fan: true, t: 0.48, max: 0.48 }); break;
     }
-    case 893: { // Zarude: heavy vine fan from alternating arena flanks
+    case 893: { // Zarude: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates BINDING VINES (the normal-fire answer) with the vine
+      // fan. Two vine anchors orbit FIXED points flanking the boss in ANTI-PHASE
+      // on the GEAR lifecycle, each lashing one aimed 'vine' micro every OTHER
+      // metronome beat (`dripEvery 2` — a slower drip than Celebi's pods that
+      // still stacks up if ignored). Pairing rule: Zarude must NOT feel like
+      // Eternatus's cysts — it borrows Dialga's gear. Two basic hits sever one
+      // (heavy, interceptHP 2); anchors fizzle after 9s or if Zarude falls. Cap 2;
+      // skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.vineTurn = !boss.vineTurn) && !G.enemyShots.some(s => s.gear)) {
+        const vVolley = nextEnemyVolley();
+        const gr = Math.max(58, boss.w * 0.55), flank = Math.max(70, boss.w * 0.85);
+        for (let i = 0; i < 2; i++) {
+          spawnEnemyShot({ x: bx, y: by, vx: 0, vy: 0, boss: true, type: 'grass',
+            species: 893, kind: 'vine', classKey: 'heavy', visualR: 12, hitR: 10, volleyId: vVolley,
+            gear: { t: 0, life: 9, ang: i * Math.PI, r: gr, ox: (i ? 1 : -1) * flank, beat: 0, dripEvery: 2, src: boss } });
+        }
+        setCombatNotice('BINDING VINES — SHOOT THEM DOWN!', '#66bb6a', 1.8);
+        ringFx(bx, by, '#66bb6a', 6, 120, 3, 0.4);
+        tone(240, 0.2, 'triangle', 0.05, 120);
+        break;
+      }
+      // POWER WHIP: a heavy vine fan from an alternating arena flank.
       boss.hx = (boss.hx < W / 2 ? W * 0.74 : W * 0.26) - G.fx; boss.bx = boss.hx;
       const aim = Math.atan2(shipY() - by, G.paddle.x - (boss.bx + G.fx)), sp = 165 * diff().shotSpeed;
       const vineVolley = nextEnemyVolley();
@@ -1257,7 +1428,29 @@ function bossAbility(boss) {
         kind: 'vine', classKey: 'standard', volleyId: vineVolley, turn: 0.2 });
       break;
     }
-    case 1025: { // Pecharunt: mirror-steps and hangs a crooked poison wheel
+    case 1025: { // Pecharunt: MYTHIC DUEL (Milestone 4 Round C).
+      // Phase 1 alternates MOCHI PUPPETS (the normal-fire answer) with the poison
+      // wheel. Three mochi ride the FEATHER lifecycle with a HEAVY sway (55px
+      // swing, vs Mew's 34) so they weave wide as they fall, then burst into a
+      // fan of 3 toxic micros at the ship band. Pairing rule: Pecharunt must NOT
+      // feel like Koraidon's afterimages — it borrows Mew's bubble/feather. Two
+      // basic hits pop one (heavy, interceptHP 2); orphan-fizzle if Pecharunt
+      // falls. Cap 3; skip the turn if any survive (focus-orb guard).
+      if (G.mode === 'junkie' && boss.phase === 1
+        && (boss.mochiTurn = !boss.mochiTurn) && !G.enemyShots.some(s => s.feather)) {
+        const mVolley = nextEnemyVolley();
+        for (let i = 0; i < 3; i++) {
+          spawnEnemyShot({ x: bx + (i - 1) * 46, y: by + 10, vx: 0, vy: 0, boss: true,
+            type: 'poison', species: 1025, kind: 'toxic', classKey: 'heavy',
+            visualR: 12, hitR: 10, volleyId: mVolley,
+            feather: { t: 0, burstAt: shipY() - 40, sway: 2.2 + i * 0.6 + gameRand() * 0.4, swayAmp: 55, fan: 3, src: boss } });
+        }
+        setCombatNotice('MOCHI PUPPETS — SHOOT THEM DOWN!', '#ce93d8', 1.8);
+        ringFx(bx, by, '#ce93d8', 6, 120, 3, 0.4);
+        tone(360, 0.2, 'triangle', 0.05, -120);
+        break;
+      }
+      // POISON WHEEL: mirror-steps and hangs a crooked toxic wheel.
       boss.hx = Math.max(boss.w / 2, Math.min(W - boss.w / 2, W - G.paddle.x)) - G.fx; boss.bx = boss.hx;
       const sp = 180 * diff().shotSpeed;
       const mochiVolley = nextEnemyVolley();
@@ -4071,10 +4264,13 @@ function update(dt) {
       // channel behind a loud warning. Uninterrupted, it fires a warned column
       // pattern (columns / sweep / clock) with real dodge lanes. A CHARGED shot
       // landing mid-channel BREAKS it (see the bolt block) and staggers the boss
-      // — the interrupt is charge's showcase answer. Same gates as the original
-      // Psystrike hard-gate (junkie, non-mythic, non-secret).
+      // — the interrupt is charge's showcase answer. Junkie + authored channel +
+      // non-secret. Round C relaxed the old `!boss.mythic` clause so the nine
+      // mythics carry the template too; `!boss.secretBoss` STAYS and is load-
+      // bearing — Mew VMAX shares poke.id 151, and that clause is the only thing
+      // keeping the secret reward channel-free (tested in the mythic duel suite).
       const chDef = BOSS_CHANNELS[boss.poke.id];
-      if (G.mode === 'junkie' && chDef && !boss.mythic && !boss.secretBoss) {
+      if (G.mode === 'junkie' && chDef && !boss.secretBoss) {
         if (boss.staggerT > 0) boss.staggerT -= dt * ts;
         if (!boss.channel && (boss.channelCD || 0) > 0) boss.channelCD -= dt * ts;
         if (!boss.channel && boss.hp / boss.maxHp <= chDef.hpFrac && (boss.channelCD || 0) <= 0 && !(boss.staggerT > 0)) {
@@ -4156,11 +4352,16 @@ function update(dt) {
           if (boss.sweep.imageT <= 0) {
             boss.sweep.imageDrops--;
             boss.sweep.imageT = boss.sweep.imageGap;
+            // The rider is per-boss data: Koraidon drops shock afterimages that
+            // fire aimed heavy at 3.5s; Marshadow (SHADOW SNEAK) drops fists at
+            // 3.0s. Defaults preserve Koraidon BIT-IDENTICAL (its duel test is
+            // the guard) — it never sets image{Species,Kind,LaunchAt,Notice}.
             spawnEnemyShot({ x: boss.bx + G.fx, y: boss.by + G.fy, vx: 0, vy: 0, boss: true,
-              type: boss.poke.t, species: 1007, kind: 'shock', classKey: 'heavy',
+              type: boss.poke.t, species: boss.sweep.imageSpecies || 1007,
+              kind: boss.sweep.imageKind || 'shock', classKey: 'heavy',
               visualR: 10, hitR: 9, ghost: 0.5, afterimage: true, volleyId: nextEnemyVolley(),
-              orbit: { t: 0, launchAt: 3.5, stationary: true, src: boss } });
-            if (!boss.imageAnnounced) { boss.imageAnnounced = true; setCombatNotice('AFTERIMAGES — SHOOT THEM DOWN!', '#ffd54f', 1.8); }
+              orbit: { t: 0, launchAt: boss.sweep.imageLaunchAt || 3.5, stationary: true, src: boss } });
+            if (!boss.imageAnnounced) { boss.imageAnnounced = true; setCombatNotice(boss.sweep.imageNotice || 'AFTERIMAGES — SHOOT THEM DOWN!', '#ffd54f', 1.8); }
             SFX.enemyShot();
           }
         }
@@ -4322,6 +4523,17 @@ function update(dt) {
       }
       s.age = 0; // the 9s ballistic cull starts at launch, not at summon
       if (s.orbit.t >= s.orbit.launchAt) {
+        if (s.orbit.launchType === 'column') {
+          // WISH STARS (Jirachi duel): an ignored wish comes due as a Doom
+          // Desire COLUMN at the star's lane instead of an aimed shot — a warned
+          // lane on the shared columnStrikes primitive (SEPARATE from the boss's
+          // channel punish). The star consumes itself into the lane.
+          const col = s.orbit.color || '#ffd54f'; // star gold fallback
+          G.columnStrikes.push({ x: s.x, w: 34, warn: 1.0, strike: 0.3, color: col });
+          ringFx(s.x, s.y, col, 4, 44, 2, 0.3);
+          SFX.enemyShot();
+          s.dead = true; continue;
+        }
         const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
         const sp = (195 + diff().lv * 8) * diff().shotSpeed;
         s.vx = Math.cos(aim) * sp; s.vy = Math.sin(aim) * sp;
@@ -4348,8 +4560,16 @@ function update(dt) {
         s.y += s.feather.vy * ts * dt;
       } else {
         s.y += 60 * ts * dt; // slow descent
-        s.x += Math.sin(s.feather.t * 1.6 + s.feather.sway * 4) * 34 * dt; // sine wander
+        // sine wander — amplitude is data (`swayAmp`, default 34); Pecharunt's
+        // MOCHI PUPPETS lurch on a HEAVY 55px swing. Existing feathers omit it
+        // (→ 34) so Mew/Lugia/Rayquaza/Darkrai/Eternatus stay bit-identical.
+        s.x += Math.sin(s.feather.t * 1.6 + s.feather.sway * 4) * (s.feather.swayAmp || 34) * dt;
         if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) s.x += G.gustDir * 150 * dt; // TAILWIND push
+        if (s.feather.home) { // HAUNTING WISPS (Darkrai): a slow stalk toward the
+          // pilot's lane at ~40 px/s — honest (capped so it never overshoots x)
+          const hd = G.paddle.x - s.x;
+          s.x += Math.sign(hd) * Math.min(Math.abs(hd), 40 * ts * dt);
+        }
         s.x = Math.max(16, Math.min(W - 16, s.x));
       }
       s.age = 0; // no ballistic 9s cull while it drifts
@@ -4389,11 +4609,19 @@ function update(dt) {
       const beat = Math.floor(s.gear.t / TICK_PERIOD);
       if (beat !== s.gear.beat) {
         s.gear.beat = beat;
-        const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
-        const gsp = (170 + diff().lv * 8) * diff().shotSpeed;
-        spawnEnemyShot({ x: s.x, y: s.y, vx: Math.cos(aim) * gsp, vy: Math.sin(aim) * gsp,
-          boss: true, type: s.type, species: 483, kind: 'time', classKey: 'micro', volleyId: nextEnemyVolley() });
-        SFX.enemyShot();
+        // `dripEvery` (default 1) thins the drip to every Nth beat: Zarude's
+        // BINDING VINES lash on every OTHER beat (dripEvery 2). Dialga/Celebi
+        // leave it undefined → 1 → drip every beat (Dialga stays bit-identical).
+        if (beat % (s.gear.dripEvery || 1) === 0) {
+          const aim = Math.atan2(shipY() - s.y, G.paddle.x - s.x);
+          const gsp = (170 + diff().lv * 8) * diff().shotSpeed;
+          // the drip inherits the gear's OWN identity (Dialga time / Celebi seed /
+          // Zarude vine) so the micro reads as the same projectile family — for
+          // Dialga this is bit-identical (its gear is species 483 / kind 'time').
+          spawnEnemyShot({ x: s.x, y: s.y, vx: Math.cos(aim) * gsp, vy: Math.sin(aim) * gsp,
+            boss: true, type: s.type, species: s.species, kind: s.kind, classKey: 'micro', volleyId: nextEnemyVolley() });
+          SFX.enemyShot();
+        }
       }
       continue; // gears own their motion — no ballistic integration
     }

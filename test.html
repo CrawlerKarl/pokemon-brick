@@ -2928,6 +2928,282 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('mythic duels A (Kanto–Unova): template on round 3', async () => {
+    // Round C rolls the boss template onto the gauntlet's ROUND-3 mythic. One
+    // loop over the first five (jumpToGauntletRound(2) summons the mythic): each
+    // pairs a phase-1 NORMAL-FIRE signature (a heavy interceptHP-2 shot on the
+    // deferred-shot lifecycle) with a dur-2.4 CHARGE channel. The pairing rule —
+    // a mythic never clones its own gauntlet's legendary — is why the sibling in
+    // use is cross-gauntlet (Mew feathers, Celebi gears, Victini orbs…).
+    const oldPreset = SETTINGS.preset;
+    const mono = a => a.length < 2 || a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
+    const specs = [
+      { lvl: 3,  id: 151, mon: 'MEW',     turn: 'bubbleTurn', flag: 'feather', count: 3,
+        flavor: s => s.every(x => x.feather && x.feather.sway > 1),           // HIGH sway
+        chName: 'GENESIS WAVE',     pattern: 'rain',    cols: 6 },
+      { lvl: 6,  id: 251, mon: 'CELEBI',  turn: 'podTurn',    flag: 'gear',    count: 2,
+        flavor: s => s.every(x => x.gear && x.kind === 'seed' && x.gear.beat === 0), // gear beat / seed drip
+        chName: 'LEAF STORM',       pattern: 'pincer',  cols: 4 },
+      { lvl: 9,  id: 385, mon: 'JIRACHI', turn: 'wishTurn',   flag: 'orbit',   count: 3,
+        flavor: s => s.every(x => x.orbit && x.orbit.launchType === 'column' && x.orbit.stationary), // column launch
+        chName: 'MILLENNIUM COMET', pattern: 'columns', cols: 5 },
+      { lvl: 12, id: 491, mon: 'DARKRAI', turn: 'hauntTurn',  flag: 'feather', count: 3,
+        flavor: s => s.every(x => x.feather && x.feather.home === true),      // homing stalk
+        chName: 'DARK VOID',        pattern: 'pincer',  cols: 6 },
+      { lvl: 15, id: 494, mon: 'VICTINI', turn: 'sparkTurn',  flag: 'orbit',   count: 3,
+        flavor: s => s.every(x => x.orbit && x.orbit.launchAt === 3.5 && !x.orbit.stationary), // aimed launch
+        chName: 'V-CREATE',         pattern: 'sweep',   cols: 6 },
+    ];
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      for (const spec of specs) {
+        resetRun(spec.lvl, true, { seed: 'mythic-A-' + spec.id }); // TRIAL: L15/L27 clears must never reach beginEnding()
+        jumpToGauntletRound(2); // ROUND 3 — the mythical
+        paused = false; G.freeze = 0;
+        const boss = G.bricks.find(b => b.isBoss && !b.dead);
+        assert(boss && boss.poke.id === spec.id && boss.mythic,
+          'round jump did not reach the ' + spec.mon + ' mythic');
+        assert(boss.phaseCount === 3, spec.mon + ' is not a 3-phase mythic');
+        if (G.gauntlet) G.gauntlet.entry = null;
+        G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+        G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; // steady time scale
+        mouseX = W / 2; G.paddle.x = W / 2;
+        // ---- SIGNATURE: force the turn (abilityCD 0 + toggle), assert count / interceptHP 2 / flavor ----
+        boss.abilityCD = 0; boss[spec.turn] = false; boss.fireQuietT = 99; G.enemyShots = []; G.columnStrikes = [];
+        update(1 / 60);
+        boss.abilityCD = 99; // no re-fire during the measurement
+        const sigs = G.enemyShots.filter(s => s[spec.flag]);
+        assert(sigs.length === spec.count && sigs.every(s => s.interceptHP === 2 && s.boss),
+          spec.mon + ' did not seed ' + spec.count + ' 2-HP boss ' + spec.flag + ' shots');
+        assert(spec.flavor(sigs), spec.mon + ' signature lacked its flavor field (sway / gear beat / launchType / home / launchAt)');
+        // ---- infra drive for the two NEW extensions (part 1): Jirachi column-launch, Darkrai homing ----
+        if (spec.id === 385) { // s.orbit.launchType:'column' — an ignored wish comes due as a lane, not an aimed shot
+          const st = sigs[0], sx = Math.round(st.x), c0 = G.columnStrikes.length;
+          st.orbit.t = 99; update(1 / 60);
+          const nc = G.columnStrikes.slice(c0);
+          assert(st.dead && nc.some(c => Math.abs(c.x - sx) < 2 && Math.abs(c.w - 34) < 0.01),
+            'a wish star did not come due as a warned column at its own lane');
+        }
+        if (spec.id === 491) { // s.feather.home — the wisp stalks the pilot's x
+          // run long enough that the ~40 px/s stalk decisively beats the feather's
+          // sine wander (fixed amplitude, so a short window could net either way)
+          const wsp = sigs[0]; mouseX = W - 30; G.paddle.x = W - 30;
+          const d0 = Math.abs(wsp.x - G.paddle.x);
+          for (let k = 0; k < 120 && !wsp.dead; k++) update(1 / 60);
+          assert(!wsp.dead && Math.abs(wsp.x - G.paddle.x) < d0 - 20,
+            'a haunting wisp did not stalk toward the pilot lane');
+          mouseX = W / 2; G.paddle.x = W / 2;
+        }
+        // ---- DENY: a fresh volley, two basic intercepts kill one ----
+        boss.abilityCD = 0; boss[spec.turn] = false; boss.fireQuietT = 99; G.enemyShots = [];
+        update(1 / 60);
+        boss.abilityCD = 99;
+        const den = G.enemyShots.filter(s => s[spec.flag]);
+        assert(den.length === spec.count, spec.mon + ' did not re-seed a clean signature volley for the deny');
+        for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: den[0].x, y: den[0].y }]; update(1 / 60); }
+        assert(den[0].dead, 'two basic hits did not deny the ' + spec.mon + ' signature');
+        // ---- CHANNEL: below 15% HP the desperation opens with the right name + pattern ----
+        G.enemyShots = []; G.lasers = []; G.columnStrikes = [];
+        boss.hp = boss.maxHp * 0.10;
+        boss.channel = null; boss.channelCD = 0; boss.staggerT = 0; boss.abilityCD = 99;
+        update(1 / 60);
+        assert(boss.channel && boss.channel.pattern === spec.pattern && boss.channel.name === spec.chName,
+          'low HP did not open the ' + spec.chName + ' ' + spec.pattern + ' channel');
+        // ---- CHARGED INTERRUPT: breaks it, staggers open the ×1.35 reward window ----
+        G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+          x: boss.bx + G.fx, y: boss.by + G.fy }];
+        update(1 / 60);
+        assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the ' + spec.chName + ' channel');
+        // restore HP before the damage-window assert so low-HP mythics (Mew L3 ≈ 17 HP)
+        // don't die mid-measurement — the stagger multiplier is what's under test here
+        boss.hp = boss.maxHp * 0.5;
+        const hp0 = boss.hp;
+        damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+        assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+        // ---- UNINTERRUPTED PUNISH: clear the stagger, let the channel recur + resolve to its lanes ----
+        boss.hp = boss.maxHp * 0.10; // back below the channel threshold so it re-opens
+        boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+        update(1 / 60);
+        assert(boss.channel && boss.channel.pattern === spec.pattern, 'the ' + spec.chName + ' channel did not recur after cooldown');
+        boss.channel.t = 99; boss.abilityCD = 99; // let ONLY the channel punish push columns this frame
+        const c0 = G.columnStrikes.length;
+        update(1 / 60);
+        const cols = G.columnStrikes.slice(c0);
+        assert(cols.length === spec.cols, 'an uninterrupted ' + spec.chName + ' did not fire ' + spec.cols + ' warned columns');
+        // geometry per pattern (Jirachi's launchType columns are SEPARATE — enemyShots was cleared, so these are channel-only)
+        if (spec.pattern === 'rain') assert(new Set(cols.map(c => Math.round(c.x))).size === cols.length, spec.mon + ' rain lanes were not all distinct');
+        // warn ticks down by dt within the same spawn frame — assert simultaneity (equal warns)
+        // and the ×1.2 multiplier's effect (>1.2; an unmultiplied 1.05 warn can never reach it)
+        else if (spec.pattern === 'columns') assert(cols.every(c => Math.abs(c.warn - cols[0].warn) < 1e-6) && cols[0].warn > 1.2, spec.mon + ' columns did not fire simultaneously at the warnMul 1.2 warn');
+        else if (spec.pattern === 'sweep') assert(mono(cols.map(c => c.warn)), spec.mon + ' sweep warns were not monotonic');
+        else if (spec.pattern === 'pincer') assert(cols[0].warn < cols[cols.length - 1].warn, spec.mon + ' pincer did not close from the edges inward');
+      }
+      return 'five mythics (Mew/Celebi/Jirachi/Darkrai/Victini): id + 3 phases → signature (count · interceptHP 2 · flavor) → column-launch / homing infra → deny (2 hits) → dur-2.4 channel (name+pattern) → charged break → 1.35× stagger → punish geometry';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('mythic duels B (Kalos–Paldea) + VMAX exclusion', async () => {
+    // The second half of Round C: Diancie / Marshadow / Zarude / Pecharunt carry
+    // the same template on gauntlet round 3, exercising the three remaining
+    // sibling reuses (Diancie borrows Zekrom's conduit BUFF-read, Marshadow
+    // borrows Koraidon's dash afterimage rider, Zarude borrows Dialga's gear with
+    // a thinned drip) plus Pecharunt's heavy-sway feather. Then the load-bearing
+    // guard: Mew VMAX shares poke.id 151 with the mythic Mew, so the channel-open
+    // gate's `!boss.secretBoss` clause is the ONLY thing keeping the secret reward
+    // channel-free — this proves BOSS_CHANNELS[151] never leaks onto it.
+    const oldPreset = SETTINGS.preset;
+    const mono = a => a.length < 2 || a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
+    const specs = [
+      { lvl: 18, id: 719,  mon: 'DIANCIE',   turn: 'jewelTurn', flag: 'conduit', count: 2,
+        flavor: s => s.every(x => x.conduit && x.kind === 'crystal'),               // crystal turret node
+        chName: 'MOONBLAST',       pattern: 'rain',   cols: 5 },
+      { lvl: 21, id: 802,  mon: 'MARSHADOW', rush: true,                             // SHADOW SNEAK afterimage rider
+        chName: 'SPECTRAL THIEF',  pattern: 'clock',  cols: 6 },
+      { lvl: 24, id: 893,  mon: 'ZARUDE',    turn: 'vineTurn',  flag: 'gear',    count: 2,
+        flavor: s => s.every(x => x.gear && x.kind === 'vine' && x.gear.dripEvery === 2), // every-other-beat drip
+        chName: 'POWER WHIP',      pattern: 'pincer', cols: 6 },
+      { lvl: 27, id: 1025, mon: 'PECHARUNT', turn: 'mochiTurn', flag: 'feather', count: 3,
+        flavor: s => s.every(x => x.feather && x.feather.fan === 3 && x.feather.swayAmp > 34), // heavy sway
+        chName: 'MALIGNANT CHAIN', pattern: 'rain',   cols: 7 },
+    ];
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      for (const spec of specs) {
+        resetRun(spec.lvl, true, { seed: 'mythic-B-' + spec.id }); // TRIAL: L27 clears must never reach beginEnding()
+        jumpToGauntletRound(2); // ROUND 3 — the mythical
+        paused = false; G.freeze = 0;
+        const boss = G.bricks.find(b => b.isBoss && !b.dead);
+        assert(boss && boss.poke.id === spec.id && boss.mythic,
+          'round jump did not reach the ' + spec.mon + ' mythic');
+        assert(boss.phaseCount === 3, spec.mon + ' is not a 3-phase mythic');
+        if (G.gauntlet) G.gauntlet.entry = null;
+        G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
+        G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; // steady time scale
+        mouseX = W / 2; G.paddle.x = W / 2;
+        // ---- SIGNATURE + DENY (per-mythic sibling) ----
+        if (spec.rush) {
+          // MARSHADOW: SHADOW SNEAK is the rush ITSELF — each dash drops 2 shadow
+          // afterimages (Koraidon's imageDrops rider, parameterized to kind 'fist'
+          // / launchAt 3.0). Drive the sweep until both drops are laid.
+          boss.abilityCD = 0; boss.fireQuietT = 99; G.enemyShots = []; G.columnStrikes = [];
+          update(1 / 60);      // fires SHADOW SNEAK (arms boss.sweep with the drops)
+          boss.abilityCD = 99; // no second rush while the sweep lays its afterimages
+          for (let k = 0; k < 90 && G.enemyShots.filter(s => s.afterimage).length < 2; k++) update(1 / 60);
+          const drops = G.enemyShots.filter(s => s.afterimage);
+          assert(drops.length === 2 && drops.every(s => s.kind === 'fist' && s.interceptHP === 2 && s.boss
+              && s.orbit && s.orbit.launchAt === 3.0),
+            'MARSHADOW rush did not drop exactly 2 fist afterimages at launchAt 3.0');
+          // deny one with two basic intercepts
+          for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: drops[0].x, y: drops[0].y }]; update(1 / 60); }
+          assert(drops[0].dead, 'two basic hits did not disperse a MARSHADOW afterimage');
+        } else {
+          // Turn-toggle mythics: force the ability turn, assert count / interceptHP 2 / flavor.
+          boss.abilityCD = 0; boss[spec.turn] = false; boss.fireQuietT = 99; G.enemyShots = []; G.columnStrikes = [];
+          update(1 / 60);
+          boss.abilityCD = 99; // no re-fire during the measurement
+          const sigs = G.enemyShots.filter(s => s[spec.flag]);
+          assert(sigs.length === spec.count && sigs.every(s => s.interceptHP === 2 && s.boss),
+            spec.mon + ' did not seed ' + spec.count + ' 2-HP boss ' + spec.flag + ' shots');
+          assert(spec.flavor(sigs), spec.mon + ' signature lacked its flavor field (crystal / vine drip / heavy sway)');
+          // ---- DIANCIE: DIAMOND STORM grows +1 flanking column per LIVE turret ----
+          if (spec.id === 719) {
+            // base fire (no turrets): 2 flanking facets + 1 center gleam = 3 columns
+            G.enemyShots = []; G.columnStrikes = []; boss.abilityCD = 0; boss.jewelTurn = true; // flips false → DIAMOND STORM
+            update(1 / 60); boss.abilityCD = 99;
+            const base = G.columnStrikes.length;
+            // re-seed 2 live turrets, then fire DIAMOND STORM again → +1 col each
+            G.columnStrikes = []; boss.abilityCD = 0; boss.jewelTurn = false; // flips true → seed turrets
+            update(1 / 60); boss.abilityCD = 99;
+            const nodes = G.enemyShots.filter(s => s.conduit && !s.dead);
+            assert(nodes.length === 2, 'DIANCIE did not re-seed 2 JEWEL TURRETS for the buff read');
+            G.columnStrikes = []; boss.abilityCD = 0; boss.jewelTurn = true; // flips false → DIAMOND STORM w/ turrets live
+            update(1 / 60); boss.abilityCD = 99;
+            const buffed = G.columnStrikes.length;
+            assert(base === 3 && buffed === base + 2,
+              'DIAMOND STORM did not grow +1 column per live JEWEL TURRET (base ' + base + ' → ' + buffed + ')');
+          }
+          // ---- ZARUDE: the gear drip skips ODD beats (dripEvery 2) ----
+          if (spec.id === 893) {
+            const g = sigs[0]; G.enemyShots = [g]; G.columnStrikes = [];
+            // cross into beat 1 (ODD) — the vine must NOT lash
+            g.gear.t = TICK_PERIOD * 1 + 0.001; g.gear.beat = 0; update(1 / 60);
+            const afterOdd = G.enemyShots.filter(s => !s.gear).length;
+            // cross into beat 2 (EVEN) — now it lashes one aimed vine micro
+            g.gear.t = TICK_PERIOD * 2 + 0.001; g.gear.beat = 1; update(1 / 60);
+            const afterEven = G.enemyShots.filter(s => !s.gear).length;
+            assert(afterOdd === 0 && afterEven === 1,
+              'ZARUDE vine drip did not skip the odd beat (dripEvery 2): odd=' + afterOdd + ' even=' + afterEven);
+          }
+          // ---- DENY: a fresh volley, two basic intercepts kill one ----
+          boss.abilityCD = 0; boss[spec.turn] = false; boss.fireQuietT = 99; G.enemyShots = [];
+          update(1 / 60);
+          boss.abilityCD = 99;
+          const den = G.enemyShots.filter(s => s[spec.flag]);
+          assert(den.length === spec.count, spec.mon + ' did not re-seed a clean signature volley for the deny');
+          for (let k = 0; k < 2; k++) { G.lasers = [{ basic: true, x: den[0].x, y: den[0].y }]; update(1 / 60); }
+          assert(den[0].dead, 'two basic hits did not deny the ' + spec.mon + ' signature');
+        }
+        // ---- CHANNEL: below 15% HP the desperation opens with the right name + pattern ----
+        G.enemyShots = []; G.lasers = []; G.columnStrikes = [];
+        boss.hp = boss.maxHp * 0.10;
+        boss.channel = null; boss.channelCD = 0; boss.staggerT = 0; boss.abilityCD = 99; boss.sweep = null;
+        update(1 / 60);
+        assert(boss.channel && boss.channel.pattern === spec.pattern && boss.channel.name === spec.chName,
+          'low HP did not open the ' + spec.chName + ' ' + spec.pattern + ' channel');
+        // ---- CHARGED INTERRUPT: breaks it, staggers open the ×1.35 reward window ----
+        G.lasers = [{ charged: true, basic: true, power: 0.5, pierce: 3, r: 10,
+          x: boss.bx + G.fx, y: boss.by + G.fy }];
+        update(1 / 60);
+        assert(!boss.channel && boss.staggerT > 1, 'a charged hit did not break the ' + spec.chName + ' channel');
+        // restore HP before the damage-window assert so low-HP mythics don't die
+        // mid-measurement — the stagger multiplier is what's under test here
+        boss.hp = boss.maxHp * 0.5;
+        const hp0 = boss.hp;
+        damageBrick(boss, 1, boss.bx, boss.by, null, { ignorePhaseGate: true });
+        assert(Math.abs((hp0 - boss.hp) - 1.35) < 0.01, 'stagger did not open the 1.35× reward window');
+        // ---- UNINTERRUPTED PUNISH: clear the stagger, let the channel recur + resolve ----
+        boss.hp = boss.maxHp * 0.10; // back below the channel threshold so it re-opens
+        boss.staggerT = 0; boss.channelCD = 0; G.columnStrikes = [];
+        update(1 / 60);
+        assert(boss.channel && boss.channel.pattern === spec.pattern, 'the ' + spec.chName + ' channel did not recur after cooldown');
+        boss.channel.t = 99; boss.abilityCD = 99; boss.sweep = null; // let ONLY the channel punish push columns this frame
+        const c0 = G.columnStrikes.length;
+        update(1 / 60);
+        const cols = G.columnStrikes.slice(c0);
+        assert(cols.length === spec.cols, 'an uninterrupted ' + spec.chName + ' did not fire ' + spec.cols + ' warned columns');
+        // geometry per pattern
+        if (spec.pattern === 'rain') assert(new Set(cols.map(c => Math.round(c.x))).size === cols.length, spec.mon + ' rain lanes were not all distinct');
+        else if (spec.pattern === 'clock') assert(new Set(cols.map(c => Math.round(c.x))).size === cols.length && mono(cols.map(c => c.warn)),
+          spec.mon + ' clock did not fire 6 distinct lanes in a rotating (monotonic-warn) sequence');
+        else if (spec.pattern === 'pincer') assert(cols[0].warn < cols[cols.length - 1].warn, spec.mon + ' pincer did not close from the edges inward');
+      }
+      // ---- VMAX EXCLUSION: the secret Mew VMAX shares id 151 — BOSS_CHANNELS[151]
+      // (GENESIS WAVE) must NEVER open on it, yet it must keep fighting (MAX MIRAGE).
+      resetRun(3, true, { seed: 'mythic-B-vmax' });
+      jumpToGauntletRound(3); // the SECRET round: forceSecret Mew VMAX (secretBoss, id 151)
+      paused = false; G.freeze = 0;
+      const vmax = G.bricks.find(b => b.isBoss && b.secretBoss && !b.dead);
+      assert(vmax && vmax.poke.id === 151 && vmax.mewVmax && vmax.phaseCount === 3,
+        'round-3 secret jump did not summon three-phase Mew VMAX (id 151)');
+      if (G.gauntlet) G.gauntlet.entry = null;
+      G.bossIntro = 0; G.invuln = 999;
+      G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0;
+      vmax.hp = vmax.maxHp * 0.08; // deep below the 15% channel threshold
+      vmax.channel = null; vmax.channelCD = 0; vmax.staggerT = 0;
+      let everChanneled = false, firedMirage = false;
+      for (let k = 0; k < 300; k++) {
+        if (k % 40 === 0) vmax.abilityCD = 0; // pulse MAX MIRAGE so the boss keeps fighting
+        update(1 / 60);
+        if (vmax.channel) everChanneled = true;
+        if (G.enemyShots.some(s => s.kind === 'mirage')) firedMirage = true;
+      }
+      assert(!everChanneled && !vmax.channel,
+        'BOSS_CHANNELS[151] leaked onto the secret Mew VMAX — the !secretBoss channel gate failed');
+      assert(firedMirage && !vmax.dead, 'Mew VMAX stopped fighting — MAX MIRAGE never fired over 300 frames');
+      return 'four mythics (Diancie/Marshadow/Zarude/Pecharunt): id + 3 phases → signature (Diancie turret buff +2 cols · Marshadow 2 fist afterimages @3.0 · Zarude every-other-beat drip · Pecharunt heavy sway) → deny (2 hits) → dur-2.4 channel → charged break → 1.35× stagger → punish geometry; + Mew VMAX (id 151, secretBoss) never channels yet keeps firing MAX MIRAGE';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   test('Kanto distant flocks: capped, high sky, Kanto-only', async () => {
     SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';
