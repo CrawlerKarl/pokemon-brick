@@ -6432,6 +6432,13 @@ function drawResults() {
     ctx.fillStyle = accent;
     ctx.fillText('NEXT — ' + R.nextName, W / 2, belowObj + (short ? 16 : 24));
   }
+  // the flight log: one line of expedition narrative — flavour, never a gate
+  if (R.flavor && !short) {
+    ctx.font = 'italic ' + bodyFont(12, 600);
+    ctx.fillStyle = '#7e93ad';
+    wrapText(R.flavor, Math.min(W * 0.86, 620))
+      .forEach((ln, i) => ctx.fillText(ln, W / 2, belowObj + 52 + i * 16));
+  }
   ctx.restore();
   if (t > 0.6) pulse(IS_TOUCH ? 'TAP TO CONTINUE' : 'CLICK TO CONTINUE', H * (short ? 0.9 : 0.88));
 }

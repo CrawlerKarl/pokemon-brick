@@ -5,6 +5,17 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 1 Round D (part 1): the flight-log narrative
+
+- `STAGE_FLAVOR`/`stageFlavor` (data.js): one authored expedition-log line
+  per stage, surfaced on the results screen (`R.flavor`, italic muted
+  wrap under the next-stage tease; hidden on short viewports). Kanto's
+  three lines seed the campaign voice and tease Johto; other regions get
+  theirs in Milestone 9's polish pass. Zero pacing cost — it rides the
+  existing one-tap interstitial.
+- Still queued for Round D part 2: Kanto-specific ambient scenery motion
+  (drifting flocks over the hills) + the demo polish pass.
+
 ## 2026-07-18 — Milestone 1 Round C shipped: the Mewtwo duel
 
 - **Focus orbs** (bossAbility case 150 + `s.orbit` handling in the

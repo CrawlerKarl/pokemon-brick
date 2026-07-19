@@ -2085,6 +2085,8 @@ window.requestAnimationFrame = function () { return 0; };
         'results payload has the wrong stage identity');
       assert(R.objectives.length === 3 && R.objectives.every(o => o.name && o.desc),
         'Kanto arrival objectives missing');
+      assert(typeof R.flavor === 'string' && R.flavor.includes('FLIGHT LOG'),
+        'Kanto results are missing their flight-log narrative line');
       assert(!R.medalsSaved, 'trial run claimed to save medals');
       assert(G.level === 2 && G.upgradeChoices, 'level advance / draft roll did not happen behind results');
       drawResults(); // renders without throwing

@@ -409,6 +409,7 @@ function buildStageResults() {
     shotsN: L.shotsN || 0, shotsC: L.shotsC || 0,
     overheats: L.overheats || 0, megas: L.megas || 0,
     catches: G.caughtRun, medalsSaved: !G.trial && !G.daily && !G.cheated,
+    flavor: stageFlavor(lvl),
     objectives,
   };
 }

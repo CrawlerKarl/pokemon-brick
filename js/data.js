@@ -1598,3 +1598,15 @@ const REGION_INTROS = [
   { title: 'GALAR', tag: 'THE DARKEST DAY LOOMS', sub: 'INDUSTRIAL SPRAWL · GIGANTIC SHADOWS · ETERNITY WAITS' },
   { title: 'PALDEA', tag: 'THE FINAL FRONTIER', sub: 'CRYSTAL BADLANDS · PARADOX BEASTS · THE JOURNEY\'S END' },
 ];
+
+// ---- STAGE FLAVOR (Milestone 1 Round D): one line of expedition narrative
+// per stage, read aloud on the results screen — the campaign's "flight log"
+// voice. Never interrupts play; absent entries simply render nothing.
+// Kanto is authored (the vertical slice); other regions join in their
+// polish pass (Milestone 9).
+const STAGE_FLAVOR = {
+  '0:0': '"THE PIDGEY FLOCKS SCATTER AT YOUR ENGINE WASH. SOMETHING HAS THEM SPOOKED."  — FLIGHT LOG, DAY 1',
+  '0:1': '"ARMORED SHELLS ON ROOKIE WILDS? SOMEONE IS ORGANIZING THEM."  — FLIGHT LOG, DAY 2',
+  '0:2': '"THE GENETIC POKÉMON WITHDRAWS TO THE EAST. THE BELL TOWERS OF JOHTO ARE RINGING."  — FLIGHT LOG, DAY 3',
+};
+function stageFlavor(lvl) { return STAGE_FLAVOR[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
