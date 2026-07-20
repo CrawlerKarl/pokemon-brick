@@ -52,24 +52,34 @@ NEVER rename a key:
   (NO PARTNER uses a neutral vector training drone), flying vertically and
   firing its own typed attack.
 
-**The title screen is a return-player dashboard, not just a mode picker.**
-`menuLayout()` reserves a progression strip for journey/checkpoint, Pokédex
-research, and dated Daily best/completion/streak state. All three mode cards
-sit over `drawMenuAdventureBackdrop` (bright route sky, hills, nine journey
-markers, moving clouds/leaves); do not restore the old full-screen dark dimmer.
-remain visible, but only the hovered card (or one rotating focus card on
-touch/idle) animates; `reduceFlash` freezes them. Setup calls the opt-out
-**NO PARTNER**, shows starting HP + pressure on difficulty cards, and pages an
-18-type starter roster in three groups of six. The title card puts an actual
-partner inside the custom STARFIGHTER flight rig — never a legendary mascot.
-Mode cards must lead with their literal recipes: YOU FLY + FIRE, BALL + PADDLE,
-or NO BALL + DIRECT FIRE. Each type has a distinct
+**The title screen is THE THREE DOORS (overhauled 2026-07-20): simple,
+obvious, calm.** `menuLayout()` lays out three EQUAL game cards (columns
+on wide screens, stacked diorama-beside-text rows when `narrow && W<H`) —
+each is its live gameplay diorama (`drawHomePreview`), the mode name, ONE
+recipe line (YOU FLY + FIRE / BALL + PADDLE / NO BALL + DIRECT FIRE), and
+ONE play affordance. **Tapping a card selects that game AND opens partner
+selection in one step** (`drawHomeGameCard` render + the card loop in
+input.js). Do NOT restore the old single-hero + copy-column + start-button
++ mode-rail + progression-bands layout — one idea per surface. The daily
+chip rides the Breaker card's diorama corner (input tests it BEFORE the
+cards); CONTINUE is a slim band under the header only when a checkpoint
+exists and OUTRANKS the skin pill in tap order; journey/research is one
+quiet desktop footer line. The edition pill (`skinPillRect`) toggles skins
+and must stay clamped above the content zone on short viewports.
+**The partner screen is one DETAIL HERO + three labeled shelves.** All the
+reading lives in a single hero card (sprite, name, ability + type, effect,
+evolution line); the 18 partners are small identity tiles (sprite + name
+only) on three shelves named by `SKIN.rosterGroups` (THE CLASSICS / WILD &
+FIERCE / MYSTICS & TITANS on pokemon; the MAGIC/TECH/MAGITECH disciplines
+on aetherfall). Keep the opt-out **NO PARTNER** as a quiet ghost chip; keep
+difficulty cards showing starting HP + pressure. Each type has a distinct
 three-tier ability in `STARTER_MON`, an ICONIC species line (Dratini/dragon,
 Machop/fighting, Gastly/ghost, Magnemite/steel…), and its own signature
 attack silhouette (`pilotInfo().shape` → `drawTypedBolt`, 14 shapes) that
-scales up + gains a flourish at partner tiers II/III (`L.tier`). Pikachu is
-an intentionally OP explicit pick that becomes Raichu in region 5. Keep
-render and hit-testing on the same layout geometry.
+scales up at partner tiers II/III. Pikachu is an intentionally OP explicit
+pick that becomes Raichu in region 5. Render and hit-testing ALWAYS share
+the same layout geometry (`menuLayout`/`setupLayout`); the viewport-fit
+suite test guards every rect across six sizes.
 
 ## Editing
 - Everything is `js/*.js`. `index.html` is just the shell — never inline JS.

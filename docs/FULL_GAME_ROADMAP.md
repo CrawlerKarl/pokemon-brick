@@ -30,8 +30,9 @@ Status legend: ✅ complete · 🔶 in progress · ⬜ not started · ◐ partia
   (`shotSprite`/`auraSprite`/…) — never per-frame gradients or shadowBlur.
 - Respect `reduceFlash`, safe areas (`SAFE_T/L/R/B`), touch customization,
   and all current accessibility settings.
-- Preserve save compatibility; add migrations (checkpoint schema is v3 with
-  a never-throws v1/v2 migration — keep that pattern).
+- Preserve save compatibility; add migrations (checkpoint schema is v4 —
+  adds skin + affinity fields — with a never-throws v1/v2/v3 migration;
+  keep that pattern).
 - Analytics stay local by default; any external collection is opt-in only.
 
 ---
@@ -137,14 +138,16 @@ Shipped:
   ×0.35, surge/finalPush raise to ×1.25–1.4.
 - [x] **Recovery windows after intensity peaks** — the `recovery` beat
   holds fire ~3.4s, primes heal pity, and eases the threat budget.
-- [x] **Distinct region grammars** — KANTO (teaching) and JOHTO (the hunt)
-  authored; regions 3-9 use a default escalation→recovery arc.
+- [x] **Distinct region grammars** — ALL NINE authored (2026-07-20): each
+  region paces differently using only the tested beat actions (Hoenn
+  squalls, Sinnoh escort+avalanche, Unova rush hour, Alola breather,
+  Galar stadium waves, Paldea journey-in-miniature…).
 - [x] **First objective family** — `G.objective`/`ENCOUNTER_OBJECTIVES` +
   `updateObjective` + `drawObjectiveBanner`. **SURVIVE THE MIGRATION**
   (Hoenn challenge) changes the win condition: no clear-by-attrition,
   outlast the timer, the swarm disperses.
 
-Shipped (Round C, 2026-07-19 — design: `M3_ENTITY_OBJECTIVES.md`):
+Shipped (Round C, 2026-07-19 — design: `archive/M3_ENTITY_OBJECTIVES.md`):
 - [x] **The FRIENDLY entity** (`br.friendly`) — crosser-parity
   exclusions + laser pass-through + a new enemy-shot-vs-friendly
   collision (3 heart pips) + alternating micro-volley redirect
@@ -169,7 +172,7 @@ Still open (M9 authoring pass):
 
 ## Milestone 4 — Full boss overhaul 🔶
 (Rounds A+B+C shipped 2026-07-19 — all NINE finale legendaries AND all
-NINE mythicals on the template; design doc: `M4_BOSS_KITS.md`)
+NINE mythicals on the template; design doc: `archive/M4_BOSS_KITS.md`)
 
 Shipped (Round C — the nine mythicals):
 - [x] **Channel gate opened to mythics** — the channel-open gate keys
@@ -320,7 +323,7 @@ licensing). Before any public/commercial distribution the user must choose
 between securing authorization or converting to an original creature
 universe. Mechanics work continues regardless.
 **DECIDED 2026-07-19:** build an original sci-fi × fantasy skin behind a
-runtime toggle — full design in `docs/ORIGINAL_SKIN_PLAN.md` (skin
+runtime toggle — full design in `docs/archive/ORIGINAL_SKIN_PLAN.md` (skin
 registry, per-skin storage, 18 classes / 3 disciplines, LIGHT/DARK
 affinity, procedural art, rounds S1–S7).
 **SHIPPED 2026-07-19 (rounds S1–S7):** the AETHERFALL skin is LIVE behind
@@ -332,6 +335,30 @@ the title-screen edition toggle. `js/skin.js` (registry + per-skin
 LIGHT/DARK affinity satellites on the stack machinery, gallery unit
 sheet, and 5 new suite tests. The pokemon skin keeps legacy storage keys
 (zero migration) and stays bit-identical — the suite is the guard.
+
+**SHIPPED 2026-07-20 (post-skin polish arc):**
+- **Sprite art v2** — 99 bespoke procedural painters (259 baked looks) +
+  a cel-shade/rim-light/sticker-outline finish pipeline, replacing the
+  S5 archetypes.
+- **Production-art override pipeline** — the user's separate generation
+  workflow drops `art/aetherfall-production/sprites/final/af-<id>.png`;
+  `npm run art-overrides` regenerates `js/aetherfall-overrides.generated.js`
+  and `aetherart` blits each PNG onto its cached canvas. **130 overrides
+  live** (all vessels + realms 1–5 creatures).
+- **Two balance rounds** — the CLASSIC DEFLECTOR CORE (width is armor,
+  not a bigger target; 8-shot wave-fire ceiling) and the CLASSIC GUNS
+  rework (partner-typed support fire, no free Mega fireball carpet,
+  charge arc while armed).
+- **THE THREE DOORS title overhaul** — three big self-explanatory game
+  cards + a one-hero/three-shelf partner picker (`SKIN.rosterGroups`).
+- **The voice & pacing pass** — flight-log flavor for all 27 stages ×
+  both skins, and all nine authored region grammars.
+- **Adversarial-review fixes** — no-partner offense made typeless
+  (symmetric with `playerType()`); the skin pill clamped + CONTINUE
+  reprioritized on landscape phones.
+Suite grew 71 → 78. **This IS the Milestone-10 release-identity work;
+what remains of M10 is the operational readiness list above (offline,
+localization, telemetry, captures), not identity.**
 
 ---
 

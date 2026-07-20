@@ -778,5 +778,23 @@
     "generatedAt": "2026-07-20",
     "promptLog": "PRODUCTION_RUN.md#507--shadelurk",
     "alphaValidated": true
+  },
+  "aetherfall:502": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#502--surgehound",
+    "alphaValidated": true
+  },
+  "aetherfall:505": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#505--platedrone",
+    "alphaValidated": true
+  },
+  "aetherfall:508": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#508--neonprowler",
+    "alphaValidated": true
   }
 }

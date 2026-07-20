@@ -521,7 +521,7 @@ Desperation channels are now data-driven: `BOSS_CHANNELS` (data.js) keys
 (five sequential columns, a traveling wall), `clock` (six clockwise
 strikes, one rotating safe lane starting at the pilot's column). Interrupt
 mechanics (charged hit → 1.5s ×1.35 stagger, cd 9) are uniform template
-constants. Kit design docs live in `docs/M4_BOSS_KITS.md`.
+constants. Kit design docs live in `docs/archive/M4_BOSS_KITS.md`.
 - **Lugia — THE STORM THAT HUNTS (L6):** STORM FEATHERS (three 2-HP
   `aeroring` shots drift down on the wind; each that reaches the ship band
   bursts into three aimed micros — normal fire's answer), TAILWIND CURRENT
@@ -1011,4 +1011,4 @@ a fan project — get a licensing review before any public distribution or
 monetization. The **AETHERFALL EDITION is original work** (names, world,
 procedural art — no Pokémon strings, ids gated per skin, zero shared
 assets): it exists so the engine has a release identity that carries no
-third-party IP, per `docs/ORIGINAL_SKIN_PLAN.md`.
+third-party IP, per `docs/archive/ORIGINAL_SKIN_PLAN.md`.
