@@ -4554,6 +4554,51 @@ function drawHomeModeSwitch(mode, g, selected, L) {
   ctx.restore();
 }
 
+// One game, one door: live diorama up top, the name, one recipe line, and a
+// single tap-to-play affordance. All explanation lives INSIDE the picture —
+// nothing else competes. Selected card breathes with its accent.
+function drawHomeGameCard(mode, r, selected, L) {
+  const hov = inRect(mouseX, lastMouseY, r);
+  const lit = selected || hov;
+  ctx.save();
+  ctx.shadowColor = lit ? mode.accent : 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = lit ? (hov ? 26 : 16) : 18; ctx.shadowOffsetY = 8;
+  roundRect(r.x, r.y, r.w, r.h, L.narrow ? 18 : 24);
+  ctx.fillStyle = 'rgba(7,11,24,0.94)'; ctx.fill();
+  ctx.restore();
+  roundRect(r.x, r.y, r.w, r.h, L.narrow ? 18 : 24);
+  ctx.strokeStyle = lit ? mode.accent : 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = lit ? 2 : 1; ctx.stroke();
+  // diorama fills the card's upper share — the game explains itself by
+  // LOOKING like itself (stacked phone rows go side-by-side instead)
+  const sideBySide = L.stacked;
+  const pv = sideBySide
+    ? { x: r.x + 8, y: r.y + 8, w: r.w * 0.46, h: r.h - 16 }
+    : { x: r.x + 8, y: r.y + 8, w: r.w - 16, h: Math.max(60, r.h * (L.short ? 0.5 : 0.64)) };
+  drawHomePreview(mode, pv);
+  // text zone: centered in the space between diorama and the PLAY line
+  const tx = sideBySide ? r.x + r.w * 0.46 + 20 : r.x + r.w / 2;
+  const align = sideBySide ? 'left' : 'center';
+  const ty0 = sideBySide ? r.y + r.h * 0.3
+    : pv.y + pv.h + (r.y + r.h - (pv.y + pv.h)) * (L.short ? 0.42 : 0.38);
+  ctx.textAlign = align;
+  if (mode.key === 'junkie') { // one quiet featured star, not a banner
+    ctx.font = `800 ${L.short ? 7 : 8.5}px Orbitron, sans-serif`; ctx.fillStyle = mode.accent;
+    ctx.fillText('★ FEATURED', tx, ty0 - (L.short ? 12 : 17));
+  }
+  ctx.font = `900 ${Math.min(L.short ? 17 : 26, r.w / (sideBySide ? 11 : 7.2))}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#ffffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = lit ? 14 : 8;
+  ctx.fillText(mode.label, tx, ty0, sideBySide ? r.w * 0.5 - 28 : r.w - 24);
+  ctx.shadowBlur = 0;
+  ctx.font = `700 ${L.short ? 8 : 10}px Orbitron, sans-serif`; ctx.fillStyle = '#aab6cb';
+  ctx.fillText(mode.mechanic, tx, ty0 + (L.short ? 15 : 22), sideBySide ? r.w * 0.5 - 28 : r.w - 24);
+  // the single affordance line
+  const py2 = sideBySide ? r.y + r.h * 0.74 : r.y + r.h - (L.short ? 14 : 22);
+  ctx.font = `900 ${L.short ? 8 : 10}px Orbitron, sans-serif`;
+  ctx.fillStyle = lit ? mode.accent : 'rgba(255,255,255,0.42)';
+  ctx.fillText(hov ? '▶  TAP TO PLAY' : '▶  PLAY', tx, py2, sideBySide ? r.w * 0.5 - 28 : r.w - 24);
+}
+
 function drawMenuRedesign() {
   const L = menuLayout();
   const activeIndex = Math.max(0, MODES.findIndex(m => m.key === SETTINGS.mode));
@@ -4590,78 +4635,30 @@ function drawMenuRedesign() {
   drawHomeUtility(L.dex, SKIN.strings.dexChar + ' ' + SKIN.strings.dexName + ' ' + DEX.size + '/' + dexTotal(), mode.accent);
   drawHomeUtility(L.adv, '⚙ SETTINGS', mode.accent);
 
-  // Unified hero surface, with a calm copy column and a literal game preview.
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.58)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14;
-  roundRect(L.hero.x, L.hero.y, L.hero.w, L.hero.h, L.narrow ? 22 : 28);
-  ctx.fillStyle = 'rgba(7,11,24,0.92)'; ctx.fill(); ctx.restore();
-  roundRect(L.hero.x, L.hero.y, L.hero.w, L.hero.h, L.narrow ? 22 : 28);
-  ctx.strokeStyle = 'rgba(255,255,255,0.13)'; ctx.lineWidth = 1; ctx.stroke();
-  if (!L.narrow) {
-    const pane = ctx.createLinearGradient(L.hero.x, 0, L.hero.x + L.hero.w * 0.39, 0);
-    pane.addColorStop(0, mode.accent + '13'); pane.addColorStop(1, mode.accent + '00');
-    ctx.fillStyle = pane; roundRect(L.hero.x + 1, L.hero.y + 1, L.hero.w * 0.4, L.hero.h - 2, 27); ctx.fill();
-  }
-  drawHomePreview(mode, L.preview);
-
-  const c = L.copy, top = c.y + (L.narrow ? 4 : 2);
-  ctx.textAlign = 'left';
-  ctx.font = `800 ${L.short ? 9 : 11}px Orbitron, sans-serif`; ctx.fillStyle = mode.accent;
-  ctx.fillText((mode.key === 'junkie' ? '★ FEATURED CAMPAIGN' : 'ARCADE CAMPAIGN') + '  /  ' + mode.desc,
-    c.x, top + 8, c.w);
-  const nameY = top + (L.short ? 32 : 52);
-  ctx.font = `900 ${L.short ? 25 : L.narrow ? 34 : Math.min(48, c.w / 7.7)}px Orbitron, sans-serif`;
-  ctx.fillStyle = '#ffffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = 13;
-  ctx.fillText(mode.label, c.x, nameY, c.w); ctx.shadowBlur = 0;
-  if (!L.short || (L.narrow && H >= 560)) {
-    const summaryY = nameY + (L.narrow ? 45 : 57);
-    ctx.font = bodyFont(L.short ? 12.5 : L.narrow ? 15 : 17, 600); ctx.fillStyle = '#c5cedd';
-    ctx.fillText(mode.summary[0], c.x, summaryY, c.w);
-    ctx.fillText(mode.summary[1], c.x, summaryY + (L.short ? 19 : L.narrow ? 22 : 25), c.w);
-  }
-  // The control recipe already appears in the mode switcher. On shorter
-  // phones, omitting this duplicate pill preserves breathing room between
-  // the description and the primary touch target.
-  if (!L.narrow || H >= 760 || L.short) {
-    const pillY = L.quick.y - (L.short ? 24 : 38), pillH = L.short ? 18 : 25;
-    ctx.font = `800 ${L.short ? 8 : 10}px Orbitron, sans-serif`;
-    const pillW = Math.min(c.w, ctx.measureText(mode.mechanic).width + (L.short ? 20 : 28));
-    roundRect(c.x, pillY - pillH / 2, pillW, pillH, pillH / 2);
-    ctx.fillStyle = mode.accent + '1f'; ctx.fill(); ctx.strokeStyle = mode.accent + '99'; ctx.stroke();
-    ctx.textAlign = 'center'; ctx.fillStyle = '#eef1f8';
-    ctx.fillText(mode.mechanic, c.x + pillW / 2, pillY + 0.5, pillW - 12);
-  }
-
-  // One unambiguous start action for the selected mode.
-  ctx.textAlign = 'center';
-  const q = L.quick, hovQ = inRect(mouseX, lastMouseY, q);
-  ctx.save(); ctx.shadowColor = mode.accent; ctx.shadowBlur = hovQ ? 24 : 13;
-  roundRect(q.x, q.y, q.w, q.h, 13);
-  const qg = ctx.createLinearGradient(0, q.y, 0, q.y + q.h);
-  qg.addColorStop(0, mixHex(mode.accent, '#ffffff', hovQ ? 0.34 : 0.18));
-  qg.addColorStop(1, mixHex(mode.accent, '#050816', mode.key === 'junkie' ? 0.28 : 0.18));
-  ctx.fillStyle = qg; ctx.fill(); ctx.shadowBlur = 0;
-  ctx.font = `900 ${L.short ? 11 : 14}px Orbitron, sans-serif`;
-  ctx.fillStyle = mode.key === 'junkie' ? '#ffffff' : '#07101c';
-  ctx.fillText('▶  START ' + mode.label, q.x + q.w / 2, q.y + q.h / 2 + 0.5, q.w - 20);
-  ctx.restore();
-
-  const d = L.daily, hovD = inRect(mouseX, lastMouseY, d), best = dailyBest();
-  roundRect(d.x, d.y, d.w, d.h, 11);
-  ctx.fillStyle = hovD ? 'rgba(128,216,255,0.18)' : 'rgba(255,255,255,0.055)'; ctx.fill();
-  ctx.strokeStyle = hovD ? '#80d8ff' : 'rgba(255,255,255,0.18)'; ctx.stroke();
-  ctx.font = `800 ${L.short ? 8 : d.w < 180 ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = hovD ? '#ffffff' : '#aebbd0';
-  const dailyLabel = best ? '★ DAILY · BEST ' + best : '★ DAILY BREAKER · ' + dailyShortDate();
-  ctx.fillText(dailyLabel, d.x + d.w / 2, d.y + d.h / 2 + 0.5, d.w - 12);
+  // ---- THE THREE DOORS: every game is one big self-explanatory card ----
   if (L.resume && RUN_CKPT) {
     const rb = L.resume, hovR = inRect(mouseX, lastMouseY, rb);
-    roundRect(rb.x, rb.y, rb.w, rb.h, 11);
-    ctx.fillStyle = hovR ? 'rgba(128,216,255,0.24)' : 'rgba(128,216,255,0.1)'; ctx.fill();
-    ctx.strokeStyle = '#80d8ff'; ctx.stroke();
-    ctx.font = `900 ${L.short ? 8 : rb.w < 180 ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = '#e7f8ff';
-    ctx.fillText('▶ CONTINUE · WAVE ' + RUN_CKPT.lvl, rb.x + rb.w / 2, rb.y + rb.h / 2 + 0.5, rb.w - 12);
+    ctx.save(); if (hovR) { ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = 14; }
+    roundRect(rb.x, rb.y, rb.w, rb.h, 12);
+    ctx.fillStyle = hovR ? 'rgba(128,216,255,0.22)' : 'rgba(128,216,255,0.09)'; ctx.fill();
+    ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+    ctx.textAlign = 'center';
+    ctx.font = `900 ${L.short ? 9 : 11}px Orbitron, sans-serif`; ctx.fillStyle = '#e7f8ff';
+    const rmode = (MODES.find(m => m.key === RUN_CKPT.mode) || MODES[0]).label;
+    ctx.fillText('▶  CONTINUE YOUR JOURNEY — ' + genFor(RUN_CKPT.lvl).name + ' · WAVE ' + RUN_CKPT.lvl + ' · ' + rmode,
+      rb.x + rb.w / 2, rb.y + rb.h / 2 + 0.5, rb.w - 24);
   }
-
-  for (let i = 0; i < MODES.length; i++) drawHomeModeSwitch(MODES[i], L.card(i), i === activeIndex, L);
+  for (let i = 0; i < MODES.length; i++) drawHomeGameCard(MODES[i], L.card(i), i === activeIndex, L);
+  // the daily chip rides the Breaker card (it IS a Breaker run)
+  {
+    const d = L.daily, hovD = inRect(mouseX, lastMouseY, d), best = dailyBest();
+    roundRect(d.x, d.y, d.w, d.h, d.h / 2);
+    ctx.fillStyle = hovD ? 'rgba(128,216,255,0.22)' : 'rgba(6,10,22,0.55)'; ctx.fill();
+    ctx.strokeStyle = hovD ? '#80d8ff' : 'rgba(128,216,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = `800 ${L.short ? 7.5 : 9}px Orbitron, sans-serif`; ctx.fillStyle = hovD ? '#ffffff' : '#9fc6dd';
+    ctx.fillText(best ? '★ DAILY · BEST ' + best : '★ DAILY CHALLENGE', d.x + d.w / 2, d.y + d.h / 2 + 0.5, d.w - 12);
+  }
 
   // Returning-player context is reduced to one calm footer line on roomy
   // screens. Mobile keeps only the two utility buttons.
@@ -5263,63 +5260,98 @@ function drawSetupHeader(L, mode) {
 }
 
 function drawPilotSetup(L, mode) {
-  const maxW = W * 0.94;
+  // CALM ROSTER: all the reading happens in ONE hero card; the 18 partners
+  // are small identity tiles (sprite + name) on three labeled shelves.
   ctx.font = `900 ${L.narrow ? 14 : 16}px Orbitron, sans-serif`;
   ctx.fillStyle = '#f1e7f8';
   ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR FLIGHT PARTNER' : 'CHOOSE YOUR PARTNER', W / 2, L.sectionY);
-  if (!L.short) {
-    ctx.font = bodyFont(L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#90a4ae';
-    const selected = SKIN.starterMon[SETTINGS.starter];
-    const headerCopy = L.info.h <= 12 && selected
-      ? selected.names[0].toUpperCase() + ' · ' + starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1).ability
-      : 'ALL 18 ARE HERE · EACH CHANGES YOUR ATTACK TYPE AND PASSIVE';
-    ctx.fillText(headerCopy, W / 2, L.sectionY + 18, maxW);
+  // ---- the DETAIL HERO ----
+  {
+    const hv = L.hero;
+    const mon = SKIN.starterMon[SETTINGS.starter];
+    const col = mon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+    roundRect(hv.x, hv.y, hv.w, hv.h, 16);
+    ctx.fillStyle = 'rgba(7,11,27,0.9)'; ctx.fill(); ctx.restore();
+    roundRect(hv.x, hv.y, hv.w, hv.h, 16);
+    ctx.strokeStyle = col + '88'; ctx.lineWidth = 1.4; ctx.stroke();
+    const sp = Math.min(hv.h - 12, L.short ? 46 : 96);
+    const sx2 = hv.x + (L.short ? 8 : 16);
+    if (mon) {
+      const img = getSprite(mon.ids[0]);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, sx2, hv.y + hv.h / 2 - sp / 2, sp, sp);
+      else drawGlyph(ctx, SETTINGS.starter, sx2 + sp / 2, hv.y + hv.h / 2, sp * 0.3, col);
+    } else drawGlyph(ctx, 'normal', sx2 + sp / 2, hv.y + hv.h / 2, sp * 0.3, col);
+    const tx2 = sx2 + sp + (L.short ? 10 : 18), tw2 = hv.x + hv.w - tx2 - 14;
+    ctx.textAlign = 'left';
+    if (mon) {
+      const copy = starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1);
+      ctx.font = `900 ${L.short ? 11 : L.narrow ? 14 : 17}px Orbitron, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(mon.names[0], tx2, hv.y + hv.h * (L.short ? 0.3 : 0.24), tw2);
+      ctx.font = `800 ${L.short ? 8 : 10}px Orbitron, sans-serif`; ctx.fillStyle = col;
+      ctx.fillText(copy.ability + '  ·  ' + (SETTINGS.starter || '').toUpperCase() + ' TYPE',
+        tx2, hv.y + hv.h * (L.short ? 0.58 : 0.47), tw2);
+      if (!L.short) {
+        ctx.font = bodyFont(L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#c5cedd';
+        ctx.fillText(copy.tier, tx2, hv.y + hv.h * 0.67, tw2);
+        ctx.font = bodyFont(L.narrow ? 8.5 : 9.5, 550); ctx.fillStyle = '#8494ac';
+        ctx.fillText(mon.names.join(' → ') + '  ·  ' + SKIN.strings.evolvesIn, tx2, hv.y + hv.h * 0.85, tw2);
+      } else {
+        ctx.font = bodyFont(8.5, 550); ctx.fillStyle = '#8494ac';
+        ctx.fillText(copy.tier, tx2, hv.y + hv.h * 0.84, tw2);
+      }
+    } else {
+      ctx.font = `900 ${L.short ? 11 : L.narrow ? 14 : 17}px Orbitron, sans-serif`;
+      ctx.fillStyle = '#e2e8f2';
+      ctx.fillText('PICK A PARTNER', tx2, hv.y + hv.h * (L.short ? 0.36 : 0.32), tw2);
+      ctx.font = bodyFont(L.short ? 8.5 : L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#8494ac';
+      ctx.fillText('EACH ONE CHANGES YOUR ATTACK TYPE AND PASSIVE' + (L.short ? '' : ' — OR FLY SOLO BELOW'),
+        tx2, hv.y + hv.h * (L.short ? 0.72 : 0.62), tw2);
+    }
+    ctx.textAlign = 'center';
   }
+  // ---- three labeled shelves of six small tiles ----
   const roster = skinStarters();
+  const groups = SKIN.rosterGroups || [];
+  for (let g = 0; g < 3; g++) {
+    const sh = L.shelf(g), grp = groups[g];
+    if (grp && sh.h > 8) {
+      ctx.textAlign = 'left';
+      ctx.font = `800 ${L.short ? 7.5 : 9}px Orbitron, sans-serif`;
+      ctx.fillStyle = grp.color || '#8494ac';
+      ctx.fillText(grp.n, sh.x + 2, sh.y + sh.h - 3, sh.w * 0.7);
+      ctx.strokeStyle = (grp.color || '#8494ac') + '33'; ctx.lineWidth = 1;
+      const lw = ctx.measureText(grp.n).width;
+      ctx.beginPath(); ctx.moveTo(sh.x + lw + 12, sh.y + sh.h - 6); ctx.lineTo(sh.x + sh.w, sh.y + sh.h - 6); ctx.stroke();
+      ctx.textAlign = 'center';
+    }
+  }
   for (let i = 0; i < roster.length; i++) {
     const st = roster[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
     const hov = inRect(mouseX, lastMouseY, pg), col = TYPE_COLORS[st.key];
-    const mon = SKIN.starterMon[st.key], copy = starterModeCopy(st.key, SETTINGS.mode, 1);
+    const mon = SKIN.starterMon[st.key];
     ctx.save();
-    if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 15; }
-    roundRect(pg.x, pg.y, pg.w, pg.h, Math.min(12, pg.h * 0.18));
-    ctx.fillStyle = sel ? col + '38' : hov ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.055)'; ctx.fill();
-    ctx.lineWidth = sel ? 2.4 : 1;
-    ctx.strokeStyle = sel ? col : 'rgba(255,255,255,0.2)'; ctx.stroke();
+    if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 16; }
+    roundRect(pg.x, pg.y, pg.w, pg.h, Math.min(11, pg.h * 0.18));
+    ctx.fillStyle = sel ? col + '34' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+    ctx.lineWidth = sel ? 2.2 : 1;
+    ctx.strokeStyle = sel ? col : 'rgba(255,255,255,0.16)'; ctx.stroke();
     ctx.shadowBlur = 0;
-    const compact = pg.h < 56;
-    const sp = Math.min(compact ? 28 : 43, pg.h * (compact ? 0.62 : 0.5), pg.w * 0.42);
+    const nameH = pg.h > 52 ? 13 : 10;
+    const sp = Math.min(pg.h - nameH - 6, pg.w - 10);
     const img = getSprite(mon.ids[0]);
-    const sx = pg.x + pg.w / 2 - sp / 2, sy = pg.y + (compact ? 1 : 3);
-    if (img.complete && img.naturalWidth) ctx.drawImage(img, sx, sy, sp, sp);
-    else drawGlyph(ctx, st.key, pg.x + pg.w / 2, sy + sp / 2, sp * 0.3, col);
-    drawGlyph(ctx, st.key, pg.x + 7, pg.y + 7, Math.min(4.8, pg.w * 0.05), col);
-    if (st.key === 'electric' && pg.w > 66) {
-      roundRect(pg.x + pg.w - 22, pg.y + 4, 18, 10, 4); ctx.fillStyle = '#ffd740'; ctx.fill();
-      ctx.font = '900 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#181100';
-      ctx.fillText('OP', pg.x + pg.w - 13, pg.y + 9);
+    if (img.complete && img.naturalWidth) ctx.drawImage(img, pg.x + pg.w / 2 - sp / 2, pg.y + 3, sp, sp);
+    else drawGlyph(ctx, st.key, pg.x + pg.w / 2, pg.y + 3 + sp / 2, sp * 0.3, col);
+    if (st.key === 'electric' && pg.w > 52) { // the one legend tag we keep
+      roundRect(pg.x + pg.w - 17, pg.y + 3, 14, 8, 3); ctx.fillStyle = '#ffd740'; ctx.fill();
+      ctx.font = '900 5.5px Orbitron, sans-serif'; ctx.fillStyle = '#181100';
+      ctx.fillText('OP', pg.x + pg.w - 10, pg.y + 7.4);
     }
-    ctx.font = `900 ${Math.min(compact ? 9 : 11.5, pg.w / 9.5)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? '#fff' : '#dce4e8';
-    ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h - (compact ? 8 : 18), pg.w - 5);
-    if (!compact) {
-      ctx.font = `800 ${Math.min(8.5, pg.w / 14)}px Orbitron, sans-serif`; ctx.fillStyle = col;
-      ctx.fillText(copy.ability, pg.x + pg.w / 2, pg.y + pg.h - 7, pg.w - 5);
-    }
+    ctx.font = `800 ${Math.min(pg.h > 52 ? 8.5 : 7.5, pg.w / 7.4)}px Orbitron, sans-serif`;
+    ctx.fillStyle = sel ? '#fff' : hov ? '#e8edf4' : '#aeb9c9';
+    ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h - (pg.h > 52 ? 8 : 6), pg.w - 4);
     ctx.restore();
-  }
-  if (L.info.h > 12) {
-    const mon = SKIN.starterMon[SETTINGS.starter], col = mon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
-    roundRect(L.info.x, L.info.y, L.info.w, L.info.h, 12);
-    ctx.fillStyle = 'rgba(7,11,27,0.7)'; ctx.fill(); ctx.strokeStyle = col + '66'; ctx.lineWidth = 1; ctx.stroke();
-    if (mon) {
-      const copy = starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1);
-      fitText(copy.ability + ' — ' + copy.tier, L.info.y + L.info.h * 0.38,
-        L.narrow ? 10.5 : 12, '750', col, L.info.w - 18, "Verdana, system-ui, sans-serif");
-      if (L.info.h > 50) fitText(mon.names.join(' → ') + ' · ' + SKIN.strings.evolvesIn, L.info.y + L.info.h * 0.68,
-        9.5, '550', '#90a4ae', L.info.w - 18, "Verdana, system-ui, sans-serif");
-    } else fitText('TRAINING DRONE — NO TYPE ADVANTAGE OR PARTNER ABILITY', L.info.y + L.info.h / 2,
-      10.5, '700', '#b0bec5', L.info.w - 18, "Verdana, system-ui, sans-serif");
   }
   {
     const pg = L.none, sel = SETTINGS.starter === 'none', hov = inRect(mouseX, lastMouseY, pg);

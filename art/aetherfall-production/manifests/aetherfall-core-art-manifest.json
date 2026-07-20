@@ -179,7 +179,10 @@
       "finalFile": "sprites/final/af-013-fluxweaver.png",
       "previewFile": "sprites/previews/af-013-fluxweaver-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#13--fluxweaver",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:14",
@@ -202,7 +205,10 @@
       "finalFile": "sprites/final/af-014-tidebinder.png",
       "previewFile": "sprites/previews/af-014-tidebinder-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#14--tidebinder",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:15",
@@ -225,7 +231,10 @@
       "finalFile": "sprites/final/af-015-deepcaller.png",
       "previewFile": "sprites/previews/af-015-deepcaller-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#15--deepcaller",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:16",
@@ -248,7 +257,10 @@
       "finalFile": "sprites/final/af-016-druid.png",
       "previewFile": "sprites/previews/af-016-druid-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#16--druid",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:17",
@@ -271,7 +283,10 @@
       "finalFile": "sprites/final/af-017-grovekeeper.png",
       "previewFile": "sprites/previews/af-017-grovekeeper-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#17--grovekeeper",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:18",
@@ -294,7 +309,10 @@
       "finalFile": "sprites/final/af-018-wildspeaker.png",
       "previewFile": "sprites/previews/af-018-wildspeaker-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#18--wildspeaker",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:19",
@@ -317,7 +335,10 @@
       "finalFile": "sprites/final/af-019-stormbinder.png",
       "previewFile": "sprites/previews/af-019-stormbinder-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#19--stormbinder",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:20",
@@ -340,7 +361,10 @@
       "finalFile": "sprites/final/af-020-tempestbinder.png",
       "previewFile": "sprites/previews/af-020-tempestbinder-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#20--tempestbinder",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:21",
@@ -363,7 +387,10 @@
       "finalFile": "sprites/final/af-021-thundersovereign.png",
       "previewFile": "sprites/previews/af-021-thundersovereign-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#21--thundersovereign",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:22",
@@ -386,7 +413,10 @@
       "finalFile": "sprites/final/af-022-drifter.png",
       "previewFile": "sprites/previews/af-022-drifter-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#22--drifter",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:23",
@@ -409,7 +439,10 @@
       "finalFile": "sprites/final/af-023-wayfinder.png",
       "previewFile": "sprites/previews/af-023-wayfinder-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#23--wayfinder",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:24",
@@ -432,7 +465,10 @@
       "finalFile": "sprites/final/af-024-paragon.png",
       "previewFile": "sprites/previews/af-024-paragon-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#24--paragon",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:25",
@@ -455,7 +491,10 @@
       "finalFile": "sprites/final/af-025-aeronaut.png",
       "previewFile": "sprites/previews/af-025-aeronaut-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#25--aeronaut",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:26",
@@ -478,7 +517,10 @@
       "finalFile": "sprites/final/af-026-jetcorsair.png",
       "previewFile": "sprites/previews/af-026-jetcorsair-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#26--jetcorsair",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:27",
@@ -501,7 +543,10 @@
       "finalFile": "sprites/final/af-027-skymarshal.png",
       "previewFile": "sprites/previews/af-027-skymarshal-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#27--skymarshal",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:28",
@@ -524,7 +569,10 @@
       "finalFile": "sprites/final/af-028-frostweaver.png",
       "previewFile": "sprites/previews/af-028-frostweaver-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#28--frostweaver",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:29",
@@ -547,7 +595,10 @@
       "finalFile": "sprites/final/af-029-glacimancer.png",
       "previewFile": "sprites/previews/af-029-glacimancer-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#29--glacimancer",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:30",
@@ -570,7 +621,10 @@
       "finalFile": "sprites/final/af-030-wintersage.png",
       "previewFile": "sprites/previews/af-030-wintersage-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#30--wintersage",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:31",
@@ -593,7 +647,10 @@
       "finalFile": "sprites/final/af-031-vanguard.png",
       "previewFile": "sprites/previews/af-031-vanguard-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#31--vanguard",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:32",
@@ -616,7 +673,10 @@
       "finalFile": "sprites/final/af-032-shocktrooper.png",
       "previewFile": "sprites/previews/af-032-shocktrooper-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#32--shocktrooper",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:33",
@@ -662,7 +722,10 @@
       "finalFile": "sprites/final/af-034-chemist.png",
       "previewFile": "sprites/previews/af-034-chemist-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#34--chemist",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:35",
@@ -685,7 +748,10 @@
       "finalFile": "sprites/final/af-035-venomsmith.png",
       "previewFile": "sprites/previews/af-035-venomsmith-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#35--venomsmith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:36",
@@ -731,7 +797,10 @@
       "finalFile": "sprites/final/af-037-terrashaper.png",
       "previewFile": "sprites/previews/af-037-terrashaper-preview.png",
       "promptRecipe": "pilot:pilotI",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#37--terrashaper",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:38",
@@ -754,7 +823,10 @@
       "finalFile": "sprites/final/af-038-quakebinder.png",
       "previewFile": "sprites/previews/af-038-quakebinder-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#38--quakebinder",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:39",

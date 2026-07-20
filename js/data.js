@@ -1787,6 +1787,12 @@ assembleSkins({
   bonusFlock: { id: 16, t: 'flying', name: 'BONUS FLOCK!',
     sub: 'SWIFT AND HARMLESS — CHAIN THEM FOR REWARDS' },
   stageObjectiveSets: STAGE_OBJECTIVE_SETS,
+  // the partner screen's three shelves of six (matches starterOrder rows)
+  rosterGroups: [
+    { n: 'THE CLASSICS', color: '#ffd54f' },
+    { n: 'WILD & FIERCE', color: '#ef5350' },
+    { n: 'MYSTICS & TITANS', color: '#b388ff' },
+  ],
   // display strings engine code reads through SKIN.strings — the pokemon
   // values ARE the historical literals (bit-identity is the contract)
   strings: {

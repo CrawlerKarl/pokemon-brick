@@ -164,42 +164,45 @@ let setupStep = 'pilot'; // setup is a two-screen flow: all pilots → challenge
 // three dense status bands. This layout gives one idea the stage at a time:
 // a readable description + action, a generous gameplay diorama, and three
 // compact mode switches. Rendering and hit-testing share these rectangles.
+// THE THREE DOORS (title overhaul, 2026-07-20): the home screen is three
+// equal, self-explanatory game cards — tap one and you're choosing a
+// partner. A slim CONTINUE band appears only when a checkpoint exists;
+// everything else (daily, journey, codex, settings) is one quiet chip or
+// footer line. `quick` aliases the SELECTED mode's card so the primary
+// CTA contract (and its test) is unchanged; `preview`/`hero` alias the
+// whole card band. Rendering and hit-testing share these rectangles.
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
   const narrow = W < 720;
   const short = H < 560 || (narrow && H < 650);
-  const pad = narrow ? 12 : short ? 18 : Math.max(24, Math.min(38, W * 0.028));
-  const gap = narrow ? 8 : 12;
-  const headerH = short ? 40 : narrow ? 52 : 58;
-  const headerY = narrow ? 10 : short ? 10 : 16;
-  const footerH = short ? (narrow ? 44 : 36) : narrow ? 58 : 54;
-  const footerY = H - pad - footerH;
-  const heroY = headerY + headerH + (short ? 7 : 13);
-  const hero = { x: pad, y: heroY, w: W - pad * 2, h: Math.max(220, footerY - heroY - (short ? 7 : 12)) };
-  const modeH = short ? 46 : narrow ? 58 : 64;
-  const modeGap = narrow ? 6 : 10;
-  const modePad = narrow ? 10 : 18;
-  const modeW = (hero.w - modePad * 2 - modeGap * 2) / 3;
-  const modeY = hero.y + hero.h - modeH - (narrow ? 10 : 16);
-  const copy = narrow
-    ? { x: hero.x + 18, y: hero.y + Math.min(short ? 112 : 276, hero.h * (short ? 0.38 : 0.41)),
-        w: hero.w - 36, h: modeY - hero.y - Math.min(short ? 112 : 276, hero.h * (short ? 0.38 : 0.41)) - 8 }
-    : { x: hero.x + Math.max(28, hero.w * 0.03), y: hero.y + (short ? 20 : 38),
-        w: hero.w * 0.34, h: modeY - hero.y - (short ? 28 : 48) };
-  const preview = narrow
-    ? { x: hero.x + 10, y: hero.y + 10, w: hero.w - 20,
-        h: Math.max(82, copy.y - hero.y - 20) }
-    : { x: hero.x + hero.w * 0.385, y: hero.y + 16, w: hero.w * 0.595 - 16,
-        h: modeY - hero.y - 30 };
-  const startH = short ? (narrow ? 46 : 38) : narrow ? 50 : 54;
-  const startW = narrow ? copy.w : Math.min(330, copy.w);
-  const secondaryH = short ? (narrow ? 44 : 32) : narrow ? 42 : 38;
-  const startY = modeY - startH - secondaryH - (short ? 14 : 22);
-  const secondaryY = startY + startH + (short ? 5 : 8);
-  const secondaryW = hasCkpt ? (startW - gap) / 2 : startW;
-  const titleSize = short ? Math.min(25, W / 18) : narrow ? Math.min(30, W / 11) : Math.min(34, W / 24);
+  const pad = narrow ? 12 : short ? 18 : Math.max(24, Math.min(40, W * 0.03));
+  const gap = narrow ? 10 : 14;
+  const headerH = short ? 38 : narrow ? 50 : 56;
+  const headerY = short ? 8 : narrow ? 10 : 16;
+  const titleSize = short ? Math.min(24, W / 18) : narrow ? Math.min(30, W / 11) : Math.min(34, W / 24);
   const titleY = headerY + headerH / 2;
-  const utilityW = short ? 94 : 122;
+  // footer: desktop keeps one calm journey line; phones keep two utilities
+  const footerH = short ? 34 : narrow ? 52 : 42;
+  const footerY = H - (short ? 8 : pad * 0.7) - footerH;
+  // continue band (only with a checkpoint) sits between header and cards
+  const resumeH = hasCkpt ? (short ? 30 : narrow ? 42 : 46) : 0;
+  const zoneY = headerY + headerH + (short ? 6 : 12) + (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
+  const zone = { x: pad, y: zoneY, w: W - pad * 2, h: footerY - zoneY - (short ? 6 : 12) };
+  // three equal cards: columns on wide screens, stacked rows on phones
+  const stacked = narrow && W < H;
+  const cardW = stacked ? zone.w : (zone.w - gap * 2) / 3;
+  const cardH = stacked ? (zone.h - gap * 2) / 3 : zone.h;
+  const card = i => stacked
+    ? { x: zone.x, y: zone.y + i * (cardH + gap), w: cardW, h: cardH }
+    : { x: zone.x + i * (cardW + gap), y: zone.y, w: cardW, h: cardH };
+  const selIdx = Math.max(0, MODES.findIndex(m => m.key === SETTINGS.mode));
+  // the daily chip rides the Breaker card's diorama corner (it IS a
+  // Breaker run) — badge-style, like the preview badges
+  const bc = card(Math.max(0, MODES.findIndex(m => m.key === 'classic')));
+  const dailyH = short ? 18 : 22;
+  const dailyW = Math.min(bc.w * 0.62, 170);
+  const daily = { x: bc.x + bc.w - dailyW - 14, y: bc.y + 14, w: dailyW, h: dailyH };
+  const utilityW = short ? 92 : 118;
   const dex = narrow
     ? { x: pad, y: footerY, w: (W - pad * 2 - gap) / 2, h: footerH }
     : { x: W - pad - utilityW * 2 - gap, y: headerY + 8, w: utilityW, h: headerH - 16 };
@@ -207,13 +210,14 @@ function menuLayout() {
     ? { x: pad + (W - pad * 2 - gap) / 2 + gap, y: footerY, w: (W - pad * 2 - gap) / 2, h: footerH }
     : { x: W - pad - utilityW, y: headerY + 8, w: utilityW, h: headerH - 16 };
   return {
-    s: Math.max(0.72, Math.min(1, H / 760)), short, narrow, stacked: narrow,
-    pad, headerY, headerH, titleY, titleSize, hero, copy, preview, modeY,
-    quick: { x: copy.x, y: startY, w: startW, h: startH },
-    daily: { x: copy.x, y: secondaryY, w: secondaryW, h: secondaryH },
-    card: i => ({ x: hero.x + modePad + i * (modeW + modeGap), y: modeY, w: modeW, h: modeH }),
-    resume: hasCkpt ? { x: copy.x + secondaryW + gap, y: secondaryY, w: secondaryW, h: secondaryH } : null,
-    progress: narrow ? null : { x: pad, y: footerY, w: Math.max(280, W - pad * 2), h: footerH },
+    s: Math.max(0.72, Math.min(1, H / 760)), short, narrow, stacked,
+    pad, gap, headerY, headerH, titleY, titleSize,
+    hero: zone, preview: zone, copy: zone, modeY: zone.y,
+    card,
+    quick: card(selIdx),
+    daily,
+    resume: hasCkpt ? { x: pad, y: headerY + headerH + (short ? 6 : 12), w: W - pad * 2, h: resumeH } : null,
+    progress: narrow ? null : { x: pad, y: footerY, w: Math.max(280, W - pad * 2 - 0), h: footerH },
     dex, adv,
   };
 }
@@ -235,32 +239,41 @@ function setupLayout() {
   const bottomPad = short ? 8 : narrow ? 12 : 18;
 
   if (setupStep === 'pilot') {
-    // Six roomy columns on desktop are more legible than the old nine-card
-    // strip. Phones keep three large touch targets per row.
-    const cols = narrow ? 3 : W < 900 ? 4 : 6;
-    const rows = Math.ceil(STARTER_KEYS.length / cols);
-    const gap = short ? 5 : narrow ? 7 : 10;
-    const gridY = sectionY + (short ? 14 : 24);
-    const nextH = short ? 40 : narrow ? 52 : 54;
+    // CALM ROSTER (title overhaul): one DETAIL HERO card up top carries all
+    // the reading; below it the 18 partners are three labeled SHELVES of six
+    // small identity tiles (sprite + name only). Tap a tile → the hero
+    // explains it. The skin names the shelves (disciplines on AETHERFALL).
+    const heroW = Math.min(contentW, 860);
+    const hero = { x: cx - heroW / 2, y: sectionY + (short ? 2 : 8), w: heroW, h: short ? 56 : narrow ? 102 : 122 };
+    const nextH = short ? 38 : narrow ? 52 : 54;
     const nextW = narrow ? contentW : Math.min(420, contentW * 0.46);
     const nextY = H - bottomPad - nextH;
-    const noneH = short ? 22 : 26;
-    const noneY = nextY - noneH - (short ? 5 : 8);
-    const minInfo = short ? 0 : narrow ? 30 : 74;
-    const gridRoom = noneY - minInfo - (short ? 5 : 12) - gridY;
-    const maxCardH = short ? 54 : narrow ? 88 : 108;
-    const cardH = Math.max(short ? 36 : 48,
-      Math.min(maxCardH, (gridRoom - gap * (rows - 1)) / rows));
-    const cardW = (contentW - gap * (cols - 1)) / cols;
-    const gridH = rows * cardH + (rows - 1) * gap;
-    const infoY = gridY + gridH + (short ? 4 : 10);
-    const infoH = Math.max(0, Math.min(narrow ? 54 : 96, noneY - infoY - (short ? 4 : 8)));
+    const noneH = short ? 20 : 24;
+    const noneY = nextY - noneH - (short ? 4 : 8);
+    const gap = short ? 4 : narrow ? 6 : 8;
+    const labelH = short ? 11 : 16;
+    const vgap = short ? 4 : 8;
+    const shelfRoom = noneY - (short ? 4 : 10) - (hero.y + hero.h + (short ? 4 : 10));
+    const rowH = (shelfRoom - 3 * labelH - 2 * vgap) / 3;
+    const tileW0 = (contentW - gap * 5) / 6;
+    const tileH = Math.max(short ? 34 : 44, Math.min(narrow ? 84 : 96, rowH, tileW0 * 1.35 + 14));
+    const tileW = Math.min(tileW0, tileH * 1.15);
+    const rowW = tileW * 6 + gap * 5;
+    // center the shelf block in its room — tall phones breathe evenly
+    // instead of leaving one dead band above the bottom-pinned actions
+    const shelvesH = 3 * (labelH + tileH) + 2 * vgap;
+    const shelfTop = hero.y + hero.h + (short ? 4 : 10) + Math.max(0, (shelfRoom - shelvesH) * 0.38);
     return {
       step: 'pilot', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
-      starter: i => { const c = i % cols, r = Math.floor(i / cols);
-        return { x: cx - contentW / 2 + c * (cardW + gap), y: gridY + r * (cardH + gap), w: cardW, h: cardH }; },
+      hero, rowW, labelH, tileW, tileH,
+      shelf: g => ({ x: cx - rowW / 2, y: shelfTop + g * (labelH + tileH + vgap), w: rowW, h: labelH }),
+      starter: i => {
+        const g = Math.floor(i / 6), col = i % 6;
+        return { x: cx - rowW / 2 + col * (tileW + gap),
+          y: shelfTop + g * (labelH + tileH + vgap) + labelH, w: tileW, h: tileH };
+      },
       none: { x: cx - Math.min(290, contentW * 0.72) / 2, y: noneY, w: Math.min(290, contentW * 0.72), h: noneH },
-      info: { x: cx - Math.min(contentW, 760) / 2, y: infoY, w: Math.min(contentW, 760), h: infoH },
+      info: hero, // API alias: the hero IS the info surface now
       next: { x: cx - nextW / 2, y: nextY, w: nextW, h: nextH },
     };
   }

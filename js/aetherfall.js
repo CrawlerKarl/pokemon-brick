@@ -512,6 +512,11 @@
   Object.assign(AF, {
     edition: 'AETHERFALL EDITION',
     affinities: true, // unlocks the LIGHT/DARK setup pick (Round S6)
+    rosterGroups: [
+      { n: 'MAGIC · THE OLD WAYS', color: '#c879ff' },
+      { n: 'TECH · THE ASCENDANCY', color: '#4de0f2' },
+      { n: 'MAGITECH · THE CONVERGENCE', color: '#ffd166' },
+    ],
     starterOrder: ['fire', 'ice', 'grass', 'ghost', 'dark', 'fairy',       // MAGIC
       'steel', 'bug', 'poison', 'flying', 'rock', 'fighting',              // TECH
       'electric', 'psychic', 'dragon', 'ground', 'water', 'normal'],       // MAGITECH

@@ -5,6 +5,35 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — Title overhaul: THE THREE DOORS + the calm roster
+
+User brief: the home screen was overwhelming and the 18-partner grid
+doubly so — "simple, clean, visually beautiful, obvious options."
+
+- **Home = three doors.** The selected-hero + copy column + start button
+  + mode rail + progression bands collapse into THREE equal game cards
+  (columns on wide screens, stacked diorama-beside-text rows on
+  phones). Each card: its live diorama (the game explains itself by
+  looking like itself), the name, ONE recipe line, ONE play affordance.
+  Tapping a card selects that game AND opens partner selection — one
+  tap, one decision, Back to change. The daily chip rides the Breaker
+  card's diorama corner (it IS a Breaker run); CONTINUE is a slim band
+  under the header only when a checkpoint exists; journey/research is
+  one quiet footer line (desktop only). `menuLayout` keeps its API
+  (quick aliases the selected card; preview/hero alias the card band).
+- **Partner screen = one hero, three shelves.** All reading moved into
+  a single DETAIL HERO card (sprite, name, ability + type, effect line,
+  evolution chain); the 18 partners are small identity tiles (sprite +
+  name only) on three labeled shelves — `SKIN.rosterGroups` names them
+  (THE CLASSICS / WILD & FIERCE / MYSTICS & TITANS on pokemon; the
+  MAGIC/TECH/MAGITECH disciplines with their colors on AETHERFALL).
+  Shelf block centers in its room; tiles cap at thumb-friendly sizes;
+  NO PARTNER stays a quiet ghost chip. `setupLayout` keeps its API
+  (info aliases the hero; new shelf(g)/tile fields).
+- The setup-walk test moved to the new contract (tap a card → that
+  game's partner screen); the viewport-fit sweep passes at all six
+  sizes incl. 310×670 and 667×375. Suite 78/78.
+
 ## 2026-07-20 — BREAKER guns: support arm, Starfighter grammar + the
 ## production-art override layer
 

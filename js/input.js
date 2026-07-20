@@ -1123,15 +1123,15 @@ function onPress(x, y) {
     const L = menuLayout();
     if (skinPillRect && inRect(x, y, skinPillRect)) { SFX.power(); toggleSkin(); return; }
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
-    if (inRect(x, y, L.quick)) {
-      setupStep = 'pilot'; menuPage = 'setup'; SFX.power();
-      return;
-    }
+    // the daily badge overlaps the Breaker card — test it first
     if (inRect(x, y, L.daily)) { startDailyRun(); return; }
+    // THE THREE DOORS: tapping a game card selects it AND walks straight
+    // into partner selection — one tap, one decision, Back to change it
     for (let i = 0; i < MODES.length; i++) {
       if (inRect(x, y, L.card(i))) {
         SETTINGS.mode = MODES[i].key; saveSettings();
-        SFX.wall(); return;
+        setupStep = 'pilot'; menuPage = 'setup'; SFX.power();
+        return;
       }
     }
     if (inRect(x, y, dexBtnGeom())) { G.state = 'dex'; dexScroll = 0; return; }

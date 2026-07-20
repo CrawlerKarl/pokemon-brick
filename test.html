@@ -1937,10 +1937,13 @@ window.requestAnimationFrame = function () { return 0; };
       const L = menuLayout(), first = L.card(0), side = L.card(1);
       assert(Math.abs(first.w - side.w) < 2 && L.preview.w * L.preview.h > first.w * first.h * 2,
         'selected-game preview is not clearly separated from the equal mode switchers');
-      G.state = 'menu'; menuPage = 'modes'; setupStep = 'pilot'; SETTINGS.mode = 'classic';
-      onPress(L.quick.x + L.quick.w / 2, L.quick.y + L.quick.h / 2);
+      // THE THREE DOORS contract: tapping a game card selects that game AND
+      // opens its partner selection in one step
+      G.state = 'menu'; menuPage = 'modes'; setupStep = 'pilot';
+      const ci = MODES.findIndex(m => m.key === 'classic'), cr = L.card(ci);
+      onPress(cr.x + cr.w / 2, cr.y + cr.h / 2);
       assert(SETTINGS.mode === 'classic' && menuPage === 'setup' && setupStep === 'pilot',
-        'primary CTA did not open the selected mode\'s partner selection');
+        'tapping a game card did not open that game\'s partner selection');
       const P = setupLayout();
       assert(skinStarters().every((_, i) => P.starter(i)), 'the partner screen does not expose all 18 choices');
       const fairy = skinStarters().findIndex(s => s.key === 'fairy'), fr = P.starter(fairy);

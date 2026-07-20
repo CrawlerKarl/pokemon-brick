@@ -17,6 +17,150 @@
     "promptLog": "VERTICAL_SLICE.md#12--suncaller",
     "alphaValidated": true
   },
+  "aetherfall:13": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#13--fluxweaver",
+    "alphaValidated": true
+  },
+  "aetherfall:14": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#14--tidebinder",
+    "alphaValidated": true
+  },
+  "aetherfall:15": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#15--deepcaller",
+    "alphaValidated": true
+  },
+  "aetherfall:16": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#16--druid",
+    "alphaValidated": true
+  },
+  "aetherfall:17": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#17--grovekeeper",
+    "alphaValidated": true
+  },
+  "aetherfall:18": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#18--wildspeaker",
+    "alphaValidated": true
+  },
+  "aetherfall:19": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#19--stormbinder",
+    "alphaValidated": true
+  },
+  "aetherfall:20": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#20--tempestbinder",
+    "alphaValidated": true
+  },
+  "aetherfall:21": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#21--thundersovereign",
+    "alphaValidated": true
+  },
+  "aetherfall:22": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#22--drifter",
+    "alphaValidated": true
+  },
+  "aetherfall:23": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#23--wayfinder",
+    "alphaValidated": true
+  },
+  "aetherfall:24": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#24--paragon",
+    "alphaValidated": true
+  },
+  "aetherfall:25": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#25--aeronaut",
+    "alphaValidated": true
+  },
+  "aetherfall:26": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#26--jetcorsair",
+    "alphaValidated": true
+  },
+  "aetherfall:27": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#27--skymarshal",
+    "alphaValidated": true
+  },
+  "aetherfall:28": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#28--frostweaver",
+    "alphaValidated": true
+  },
+  "aetherfall:29": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#29--glacimancer",
+    "alphaValidated": true
+  },
+  "aetherfall:30": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#30--wintersage",
+    "alphaValidated": true
+  },
+  "aetherfall:31": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#31--vanguard",
+    "alphaValidated": true
+  },
+  "aetherfall:32": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#32--shocktrooper",
+    "alphaValidated": true
+  },
+  "aetherfall:34": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#34--chemist",
+    "alphaValidated": true
+  },
+  "aetherfall:35": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#35--venomsmith",
+    "alphaValidated": true
+  },
+  "aetherfall:37": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#37--terrashaper",
+    "alphaValidated": true
+  },
+  "aetherfall:38": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#38--quakebinder",
+    "alphaValidated": true
+  },
   "aetherfall:101": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
