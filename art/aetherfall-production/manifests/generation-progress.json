@@ -1,0 +1,32 @@
+{
+  "aetherfall:10": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#10--pyromancer",
+    "alphaValidated": true
+  },
+  "aetherfall:101": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#101--thistling",
+    "alphaValidated": true
+  },
+  "aetherfall:102": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#102--briarkin",
+    "alphaValidated": true
+  },
+  "aetherfall:103": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#103--thornwarden",
+    "alphaValidated": true
+  },
+  "aetherfall:180": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#180--velmora-the-first-oracle",
+    "alphaValidated": true
+  }
+}

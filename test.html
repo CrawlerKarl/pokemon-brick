@@ -1365,6 +1365,54 @@ window.requestAnimationFrame = function () { return 0; };
     return 'neutral/light/dark trios gate correctly · pokemon ignores affinity · stacks seeded';
   });
 
+  // 2b-ii) CLASSIC DEFLECTOR CORE (balance round): enemy fire only damages a
+  // FIXED core at the paddle's center; width mods grow the visual paddle and
+  // its deflector wings, NEVER the kill zone. Wing hits are consumed with no
+  // life lost; wave fire can't stack past 8 live shots.
+  test('classic deflector core: width is armor, never a bigger target', async () => {
+    SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'flying';
+    resetRun(5, true, { seed: 'core-balance' });
+    G.state = 'play'; G.stateT = 9; G.invuln = 0; G.shieldCharges = 0;
+    // park a STUCK ball: classic loses a life at zero balls, so an empty
+    // array would blame ball loss on the wing — a stuck ball never drops
+    G.balls = [makeBall(W / 2, PADDLE_Y() - 24)];
+    G.balls[0].stuck = true;
+    const baseCore = classicCoreHalf();
+    G.fx_wide = { t: 999, tier: 3 };
+    G.upg.wide = 1;
+    assert(Math.abs(classicCoreHalf() - baseCore) < 0.001,
+      'width mods changed the damage core (' + classicCoreHalf() + ' vs ' + baseCore + ')');
+    assert(paddleW() / 2 > classicCoreHalf() + 40,
+      'stacked width should extend well past the core (wings exist)');
+    // 1) a shot on the WING deflects: consumed, zero damage, no i-frames
+    const py = PADDLE_Y(), lives0 = G.lives;
+    G.paddle.x = W / 2; mouseX = W / 2;
+    const wingX = W / 2 + classicCoreHalf() + 30;
+    spawnEnemyShot({ x: wingX, y: py - 6, vy: 200, type: 'fire', classKey: 'standard' });
+    for (let i = 0; i < 12; i++) { G.paddle.x = W / 2; update(1 / 60); }
+    assert(G.lives === lives0, 'a wing hit cost a life');
+    assert(G.invuln === 0, 'a wing deflect burned i-frames');
+    assert(!G.enemyShots.some(s => !s.dead && !s.boss), 'the wing shot was not consumed');
+    // 2) a shot on the CORE still lands (one life, the honest rule)
+    spawnEnemyShot({ x: W / 2, y: py - 6, vy: 200, type: 'fire', classKey: 'standard' });
+    for (let i = 0; i < 12; i++) { G.paddle.x = W / 2; update(1 / 60); }
+    assert(G.lives === lives0 - 1, 'a core hit did not cost exactly one life (' + (lives0 - G.lives) + ')');
+    // 3) column strikes clip the core, not the widened wings
+    G.invuln = 0;
+    G.columnStrikes.push({ x: W / 2 + classicCoreHalf() + 40, w: 20, warn: -1, strike: 0.3 });
+    for (let i = 0; i < 6; i++) { G.paddle.x = W / 2; update(1 / 60); }
+    assert(G.lives === lives0 - 1, 'a beam on the wings hit the player');
+    G.columnStrikes = [];
+    // 4) the classic wave-fire ceiling: 8+ live shots block new telegraphs
+    G.enemyShots = []; G.telegraphs = [];
+    for (let i = 0; i < 9; i++) spawnEnemyShot({ x: 60 + i * 40, y: 80, vy: 40, type: 'grass', classKey: 'standard' });
+    G.enemyShotCD = 0; G.invuln = 2; // stay safe while the wall exists
+    for (let i = 0; i < 30; i++) { G.paddle.x = W / 2; G.invuln = 2; update(1 / 60); }
+    assert(G.telegraphs.every(t => t.boss), 'wave telegraphs were scheduled past the 8-shot ceiling');
+    G.enemyShots = []; G.fx_wide = null; delete G.upg.wide;
+    return 'fixed core under ×2.05 width · wing shots + beams deflect free · core costs 1 life · 8-shot ceiling holds';
+  });
+
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
   // the player, and an unshielded hit still costs a life. (Shields used to
   // trigger only at the floor line BELOW the player — dead in these modes.)

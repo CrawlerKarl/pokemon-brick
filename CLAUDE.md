@@ -154,6 +154,16 @@ phone — flag anything only verifiable there.
   render-only multipliers in `ENEMY_SHOT_DRAW_SCALE`. Caterpie-family `stinger`
   and electric `needle` silhouettes must retain their white spine and outline.
   Never grow `hitR` merely to match visibility art.
+- **CLASSIC's paddle has a FIXED damage core; width is armor, never a bigger
+  target.** Enemy shots and column beams only damage `classicCoreHalf()`
+  (0.42 × BASE width — WIDE power / wide tier / Tailwind grow the visual
+  paddle and its catch/ball reach, never the kill zone; the junkie
+  "upgrades never widen the hurtbox" rule, translated). Paddle wings
+  beyond the core DEFLECT shots free (no life, no i-frames — sparks +
+  throttled floater + a once-per-run announce; render shows the warm core
+  / pale wing sheen from level 2 on). Classic wave fire also has a hard
+  ceiling: 8 live non-boss shots block new telegraphs. Suite-tested
+  ('classic deflector core') — never re-couple the hurtbox to `paddleW()`.
 - **Upgrade-web luminance means installability.** Only nodes in the current
   three-choice draft use a lit badge, white halo, and literal `OPTION N` tag.
   Owned nodes are steady, reachable nodes muted, locked nodes very dim; tapping

@@ -6,6 +6,17 @@ function paddleW() {
   return G.paddle.w * (1 + 0.18 * upgN('wide')) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1)
     * starterMod('paddle', 1);
 }
+// CLASSIC's answer to the junkie "upgrades never widen the hurtbox" rule:
+// enemy fire only DAMAGES a fixed core around the paddle's center — width
+// mods (WIDE power, the wide tier, Tailwind) grow the VISUAL paddle and its
+// ball/catch reach, never the kill zone. The wings beyond the core DEFLECT
+// shots (armor, not a target), so widening is always a pure upgrade.
+// 0.42 × base width ≈ a 55 px half-core on the 130 px paddle — wide enough
+// to feel honest at the center, small enough that an elite's 3-shot fan
+// can no longer clip you with every prong at once.
+function classicCoreHalf() {
+  return Math.min(paddleW(), G.paddle.w * 0.84) / 2;
+}
 function timeScale() {
   return (G.fx_slow ? 0.5 : 1) * (G.starterChillT > 0 ? 0.7 : 1)
     * SETTINGS.speed * (G.dramaticT > 0 ? 0.3 : 1);
@@ -2887,6 +2898,7 @@ function update(dt) {
   G.invuln = Math.max(0, G.invuln - dt);
   G.blasterCD = Math.max(0, G.blasterCD - dt);
   G.muzzle = Math.max(0, G.muzzle - dt);
+  G.wingFloatT = Math.max(0, (G.wingFloatT || 0) - dt); // wing-deflect floater throttle
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
   G.surgeFlash = Math.max(0, (G.surgeFlash || 0) - dt * 2.4); // surge-ring flare after a Rally bank
   G.hurtHud = Math.max(0, (G.hurtHud || 0) - dt); // on-hit health readout at the player
@@ -4595,7 +4607,12 @@ function update(dt) {
             && G.encounter.squads[b.flight.sq].silenceT > 0));
         // cap concurrent warnings so the board never fills with warning lines
         const activeTel = G.telegraphs.reduce((n, t) => n + (t.boss ? 0 : 1), 0);
-        if (alive.length && activeTel < (blaster ? 5 : 3)) {
+        // CLASSIC pressure ceiling: wave fire never stacks past 8 live shots
+        // no matter how preset × ambush × late-region cadence multiply out.
+        // Ball play needs readable lanes; sustained cadence stays, walls don't.
+        const classicWall = G.mode === 'classic'
+          && G.enemyShots.reduce((n, s) => n + (!s.dead && !s.boss ? 1 : 0), 0) >= 8;
+        if (alive.length && activeTel < (blaster ? 5 : 3) && !classicWall) {
           const shooter = alive[Math.floor(gameRand() * alive.length)];
           if (G.mode === 'junkie') {
             const pattern = starEnemyPattern(shooter);
@@ -4659,8 +4676,11 @@ function update(dt) {
     } else {
       cs.strike -= dt * ts;
       // the junkie pilot is a compact mon — beam clips its small hitbox, not
-      // a phantom paddle width (same rule as enemy shots)
-      const halfW = G.mode === 'junkie' ? 26 : paddleW() / 2;
+      // a phantom paddle width (same rule as enemy shots). Classic clips the
+      // fixed DAMAGE CORE (never the widened wings), blaster its base width —
+      // a warned beam lane must always leave a reachable escape.
+      const halfW = G.mode === 'junkie' ? 26
+        : G.mode === 'classic' ? classicCoreHalf() : G.paddle.w / 2;
       if (G.invuln <= 0 && Math.abs(G.paddle.x - cs.x) < cs.w / 2 + halfW) {
         cs.strike = 0;
         if (absorbHit(G.paddle.x, shipY())) continue;
@@ -4886,9 +4906,11 @@ function update(dt) {
     const py = shipY();
     // Visual scale and collision scale are independent. The ship has a small
     // core hurtbox; even a screen-filling shot never inherits its full art
-    // radius as invisible splash.
+    // radius as invisible splash. Classic's DAMAGE core is fixed
+    // (classicCoreHalf — width mods never grow it); the wings outside it
+    // are deflector armor handled just before the damage branch below.
     const hitR = s.hitR || (s.heavy ? 14 : 8);
-    const hitW = (jk ? 13 : (G.mode === 'classic' ? paddleW() / 2 : G.paddle.w / 2) + 4) + hitR;
+    const hitW = (jk ? 13 : (G.mode === 'classic' ? classicCoreHalf() : G.paddle.w / 2) + 4) + hitR;
     const hitH = (jk ? 12 : G.paddle.h / 2 + 4) + hitR;
     // PROTECT OBJECTIVE: enemy fire can strike the friendly. This narrow check
     // runs ONLY while a live friendly exists — a shot inside its hitR is
@@ -4922,6 +4944,35 @@ function update(dt) {
         }
         ringFx(s.x, wy, '#a5d6a7', 4, 30, 2, 0.3);
         tone(640, 0.07, 'square', 0.04, -140);
+        continue;
+      }
+    }
+    // DEFLECTOR WINGS (classic): the visual paddle beyond the fixed damage
+    // core is ARMOR. A shot striking a wing is consumed with a spark — no
+    // life, no i-frames burned, and it works during invuln too. This is what
+    // makes every width upgrade a pure upgrade: more ball reach, more armor,
+    // same small kill zone. Aimed elite/boss fire still targets your center,
+    // so the counterplay (move the CORE) is untouched.
+    if (!s.dead && G.mode === 'classic' && s.y > py - hitH && s.y < py + hitH) {
+      const dx = Math.abs(s.x - G.paddle.x);
+      const wingHalf = paddleW() / 2 + 4 + hitR;
+      if (dx >= hitW && dx < wingHalf) {
+        s.dead = true;
+        statsDeflect();
+        burst(s.x, py, '#cfe8ff', 8, 160, 0.35);
+        ringFx(s.x, py, '#b0e3ff', 3, 22, 2, 0.25);
+        tone(520, 0.05, 'square', 0.035, -200);
+        if ((G.wingFloatT || 0) <= 0) {
+          G.wingFloatT = 0.7;
+          addFloater(s.x, py - 30, 'DEFLECTED', '#b0e3ff', 11);
+        }
+        // once per run, name the mechanic the moment it first saves you
+        if (!G.wingTipShown) {
+          G.wingTipShown = true;
+          setAnnounce('shield', '#b0e3ff', 'WING DEFLECT!',
+            "THE PADDLE'S EDGES ARE ARMOR — ONLY THE GLOWING CORE IS VULNERABLE", 3,
+            'WIDER PADDLE = MORE ARMOR, SAME SMALL CORE');
+        }
         continue;
       }
     }

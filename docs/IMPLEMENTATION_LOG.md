@@ -5,6 +5,45 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — BREAKER balance: the deflector core (width was a trap)
+
+User report: classic's enemy fire sometimes reads impossible to dodge,
+and widening the paddle — sold as a pure upgrade — made it worse.
+
+**Diagnosis (instrumented dodge-bot, 90s seeded runs, Normal):** wave
+fire tops out at 3 simultaneous shots (the telegraph cap works), so the
+pain wasn't volume — it was the HURTBOX. Classic used the full live
+paddle width as the shot target: base 130px × wide tier 1.18 × WIDE
+power ×2.05 × Tailwind ×1.3 ≈ 346–409px visual → a 322–432px kill zone
+vs shots at ~350–450px/s. An elite 3-fan's prongs land closer together
+than that, so every prong clipped — mathematically unavoidable. Bot lost
+4 lives in 90s at region 8. Column beams used `paddleW()/2` too, so a
+wide paddle could make warned lanes inescapable.
+
+**Fix — the deflector core** (`classicCoreHalf()`, update.js):
+- Enemy shots + column beams damage only a FIXED core: 0.42 × BASE
+  width (≈55px half). Width mods never touch it — the junkie "upgrades
+  never widen the hurtbox" invariant, translated to the paddle.
+- The visual wings beyond the core DEFLECT shots free (consumed, spark
+  + throttled 'DEFLECTED' floater, no life, no i-frames) — every width
+  upgrade is now purely good: more ball reach AND more armor. Aimed
+  elite/boss fire still targets your center, so movement stays the
+  counterplay.
+- Once per run, the first wing save announces the rule; the paddle
+  renders the warm vulnerable core + pale wing sheen from level 2 on
+  (pure fills, no per-frame gradient/shadow work).
+- Safety ceiling: classic wave fire stops scheduling telegraphs past 8
+  live non-boss shots (measured max was 3 on Normal — this bounds
+  Ace/One-Life × ambush × late-region stacking).
+- Blaster beam collision fixed to its base width (WIDE CATCH no longer
+  inflates beam hits); junkie untouched.
+
+**After (same seeds, same bot):** R8 4 → 1 lives lost; R2 2 → 1 and the
+wave now clears; core pinned at 55px under a 346px paddle. Suite 76 →
+77 ('classic deflector core: width is armor, never a bigger target' —
+fixed core under stacked width, wing shots + beams deflect free, core
+costs exactly 1, the 8-shot ceiling holds).
+
 ## 2026-07-20 — AETHERFALL art v2: every design bespoke
 
 Full rewrite of `js/aetherart.js` (~3.9k lines): the ten generic

@@ -1938,6 +1938,25 @@ function drawPaddle() {
   roundRect(x - pwv / 2, py - ph / 2, pwv, ph, 9);
   ctx.fillStyle = g; ctx.fill();
   ctx.shadowBlur = 0;
+  // ---- the DAMAGE CORE readout (classic): enemy fire only hurts the
+  // center segment; the wings beyond it are deflector armor. Once fire is
+  // part of the wave (level 2+), the vulnerable core glows warm so the
+  // "small kill zone" rule is visible right on the hull. Pure fills — no
+  // per-frame gradient/shadow work.
+  if (G.mode === 'classic' && G.level >= 2 && (G.state === 'play' || G.state === 'serve')) {
+    const coreW = Math.min(pwv, classicCoreHalf() * 2 * (2 - sq));
+    const pulseC = 0.16 + 0.08 * Math.sin(G.time * 4);
+    roundRect(x - coreW / 2, py - ph / 2 + 1.5, coreW, ph - 3, 7);
+    ctx.fillStyle = `rgba(255,120,80,${pulseC})`; ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(255,180,140,${0.4 + 0.2 * Math.sin(G.time * 4)})`;
+    roundRect(x - coreW / 2, py - ph / 2 + 1.5, coreW, ph - 3, 7); ctx.stroke();
+    if (pwv > coreW + 18) { // faint armor sheen on the wings when they exist
+      ctx.fillStyle = 'rgba(176,227,255,0.10)';
+      roundRect(x - pwv / 2 + 2, py - ph / 2 + 2, (pwv - coreW) / 2 - 5, ph - 4, 6); ctx.fill();
+      roundRect(x + coreW / 2 + 3, py - ph / 2 + 2, (pwv - coreW) / 2 - 5, ph - 4, 6); ctx.fill();
+    }
+  }
   // ---- starter styling: the rig grows more elaborate at each evolution ----
   const sLvl = G.starterLvl;
   if (G.starter === 'fire') {
