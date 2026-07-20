@@ -3434,6 +3434,124 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('objective: escort the traveler (protect → disperse, faint → attrition)', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(10, true, { seed: 'obj-escort' }); // Sinnoh arrival
+      paused = false; G.freeze = 0;
+      assert(G.objective && G.objective.type === 'escort', 'Sinnoh arrival did not arm the escort objective');
+      const fr = G.objective.friendly;
+      assert(fr && fr.friendly && fr.poke.id === 175 && fr.fhp === 3 && fr.fpath === 'cross',
+        'the escort friendly (Togepi 175, fhp 3, path cross) was not spawned');
+      assert(!fr.flight, 'the friendly must have NO flight slot (outside the formation/solver systems)');
+      // player fire PASSES THROUGH — no damage, the bolt survives, no lastHit
+      G.enemyShots = [];
+      const hp0 = fr.hp;
+      G.lasers = [{ basic: true, x: fr.bx + G.fx, y: fr.by + G.fy }];
+      update(1 / 60);
+      assert(fr.hp === hp0 && !fr.dead && fr.fhp === 3, 'player fire damaged the friendly');
+      assert(G.lasers.length && !G.lasers[0].dead && G.lasers[0].lastHit !== fr,
+        'the bolt did not pass through the friendly (no survive / spent pierce on it)');
+      // a forced enemy shot at its position chips a heart pip and is consumed
+      const pip0 = fr.fhp;
+      G.enemyShots = [{ x: fr.bx + G.fx, y: fr.by + G.fy, vx: 0, vy: 0, type: 'normal', classKey: 'micro', _t: 1 }];
+      update(1 / 60);
+      assert(fr.fhp === pip0 - 1, 'an enemy shot on the friendly did not chip its fhp');
+      assert(!G.enemyShots.some(s => s._t), 'the enemy shot that struck the friendly was not consumed');
+      // attrition can't clear while the traveler lives (survive-guard parity)
+      let clearedEarly = false;
+      await runFrames(60 * 2, () => {
+        for (const b of G.bricks) if (!b.dead && !b.crosser && !b.barrier && !b.friendly) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
+        if (G.state !== 'play') { clearedEarly = true; return false; }
+      });
+      assert(!clearedEarly && !G.objective.done, 'the escort wave cleared by attrition while the traveler lived');
+      assert(G.objective.progress > 0, 'escort progress did not advance as the traveler climbed');
+      // guarantee a swarm to disperse, then send the traveler to its exit
+      spawnReinforcement();
+      await runFrames(30);
+      assert(G.bricks.some(b => b.flight && !b.dead), 'no swarm present to disperse');
+      const fr2 = G.objective.friendly; fr2.by = fr2.fexitY - 1;
+      const sc0 = G.score;
+      update(1 / 60);
+      assert(G.objective.done, 'the traveler reaching the exit did not complete the escort');
+      assert(G.score - sc0 >= 600, 'escort completion did not pay the +600');
+      assert(G.reinforce === 0 && G.bricks.some(b => b.crosser && !b.dead), 'the swarm did not disperse on escort completion');
+      await runFrames(60 * 8, () => G.state === 'play' ? undefined : false);
+      assert(G.state === 'results', 'completing the escort did not clear the stage');
+      assert(G.results && G.results.objective === 'escort' && G.results.objectiveDone === true, 'ledger did not record the escort as complete');
+      skipResults();
+      // FRESH run: drain the friendly → objective FAILS, it faints, the wave
+      // reverts to a normal attrition clear (the guard ignores failed objectives)
+      resetRun(10, true, { seed: 'obj-escort-fail' });
+      paused = false; G.freeze = 0;
+      await runFrames(10); // prime past the serve→play transition before injecting
+      const frF = G.objective.friendly; frF.fhp = 1;
+      G.enemyShots = [{ x: frF.bx + G.fx, y: frF.by + G.fy, vx: 0, vy: 0, type: 'normal', classKey: 'micro' }];
+      update(1 / 60); update(1 / 60);
+      assert(G.objective.failed && frF.dead, 'draining the friendly did not FAIL the objective + faint it');
+      await runFrames(60 * 8, () => {
+        G.reinforce = 0;
+        for (const b of G.bricks) if (!b.dead && !b.crosser && !b.friendly) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
+        return G.state === 'play' ? undefined : false;
+      });
+      assert(G.state === 'results', 'a FAILED escort did not revert to a normal attrition clear');
+      assert(G.results.objective === 'escort' && G.results.objectiveDone === false, 'ledger did not record the escort as failed');
+      skipResults();
+      return 'escort: pass-through fire, enemy chips fhp, protect-guard holds, exit → +600/disperse/clear; faint → fail → attrition';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
+  test('objective: defend the relay (hold the line)', async () => {
+    const oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(17, true, { seed: 'obj-defend' }); // Kalos challenge
+      paused = false; G.freeze = 0;
+      assert(G.objective && G.objective.type === 'defend' && G.objective.dur > 0, 'Kalos challenge did not arm the defend objective');
+      const fr = G.objective.friendly;
+      assert(fr && fr.poke.id === 137 && fr.fpath === 'hold', 'the relay friendly (Porygon 137, path hold) was not spawned');
+      fr.fhp = 30; // isolate the redirect + completion logic from incidental fire
+      // the relay is STATIONARY — it parks near W/2 and barely drifts
+      const x0 = fr.bx, y0 = fr.by;
+      await runFrames(90);
+      assert(Math.abs(fr.bx - x0) < 30 && Math.abs(fr.by - y0) < 30, 'the relay drifted from its hold station');
+      // REDIRECT: while the relay lives, every 2nd AIMED MICRO volley aims at
+      // the relay instead of the pilot. Put the pilot far left and the shooter
+      // directly above the relay: pilot-aim → vx≪0, relay-aim → vx≈0 (down).
+      G.paddle.x = 60;
+      const rx = fr.bx + G.fx, src = { poke: { id: 19, t: 'normal' } };
+      const micro = { classKey: 'micro', kind: 'shot', count: 1, spread: 0, aimed: true, speedMul: 0.7 };
+      G.objective.redirN = 0;
+      G.enemyShots = []; spawnStarEnemyPattern(src, micro, rx, 80, diff(), 1); // redirN 1 (odd → pilot)
+      const v1 = G.enemyShots[G.enemyShots.length - 1];
+      G.enemyShots = []; spawnStarEnemyPattern(src, micro, rx, 80, diff(), 2); // redirN 2 (even → relay)
+      const v2 = G.enemyShots[G.enemyShots.length - 1];
+      assert(v1.vx < -30, 'the non-redirected micro volley did not aim at the pilot');
+      assert(Math.abs(v2.vx) < Math.abs(v1.vx) && v2.vy > 0, 'the alternating micro volley did not redirect its aim onto the relay');
+      // HEAVY fire is NOT redirected — it keeps hunting the pilot even on the
+      // alternating slot (micro class only)
+      const heavy = { classKey: 'heavy', kind: 'shot', count: 1, spread: 0, aimed: true, speedMul: 0.7 };
+      G.objective.redirN = 1; // next call is the even slot
+      G.enemyShots = []; spawnStarEnemyPattern(src, heavy, rx, 80, diff(), 3);
+      assert(G.enemyShots[G.enemyShots.length - 1].vx < -30, 'heavy fire was wrongly redirected to the relay');
+      // TIMER completion → disperse + clear; ledger records objectiveDone
+      spawnReinforcement();
+      await runFrames(30);
+      assert(G.bricks.some(b => b.flight && !b.dead), 'no swarm present to disperse');
+      G.enemyShots = []; G.objective.friendly.fhp = 3;
+      G.objective.t = G.objective.dur - 0.001;
+      update(1 / 60);
+      assert(G.objective.done, 'holding the relay for the timer did not complete the defend');
+      assert(G.reinforce === 0 && G.bricks.some(b => b.crosser && !b.dead), 'the relay defense did not disperse the swarm');
+      await runFrames(60 * 8, () => G.state === 'play' ? undefined : false);
+      assert(G.state === 'results', 'completing the defend did not clear the stage');
+      assert(G.results && G.results.objective === 'defend' && G.results.objectiveDone === true, 'ledger did not record objectiveDone for the defend');
+      skipResults();
+      return 'defend: stationary relay, alternating micro fire redirects onto it (heavy stays on the pilot), timer → disperse/clear/ledger';
+    } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

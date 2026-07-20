@@ -436,6 +436,19 @@ case 150, update.js):
 The pattern (one move answered by normal fire, one by charge, desperation
 with readable counterplay) is Milestone 4's template for every boss.
 
+### Protect objectives: the friendly entity (Milestone 3 Round C)
+STARFIGHTER's first FRIENDLY combat entity (`br.friendly`): outside
+every formation system like a crosser, untouchable by your own fire
+(bolts pass straight through), but the swarm hunts it — every other
+aimed micro volley redirects onto it and each hit chips one of three
+heart pips. **ESCORT THE TRAVELER** (Sinnoh arrival): Togepi crosses
+the battle bottom-to-top over ~18s; get it to the exit and the swarm
+disperses (+600, a potion at the exit). **DEFEND THE RELAY** (Kalos
+challenge): Porygon holds mid-field for 22s. If the friendly faints,
+the objective FAILS — the banner drops and the wave reverts to a
+normal clear (the game's first objective fail state). The results
+screen records the outcome.
+
 ### Round D: sentinel rhythm + presentation polish (Milestone 4)
 Round 1 now has a combat read: **sentinels GUARD** (×0.55 damage behind
 a hexagonal ring) and the one that just fired its typed special drops

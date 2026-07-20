@@ -881,6 +881,20 @@ function drawBricks() {
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
       if (br.shiny) drawGlyph(ctx, 'fairy', x + s2 * 0.4, yb - s2 * 0.4, 5, '#ffd700');
+      // PROTECT-objective ally: a soft wingmate-pink ring reads it as FRIENDLY
+      // at a glance, with heart pips above for its remaining fhp. Strokes and
+      // glyphs only — no gradients, no shadowBlur (mobile-safe, reduceFlash ok).
+      if (br.friendly) {
+        ctx.strokeStyle = '#ff80ab';
+        ctx.globalAlpha = 0.5 + 0.22 * Math.sin(G.time * 3 + br.wobble);
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.62, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+        const pips = Math.max(0, br.fhp || 0), pw = 9, py2 = yb - s2 * 0.62 - 9;
+        for (let i = 0; i < pips; i++) {
+          drawGlyph(ctx, 'heart', x + (i - (pips - 1) / 2) * pw, py2, 4, '#ff80ab');
+        }
+      }
       // Sentinel bosses always carry a named bar; ordinary tough flyers use a
       // compact ring once damaged. This creates a clear health hierarchy:
       // player rail → sentinel bar → legendary phase bar → elite rings.
@@ -4028,11 +4042,18 @@ function drawBrickBehaviorLegend() {
 // is understandable from a UI cue, not just from the announce card.
 function drawObjectiveBanner() {
   const O = G.objective;
-  if (!O || O.done || (G.state !== 'play' && G.state !== 'serve')) return;
+  // a FAILED objective draws nothing — the banner vanishing is the tell (the
+  // strip notice already named the fall), and the wave is a normal clear now.
+  if (!O || O.done || O.failed || (G.state !== 'play' && G.state !== 'serve')) return;
   const short = W < 560;
-  const label = O.name || 'OBJECTIVE';
+  let label = O.name || 'OBJECTIVE';
   let readout = '';
   if (O.type === 'survive') readout = Math.max(0, Math.ceil(O.dur - O.t)) + 's';
+  else if (O.type === 'defend') readout = Math.max(0, Math.ceil(O.dur - O.t)) + 's';
+  else if (O.type === 'escort') readout = Math.round((O.progress || 0) * 100) + '%';
+  // PROTECT objectives inline the friendly's remaining heart pips
+  const fr = O.friendly;
+  if (fr && !fr.dead) label += '  ·  ' + '♥'.repeat(Math.max(0, fr.fhp));
   const y = short ? 44 : 52;
   const w = Math.min(W * 0.72, (short ? 220 : 300));
   ctx.save();
@@ -6961,8 +6982,16 @@ function drawResults() {
     hitLine + '   ·   SHOTS ' + R.shotsN + ' / CHARGED ' + R.shotsC
     + (R.overheats ? '   ·   OVERHEATED ×' + R.overheats : ''),
     W / 2, rowY + rowGap, W * 0.92);
-  // objectives — the mastery list with medal states
-  const objY = rowY + rowGap * (short ? 2.2 : 2.7);
+  // ENCOUNTER OBJECTIVE outcome (M3 Round C) — one line from the ledger
+  if (R.objective) {
+    ctx.fillStyle = R.objectiveDone ? '#9CFF57' : '#ff8a80';
+    ctx.font = bodyFont(short ? 11 : 13, 700);
+    ctx.fillText('OBJECTIVE: ' + R.objective.toUpperCase() + ' — ' + (R.objectiveDone ? 'COMPLETE' : 'FAILED'),
+      W / 2, rowY + rowGap * 2, W * 0.92);
+  }
+  // objectives — the mastery list with medal states (pushed down one row when
+  // the encounter-objective line above is present, so they never collide)
+  const objY = rowY + rowGap * (short ? 2.2 : 2.7) + (R.objective ? rowGap : 0);
   // narrow phones stack name+badge over the description, so the row is taller
   const objH = narrow ? (short ? 42 : 54) : (short ? 30 : 40);
   const panelW = Math.min(W * 0.92, 640);

@@ -196,6 +196,18 @@ phone — flag anything only verifiable there.
   separation solver, the overlap invariants, the shooter pool, the
   `blocksStatic` position snap, the dramatic slow-mo, AND the level-clear
   condition. Never let a crosser hold a wave hostage.
+- **`br.friendly` (M3 protect objectives) = crosser exclusions PLUS two
+  rules:** player fire passes through (laser loop `continue` + a
+  damageBrick guard — no damage, no pierce spent, no lastHit, ever) and
+  enemy shots CAN hit it (3 `fhp` heart pips, shot consumed; the
+  collision runs only while a live friendly exists). Enemy targeting is
+  a REDIRECT of every 2nd aimed micro volley — never additional shots
+  (threat budget untouched) and never heavies (interception stays the
+  counterplay, dodging stays the player's). A fainted friendly sets
+  `O.failed` — the clear guard ignores done OR failed objectives, so a
+  failed protect wave reverts to a normal attrition clear. Friendlies
+  render with the ally-pink ring + heart pips and must never enter
+  formation/solver/overlap systems.
 - **Charge has a full timing arc (M2).** `RESONANCE_WINDOW` (0.38s after
   the charge tops out) → resonant release (+25% power, +1 pierce, ×0.7
   heat). Past ~1.4s the barrel OVERCHARGES (heat outpaces cooling). The

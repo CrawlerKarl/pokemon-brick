@@ -5,6 +5,40 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 3 Round C: the friendly entity + protect objectives
+
+The first entity-based objective families, on the game's first
+FRIENDLY combat entity. Design: `M3_ENTITY_OBJECTIVES.md`.
+- **`br.friendly`**: crosser-parity exclusions (solver/overlap/shooter
+  pool/snap/slow-mo/clear/director baseline) PLUS laser pass-through
+  (no damage, no pierce, no lastHit — and a damageBrick guard so AoE
+  can't hurt it either) and a NEW enemy-shot collision (3 heart pips,
+  shot consumed, ring+floater). Every 2nd aimed MICRO volley redirects
+  onto the friendly (redirect, never add — heavies keep hunting the
+  pilot, so interception is the counterplay and dodging stays yours).
+- **ESCORT THE TRAVELER** ('3:0' L10, Togepi 175): crosses bottom→top
+  at ~34 px/s (~17-20s — retuned from the spec's 55 for journey feel);
+  banner shows path % + hearts. **DEFEND THE RELAY** ('5:1' L17,
+  Porygon 137): stationary, 22s countdown. Both hold the wave open
+  (survive-guard parity + reuse of its reinforcement drip); completion
+  = +600, potion at the friendly, survive-style disperse, clear.
+- **First objective FAIL state**: friendly faints → `O.failed`, strip
+  notice, banner suppressed, wave reverts to a normal attrition clear
+  (the clear guard ignores done OR failed objectives). No extra
+  punishment.
+- **Ledger**: `statsObjective(type, done)` + one OBJECTIVE line in
+  results (mastery list shifts a row when present).
+- Tests 69 → 71 (escort: pass-through/chip/guard/exit/disperse/faint-
+  fail; defend: hold/redirect-vs-heavy/timer). One test fix from the
+  first run: the faint branch injected its shot on the very first
+  post-reset update (still serve) — primed past the serve→play
+  transition. M9 note: near the exit the escort passes behind the
+  banner/formation band briefly — consider an exit-lane nudge in the
+  region-authoring pass.
+- Verified: 71/71 fronted, live escort (banner ♥♥ · 61%) and relay
+  (♥♥♥ · 16s) screenshots, console clean, verify-assets OK (175/137
+  named + sprited locally).
+
 ## 2026-07-19 — Milestone 4 Round D: sentinel rhythm + presentation
 
 The combat template was complete (18 duels); Round D gave round 1 a

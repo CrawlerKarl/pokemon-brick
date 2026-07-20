@@ -384,6 +384,12 @@ function specVeilActive(br) {
   return !!br.specVeil && ((G.time + br.specVeil.ph) % 3.4) < 2.0;
 }
 function statsShellCrack() { const L = statsCur(); if (L) L.shellCracks = (L.shellCracks || 0) + 1; }
+// ENCOUNTER OBJECTIVE outcome (M3 Round C): records the protect-objective
+// resolution on the current level ledger so RESULTS can surface one line.
+function statsObjective(type, done) {
+  const L = statsCur(); if (!L) return;
+  L.objective = type; L.objectiveDone = !!done;
+}
 // ---- STAGE MEDALS (pkbrk-medals): { '<lvl>': { objectiveKey: 1 } }.
 // Awarded on the results screen from stageObjectives(lvl) checks — real
 // journeys only (never trial/daily/cheated). Survives corrupt storage via
@@ -419,6 +425,7 @@ function buildStageResults() {
         : genFor(lvl).name + ' · ' + STAGE_NAMES[stageIdx(lvl) + 1],
     t: L.t || 0, kills: L.kills || 0, score: G.score,
     hitsTaken, topFam: topFam ? topFam[0] : null,
+    objective: L.objective || null, objectiveDone: !!L.objectiveDone,
     shotsN: L.shotsN || 0, shotsC: L.shotsC || 0,
     overheats: L.overheats || 0, megas: L.megas || 0,
     catches: G.caughtRun, medalsSaved: !G.trial && !G.daily && !G.cheated,
@@ -1339,7 +1346,30 @@ function buildLevel(lvl) {
       t: 0, lastFireT: 0, threatMul: 1, threatT: 0 };
     // a live in-wave OBJECTIVE that changes how the stage is cleared
     const o = encounterObjective(lvl);
-    if (o) G.objective = { ...o, t: 0, done: false, progress: 0, spawnT: 4 };
+    if (o) {
+      G.objective = { ...o, t: 0, done: false, failed: false, progress: 0, spawnT: 4 };
+      // PROTECT families (escort/defend) carry a FRIENDLY mon — a G.bricks
+      // entry that lives OUTSIDE every hostile system (crosser-parity plus
+      // player-fire pass-through + enemy-fire vulnerability). It never flies a
+      // formation, never fires, and never enters the solver/overlap invariants.
+      if (o.species) {
+        const cross = o.path === 'cross';
+        const startY = cross ? H * 0.9 : H * 0.38;
+        const fr = {
+          bx: W / 2, by: startY, hx: W / 2, hy: startY, row: 0, col: 0,
+          w: 42, h: 38, hp: 999, maxHp: 999,
+          // Togepi(175)=fairy, Porygon(137)=normal — the aura tint under the
+          // ally ring; friendlies never shoot so type is cosmetic only.
+          poke: { id: o.species, t: o.species === 175 ? 'fairy' : 'normal', n: NAMES[o.species] },
+          flash: 0, wobble: gameRand() * Math.PI * 2,
+          bare: true, friendly: true, fhp: 3, fpath: o.path,
+          f0y: startY, fexitY: H * 0.08, fbx0: W / 2,
+        };
+        getSprite(o.species);
+        G.bricks.push(fr);
+        G.objective.friendly = fr;
+      }
+    }
   }
   // ---- STARFIGHTER FIRST-FLIGHT COACH: five one-line steps taught during
   // Kanto's opening waves (fly → tap fire → hold charge → grab an orb → mega).

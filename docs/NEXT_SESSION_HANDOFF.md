@@ -1,13 +1,14 @@
 # HANDOFF — Starfighter campaign build-out (next session)
 
-> **STATUS: LIVE through Milestone 4 Round D — M4 is functionally
-> COMPLETE.** Milestones 0 and 1 COMPLETE; M2 core round shipped; M3
-> Rounds A+B shipped; M4 Rounds A–D shipped: all 18 finale bosses on
-> the duel template, sentinel GUARD/OPENING rhythm, all 27 bespoke
-> entrance motifs, transition/defeat garnish, practice PHASE
-> selection, and `bossMusicHeat()` phase layering. Remaining M4 tail
-> (low priority): per-species defeat animations, VMAX enrage garnish.
-> Invariant suite **69/69 green**. Everything below is deployed at
+> **STATUS: LIVE through M3 Round C + M4 complete.** Milestones 0/1
+> COMPLETE; M2 core round shipped; M3 Rounds A+B+C shipped (the
+> friendly entity + ESCORT/DEFEND protect objectives with the first
+> fail state); M4 Rounds A–D shipped (all 18 finale bosses on the
+> duel template, sentinel GUARD/OPENING, 27 bespoke entrances,
+> transition/defeat garnish, practice PHASE selection, music heat).
+> **AETHERFALL Round S1 is DESIGNED and ready to implement:**
+> `docs/S1_SKIN_SPINE_DESIGN.md` (from the full-codebase audit).
+> Invariant suite **71/71 green**. Everything below is deployed at
 > https://crawlerkarl.github.io/pokemon-brick/.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
@@ -90,14 +91,15 @@ change — skins are labels/art over the same engine.
 
 ## Pick up here (choose one)
 
-### Option S — AETHERFALL Round S1 (the user's chosen direction)
-Start the original-skin build per `docs/ORIGINAL_SKIN_PLAN.md`: the
-`SKINS` registry + runtime toggle + per-skin namespaced storage is the
-foundation round (S1) everything else hangs off. Read that doc FIRST,
-completely — the prime directive (internal keys never change) and the
-round breakdown are all there. This is the user's explicitly chosen
-direction for release identity; mechanics rounds (below) remain valid
-parallel work.
+### Option S — AETHERFALL Round S1 (the user's chosen direction — READY)
+The design is DONE: read `docs/ORIGINAL_SKIN_PLAN.md` (the approved
+plan) then `docs/S1_SKIN_SPINE_DESIGN.md` (the executable spec, built
+from a full-codebase audit — load-order traps, complete storage-key
+and easter-egg inventories, the global→SKIN.* migration checklist,
+checkpoint v4, and the three new tests). Acceptance gate: the whole
+suite bit-identical under the Pokémon skin. Implementation is one or
+two sequential agents; render.js's consumer breadth is the densest
+edit.
 
 ### Option A — Milestone 3 Round C: entity-based objective families
 The remaining families all need a **friendly/neutral entity type** (the one

@@ -144,10 +144,23 @@ Shipped:
   (Hoenn challenge) changes the win condition: no clear-by-attrition,
   outlast the timer, the swarm disperses.
 
-Still open (Round C / M9):
-- [ ] Entity-based objective families: **escort/defend a friendly**,
-  **capture without destroying**, **defend multiple lanes**, **chase a
-  fleeing elite** — these need a friendly/neutral entity type.
+Shipped (Round C, 2026-07-19 — design: `M3_ENTITY_OBJECTIVES.md`):
+- [x] **The FRIENDLY entity** (`br.friendly`) — crosser-parity
+  exclusions + laser pass-through + a new enemy-shot-vs-friendly
+  collision (3 heart pips) + alternating micro-volley redirect
+  targeting (threat budget untouched) + ally ring/heart render.
+- [x] **ESCORT THE TRAVELER** (Sinnoh arrival, Togepi crosses ~34 px/s)
+  and **DEFEND THE RELAY** (Kalos challenge, Porygon holds 22s) — both
+  hold the wave open; completion pays +600 + potion and disperses the
+  swarm; the friendly fainting is the game's FIRST objective fail
+  state (banner drops, wave reverts to attrition clear).
+- [x] **Ledger bridge** — `statsObjective` + an OBJECTIVE line on the
+  results screen.
+- [x] Suite 69 → 71.
+
+Still open (M9 authoring pass):
+- [ ] Capture-without-destroying + chase-the-fleeing-elite (need a
+  catch-system audit), defend-multiple-lanes.
 - [ ] Lighter overlay objectives: break-N-projectiles, no-overheat section,
   shield-relay sequence, weather survival.
 - [ ] Author the remaining 7 region grammars (currently on the default arc).

@@ -217,7 +217,19 @@ function starEnemyPattern(src) {
 }
 function patternThreat(P) { return enemyShotClass(P.classKey).threat * P.count; }
 function spawnStarEnemyPattern(src, P, bx, by, d, volleyId) {
-  const base = P.aimed ? Math.atan2(shipY() - by, G.paddle.x - bx) : Math.PI / 2;
+  // PROTECT OBJECTIVES: while an escort/relay friendly is alive, every 2nd
+  // AIMED MICRO volley redirects its aim onto the friendly instead of the
+  // pilot — the swarm splits its attention. This REDIRECTS aim only (never
+  // adds shots — the threat budget is untouched); heavy fire keeps hunting
+  // the player, so interception is the friendly's counterplay and dodging
+  // stays yours.
+  let aimX = G.paddle.x, aimY = shipY();
+  const fr = G.objective && G.objective.friendly;
+  if (fr && !fr.dead && fr.fhp > 0 && P.aimed && P.classKey === 'micro') {
+    G.objective.redirN = (G.objective.redirN || 0) + 1;
+    if (G.objective.redirN % 2 === 0) { aimX = fr.bx + G.fx; aimY = fr.by + G.fy; }
+  }
+  const base = P.aimed ? Math.atan2(aimY - by, aimX - bx) : Math.PI / 2;
   const sp = (225 + d.lv * 14) * d.shotSpeed * P.speedMul;
   for (let i = 0; i < P.count; i++) {
     const off = (i - (P.count - 1) / 2) * P.spread;
@@ -479,6 +491,7 @@ function starterStrikeTargets(source, count, dmg, element, color, label) {
 
 function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (!br || br.dead) return;
+  if (br.friendly) return; // PROTECT-objective allies take no player damage (any path)
   if (br.isBoss && br.phaseT > 0 && !meta.ignorePhaseGate) return;
   const generator = !meta.ignoreShield && shieldGeneratorFor(br);
   if (generator) {
@@ -854,8 +867,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 120, p: { key: 'pokeball' }, dexId: br.poke.id, rot: 0 });
       }
     }
-    // last brick → dramatic slow-mo (harmless bonus crossers don't hold it)
-    if (!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser)) G.dramaticT = 0.9;
+    // last brick → dramatic slow-mo (harmless bonus crossers / protect allies don't hold it)
+    if (!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser && !b.friendly)) G.dramaticT = 0.9;
   } else {
     burst(sx, sy, col, 8, 180, 0.4);
     SFX.hit(G.combo);
@@ -2542,9 +2555,76 @@ function runBeat(beat) {
 // timer and the flock DISPERSES (remaining flyers become fleeing crossers,
 // which the crosser-exempt clear logic then clears). The clear guard below
 // holds the wave open until the timer completes.
+// PROTECT-objective helpers (escort/defend). The DISPERSE + reinforcement
+// drip mirror the SURVIVE machinery so a protect wave can't be trivialized by
+// pre-clearing, and completing it ENDS the stage instead of spawning a grind
+// wave.
+function objectiveDrip(O, dt) {
+  O.spawnT -= dt;
+  const aliveFlyers = G.bricks.filter(b => !b.dead && b.flight && !b.crosser).length;
+  if (O.spawnT <= 0 && aliveFlyers < 14) { spawnReinforcement(); O.spawnT = 5.5; }
+}
+function disperseSwarm() {
+  // remaining flyers migrate away as fleeing crossers (no flight slot → the
+  // crosser-exempt clear takes the wave); the swarm's fire scatters too.
+  for (const b of G.bricks) {
+    if (b.dead || b.isBoss || b.crosser || b.friendly) continue;
+    if (b.flight || b.dive || b.bare) {
+      b.flight = null; b.dive = null; b.bare = true;
+      b.crosser = { vx: ((b.bx + G.fx) < W / 2 ? -1 : 1) * Math.max(150, W * 0.2), bobPh: gameRand() * 6 };
+    }
+  }
+  G.enemyShots = G.enemyShots.filter(s => s.boss);
+  G.reinforce = 0; // completing the objective ENDS the stage — no grind wave after
+}
+// the friendly reached safety / held the line: award, drop a potion at it,
+// disperse the swarm and let the crosser-exempt clear take the wave.
+function completeProtect(O, name) {
+  O.done = true;
+  const fr = O.friendly;
+  const px = fr ? fr.bx + G.fx : W / 2, py = fr ? fr.by + G.fy : H * 0.3;
+  G.score += 600;
+  addFloater(px, py - 24, '+600', '#ffd54f', 14);
+  G.powerups.push({ x: px, y: py, vy: 112, p: POWERS.heal, rot: 0 });
+  ringFx(px, py, '#ff80ab', 6, 60, 3, 0.5);
+  if (fr) fr.dead = true; // it flies clear of the zone
+  disperseSwarm();
+  statsObjective(O.type, true);
+  setAnnounce('star', '#ffd54f', name, 'THE FLOCK SCATTERS — THE SKY IS YOURS', 2.8,
+    null, null, false, true);
+  SFX.levelUp(); haptic('boss');
+}
+// the traveler / relay fell: the objective FAILS (the first fail state). No
+// extra punishment — the wave reverts to a normal attrition clear (the clear
+// guard ignores failed objectives) and the banner disappears.
+function friendlyFaints(fr) {
+  const O = G.objective;
+  fr.dead = true;
+  shatterBrick(fr, fr.bx + G.fx, fr.by + G.fy, true); // bare faint
+  if (O) { O.failed = true; statsObjective(O.type, false); }
+  setAnnounce('star', '#ff80ab', 'THE TRAVELER FELL — CLEAR THE WAVE!', '', 2.4);
+  SFX.hit(0); haptic('hit');
+}
 function updateObjective(dt) {
   const O = G.objective;
-  if (!O || G.mode !== 'junkie' || G.state !== 'play' || O.done) return;
+  if (!O || G.mode !== 'junkie' || G.state !== 'play' || O.done || O.failed) return;
+  // PROTECT: while the friendly lives, hold the swarm's pressure and read out
+  // its progress. Its faint (fhp→0) is handled at the enemy-shot collision.
+  if (O.type === 'escort' || O.type === 'defend') {
+    const fr = O.friendly;
+    if (!fr || fr.dead) return; // already failed (faint handles the fail)
+    O.t += dt;
+    objectiveDrip(O, dt);
+    if (O.type === 'escort') {
+      // the traveler drifts bottom→top; progress = fraction of the path crossed
+      O.progress = Math.max(0, Math.min(1, (fr.f0y - fr.by) / (fr.f0y - fr.fexitY)));
+      if (fr.by <= fr.fexitY) completeProtect(O, 'TRAVELER ESCORTED!');
+    } else { // defend: hold the relay for the timer
+      O.progress = Math.min(1, O.t / O.dur);
+      if (O.t >= O.dur) completeProtect(O, 'RELAY DEFENDED!');
+    }
+    return;
+  }
   if (O.type === 'survive') {
     O.t += dt;
     O.progress = Math.min(1, O.t / O.dur);
@@ -2578,7 +2658,7 @@ function updateDirector(dt) {
   if (D.threatT > 0) { D.threatT -= dt; if (D.threatT <= 0) D.threatMul = 1; }
   const next = D.beats.find(b => !b.fired);
   if (!next) return;
-  const aliveNow = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser).length;
+  const aliveNow = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser && !b.friendly).length;
   const prog = D.baseline > 0 ? aliveNow / D.baseline : 0;
   const trig = next.p != null ? (prog <= next.p && aliveNow > 0)
     : next.afterPrev != null ? (D.t - D.lastFireT >= next.afterPrev)
@@ -3064,6 +3144,21 @@ function update(dt) {
     br.bx += br.crosser.vx * dt * ts;
     br.by += Math.sin(G.time * 4 + br.crosser.bobPh) * 22 * dt * ts;
     if ((br.crosser.vx > 0 && br.bx > W + 80) || (br.crosser.vx < 0 && br.bx < -80)) br.dead = true;
+  }
+  // PROTECT-objective FRIENDLY: its own gentle path beside the crosser fly-by —
+  // never a formation slot, never the solver. 'cross' drifts bottom→top at
+  // ~34 px/s (the escort must feel like a JOURNEY — ~17-20s across the band)
+  // with a lateral bob (escort); 'hold' parks at W/2 (defend). The
+  // escort's arrival + the defend's timer are resolved in updateObjective.
+  for (const br of G.bricks) {
+    if (br.dead || !br.friendly) continue;
+    if (br.fpath === 'cross') {
+      br.by -= 34 * dt * ts;
+      br.bx = br.fbx0 + Math.sin(G.time * 1.4 + br.wobble) * 26;
+    } else { // 'hold' — sits at station with a small breathing bob
+      br.bx = br.fbx0 + Math.sin(G.time * 1.1 + br.wobble) * 8;
+      br.by = br.f0y + Math.sin(G.time * 1.8 + br.wobble) * 6;
+    }
   }
   // ---- SPACE JUNKIE squad maneuvers: every so often one flock does
   // something unexpected — startle-SCATTERS (the knot swells then contracts),
@@ -3629,6 +3724,7 @@ function update(dt) {
       }
       if (flying(br)) continue; // flyers are positioned by their pattern
       if (br.crosser) continue; // bonus crossers own their fly-by path
+      if (br.friendly) continue; // protect-objective allies own their own path
       let ox = 0, oy = 0;
       if (G.blocksStatic) {
         // Slider behaviors are the exception to the anchored wall: they move
@@ -4039,6 +4135,7 @@ function update(dt) {
     }
     for (const br of G.bricks) {
       if (br.dead || br.phaseT > 0 || L.dead || L.lastHit === br) continue;
+      if (br.friendly) continue; // player fire PASSES THROUGH protect allies — no damage, no pierce spent, no lastHit
       const bx = br.bx + G.fx, by = br.by + G.fy;
       // charged shots are fat, so they connect over a wider span
       const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0) + (L.heavy ? 6 : 0);
@@ -4471,7 +4568,7 @@ function update(dt) {
           : d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
-          && !b.barrier && !b.dormant && !b.crosser && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
+          && !b.barrier && !b.dormant && !b.crosser && !b.friendly && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
           && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
             && G.encounter.squads[b.flight.sq].silenceT > 0));
         // cap concurrent warnings so the board never fills with warning lines
@@ -4771,6 +4868,23 @@ function update(dt) {
     const hitR = s.hitR || (s.heavy ? 14 : 8);
     const hitW = (jk ? 13 : (G.mode === 'classic' ? paddleW() / 2 : G.paddle.w / 2) + 4) + hitR;
     const hitH = (jk ? 12 : G.paddle.h / 2 + 4) + hitR;
+    // PROTECT OBJECTIVE: enemy fire can strike the friendly. This narrow check
+    // runs ONLY while a live friendly exists — a shot inside its hitR is
+    // consumed and chips one heart pip; at 0 the traveler faints and the
+    // objective FAILS. reduceFlash-safe feedback (a ring + floater, no bloom).
+    const fr = G.objective && G.objective.friendly;
+    if (!s.dead && fr && !fr.dead && fr.fhp > 0) {
+      const fx = fr.bx + G.fx, fy = fr.by + G.fy, fR = hitR + Math.max(fr.w, fr.h) / 2;
+      if (Math.abs(s.x - fx) < fR && Math.abs(s.y - fy) < fR) {
+        s.dead = true;
+        fr.fhp--; fr.flash = 0.7;
+        ringFx(fx, fy, '#ff80ab', 5, 34, 3, 0.35);
+        addFloater(fx, fy - fr.h / 2 - 10, fr.fhp > 0 ? '− ♥' : 'FELL!', '#ff80ab', 12);
+        tone(360, 0.07, 'sine', 0.05, -120);
+        if (fr.fhp <= 0) friendlyFaints(fr);
+        continue;
+      }
+    }
     // BULWARK BATTERY: the hex wall floats ahead of the pilot and eats
     // ordinary shots crossing it, one segment each
     if (!s.dead && upgN('battery') && G.wallSeg > 0 && !s.boss && (s.vy || 0) > 0) {
@@ -4876,10 +4990,11 @@ function update(dt) {
   G.powerups = G.powerups.filter(p => !p.dead);
 
   // ---- level clear → reinforcements first, then draft and move on ----
-  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier || b.crosser)) {
-    // a SURVIVE objective holds the wave open until its timer completes —
-    // you outlast the migration, you don't wipe it out
-    if (G.objective && G.objective.type === 'survive' && !G.objective.done) return;
+  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly)) {
+    // an active objective holds the wave open — SURVIVE outlasts the timer,
+    // ESCORT/DEFEND protects the friendly. A FAILED objective releases the
+    // wave to a normal attrition clear (losing the bonus is the only cost).
+    if (G.objective && !G.objective.done && !G.objective.failed) return;
     // the enemies are gone — any ROCK TOMB barriers crumble on their own
     for (const b of G.bricks) if (!b.dead && b.barrier) { b.dead = true; burst(b.bx + G.fx, b.by + G.fy, '#a1887f', 12, 180, 0.5); }
     if (G.reinforce > 0) {

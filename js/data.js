@@ -1689,5 +1689,14 @@ function encounterScript(lvl) {
 const ENCOUNTER_OBJECTIVES = {
   '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
     tip: "OUTLAST THE SWARM — YOU DON'T HAVE TO KILL THEM ALL" },
+  // ESCORT (Sinnoh arrival): a friendly TOGEPI crosses the combat zone
+  // bottom→top while the swarm hunts it. Get it to the far edge (path
+  // completion, ~20s) and the flock disperses. Fainting = objective failed.
+  '3:0': { type: 'escort', name: 'ESCORT THE TRAVELER', species: 175, path: 'cross',
+    tip: 'GET THE TRAVELER ACROSS — INTERCEPT THE FIRE AIMED AT IT' },
+  // DEFEND (Kalos challenge): a stationary PORYGON relay must survive a 22s
+  // timer while the swarm splits aimed fire between you and it.
+  '5:1': { type: 'defend', dur: 22, name: 'DEFEND THE RELAY', species: 137, path: 'hold',
+    tip: 'KEEP THE RELAY ALIVE — SHOOT DOWN THE FIRE AIMED AT IT' },
 };
 function encounterObjective(lvl) { return ENCOUNTER_OBJECTIVES[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
