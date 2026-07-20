@@ -3895,15 +3895,18 @@ function drawHUD() {
   }
   const hudElem = G.mode === 'junkie'; // junkie always shows the live attack type
   if (G.ballElement || hudElem) {
+    // attackElement() is null for a NO-PARTNER (neutral/typeless) pilot — the
+    // element readout renders that as NEUTRAL rather than a type.
     const el = hudElem ? attackElement() : G.ballElement;
-    ctx.fillStyle = TYPE_COLORS[el];
+    const elLabel = el ? el.toUpperCase() : 'NEUTRAL';
+    ctx.fillStyle = el ? TYPE_COLORS[el] : '#b0bec5';
     ctx.font = '700 11px Orbitron, sans-serif';
     const basePartner = G.ballElementT > 1000 && G.starter && el === G.starter;
     const tag = hudElem
       ? (G.ballElement
-        ? el.toUpperCase() + ' TYPE · ITEM · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
-        : el.toUpperCase() + ' TYPE · PILOT')
-      : el.toUpperCase() + (G.mode === 'classic' ? ' BALL' : ' WEAPON') + (basePartner
+        ? elLabel + ' TYPE · ITEM · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
+        : elLabel + (el ? ' TYPE · PILOT' : ' · PILOT'))
+      : elLabel + (G.mode === 'classic' ? ' BALL' : ' WEAPON') + (basePartner
         ? ' · PARTNER'
         : ' · POWER-UP · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's');
     ctx.fillText('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72);
