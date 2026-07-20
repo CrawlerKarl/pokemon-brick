@@ -4,6 +4,9 @@
 // The procedural renderer covers every id absent from this map.
 const AETHERFALL_ART_OVERRIDES = {
   "10": "art/aetherfall-production/sprites/final/af-010-pyromancer.png",
+  "11": "art/aetherfall-production/sprites/final/af-011-infernomancer.png",
+  "12": "art/aetherfall-production/sprites/final/af-012-suncaller.png",
+  "19": "art/aetherfall-production/sprites/final/af-019-stormbinder.png",
   "101": "art/aetherfall-production/sprites/final/af-101-thistling.png",
   "102": "art/aetherfall-production/sprites/final/af-102-briarkin.png",
   "103": "art/aetherfall-production/sprites/final/af-103-thornwarden.png",
