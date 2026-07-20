@@ -43,6 +43,14 @@
 <script>
 'use strict';
 // ---- pre-game shims (MUST run before the game scripts load) ----
+// 0) the suite IS the pokemon bit-identity gate: it must run under the
+//    pokemon skin no matter what the user's saved edition toggle says.
+//    ?skin= outranks SETTINGS.skin, so pin it in the URL pre-load
+//    (replaceState — no reload, no storage mutation, toggle preserved).
+if (!new URLSearchParams(location.search).has('skin')) {
+  history.replaceState(null, '', location.pathname + location.search
+    + (location.search ? '&' : '?') + 'skin=pokemon');
+}
 // 1) capture every uncaught error / rejection so tests can assert "no exception"
 window.__ERRORS = [];
 window.addEventListener('error', e => {

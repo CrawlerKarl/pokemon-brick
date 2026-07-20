@@ -48,11 +48,15 @@ test → document → commit → push → confirm the Pages build.
   original names — VELMORA…AURELION PRIME), `SKIN.strings` +
   `SKIN.secret` (LUMINE VMAX), `treeLexicon` (path names per discipline
   via `skinPathName`), mode-card copy patch.
-- **`js/aetherart.js`** — deterministic procedural renderer: 10 body
-  archetypes + pilot VESSEL, act design language (magic organic → tech
-  angular → magitech chrome+inlays), form escalation, legendary
-  flourishes keyed by BOSS_STYLE, radiant hue-shift variants, bake cache
-  honoring the `getSprite` contract (`SKIN.spriteMaker` dispatch).
+- **`js/aetherart.js` (v2, 2026-07-20)** — every design is a BESPOKE
+  painter now: 54 creature lines + 18 class vessels + 9 sentinels + 18
+  bosses (259 baked ids). Shared part library + a universal finish
+  pipeline (cel shade → rim light → 8-dir sticker outline from the
+  alpha silhouette) keeps one cohesive look. Deterministic seeded rand,
+  bake-once cache, `getSprite` contract, zero network,
+  `AF.spriteClassify` still exported for the suite audit. To restyle a
+  unit, edit its `LINE_PAINTERS[baseId]` / `VESSELS[type]` /
+  `LEGEND_PAINTERS[id]` function — never touch the bake dispatch.
 - **Affinity (S6)** — LIGHT/DARK pick on the difficulty screen (aetherfall
   only), 3+3 satellites on STACK_ITEMS (`dawn/halo/grace` ·
   `fang/tithe/hex`) via `activeSatellites()`; effects wired at real

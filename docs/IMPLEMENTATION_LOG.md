@@ -5,6 +5,45 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — AETHERFALL art v2: every design bespoke
+
+Full rewrite of `js/aetherart.js` (~3.9k lines): the ten generic
+archetypes are gone; **all 99 designs are authored painters** — 54
+creature lines, 18 pilot vessels, 9 sentinels, 9 legendaries, 9 mythics
+(259 baked ids incl. forms). Every unit now looks like what it IS:
+thorn-bud sprites, living bells, paper-lantern wraiths, bonsai spirits,
+anglerfiends, iceberg whales, gear golems, furnace stoves, neon
+wireframe hounds, noir trenchcoat phantoms, living billboards,
+shattered-pane phantoms, hand-mirror seers, sacred-geometry ley nodes,
+satellite-dish palms, electric mantas, double-exposure echo wraiths,
+walking castle golems, living swords, photograph ghosts, hourglass
+spirits, rising suns. Vessels carry the class fantasy (bone-ribbed
+necromancer skiff with scythe prow; tesla-mast stormbinder; drone-hive
+swarm carrier; patched drifter with lantern pole). Legendaries are
+set-pieces: the armillary Clockwork Regent, pylon-titan Voltrex with a
+living arc crown, half-gold/half-chrome Aurelion Prime, stained-glass
+Lucerna, crown-strung Marionne.
+
+- **Finish pipeline** (`finishSprite`): every bake gets a cel SHADE
+  (alpha-clipped underside gradient), a RIM LIGHT (offset-silhouette
+  subtraction, top-left), and an 8-direction STICKER OUTLINE stamped
+  from the alpha silhouette — one look unifies all 259 sprites and
+  keeps them readable at 36 px combat size.
+- **Part library**: blobPath/mirror/teardrop/lens/crescent/flame/
+  crystal/gearRing/halo/orbitals/wing×4 (feather/blade/membrane/
+  energy)/thruster/plate/eyes×3/visor/skull/runes/lantern/crowns/
+  motes/mist/tailSpline. Painters stay 25–45 lines each.
+- Forms escalate inside each painter (sprout → circlet → gold crown,
+  plus per-design growth); sentinels share a realm painter with
+  per-member emblems (`drawGlyph(type)`); bosses ride style-true
+  silhouettes (anchor oracle, infinity gale-bird, serpent leviathan,
+  bastion clock, flank pylon, swoop carrion angel, phase crescent,
+  perimeter blade-fan, charge split-fusion).
+- Same contract as v1: deterministic seeded rand, bake-once cache,
+  `.complete/.naturalWidth`, zero network, `AF.spriteClassify` kept
+  for the suite's asset audit. Console audit: 259/259 ids bake ≥2%
+  opaque pixels, radiant variants distinct, zero page errors.
+
 ## 2026-07-19 — AETHERFALL rounds S1–S7: the original skin ships
 
 The complete Milestone-10 release-identity build, in one arc. Designs:
