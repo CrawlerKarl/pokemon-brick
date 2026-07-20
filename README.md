@@ -1,13 +1,26 @@
-# Wavebreaker (Pokémon Edition)
+# Wavebreaker
 
-**WAVEBREAKER** is the game's brand — skin-agnostic on purpose. Every mode is
-another way to break the wave, so new modes just add title-screen cards, and
-the current theme is an "edition" (today: `SKIN_EDITION = 'POKÉMON EDITION'`,
-config.js) that a future re-skin swaps out without touching mechanics or
-storage keys. UI mode labels are equally presentation-only: **BREAKER** /
-**BLASTER** / **STARFIGHTER** map to the storage-stable internal keys
-`classic` / `blaster` / `junkie` (docs and code comments below still say
-"Space Junkie" for the junkie systems — that's the mode's internal codename).
+**WAVEBREAKER** is the game's brand — skin-agnostic on purpose, and it now
+ships **two complete editions behind a runtime toggle** (tap the edition
+pill on the title screen):
+
+- **POKÉMON EDITION** — the original fan skin (PNG sprites, national-dex
+  rosters, legacy storage keys — every old save keeps working untouched).
+- **AETHERFALL EDITION** — an original sci-fi × fantasy universe: 18
+  classes across MAGIC / TECH / MAGITECH disciplines, nine realms from the
+  GREENSPELL MARCHES to the SUNDERED CRADLE, ~200 creatures drawn entirely
+  by a procedural parts renderer (zero image assets), original boss
+  identities cloning the engine's duel kits, and a LIGHT/DARK affinity
+  pick that reshapes the late-game satellite drafts.
+
+`js/skin.js` owns the registry: presentation + world data ride `SKIN.*`,
+per-skin progress goes through `storeKey()` (`pkbrk-<skin>-*`; pokemon
+keeps bare legacy names), and the engine — modes, types, effectiveness,
+paths, the upgrade web — is shared verbatim. UI mode labels are equally
+presentation-only: **BREAKER** / **BLASTER** / **STARFIGHTER** map to the
+storage-stable internal keys `classic` / `blaster` / `junkie` (docs and
+code comments below still say "Space Junkie" for the junkie systems —
+that's the mode's internal codename).
 
 A shared arcade campaign with three deliberately distinct games. **BREAKER**
 stays a pure brick breaker from Kanto through Paldea: every regular target is
@@ -90,8 +103,11 @@ sometimes doesn't fire — trigger manually with
 | --- | --- |
 | `setup.js` | Canvas, `resize()` (with a no-op guard — see Gotchas), DPR, safe-area, `IS_TOUCH` |
 | `config.js` | `PRESETS` (difficulty), `SETTINGS`, `diff()` (the one difficulty curve), menu/advanced/trial **layout geometry** |
+| `skin.js` | **The SKIN registry** — `SKINS`/`SKIN` resolution (`?skin=` → `SETTINGS.skin`), `storeKey()` per-skin storage namespacing, `STARTER_KEYS` + `skinStarters()`, `assembleSkins()` (data.js attaches the pokemon tables by reference), the edition-pill toggle (`skinPillRect`/`toggleSkin`) |
 | `audio.js` | SFX synth plus the original 18-arrangement adventure score: nine region exploration identities and nine separately authored boss arrangements (`ADVENTURE_MUSIC`, `buildMusicPattern`, `musicTick`) |
-| `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`BRICK_BEHAVIORS`** + region order, **`PATHS`** (skill tree) + `JUNKIE_ITEMS`/`STACK_ITEMS`, **`STARTER_MON`**, **`GENS`** (region/roster/boss data) + **`HABITAT_PACKS`/`TYPE_CLUSTERS`** (wave ecology), `NAMES`, sprite loading, `drawGlyph` (all vector icons) |
+| `data.js` | `TYPE_COLORS`, `POWERS`, `EFFECTIVE`/`RESIST` charts, `MODIFIERS`, **`BRICK_BEHAVIORS`** + region order, **`PATHS`** (skill tree) + `JUNKIE_ITEMS`/`STACK_ITEMS` (+ affinity satellites), **`STARTER_MON`**, **`GENS`** (region/roster/boss data) + **`HABITAT_PACKS`/`TYPE_CLUSTERS`** (wave ecology), `NAMES`, sprite loading (dispatches to `SKIN.spriteMaker` for procedural skins), `drawGlyph` (all vector icons), the tail `assembleSkins()` call |
+| `aetherfall.js` | **The AETHERFALL world**: 18 classes/disciplines/lexicon, nine realms + rosters + habitat packs, boss-kit clones (ids/names/strings original, mechanics same-slot identical), strings table, `SKIN.secret`, affinity flag |
+| `aetherart.js` | **Procedural unit renderer**: deterministic seeded parts system (10 body archetypes + pilot vessels), act design language, radiant variants, bake cache with the `getSprite` contract |
 | `scenery.js` | Per-region prerendered backgrounds (`drawScene[...]` — iconic towns), starfield, ambient weather |
 | `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
 | `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
@@ -992,4 +1008,7 @@ has **no network dependency** at play time.
 
 **Pokémon names/artwork are Nintendo/Creatures/GAME FREAK property.** This is
 a fan project — get a licensing review before any public distribution or
-monetization.
+monetization. The **AETHERFALL EDITION is original work** (names, world,
+procedural art — no Pokémon strings, ids gated per skin, zero shared
+assets): it exists so the engine has a release identity that carries no
+third-party IP, per `docs/ORIGINAL_SKIN_PLAN.md`.

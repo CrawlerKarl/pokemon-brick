@@ -21,7 +21,7 @@ const PREFERS_REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefe
 const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
     reduceShake: PREFERS_REDUCED_MOTION, reduceFlash: PREFERS_REDUCED_MOTION,
-    hcBall: false, autoFire: false, mode: 'junkie',
+    hcBall: false, autoFire: false, mode: 'junkie', skin: 'pokemon', affinity: null,
     buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
     leftHanded: false, haptics: true },
   STORED_SETTINGS);
@@ -49,10 +49,9 @@ function dailyDateKey(date = new Date()) {
 function dailySeed() { return 'WAVEBREAKER-DAILY-' + dailyDateKey(); }
 // ---- BRAND vs SKIN. WAVEBREAKER is the engine's name — every mode is
 // another way to break the wave, so new modes just add cards below. The
-// SKIN carries the current theme (today: Pokémon); a future re-theme swaps
-// these strings + the art without touching mechanics or storage keys.
+// SKIN (js/skin.js registry, resolved at boot) carries the current theme:
+// edition stamp, names, world data, art — never mechanics or storage keys.
 const GAME_TITLE = 'WAVEBREAKER';
-const SKIN_EDITION = 'POKÉMON EDITION';
 // game MODE — the FIRST choice, on the title screen. Three ways to play the
 // same journey (one wave engine underneath — buildLevel branches on the key):
 // BREAKER is the classic ball-first brick-breaker, BLASTER trades the ball
@@ -114,7 +113,8 @@ function diff() {
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * (G.daily ? 1 : SETTINGS.drops) * (mod?.key === 'swift' ? 1.4 : 1)
       * starterMod('drop', 1)
-      * (1 + 0.5 * upgN('fortune')), // Bond path tier 3
+      * (1 + 0.5 * upgN('fortune')) // Bond path tier 3
+      * (1 + 0.08 * stackN('dawn')), // DAWNLIGHT CHARM (light affinity)
     catchChance: 0.07 * (!G.daily && dexRewardActive('lucky') ? 1.25 : 1) * starterMod('catch', 1),
   };
 }
@@ -146,20 +146,10 @@ const TOUCH_TOGGLES = [
   { key: 'leftHanded', label: 'LEFT-HANDED BUTTONS' },
   { key: 'haptics', label: 'HAPTIC FEEDBACK' },
 ];
-// labels MUST match STARTER_MON's tier-1 names (data.js) — config.js parses
-// before data.js, so they can't be derived here; keep the two in sync
-const STARTERS = [
-  { key: 'fire', label: 'CHARMANDER' }, { key: 'water', label: 'SQUIRTLE' },
-  { key: 'grass', label: 'BULBASAUR' }, { key: 'electric', label: 'PIKACHU' },
-  { key: 'normal', label: 'PORYGON' }, { key: 'flying', label: 'PIDGEY' },
-  { key: 'ice', label: 'SPHEAL' }, { key: 'fighting', label: 'MACHOP' },
-  { key: 'poison', label: 'NIDORAN' }, { key: 'ground', label: 'RHYHORN' },
-  { key: 'psychic', label: 'ABRA' }, { key: 'bug', label: 'CATERPIE' },
-  { key: 'rock', label: 'LARVITAR' }, { key: 'ghost', label: 'GASTLY' },
-  { key: 'dragon', label: 'DRATINI' }, { key: 'dark', label: 'SANDILE' },
-  { key: 'steel', label: 'MAGNEMITE' }, { key: 'fairy', label: 'TOGEPI' },
-];
-if (SETTINGS.starter !== 'none' && !STARTERS.some(s => s.key === SETTINGS.starter)) SETTINGS.starter = 'none';
+// The old STARTERS literal lived here only because config parses before
+// data.js. It is GONE: the setup grid derives at runtime from the active
+// skin via skinStarters() (js/skin.js), which also owns the
+// SETTINGS.starter validation — keys are engine-stable type keys.
 let advOpen = false; // advanced settings panel
 let settingsPage = 0; // 0 = game/accessibility, 1 = touch controls
 function activeSliders() { return settingsPage === 1 ? TOUCH_SLIDERS : SLIDERS; }
@@ -248,7 +238,7 @@ function setupLayout() {
     // Six roomy columns on desktop are more legible than the old nine-card
     // strip. Phones keep three large touch targets per row.
     const cols = narrow ? 3 : W < 900 ? 4 : 6;
-    const rows = Math.ceil(STARTERS.length / cols);
+    const rows = Math.ceil(STARTER_KEYS.length / cols);
     const gap = short ? 5 : narrow ? 7 : 10;
     const gridY = sectionY + (short ? 14 : 24);
     const nextH = short ? 40 : narrow ? 52 : 54;
@@ -284,7 +274,13 @@ function setupLayout() {
   const summaryH = short ? 54 : narrow ? 84 : 96;
   const summaryW = Math.min(contentW, narrow ? contentW : 760);
   const editW = short ? 64 : narrow ? 78 : 118;
-  const diffLabelY = summaryY + summaryH + (short ? 14 : 25);
+  // a skin with affinities (AETHERFALL) adds the LIGHT/DARK pick between
+  // the pilot summary and the difficulty chips; other skins reserve no room
+  const hasAff = typeof SKIN !== 'undefined' && !!SKIN.affinities;
+  const affH = hasAff ? (short ? 26 : 34) : 0;
+  const affY = summaryY + summaryH + (short ? 6 : 10);
+  const affW = Math.min(summaryW, 560);
+  const diffLabelY = summaryY + summaryH + (hasAff ? affH + (short ? 12 : 18) : 0) + (short ? 14 : 25);
   const chipY = diffLabelY + (short ? 10 : 20);
   const cols = narrow ? 2 : 4, rows = Math.ceil(Object.keys(PRESETS).length / cols);
   const gap = short ? 7 : 12;
@@ -295,6 +291,7 @@ function setupLayout() {
     step: 'difficulty', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
     summary: { x: cx - summaryW / 2, y: summaryY, w: summaryW, h: summaryH },
     editPilot: { x: cx + summaryW / 2 - editW - 10, y: summaryY + summaryH / 2 - (short ? 13 : 17), w: editW, h: short ? 26 : 34 },
+    affinity: hasAff ? i => ({ x: cx - affW / 2 + i * (affW / 2 + 5), y: affY, w: affW / 2 - 5, h: affH }) : null,
     chipsLabelY: diffLabelY,
     chip: i => { const c = i % cols, r = Math.floor(i / cols);
       return { x: cx - contentW / 2 + c * (chipW + gap), y: chipY + r * (chipH + gap), w: chipW, h: chipH }; },
@@ -397,7 +394,7 @@ function cheatBtnGeom() {
 }
 function cheatLayout() {
   const pw = Math.min(440, W * 0.94), cols = 3;
-  const rows = Math.ceil(CHEAT_ITEMS.length / cols);
+  const rows = Math.ceil(SKIN.cheatItems.length / cols);
   const chipW = (pw - 48 - (cols - 1) * 10) / cols, chipH = 46;
   const ph = Math.min(H - 24, 104 + rows * (chipH + 10) + 18);
   const px = W / 2 - pw / 2, py = Math.max(12, H / 2 - ph / 2);

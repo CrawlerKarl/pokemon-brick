@@ -61,8 +61,11 @@ window.requestAnimationFrame = function () { return 0; };
 <!-- same scripts, same order as index.html -->
 <script src="js/setup.js"></script>
 <script src="js/config.js"></script>
+<script src="js/skin.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/data.js"></script>
+<script src="js/aetherfall.js"></script>
+<script src="js/aetherart.js"></script>
 <script src="js/scenery.js"></script>
 <script src="js/state.js"></script>
 <script src="js/input.js"></script>
@@ -1165,9 +1168,9 @@ window.requestAnimationFrame = function () { return 0; };
       apexCount + '/40 (never pre-24) · caps hold';
   });
 
-  // 2w-iii) checkpoint migration: v1/v2 accepted, normalized v3 out, lossless
+  // 2w-iii) checkpoint migration: v1/v2 accepted, normalized v4 out, lossless
   // tier mapping, grandfathered web keys, and hostile shapes never throw.
-  test('checkpoint migration: v1/v2 → v3 round-trip', async () => {
+  test('checkpoint migration: v1/v2 → v4 round-trip', async () => {
     const v2 = {
       v: 2, lvl: 13, score: 51234, lives: 3, livesMax: 5, mode: 'junkie',
       starter: 'fire', starterLvl: 2,
@@ -1181,7 +1184,7 @@ window.requestAnimationFrame = function () { return 0; };
       preset: 'normal',
     };
     const m = migrateCheckpoint(v2);
-    assert(m && m.v === 3, 'v2 did not migrate to v3');
+    assert(m && m.v === 4 && m.skin === 'pokemon', 'v2 did not migrate to v4 + pokemon skin');
     assert(m.lvl === 13 && m.score === 51234 && m.lives === 3 && m.livesMax === 5 &&
       m.mode === 'junkie' && m.starter === 'fire' && m.starterLvl === 2 && m.preset === 'normal',
       'v2 scalar state was not preserved');
@@ -1196,7 +1199,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(m.secret.shards[0] && m.secret.shards[1] && !m.secret.shards[2] && m.secretUpg.heart,
       'secret state lost in migration');
     const m2 = migrateCheckpoint(m);
-    assert(JSON.stringify(m2) === JSON.stringify(m), 'migration is not idempotent on v3');
+    assert(JSON.stringify(m2) === JSON.stringify(m), 'migration is not idempotent on v4');
     // grandfather rule: a web node with missing prerequisites survives
     const grand = migrateCheckpoint({ v: 2, lvl: 10, lives: 2, upg: { meteor: 1, calibrated: 1 } });
     assert(grand && grand.upg.meteor === 1 && grand.upg.calibrated === 1,
@@ -1204,7 +1207,7 @@ window.requestAnimationFrame = function () { return 0; };
     // v1 minimal accepted with sane defaults
     const v1 = migrateCheckpoint({ v: 1, lvl: 4, score: 100, lives: 2, mode: 'classic',
       path: { arsenal: 2 }, upg: { coolant: 1, intercept: 1 } });
-    assert(v1 && v1.v === 3 && v1.path.arsenal === 2 && v1.upg.intercept === 1 &&
+    assert(v1 && v1.v === 4 && v1.path.arsenal === 2 && v1.upg.intercept === 1 &&
       v1.livesMax >= v1.lives && v1.stacks.orb === 0 && v1.adapt === 1,
       'v1 checkpoint did not normalize cleanly');
     // hostile shapes: reject or normalize, never throw, never brick startup
@@ -1213,10 +1216,145 @@ window.requestAnimationFrame = function () { return 0; };
       let out = null, threw = false;
       try { out = migrateCheckpoint(bad); } catch (e) { threw = true; }
       assert(!threw, 'migrateCheckpoint threw on ' + JSON.stringify(bad));
-      if (out) assert(out.v === 3 && typeof out.path === 'object' && typeof out.upg === 'object',
+      if (out) assert(out.v === 4 && typeof out.path === 'object' && typeof out.upg === 'object',
         'hostile shape produced a malformed checkpoint');
     }
-    return 'v2 lossless → v3 · idempotent · grandfathered web keys kept · v1 + 10 hostile shapes safe';
+    return 'v2 lossless → v4 · idempotent · grandfathered web keys kept · v1 + 10 hostile shapes safe';
+  });
+
+  // 2s-i) SKIN SPINE (Round S1): the pokemon skin keeps LEGACY bare storage
+  // keys (zero migration for existing saves); other skins namespace.
+  test('skin S1: legacy keys preserved, per-skin namespacing', async () => {
+    const realSkin = SKIN;
+    try {
+      SKIN = SKINS.pokemon;
+      for (const base of ['run', 'dex', 'dexs', 'medals', 'victory', 'best', 'daily', 'jcoach']) {
+        assert(storeKey(base) === 'pkbrk-' + base, 'pokemon storeKey(' + base + ') lost the legacy name: ' + storeKey(base));
+      }
+      SKIN = SKINS.aetherfall;
+      assert(storeKey('run') === 'pkbrk-aetherfall-run', 'stub skin run key not namespaced: ' + storeKey('run'));
+      assert(storeKey('dex') === 'pkbrk-aetherfall-dex', 'stub skin dex key not namespaced');
+      // both skins carry complete worlds: 9 gens each, ids fully named,
+      // and a bossOnlyIds set derived from each skin's OWN gens
+      assert(Array.isArray(SKINS.pokemon.gens) && SKINS.pokemon.gens.length === 9 &&
+        Array.isArray(SKINS.aetherfall.gens) && SKINS.aetherfall.gens.length === 9 &&
+        SKINS.aetherfall.gens !== SKINS.pokemon.gens,
+        'each skin must own a complete 9-region world');
+      assert(SKINS.aetherfall.bossOnlyIds instanceof Set && SKINS.aetherfall.bossOnlyIds.size >= 25 &&
+        [...SKINS.aetherfall.bossOnlyIds].every(id => SKINS.aetherfall.names[id]),
+        'aetherfall bossOnlyIds must derive from its own gens and be fully named');
+    } finally { SKIN = realSkin; }
+    return '8 legacy bare keys under pokemon · pkbrk-aetherfall-* under aetherfall · two complete worlds';
+  });
+
+  // 2s-ii) checkpoint v3 → v4: a pre-skin save is a pokemon save; v4
+  // stamps survive; the gate accepts 4 and still rejects unknown versions.
+  test('skin S1: checkpoint v3 → v4 skin stamping', async () => {
+    const v3 = { v: 3, lvl: 7, score: 900, lives: 2, livesMax: 4, mode: 'junkie',
+      starter: 'water', starterLvl: 1, path: { aegis: 1 }, upg: { guard: 1 }, stacks: { orb: 1 },
+      catchBonus: 0, caughtRun: 1, adapt: 1, mega: 0.2,
+      secret: { shards: [false, false, false], offered: [false, false, false], completed: false },
+      secretUpg: { heart: false, lens: false, echo: false }, preset: 'normal' };
+    const m = migrateCheckpoint(v3);
+    assert(m && m.v === 4 && m.skin === 'pokemon', 'v3 (no skin) must stamp skin:pokemon, got ' + JSON.stringify(m && { v: m.v, skin: m.skin }));
+    const again = migrateCheckpoint(m);
+    assert(JSON.stringify(again) === JSON.stringify(m), 'v4 migration not idempotent');
+    const af = migrateCheckpoint(Object.assign({}, v3, { v: 4, skin: 'aetherfall' }));
+    assert(af && af.skin === 'aetherfall', 'v4 skin stamp was not preserved');
+    let threw = false, out = null;
+    try { out = migrateCheckpoint(Object.assign({}, v3, { v: 9 })); } catch (e) { threw = true; }
+    assert(!threw && out === null, 'unknown version 9 must be rejected, never thrown');
+    for (const bad of [{ v: 4 }, { v: 4, lvl: 7, skin: 12 }, { v: 4, lvl: 7, skin: null }]) {
+      let t2 = false, o2 = null;
+      try { o2 = migrateCheckpoint(Object.assign({}, v3, bad)); } catch (e) { t2 = true; }
+      assert(!t2, 'hostile v4 shape threw: ' + JSON.stringify(bad));
+      if (o2) assert(typeof o2.skin === 'string', 'hostile v4 shape produced non-string skin');
+    }
+    return 'v3→v4 stamps pokemon · idempotent · aetherfall stamp kept · v9 rejected · hostile v4 safe';
+  });
+
+  // 2s-iii) per-skin isolation: dex writes under one skin are invisible to
+  // the other. Uses sentinels + full finally-restore of every touched key.
+  test('skin S1: per-skin storage isolation', async () => {
+    const realSkin = SKIN;
+    const pk = 'pkbrk-dex', ak = 'pkbrk-aetherfall-dex';
+    const saved = { [pk]: localStorage.getItem(pk), [ak]: localStorage.getItem(ak) };
+    try {
+      SKIN = SKINS.pokemon;
+      saveStore(storeKey('dex'), [777001]);
+      SKIN = SKINS.aetherfall;
+      assert(storeKey('dex') !== pk, 'skins share a dex key');
+      const afDex = loadStore(storeKey('dex'), '[]');
+      assert(Array.isArray(afDex) && !afDex.includes(777001), 'pokemon dex leaked into the aetherfall key');
+      saveStore(storeKey('dex'), [42]);
+      SKIN = SKINS.pokemon;
+      const back = loadStore(storeKey('dex'), '[]');
+      assert(Array.isArray(back) && back.includes(777001) && !back.includes(42),
+        'flipping skins corrupted the pokemon dex key');
+    } finally {
+      SKIN = realSkin;
+      for (const k of [pk, ak]) {
+        if (saved[k] === null) localStorage.removeItem(k); else localStorage.setItem(k, saved[k]);
+      }
+    }
+    return 'dex sentinel isolated per skin key · flip-back reads the original · keys restored';
+  });
+
+  // 2s-iv) AETHERFALL asset audit (Round S5): every roster id — units,
+  // pilots, sentinels, legendaries, mythics — classifies into the id space
+  // and bakes to a REAL drawable with visible pixels. The procedural skin
+  // has no PNGs, so this is its verify-assets.
+  test('skin S5: every aetherfall id classifies and bakes pixels', async () => {
+    const AFS = SKINS.aetherfall;
+    const ids = new Set();
+    AFS.gens.forEach(g => {
+      Object.values(g.tiers).flat().forEach(([id]) => ids.add(id));
+      ids.add(g.boss.id); ids.add(g.gauntlet.myth[0]);
+      g.gauntlet.subs.forEach(([id]) => ids.add(id));
+    });
+    for (let i = 0; i < 54; i++) ids.add(10 + i); // 18 classes × 3 vessel forms
+    let baked = 0;
+    for (const id of ids) {
+      assert(AFS.spriteClassify(id), 'id ' + id + ' does not classify into the aetherfall id space');
+      assert(AFS.names[id], 'id ' + id + ' has no name');
+      const cv = AFS.spriteMaker(id, false);
+      assert(cv && cv.complete && cv.naturalWidth > 0, 'id ' + id + ' bake broke the sprite contract');
+      const px = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let opaque = 0;
+      for (let p = 3; p < px.length; p += 4) if (px[p] > 40) opaque++;
+      assert(opaque > cv.width * cv.height * 0.02, 'id ' + id + ' baked nearly empty (' + opaque + ' px)');
+      baked++;
+    }
+    const rad = AFS.spriteMaker(101, true);
+    assert(rad !== AFS.spriteMaker(101, false), 'radiant variant must be a distinct bake');
+    return baked + ' ids named + classified + baked with pixels · radiant variant distinct';
+  });
+
+  // 2s-v) AFFINITY (Round S6): the pick swaps WHICH satellite trio fills
+  // empty slots — never the web topology or the fusion/apex caps.
+  test('skin S6: affinity swaps the satellite trio only', async () => {
+    const realSkin = SKIN, realAff = SETTINGS.affinity;
+    try {
+      SKIN = SKINS.pokemon; SETTINGS.affinity = 'dark';
+      assert(activeSatellites() === WEB_SATELLITES,
+        'pokemon skin must ignore affinity entirely');
+      SKIN = SKINS.aetherfall;
+      SETTINGS.affinity = null;
+      assert(activeSatellites() === WEB_SATELLITES, 'no pick → the neutral trio');
+      SETTINGS.affinity = 'light';
+      const light = activeSatellites();
+      assert(light.length === 3 && light.every(s => (stackItem(s.stackKey) || {}).affinity === 'light'),
+        'light pick must offer exactly the three light satellites');
+      SETTINGS.affinity = 'dark';
+      const dark = activeSatellites();
+      assert(dark.length === 3 && dark.every(s => (stackItem(s.stackKey) || {}).affinity === 'dark'),
+        'dark pick must offer exactly the three dark satellites');
+      // slot caps are the balance spine — untouched by affinity
+      assert(typeof fusionsOwnedCount === 'function', 'fusion cap machinery missing');
+      const stacks = freshStacks();
+      for (const it of STACK_ITEMS) assert(stacks[it.key] === 0, 'freshStacks missing ' + it.key);
+    } finally { SKIN = realSkin; SETTINGS.affinity = realAff; }
+    return 'neutral/light/dark trios gate correctly · pokemon ignores affinity · stacks seeded';
   });
 
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
@@ -1628,7 +1766,7 @@ window.requestAnimationFrame = function () { return 0; };
           constellationReroll: T.reroll, constellationInstall: T.confirm };
         if (L.progress) rects.progress = L.progress;
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
-        for (let i = 0; i < STARTERS.length; i++) rects['starter(' + i + ')'] = P.starter(i);
+        for (let i = 0; i < skinStarters().length; i++) rects['starter(' + i + ')'] = P.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
@@ -1689,8 +1827,8 @@ window.requestAnimationFrame = function () { return 0; };
       assert(SETTINGS.mode === 'classic' && menuPage === 'setup' && setupStep === 'pilot',
         'primary CTA did not open the selected mode\'s partner selection');
       const P = setupLayout();
-      assert(STARTERS.every((_, i) => P.starter(i)), 'the partner screen does not expose all 18 choices');
-      const fairy = STARTERS.findIndex(s => s.key === 'fairy'), fr = P.starter(fairy);
+      assert(skinStarters().every((_, i) => P.starter(i)), 'the partner screen does not expose all 18 choices');
+      const fairy = skinStarters().findIndex(s => s.key === 'fairy'), fr = P.starter(fairy);
       onPress(fr.x + fr.w / 2, fr.y + fr.h / 2);
       assert(SETTINGS.starter === 'fairy', 'partner selection did not accept a choice from the full roster');
       onPress(P.next.x + P.next.w / 2, P.next.y + P.next.h / 2);
@@ -1714,7 +1852,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(DEX_REWARDS.every((r, i) => r.at > 0 && (!i || r.at > DEX_REWARDS[i - 1].at)),
       'research thresholds must be positive and strictly increasing');
     assert(Object.prototype.hasOwnProperty.call(SETTINGS, 'autoFire'), 'auto-fire setting missing');
-    assert(STARTERS.length === Object.keys(TYPE_COLORS).length && STARTERS.every(s => STARTER_MON[s.key]),
+    assert(skinStarters().length === Object.keys(TYPE_COLORS).length && skinStarters().every(s => STARTER_MON[s.key]),
       'starter picker must contain one partner line for all 18 types');
     assert(new Set(Object.values(STARTER_MON).map(m => m.ability)).size === 18,
       'every starter type needs a distinct ability');
@@ -1755,8 +1893,8 @@ window.requestAnimationFrame = function () { return 0; };
 
   // 7) storage corruption recovery — never destroys the real save (finally-restore)
   test('storage corruption recovery', async () => {
-    const KEYS = ['pkbrk-settings', 'pkbrk-dex', 'pkbrk-dexs', 'pkbrk-music', 'pkbrk-best'];
-    const FALLBACK = { 'pkbrk-settings': '{}', 'pkbrk-dex': '[]', 'pkbrk-dexs': '[]', 'pkbrk-music': 'true', 'pkbrk-best': '0' };
+    const KEYS = ['pkbrk-settings', 'pkbrk-dex', 'pkbrk-dexs', 'pkbrk-music', 'pkbrk-best', 'pkbrk-aetherfall-dex'];
+    const FALLBACK = { 'pkbrk-settings': '{}', 'pkbrk-dex': '[]', 'pkbrk-dexs': '[]', 'pkbrk-music': 'true', 'pkbrk-best': '0', 'pkbrk-aetherfall-dex': '[]' };
     const saved = {};
     for (const k of KEYS) saved[k] = localStorage.getItem(k);
     try {
@@ -1779,7 +1917,7 @@ window.requestAnimationFrame = function () { return 0; };
         assert(typeof v === typeof want && Array.isArray(v) === Array.isArray(want),
           'loadStore(' + k + ') gave ' + JSON.stringify(v) + ', expected the ' + FALLBACK[k] + ' fallback shape');
       }
-      return 'all 5 keys recover to their fallbacks without throwing';
+      return 'all 6 keys (incl. one skin-namespaced) recover to their fallbacks without throwing';
     } finally {
       for (const k of KEYS) {
         if (saved[k] === null) localStorage.removeItem(k);

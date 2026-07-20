@@ -7,7 +7,7 @@ const MEGA_DUR = 5;      // Mega Evolution duration in seconds
 function shieldCap() { return 3 + 2 * upgN('bulwark'); }
 function megaDur() { return (upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR) + starterMod('megaDur', 0); }
 function starterTierValue(key, tier) {
-  const value = STARTER_MON[G.starter]?.mods?.[key];
+  const value = SKIN.starterMon[G.starter]?.mods?.[key];
   if (value == null) return 0;
   return Array.isArray(value) ? (value[Math.max(0, Math.min(value.length - 1, tier - 1))] || 0) : value;
 }
@@ -39,7 +39,7 @@ const RESONANCE_WINDOW = 0.38;
 // riding a grass element shoots green fire.
 const PILOT_NONE = { ids: [0, 0, 0], names: ['TRAINING DRONE', 'TRAINING DRONE', 'TRAINING DRONE'] };
 function pilotInfo() {
-  const sm = STARTER_MON[G.starter];
+  const sm = SKIN.starterMon[G.starter];
   if (sm) {
     // every type FAMILY has a signature attack silhouette (drawTypedBolt,
     // render.js) — the shape follows the pilot's species, the color follows
@@ -91,7 +91,7 @@ function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 function migrateCheckpoint(c) {
   try {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
-    if (!(c.v >= 1 && c.v <= 3) || !(+c.lvl >= 4)) return null;
+    if (!(c.v >= 1 && c.v <= 4) || !(+c.lvl >= 4)) return null;
     const path = {};
     for (const k of PATH_KEYS) {
       const n = Math.max(0, Math.min(4, Math.floor(+((c.path || {})[k]) || 0)));
@@ -100,11 +100,13 @@ function migrateCheckpoint(c) {
     const upg = {};
     for (const k of Object.keys(path)) for (let t = 0; t < path[k]; t++) upg[PATHS[k].tiers[t].key] = 1;
     for (const k of [...WEB_BRIDGE_KEYS, ...WEB_FUSION_KEYS, ...WEB_APEX_KEYS]) if (c.upg && typeof c.upg === 'object' && c.upg[k]) upg[k] = 1;
-    const stacks = { orb: 0, ice: 0, bell: 0 };
+    const stacks = freshStacks(); // all STACK_ITEMS keys incl. affinity satellites
     for (const k of Object.keys(stacks)) stacks[k] = Math.max(0, Math.floor(+((c.stacks && typeof c.stacks === 'object' ? c.stacks : {})[k]) || 0));
     const lives = Math.max(1, Math.floor(+c.lives) || 1);
     return {
-      v: 3, lvl: Math.floor(+c.lvl), score: Math.max(0, Math.floor(+c.score) || 0),
+      // v4 (Round S1): + skin field — a pre-skin save is a pokemon save
+      v: 4, lvl: Math.floor(+c.lvl), score: Math.max(0, Math.floor(+c.score) || 0),
+      skin: typeof c.skin === 'string' ? c.skin : 'pokemon',
       lives, livesMax: Math.max(lives, Math.floor(+c.livesMax) || 0),
       mode: typeof c.mode === 'string' ? c.mode : 'junkie',
       starter: typeof c.starter === 'string' ? c.starter : null,
@@ -123,14 +125,19 @@ function migrateCheckpoint(c) {
         echo: !!(c.secretUpg && c.secretUpg.echo),
       },
       preset: typeof c.preset === 'string' ? c.preset : SETTINGS.preset,
+      affinity: c.affinity === 'light' || c.affinity === 'dark' ? c.affinity : null,
     };
   } catch (e) { return null; }
 }
-let RUN_CKPT = migrateCheckpoint(loadStore('pkbrk-run', 'null'));
+let RUN_CKPT = migrateCheckpoint(loadStore(storeKey('run'), 'null'));
+// belt-and-suspenders: the namespaced key already isolates skins, but a
+// checkpoint stamped by another skin is treated as absent, never resumed
+if (RUN_CKPT && RUN_CKPT.skin !== SKIN.id) RUN_CKPT = null;
 function saveCheckpoint() {
   if (G.daily) return;
   RUN_CKPT = {
-    v: 3, lvl: G.level, score: G.score, lives: G.lives, livesMax: G.livesMax, mode: G.mode,
+    v: 4, skin: SKIN.id,
+    lvl: G.level, score: G.score, lives: G.lives, livesMax: G.livesMax, mode: G.mode,
     starter: G.starter, starterLvl: G.starterLvl,
     path: { ...G.path }, upg: { ...G.upg }, stacks: { ...G.stacks },
     catchBonus: G.catchBonus, caughtRun: G.caughtRun, adapt: G.adapt,
@@ -138,11 +145,12 @@ function saveCheckpoint() {
     secret: { shards: G.secret.shards.slice(), offered: G.secret.offered.slice(), completed: !!G.secret.completed },
     secretUpg: { ...G.secretUpg },
     preset: SETTINGS.preset,
+    affinity: SETTINGS.affinity || null,
   };
-  saveStore('pkbrk-run', RUN_CKPT);
+  saveStore(storeKey('run'), RUN_CKPT);
 }
-function clearCheckpoint() { RUN_CKPT = null; saveStore('pkbrk-run', null); }
-let DAILY_RECORDS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-daily', '{}'));
+function clearCheckpoint() { RUN_CKPT = null; saveStore(storeKey('run'), null); }
+let DAILY_RECORDS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore(storeKey('daily'), '{}'));
 function dailyBest() { return Math.max(0, +(DAILY_RECORDS[dailyDateKey()] || 0)); }
 function dailyStreak() {
   let d = new Date(), streak = 0;
@@ -163,7 +171,7 @@ function recordDailyScore(score) {
   if (score > prior) DAILY_RECORDS[key] = score;
   const keys = Object.keys(DAILY_RECORDS).sort().reverse();
   for (const old of keys.slice(30)) delete DAILY_RECORDS[old];
-  saveStore('pkbrk-daily', DAILY_RECORDS);
+  saveStore(storeKey('daily'), DAILY_RECORDS);
   return score > prior;
 }
 function dailyShareText() {
@@ -173,9 +181,9 @@ function dailyShareText() {
 }
 function resumeRun() {
   const c = RUN_CKPT;
-  if (!c) return;
+  if (!c || (c.skin && c.skin !== SKIN.id)) return;
   SETTINGS.mode = MODES.some(m => m.key === c.mode) ? c.mode : 'junkie';
-  SETTINGS.starter = STARTER_MON[c.starter] ? c.starter : 'none';
+  SETTINGS.starter = SKIN.starterMon[c.starter] ? c.starter : 'none';
   if (PRESETS[c.preset]) SETTINGS.preset = c.preset;
   saveSettings();
   resetRun(c.lvl, false);
@@ -184,7 +192,8 @@ function resumeRun() {
   G.score = c.score; G.lives = Math.max(1, c.lives);
   G.livesMax = Math.max(G.lives, c.livesMax || G.livesMax);
   G.path = { ...c.path }; G.upg = { ...c.upg };
-  G.stacks = Object.assign({ orb: 0, ice: 0, bell: 0 }, c.stacks);
+  G.stacks = Object.assign(freshStacks(), c.stacks);
+  if (SKIN.affinities && (c.affinity === 'light' || c.affinity === 'dark')) { SETTINGS.affinity = c.affinity; saveSettings(); }
   G.catchBonus = c.catchBonus || 0; G.caughtRun = c.caughtRun || 0;
   G.adapt = c.adapt || 1; G.mega = Math.max(G.mega, c.mega || 0);
   G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
@@ -213,7 +222,7 @@ function secretEligible() {
 function secretShardCount() { return G.secret.shards.reduce((n, held) => n + (held ? 1 : 0), 0); }
 const G = {
   state: 'menu',
-  score: 0, best: Math.max(0, +loadStore('pkbrk-best', '0') || 0),
+  score: 0, best: Math.max(0, +loadStore(storeKey('best'), '0') || 0),
   lives: 3, livesMax: 3, level: 1, combo: 0, // livesMax = ring denominator (peak lives held)
   paddle: { x: 0, w: 130, h: 18, speed: 0, squash: 0 },
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
@@ -394,12 +403,12 @@ function statsObjective(type, done) {
 // Awarded on the results screen from stageObjectives(lvl) checks — real
 // journeys only (never trial/daily/cheated). Survives corrupt storage via
 // the loadStore guard, same pattern as SETTINGS.
-const MEDALS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore('pkbrk-medals', '{}'));
+const MEDALS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore(storeKey('medals'), '{}'));
 function medalEarned(lvl, key) { return !!(MEDALS[lvl] && MEDALS[lvl][key]); }
 function awardMedal(lvl, key) {
   if (medalEarned(lvl, key)) return false;
   (MEDALS[lvl] = MEDALS[lvl] || {})[key] = 1;
-  saveStore('pkbrk-medals', MEDALS);
+  saveStore(storeKey('medals'), MEDALS);
   return true;
 }
 function medalCount() { let n = 0; for (const k in MEDALS) n += Object.keys(MEDALS[k]).length; return n; }
@@ -419,10 +428,10 @@ function buildStageResults() {
   const hitsTaken = Object.values(L.dmgInBy || {}).reduce((a, b) => a + b, 0);
   const topFam = Object.entries(L.dmgInBy || {}).sort((a, b) => b[1] - a[1])[0];
   return {
-    lvl, region: genFor(lvl).name, stage: STAGE_NAMES[stageIdx(lvl)],
+    lvl, region: genFor(lvl).name, stage: SKIN.stageNames[stageIdx(lvl)],
     nextName: lvl >= 27 ? null
-      : stageIdx(lvl) === 2 ? genFor(lvl + 1).name + ' · ' + STAGE_NAMES[0]
-        : genFor(lvl).name + ' · ' + STAGE_NAMES[stageIdx(lvl) + 1],
+      : stageIdx(lvl) === 2 ? genFor(lvl + 1).name + ' · ' + SKIN.stageNames[0]
+        : genFor(lvl).name + ' · ' + SKIN.stageNames[stageIdx(lvl) + 1],
     t: L.t || 0, kills: L.kills || 0, score: G.score,
     hitsTaken, topFam: topFam ? topFam[0] : null,
     objective: L.objective || null, objectiveDone: !!L.objectiveDone,
@@ -598,7 +607,7 @@ const MILD_FORMS = FORMATIONS.filter(f => f.mild);
 // difficulty spike (flyers never trip the danger line, so a low pattern is
 // intense but fair). Blocks are static, so this only ever bounds the FLYERS.
 function flyerRoom(lvl) {
-  const regionInCycle = Math.floor((lvl - 1) / STAGES) % GENS.length;
+  const regionInCycle = Math.floor((lvl - 1) / STAGES) % SKIN.gens.length;
   const t = Math.max(0, Math.min(1, (regionInCycle - 6) / 2)); // 0 until region 7, →1 by the last
   return Math.max(56, H * (0.19 - 0.13 * t));
 }
@@ -780,7 +789,7 @@ function buildLevel(lvl) {
   preloadGen(genFor(lvl + STAGES));
   buildBackground(rIdx);
   const p = preset();
-  const cycle = Math.floor((lvl - 1) / (GENS.length * STAGES)); // full-journey loops
+  const cycle = Math.floor((lvl - 1) / (SKIN.gens.length * STAGES)); // full-journey loops
   // 4-5 columns on phones, up to 11 on wide desktops — cards stay readable
   // board size grows with the journey: more columns and rows deeper in, so
   // late regions are denser campaigns rather than just faster ones
@@ -825,7 +834,7 @@ function buildLevel(lvl) {
       poke: { id: gen.boss.id, n: gen.boss.n, t: gen.boss.t },
       isBoss: true, roundRole: 'legendary', phaseCount: G.mode === 'junkie' && gen.gauntlet ? 2 : 3,
       flash: 0, wobble: gameRand() * Math.PI * 2,
-      abilityCD: (BOSS_ABILITIES[gen.boss.id]?.cd || 8) * 0.7,
+      abilityCD: (SKIN.bossAbilities[gen.boss.id]?.cd || 8) * 0.7,
     });
     gridTop = bossY + bossH / 2 + 26;
     // ---- THE GAUNTLET: every region's finale is a three-round title fight.
@@ -850,15 +859,15 @@ function buildLevel(lvl) {
           hp: subHp, maxHp: subHp, bare: true, subBoss: true, elite: 3,
           roundRole: 'sentinel', phaseCount: 1, phase: 1,
           subIdx: i, subN: subs.length,
-          poke: { id: sid, t: st2, n: NAMES[sid] },
+          poke: { id: sid, t: st2, n: SKIN.names[sid] },
           flash: 0, wobble: i * 2.1,
         });
         getSprite(sid);
       }
       getSprite(gen.gauntlet.myth[0]);
       setAnnounce('alert', gen.accent, 'THE ' + gen.name + ' GAUNTLET',
-        'ROUND 1 — THE SENTINELS: ' + subs.map(x => NAMES[x[0]].toUpperCase()).join(' · '), 3.6,
-        (G.mode === 'junkie' ? gauntletEntranceName(SENTINEL_ENTRANCE_STYLES[rIdx]) + ' · ' : '') +
+        'ROUND 1 — THE SENTINELS: ' + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
+        (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
           'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true);
     } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
@@ -939,12 +948,14 @@ function buildLevel(lvl) {
         flash: 0, wobble: gameRand() * Math.PI * 2,
       };
       // easter eggs: glitch block > shiny (the Pokédex Shiny Charm doubles
-      // its appearance rate) > ditto disguise
+      // its appearance rate) > ditto disguise. MISSINGNO. and Ditto are
+      // pokemon-skin lore — other skins keep the same rand draw (streams
+      // stay aligned) but only the shiny band applies.
       const roll = gameRand();
       const shinyChance = !G.daily && dexRewardActive('shinyCharm') ? 1 / 32 : 1 / 64;
-      if (roll < 1 / 220) { brick.poke = { id: -1, t: 'normal' }; brick.hp = brick.maxHp = 1; }
+      if (SKIN.id === 'pokemon' && roll < 1 / 220) { brick.poke = { id: -1, t: 'normal' }; brick.hp = brick.maxHp = 1; }
       else if (roll < 1 / 220 + shinyChance) { brick.shiny = true; getSprite(id, true); }
-      else if (roll < 1 / 220 + shinyChance + 1 / 45) { brick.isDitto = true; }
+      else if (SKIN.id === 'pokemon' && roll < 1 / 220 + shinyChance + 1 / 45) { brick.isDitto = true; }
       G.bricks.push(brick);
     }
   }
@@ -1112,7 +1123,7 @@ function buildLevel(lvl) {
     if (G.gauntlet) {
       const sentinels = G.bricks.filter(b => b.subBoss && !b.dead);
       G.gauntlet.entry = {
-        role: 'sentinel', round: 1, style: SENTINEL_ENTRANCE_STYLES[rIdx],
+        role: 'sentinel', round: 1, style: SKIN.sentinelEntranceStyles[rIdx],
         t: 0, dur: 2.8, color: gen.accent,
       };
       for (let i = 0; i < sentinels.length; i++) {
@@ -1305,8 +1316,8 @@ function buildLevel(lvl) {
     // REGION INTRO (Milestone 1): arriving in a region is a milestone beat —
     // an authored hero card (title + tagline + flavour) with its own sting,
     // not just the stage banner. Acts still announce themselves on top.
-    const actTag = regionsIn % 3 === 0 ? 'ACT ' + ACTS[actIdx(lvl)].n + ': ' + ACTS[actIdx(lvl)].name : null;
-    const intro = REGION_INTROS[regionsIn % REGION_INTROS.length];
+    const actTag = regionsIn % 3 === 0 ? 'ACT ' + SKIN.acts[actIdx(lvl)].n + ': ' + SKIN.acts[actIdx(lvl)].name : null;
+    const intro = SKIN.regionIntros[regionsIn % SKIN.regionIntros.length];
     setAnnounce(null, gen.accent, gen.name, intro ? intro.tag : 'STAGE 1/3 — ARRIVAL', 3.2,
       [actTag, intro && intro.sub].filter(Boolean).join('  ·  '), null, false, true);
     SFX.regionIntro();
@@ -1360,7 +1371,7 @@ function buildLevel(lvl) {
           w: 42, h: 38, hp: 999, maxHp: 999,
           // Togepi(175)=fairy, Porygon(137)=normal — the aura tint under the
           // ally ring; friendlies never shoot so type is cosmetic only.
-          poke: { id: o.species, t: o.species === 175 ? 'fairy' : 'normal', n: NAMES[o.species] },
+          poke: { id: o.species, t: o.speciesT || 'normal', n: SKIN.names[o.species] },
           flash: 0, wobble: gameRand() * Math.PI * 2,
           bare: true, friendly: true, fhp: 3, fpath: o.path,
           f0y: startY, fexitY: H * 0.08, fbx0: W / 2,
@@ -1377,7 +1388,7 @@ function buildLevel(lvl) {
   // pill in render.js), and the whole coach runs ONCE per install — a finished
   // course sets 'pkbrk-jcoach' and never returns. Knockout retries re-arm it
   // harmlessly (same wave, same steps).
-  if (G.mode === 'junkie' && lvl === 1 && !G.trial && !G.daily && !loadStore('pkbrk-jcoach', 0)) {
+  if (G.mode === 'junkie' && lvl === 1 && !G.trial && !G.daily && !loadStore(storeKey('jcoach'), 0)) {
     G.jCoach = { step: 1, doneT: 0, moved: 0, lastX: null, lastY: null };
   }
   // SPACE JUNKIE's Kanto challenge doubles as the CHARGE-SHOT tutorial
@@ -1388,7 +1399,7 @@ function buildLevel(lvl) {
         : 'HOLD RIGHT-CLICK OR SHIFT TO CHARGE A SHOT');
   }
   // ---- starter evolution: the partner grows with the journey ----
-  const sm = STARTER_MON[G.starter];
+  const sm = SKIN.starterMon[G.starter];
   if (sm) {
     const sLvl = starterStage(lvl, G.starter);
     if (sLvl > G.starterLvl) {
@@ -1401,7 +1412,7 @@ function buildLevel(lvl) {
       const sameForm = sm.ids[priorLvl - 1] === sm.ids[sLvl - 1];
       setAnnounce(G.starter, TYPE_COLORS[G.starter], sameForm
         ? sm.names[sLvl - 1] + ' UNLEASHED ' + sm.ability + ' ' + romanTier(sLvl) + '!'
-        : sm.names[priorLvl - 1] + ' EVOLVED INTO ' + sm.names[sLvl - 1] + '!',
+        : sm.names[priorLvl - 1] + ' ' + skinEvolveVerb(G.starter) + ' ' + sm.names[sLvl - 1] + '!',
       sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
     }
   }
@@ -1501,10 +1512,10 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.charge = 0; G.chargeCD = 0; G.chargeFullT = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;
-  G.stacks = { orb: 0, ice: 0, bell: 0 }; G.attackAnim = 0; G.upgradeFx = null;
+  G.stacks = freshStacks(); G.attackAnim = 0; G.upgradeFx = null;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins
-  G.starter = STARTER_MON[SETTINGS.starter] ? SETTINGS.starter : null;
+  G.starter = SKIN.starterMon[SETTINGS.starter] ? SETTINGS.starter : null;
   G.starterLvl = starterStage(startLevel, G.starter);
   G.lastDraftForm = webForm(); // a deep start is not a "fresh evolution"
   G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
@@ -1562,7 +1573,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
       'SAME WALLS · DROPS · STARTER · UPGRADES FOR EVERY PLAYER', 3.4,
       'LOCAL BEST ' + dailyBest() + ' · ONE SEEDED JOURNEY');
     else setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
-      genFor(startLevel).name + ' · ' + STAGE_NAMES[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
+      genFor(startLevel).name + ' · ' + SKIN.stageNames[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
       granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
     encounterCards.forEach(a => setAnnounce(a.icon, a.color, a.name, a.desc, a.max, a.sub, a.spriteId, a.spriteShiny));
   }
@@ -1683,7 +1694,7 @@ function shatterBrick(br, x, y, bare) {
 // Clearing stage 27 on a real journey ends the campaign. The completion
 // record is written UP FRONT so no crash or reload can ever lose the clear,
 // and the region checkpoint survives untouched until that write has landed.
-let VICTORY_REC = (v => (v && typeof v === 'object') ? v : {})(loadStore('pkbrk-victory', '{}'));
+let VICTORY_REC = (v => (v && typeof v === 'object') ? v : {})(loadStore(storeKey('victory'), '{}'));
 function beginEnding() {
   // the arena goes still: hostile state dies instantly, damage is over
   G.enemyShots = []; G.telegraphs = []; G.columnStrikes = []; G.lasers = [];
@@ -1701,7 +1712,7 @@ function beginEnding() {
     path: s.path || null, rift: !!(G.secret && G.secret.completed),
     playT: Math.round(G.playT || 0),
   };
-  saveStore('pkbrk-victory', VICTORY_REC);
+  saveStore(storeKey('victory'), VICTORY_REC);
   // the night sky pre-shatters into FEW, LARGE, deliberate glass shards —
   // this is a set piece, not a particle burst (deterministic, no Date/random)
   const shards = [];

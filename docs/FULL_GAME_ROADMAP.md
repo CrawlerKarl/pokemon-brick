@@ -323,6 +323,15 @@ universe. Mechanics work continues regardless.
 runtime toggle — full design in `docs/ORIGINAL_SKIN_PLAN.md` (skin
 registry, per-skin storage, 18 classes / 3 disciplines, LIGHT/DARK
 affinity, procedural art, rounds S1–S7).
+**SHIPPED 2026-07-19 (rounds S1–S7):** the AETHERFALL skin is LIVE behind
+the title-screen edition toggle. `js/skin.js` (registry + per-skin
+`storeKey` namespacing + checkpoint v4 skin/affinity fields),
+`js/aetherfall.js` (18 classes in 3 disciplines, 9 realms, 54 unit lines,
+27 sentinels + 9+9 boss-kit clones, strings/lexicon), `js/aetherart.js`
+(deterministic parts-based procedural renderer — zero image assets),
+LIGHT/DARK affinity satellites on the stack machinery, gallery unit
+sheet, and 5 new suite tests. The pokemon skin keeps legacy storage keys
+(zero migration) and stays bit-identical — the suite is the guard.
 
 ---
 

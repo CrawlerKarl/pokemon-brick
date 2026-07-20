@@ -6,12 +6,17 @@ invariants you must not regress.
 
 ## What it is
 **WAVEBREAKER** — a Breakout × Space Invaders/Galaga hybrid, journeying through
-9 Pokémon regions (3 stages each: ARRIVAL → CHALLENGE → LEGENDARY). The brand
-is skin-agnostic: `GAME_TITLE` + `SKIN_EDITION` (config.js) split the engine
-name from the current theme ("POKÉMON EDITION"), so future modes add cards and
-future skins swap strings/art without touching mechanics. 11 JS modules in
-`js/`, loaded in order (later reference earlier) via `<script>` tags in
-`index.html` (dev.js is dev-only tooling, loaded second-to-last). No build
+9 regions (3 stages each: ARRIVAL → CHALLENGE → LEGENDARY). The brand is
+skin-agnostic and now carries **TWO full skins behind a runtime toggle**
+(the title-screen edition pill): **POKÉMON EDITION** (PNG sprites, legacy
+bare storage keys) and **AETHERFALL EDITION** (an original sci-fi × fantasy
+universe, 100% procedural art, namespaced storage). `js/skin.js` owns the
+`SKINS` registry + `SKIN` (resolved at boot: `?skin=` → `SETTINGS.skin` →
+pokemon); presentation/world tables ride `SKIN.*`, the engine (type keys,
+effectiveness, modes, paths, web) is shared. 14 JS modules in `js/`, loaded
+in order (later reference earlier) via `<script>` tags in `index.html`
+(skin.js sits between config and audio; aetherfall.js + aetherart.js after
+data.js; dev.js is dev-only tooling, loaded second-to-last). No build
 step / deps / framework. `G` (state.js) is the god-object holding all
 runtime state. The campaign roadmap lives in `docs/FULL_GAME_ROADMAP.md`
 (+ `docs/IMPLEMENTATION_LOG.md`) — consult it before starting a round.
@@ -109,6 +114,26 @@ Live at https://crawlerkarl.github.io/pokemon-brick/. The user tests on a real
 phone — flag anything only verifiable there.
 
 ## Design invariants (don't regress without being asked)
+- **Skins are labels/art over one engine — internal keys NEVER change.**
+  Type keys, mode/preset keys, path/stack/web keys, scene keys,
+  BOSS_CHANNELS `.pattern/.params`, BOSS_STYLE strings: engine, shared.
+  A skin owns names/strings/rosters/boss identities/art via `SKIN.*`
+  (assembled in data.js's tail; aetherfall.js replaces its tables).
+  The pokemon skin must stay BIT-IDENTICAL (the suite is the guard) and
+  keeps LEGACY bare storage keys; per-skin state goes through
+  `storeKey()` (never call it for settings/music/v — those are global).
+  Checkpoints are schema v4 (`skin` + `affinity`); v1–v3 accepted
+  forever; a checkpoint stamped by another skin is treated as absent.
+  Easter eggs gate on `SKIN.id === 'pokemon'` with rand draws kept even
+  across skins. AETHERFALL ships ZERO image assets: `SKIN.spriteMaker`
+  (aetherart.js) bakes deterministic canvases (seeded per line id —
+  NEVER gameRand) with `.complete/.naturalWidth` set; it must never
+  touch the network. Boss kits there are same-slot clones of the
+  pokemon kits — mechanics identical, ids/names/strings original.
+  The LIGHT/DARK affinity swaps ONLY which satellite trio fills empty
+  draft offers (`activeSatellites()`); web topology and the MAX-2-FUSION
+  / MAX-1-APEX caps are untouched. The edition pill on the home screen
+  is the toggle (render writes `skinPillRect`, input reads it).
 - **Modes share one wave generator.** `buildLevel` (state.js) branches on
   `G.mode`. When touching fire / serve / the loss condition, keep all three
   working: the shooter modes (`!== 'classic'`) spawn NO ball, skip the

@@ -47,7 +47,7 @@ function buildBackground(genIdx, stage = 2) {
   const key = genIdx * 3 + stage;
   if (bgGen === key && bgSky) return;
   bgGen = key;
-  const g = GENS[genIdx];
+  const g = SKIN.gens[genIdx];
   const scene = (SCENE_SKIES[genIdx] && SCENE_SKIES[genIdx][stage]) || { sky: g.sky, cel: 'moon', dark: 1 };
   SCENE_DARK = scene.dark;
   bgSky = document.createElement('canvas'); bgSky.width = W; bgSky.height = H;
@@ -613,7 +613,7 @@ function updateAmbient(dt, genIdx) {
 function drawAmbient(genIdx) {
   if (genIdx === 0) drawFlocks(); // Kanto: distant birds behind the weather
   const type = AMBIENT_TYPES[genIdx];
-  const accent = GENS[genIdx].accent;
+  const accent = SKIN.gens[genIdx].accent;
   for (const a of ambient) {
     switch (type) {
       case 'firefly': {

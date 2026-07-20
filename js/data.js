@@ -12,6 +12,9 @@ const TYPE_COLORS = {
 // ---- unified vector icon set: every type & power gets a drawn symbol ----
 // (replaces the old emoji — consistent style, and readable for colorblind players)
 function drawGlyph(c, key, x, y, r, col = '#fff', lw = null) {
+  // the catch-glyph is skin identity: every data-driven 'pokeball' icon
+  // (path badges, fusion icons, rewards) re-skins through this choke point
+  if (key === 'pokeball' && SKIN.strings) key = SKIN.strings.dexGlyph;
   c.save();
   c.translate(x, y);
   c.strokeStyle = col; c.fillStyle = col;
@@ -220,6 +223,17 @@ function drawGlyph(c, key, x, y, r, col = '#fff', lw = null) {
       c.beginPath(); c.moveTo(-s * 0.85, 0); c.lineTo(s * 0.85, 0); c.stroke();
       c.beginPath(); c.arc(0, 0, s * 0.26, 0, Math.PI * 2); c.stroke();
       break;
+    case 'sigil': // AETHERFALL binding sigil — hex ring around a rune eye
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3 - Math.PI / 2;
+        c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * s * 0.85, Math.sin(a) * s * 0.85);
+      }
+      c.closePath(); c.stroke();
+      c.beginPath(); c.moveTo(0, -s * 0.85); c.lineTo(0, -s * 0.45);
+      c.moveTo(0, s * 0.85); c.lineTo(0, s * 0.45); c.stroke();
+      c.beginPath(); c.arc(0, 0, s * 0.26, 0, Math.PI * 2); c.fill();
+      break;
     case 'mega': // eight-point burst
       c.beginPath();
       for (let i = 0; i < 8; i++) {
@@ -422,7 +436,7 @@ const STARTER_MON = {
 // Returns copy that describes what the starter actually does in the selected
 // mode. `tier` is one-based (1–3); invalid modes fall back to classic.
 function starterModeCopy(starter, mode = 'classic', tier = 1) {
-  const mon = STARTER_MON[starter];
+  const mon = SKIN.starterMon[starter];
   if (!mon) return null;
   const copy = mon.modeCopy[mode] || mon.modeCopy.classic;
   const tierIndex = Math.max(0, Math.min(copy.tiers.length - 1, Math.floor(Number(tier) || 1) - 1));
@@ -440,12 +454,12 @@ function starterStage(level, starter = SETTINGS.starter) {
   return regionsIn >= 6 ? 3 : regionsIn >= 3 ? 2 : 1;
 }
 function starterMod(key, fallback = 0) {
-  const mon = STARTER_MON[G.starter];
+  const mon = SKIN.starterMon[G.starter];
   const value = mon && mon.mods && mon.mods[key];
   if (value == null) return fallback;
   return Array.isArray(value) ? (value[Math.max(0, Math.min(value.length - 1, G.starterLvl - 1))] ?? fallback) : value;
 }
-function starterPerk() { return STARTER_MON[G.starter]?.ability || null; }
+function starterPerk() { return SKIN.starterMon[G.starter]?.ability || null; }
 
 // ---- species-aware MOTION PROFILES (type is only the fallback) ----
 // A ground dragon should not flap; a serpent should undulate; a boulder
@@ -463,7 +477,7 @@ const GAIT_FLAP_T = new Set(['flying', 'dragon', 'bug']);
 const GAIT_SWIM_T = new Set(['water', 'ice']);
 const GAIT_HOVER_T = new Set(['ghost', 'psychic', 'fairy', 'poison']);
 function motionProfile(poke) {
-  const o = MOTION_BY_ID[poke.id];
+  const o = SKIN.motionById[poke.id];
   if (o) return o;
   if (GAIT_FLAP_T.has(poke.t)) return 'winged';
   if (GAIT_SWIM_T.has(poke.t)) return 'swim';
@@ -648,8 +662,8 @@ const JUNKIE_ITEMS = {
 };
 function junkieTierName(pathKey, tierIdx) {
   const tier = PATHS[pathKey].tiers[tierIdx];
-  if (G.mode === 'junkie' && JUNKIE_ITEMS[pathKey] && JUNKIE_ITEMS[pathKey][tierIdx]) {
-    return JUNKIE_ITEMS[pathKey][tierIdx];
+  if (G.mode === 'junkie' && SKIN.junkieItems[pathKey] && SKIN.junkieItems[pathKey][tierIdx]) {
+    return SKIN.junkieItems[pathKey][tierIdx];
   }
   return G.mode === 'classic' && tier.cname ? tier.cname : tier.name;
 }
@@ -694,7 +708,30 @@ const STACK_ITEMS = [
   { key: 'orb',  name: 'LIFE ORB',       icon: 'mega',   color: '#b388ff', desc: 'ALL ATTACK DAMAGE +6% — STACKS FOREVER' },
   { key: 'ice',  name: 'NEVER-MELT ICE', icon: 'slow',   color: '#80deea', desc: 'BLASTER HEAT −6% PER SHOT — STACKS FOREVER' },
   { key: 'bell', name: 'SOOTHE BELL',    icon: 'heart',  color: '#f48fb1', desc: 'ALL SCORE +6% — STACKS FOREVER' },
+  // ---- AFFINITY satellites (Round S6). A skin with SKIN.affinities lets
+  // the player pick LIGHT or DARK at setup; the pick swaps which trio fills
+  // empty draft slots (activeSatellites) — same machinery, same slot rules,
+  // the 50-node web and its caps untouched. Keys are additive G.stacks keys.
+  { key: 'dawn',  affinity: 'light', name: 'DAWNLIGHT CHARM', icon: 'star',  color: '#ffe082', desc: 'POWER-UP DROPS +8% — STACKS FOREVER' },
+  { key: 'halo',  affinity: 'light', name: 'HALO WARD',       icon: 'shield', color: '#fff59d', desc: 'EVERY 25 KILLS RAISES A SHIELD — STACKS QUICKEN IT' },
+  { key: 'grace', affinity: 'light', name: 'GRACE LIGHT',     icon: 'heart', color: '#ffd54f', desc: 'POTIONS ALSO BANK 15% MEGA — STACKS FOREVER' },
+  { key: 'fang',  affinity: 'dark',  name: 'VOID FANG',       icon: 'dark',  color: '#b388ff', desc: 'ALL DAMAGE +7% · SCORE −3% — STACKS FOREVER' },
+  { key: 'tithe', affinity: 'dark',  name: 'BLOOD TITHE',     icon: 'mega',  color: '#ce93d8', desc: 'EVERY KILL BANKS +0.9% MEGA — STACKS FOREVER' },
+  { key: 'hex',   affinity: 'dark',  name: 'UMBRAL HEX',      icon: 'ghost', color: '#9575cd', desc: 'CHARGED SHOTS +9% DAMAGE — STACKS FOREVER' },
 ];
+const AFFINITIES = {
+  light: { key: 'light', name: 'LIGHT', color: '#ffd97a', tag: 'WARD · MEND · SHINE',
+    desc: 'RADIANT SATELLITES: DROPS, SHIELDS, MEGA FROM MENDING' },
+  dark: { key: 'dark', name: 'DARK', color: '#b388ff', tag: 'DRAIN · CRIT · RISK',
+    desc: 'VOID SATELLITES: DAMAGE, KILL-FED MEGA, CHARGED CRUELTY' },
+};
+function stackN(k) { return (G.stacks && G.stacks[k]) || 0; }
+function freshStacks() {
+  const s = {}; for (const it of STACK_ITEMS) s[it.key] = 0; return s;
+}
+function affinityColor() {
+  return (SKIN.affinities && AFFINITIES[SETTINGS.affinity]) ? AFFINITIES[SETTINGS.affinity].color : null;
+}
 // A complete Kanto Rift Key earns one bonus draft after Mew VMAX. These
 // upgrades never enter the ordinary tree or reroll pool.
 const SECRET_UPGRADES = [
@@ -901,6 +938,24 @@ const WEB_SATELLITES = [
   { stackKey: 'ice', path: 'arsenal' },  // NEVER-MELT ICE — cooling mastery
   { stackKey: 'bell', path: 'bond' },    // SOOTHE BELL — fortune mastery
 ];
+// affinity trios dock on the same three-satellite frame (same slots, same
+// caps); the pick simply swaps WHICH mastery items fill empty offers
+const AFFINITY_SATELLITES = {
+  light: [
+    { stackKey: 'dawn', path: 'bond' },
+    { stackKey: 'halo', path: 'aegis' },
+    { stackKey: 'grace', path: 'surge' },
+  ],
+  dark: [
+    { stackKey: 'fang', path: 'impact' },
+    { stackKey: 'tithe', path: 'surge' },
+    { stackKey: 'hex', path: 'arsenal' },
+  ],
+};
+function activeSatellites() {
+  if (SKIN.affinities && AFFINITY_SATELLITES[SETTINGS.affinity]) return AFFINITY_SATELLITES[SETTINGS.affinity];
+  return WEB_SATELLITES;
+}
 const WEB_BRIDGE_KEYS = WEB_BRIDGES.map(b => b.key);
 const WEB_FUSION_KEYS = WEB_FUSIONS.map(f => f.key);
 const WEB_APEX_KEYS = WEB_APEXES.map(x => x.key);
@@ -1138,7 +1193,7 @@ const BOSS_ONLY_IDS = new Set(GENS.flatMap(g => [
   ...(g.gauntlet ? g.gauntlet.subs.map(([id]) => id) : []),
   ...(g.gauntlet ? [g.gauntlet.myth[0]] : []),
 ]));
-function isBossOnlyPokemon(id) { return BOSS_ONLY_IDS.has(id); }
+function isBossOnlyPokemon(id) { return SKIN.bossOnlyIds.has(id); }
 // ============================================================
 //  ECOLOGY — Pokémon that BELONG together appear together.
 //  Each region has curated HABITAT PACKS (the groupings you'd see in the
@@ -1231,12 +1286,12 @@ const TYPE_CLUSTERS = [
 ];
 // pick a wave THEME — squads in one wave draw from the same ecology
 function pickWaveTheme(genIdx) {
-  const packs = HABITAT_PACKS[genIdx] || [];
+  const packs = SKIN.habitatPacks[genIdx] || [];
   if (packs.length && gameRand() < 0.6) {
     const p = packs[Math.floor(gameRand() * packs.length)];
     return { name: p.n, ids: new Set(p.ids), types: null };
   }
-  const cl = TYPE_CLUSTERS[Math.floor(gameRand() * TYPE_CLUSTERS.length)];
+  const cl = SKIN.typeClusters[Math.floor(gameRand() * SKIN.typeClusters.length)];
   return { name: cl.map(t => t.toUpperCase()).join('/') + ' HABITAT', ids: null, types: new Set(cl) };
 }
 // one tier's pool filtered to the theme; falls back to the full tier so a
@@ -1255,9 +1310,9 @@ function themedPool(gen, tier, theme) {
 // ---- 3-stage journey: every region is ARRIVAL → CHALLENGE → LEGENDARY ----
 const STAGES = 3;
 const STAGE_NAMES = ['ARRIVAL', 'CHALLENGE', 'LEGENDARY'];
-function regionIdx(lvl) { return Math.floor((lvl - 1) / STAGES) % GENS.length; }
+function regionIdx(lvl) { return Math.floor((lvl - 1) / STAGES) % SKIN.gens.length; }
 function stageIdx(lvl) { return (lvl - 1) % STAGES; } // 0 arrival · 1 challenge · 2 boss
-function genFor(level) { return GENS[regionIdx(level)]; }
+function genFor(level) { return SKIN.gens[regionIdx(level)]; }
 // ---- THE THREE ACTS. The journey is a three-act play: gens 1–3 teach the
 // flocks to ASSEMBLE, 4–6 teach them to TRANSFORM, 7–9 COMBINE everything.
 // Act boundaries land exactly on the partner evolutions (regions 4 & 7) and
@@ -1290,7 +1345,9 @@ const BOSS_ABILITIES = {
   150:  { cd: 6,   name: 'TELEPORT' },        // Mewtwo blinks across the arena
   249:  { cd: 7,   name: 'AEROBLAST' },       // Lugia summons gusting winds
   384:  { cd: 8,   name: 'SKY SWEEP' },       // Rayquaza crosses the playfield
-  483:  { cd: 8,   name: 'ROAR OF TIME' },    // Dialga warps ball speed
+  // p2FireMul: BASTION cadence tightens in phase 2+ (was a hardcoded id
+  // check in update.js — now data, so any skin's bastion boss can carry it)
+  483:  { cd: 8,   name: 'ROAR OF TIME', p2FireMul: 0.85 }, // Dialga warps ball speed
   644:  { cd: 7.5, name: 'BOLT STRIKE' },     // Zekrom calls column lightning
   717:  { cd: 7,   name: 'OBLIVION WING' },   // Yveltal fires a shot fan
   792:  { cd: 8,   name: 'PHANTOM PHASE' },   // Lunala turns intangible
@@ -1397,7 +1454,7 @@ const BOSS_PROJECTILE_KIND = Object.freeze({
   1001: 'tablet', 1002: 'crystal', 1003: 'shock', 1007: 'sunwheel', 1025: 'mochi',
 });
 function projectileKindFor(id, type) {
-  return BOSS_PROJECTILE_KIND[id] || TYPE_PROJECTILE_KIND[type] || 'pellet';
+  return SKIN.bossProjectileKind[id] || TYPE_PROJECTILE_KIND[type] || 'pellet';
 }
 // SPACE JUNKIE gauntlets are authored as 27 distinct arrival beats: one
 // sentinel formation, one legendary entrance, and one mythical entrance per
@@ -1437,7 +1494,7 @@ const GAUNTLET_ENTRANCE_NAMES = {
   shadowstep: 'SHADOW STEP', junglecall: 'JUNGLE CALL', toxicmask: 'TOXIC MASQUERADE',
   maxrift: 'MAX RIFT',
 };
-function gauntletEntranceName(style) { return GAUNTLET_ENTRANCE_NAMES[style] || 'BOSS ARRIVAL'; }
+function gauntletEntranceName(style) { return SKIN.gauntletEntranceNames[style] || 'BOSS ARRIVAL'; }
 
 // names for everything in the rosters — the Pokédex shows them
 const NAMES = {
@@ -1493,7 +1550,7 @@ function regionRoster(g) {
   ids.add(g.boss.id);
   return [...ids].sort((a, b) => a - b);
 }
-function dexTotal() { return GENS.reduce((n, g) => n + regionRoster(g).length, 0); }
+function dexTotal() { return SKIN.gens.reduce((n, g) => n + regionRoster(g).length, 0); }
 
 // sprites live in the repo (assets/sprites/, fetched by tools/fetch-sprites.js);
 // if a file is missing we fall back to PokeAPI's hosted artwork. shinies are
@@ -1503,6 +1560,10 @@ const spriteCache = {};
 const MEW_VMAX_IMG = new Image();
 MEW_VMAX_IMG.src = 'assets/sprites/mew-vmax.png';
 function getSprite(id, shiny) {
+  // procedural skins bake their own drawables (same synchronous contract:
+  // .complete / .naturalWidth are set on the returned canvas) and must
+  // never touch the network — the PNG/remote path is pokemon-skin-only
+  if (SKIN.spriteMaker) return SKIN.spriteMaker(id, shiny);
   const key = (shiny ? 's' : '') + id;
   if (!spriteCache[key]) {
     const img = new Image();
@@ -1541,11 +1602,11 @@ function preloadGen(g) {
   Object.values(g.tiers).flat().forEach(([id]) => getSprite(id));
   getSprite(g.boss.id);
 }
-preloadGen(GENS[0]); preloadGen(GENS[1]);
+// (preload moved to the skin-assembly tail — it warms the ACTIVE skin)
 
 // ---- Pokédex (persistent collection, shinies tracked separately) ----
-const DEX = new Set((v => Array.isArray(v) ? v : [])(loadStore('pkbrk-dex', '[]')));
-const DEXS = new Set((v => Array.isArray(v) ? v : [])(loadStore('pkbrk-dexs', '[]')));
+const DEX = new Set((v => Array.isArray(v) ? v : [])(loadStore(storeKey('dex'), '[]')));
+const DEXS = new Set((v => Array.isArray(v) ? v : [])(loadStore(storeKey('dexs'), '[]')));
 // Persistent research rewards turn the collection into useful progression.
 // They are deliberately modest: a new player still gets the intended run,
 // while long-term catches create visible, mode-agnostic advantages.
@@ -1557,16 +1618,16 @@ const DEX_REWARDS = [
   { at: 250, key: 'shinyCharm', name: 'SHINY CHARM', icon: 'fairy', color: '#ffd700', desc: 'SHINY POKÉMON APPEAR TWICE AS OFTEN' },
 ];
 function dexRewardActive(key) {
-  const r = DEX_REWARDS.find(x => x.key === key);
+  const r = SKIN.dexRewards.find(x => x.key === key);
   return !!r && DEX.size >= r.at;
 }
-function dexRewardAt(n) { return DEX_REWARDS.find(r => r.at === n) || null; }
-function nextDexReward() { return DEX_REWARDS.find(r => DEX.size < r.at) || null; }
+function dexRewardAt(n) { return SKIN.dexRewards.find(r => r.at === n) || null; }
+function nextDexReward() { return SKIN.dexRewards.find(r => DEX.size < r.at) || null; }
 function addToDex(id, shiny) {
   const isNew = !DEX.has(id) || (shiny && !DEXS.has(id));
   DEX.add(id);
-  saveStore('pkbrk-dex', [...DEX]);
-  if (shiny) { DEXS.add(id); saveStore('pkbrk-dexs', [...DEXS]); }
+  saveStore(storeKey('dex'), [...DEX]);
+  if (shiny) { DEXS.add(id); saveStore(storeKey('dexs'), [...DEXS]); }
   return isNew;
 }
 
@@ -1620,7 +1681,7 @@ const DEFAULT_OBJECTIVE_SETS = [
   ],
 ];
 function stageObjectives(lvl) {
-  return STAGE_OBJECTIVE_SETS[regionIdx(lvl) + ':' + stageIdx(lvl)] || DEFAULT_OBJECTIVE_SETS[stageIdx(lvl)];
+  return SKIN.stageObjectiveSets[regionIdx(lvl) + ':' + stageIdx(lvl)] || DEFAULT_OBJECTIVE_SETS[stageIdx(lvl)];
 }
 
 // ---- REGION INTROS: the arrival beat for each region's first stage — a
@@ -1647,7 +1708,7 @@ const STAGE_FLAVOR = {
   '0:1': '"ARMORED SHELLS ON ROOKIE WILDS? SOMEONE IS ORGANIZING THEM."  — FLIGHT LOG, DAY 2',
   '0:2': '"THE GENETIC POKÉMON WITHDRAWS TO THE EAST. THE BELL TOWERS OF JOHTO ARE RINGING."  — FLIGHT LOG, DAY 3',
 };
-function stageFlavor(lvl) { return STAGE_FLAVOR[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
+function stageFlavor(lvl) { return SKIN.stageFlavor[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
 // (ENCOUNTER DIRECTOR region grammar appended below — see REGION_GRAMMAR)
 
 // ============================================================
@@ -1692,11 +1753,80 @@ const ENCOUNTER_OBJECTIVES = {
   // ESCORT (Sinnoh arrival): a friendly TOGEPI crosses the combat zone
   // bottom→top while the swarm hunts it. Get it to the far edge (path
   // completion, ~20s) and the flock disperses. Fainting = objective failed.
-  '3:0': { type: 'escort', name: 'ESCORT THE TRAVELER', species: 175, path: 'cross',
+  '3:0': { type: 'escort', name: 'ESCORT THE TRAVELER', species: 175, speciesT: 'fairy', path: 'cross',
     tip: 'GET THE TRAVELER ACROSS — INTERCEPT THE FIRE AIMED AT IT' },
   // DEFEND (Kalos challenge): a stationary PORYGON relay must survive a 22s
   // timer while the swarm splits aimed fire between you and it.
-  '5:1': { type: 'defend', dur: 22, name: 'DEFEND THE RELAY', species: 137, path: 'hold',
+  '5:1': { type: 'defend', dur: 22, name: 'DEFEND THE RELAY', species: 137, speciesT: 'normal', path: 'hold',
     tip: 'KEEP THE RELAY ALIVE — SHOOT DOWN THE FIRE AIMED AT IT' },
 };
-function encounterObjective(lvl) { return ENCOUNTER_OBJECTIVES[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
+function encounterObjective(lvl) { return SKIN.encounterObjectives[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
+
+// ============================================================
+// SKIN ASSEMBLY (Round S1) — attach every presentation/world table to the
+// pokemon skin BY REFERENCE (zero copies, bit-identical), then default-fill
+// other skins so a stub skin is complete. See js/skin.js for the registry.
+// Engine tables (EFFECTIVE/RESIST, SHOT_CLASSES, TYPE_PROJECTILE_KIND,
+// PATHS/STACK_ITEMS, MODIFIERS, STAGE_OBJECTIVE_SETS…) stay global.
+// ============================================================
+assembleSkins({
+  names: NAMES, gens: GENS, habitatPacks: HABITAT_PACKS, typeClusters: TYPE_CLUSTERS,
+  starterMon: STARTER_MON, regionIntros: REGION_INTROS, stageFlavor: STAGE_FLAVOR,
+  stageNames: STAGE_NAMES, acts: ACTS, junkieItems: JUNKIE_ITEMS,
+  dexRewards: DEX_REWARDS, cheatItems: CHEAT_ITEMS,
+  gauntletEntranceNames: GAUNTLET_ENTRANCE_NAMES,
+  bossAbilities: BOSS_ABILITIES, bossChannels: BOSS_CHANNELS, bossStyle: BOSS_STYLE,
+  bossProjectileKind: BOSS_PROJECTILE_KIND, mythicAbilities: MYTHIC_ABILITIES,
+  mythicEntranceStyles: MYTHIC_ENTRANCE_STYLES, mythicBattleStyles: MYTHIC_BATTLE_STYLES,
+  legendaryEntranceStyles: LEGENDARY_ENTRANCE_STYLES,
+  sentinelEntranceStyles: SENTINEL_ENTRANCE_STYLES,
+  motionById: MOTION_BY_ID, encounterObjectives: ENCOUNTER_OBJECTIVES,
+  sprite: getSprite,
+  // the Kanto bonus-flock species + reward copy (an id + strings, so the
+  // beat itself stays engine — see spawnBonusFlock, update.js)
+  bonusFlock: { id: 16, t: 'flying', name: 'BONUS FLOCK!',
+    sub: 'SWIFT AND HARMLESS — CHAIN THEM FOR REWARDS' },
+  stageObjectiveSets: STAGE_OBJECTIVE_SETS,
+  // display strings engine code reads through SKIN.strings — the pokemon
+  // values ARE the historical literals (bit-identity is the contract)
+  strings: {
+    creature: 'POKÉMON', creatures: 'POKÉMON',
+    dexName: 'POKÉDEX', dexGlyph: 'pokeball', dexChar: '◓',
+    catchItem: 'POKÉ BALL',
+    researched: ' POKÉMON RESEARCHED',
+    newEntry: 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS',
+    dupEntry: 'ALREADY IN YOUR POKÉDEX · +250 PTS',
+    shinyBang: 'SHINY POKÉMON!', shinyTag: 'SHINY',
+    shinyDrop: '+500 · GUARANTEED POKÉBALL DROP',
+    follows: 'YOUR POKÉMON FOLLOWS',
+    evolvesIn: 'EVOLVES IN REGIONS 4 AND 7',
+    evolvingLine: from => 'WHAT? ' + from + ' IS EVOLVING!',
+    endingTitle: 'THE NINEFOLD DAWN',
+    quickHint: 'POKÉMON FLIGHT SHOOTER · 27-STAGE CAMPAIGN',
+    healName: 'MAX POTION',
+    riftDesc: 'ONE OF THREE PIECES THAT REWRITES KANTO\'S FINAL ROUND',
+    partnerWord: 'PARTNER',
+    regionWord: 'REGION',
+  },
+  // the rift-secret encounter species + copy (engine flow reads SKIN.secret)
+  secret: { id: 151, t: 'psychic', name: 'MEW VMAX',
+    breaking: 'SECRET ROUND · MEW VMAX IS BREAKING THROUGH',
+    announce: 'RIFT BREACH · MEW VMAX!',
+    announceSub: 'SECRET ROUND · 3 PHASES — THE NORMAL MEW FIGHT HAS BEEN REPLACED',
+    replaced: 'THE NORMAL MEW ROUND HAS BEEN REPLACED',
+    hint1: 'A SECOND PIECE IS HIDDEN IN KANTO\'S CHALLENGE',
+    hint2: 'THE LAST PIECE RESTS BEYOND MEWTWO' },
+});
+// warm the first two regions — pokemon only (PNG loads); procedural skins
+// bake on demand and must never touch the network
+if (SKIN.id === 'pokemon') { preloadGen(SKIN.gens[0]); preloadGen(SKIN.gens[1]); }
+
+// ---- discipline lexicon (Round S2): a skin may voice the six path names
+// per class discipline (SKIN.treeLexicon). Node keys/effects never change —
+// this is presentation only; skins without a lexicon read PATHS[k].name.
+function skinPathName(k) {
+  const lex = SKIN.treeLexicon && SKIN.treeLexicon[k];
+  if (!lex) return (PATHS[k] || {}).name || k.toUpperCase();
+  const cls = SKIN.classes && SKIN.classes[(G && G.starter) || SETTINGS.starter];
+  return lex[cls ? cls.d : 'magitech'] || PATHS[k].name;
+}

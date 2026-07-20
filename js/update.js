@@ -35,7 +35,8 @@ function scoreMult() {
     * (1 + G.catchBonus)
     * starterMod('score', 1)
     * (1 + Math.min(G.combo, 20) * starterMod('comboScore', 0))
-    * (1 + 0.06 * ((G.stacks && G.stacks.bell) || 0)); // SOOTHE BELL stacks
+    * (1 + 0.06 * ((G.stacks && G.stacks.bell) || 0)) // SOOTHE BELL stacks
+    * (1 - Math.min(0.3, 0.03 * stackN('fang'))); // VOID FANG's price
 }
 
 function tickEffects(dt) {
@@ -265,7 +266,7 @@ function spawnBossAngles(br, bx, by, d, spec) {
 // original five-simultaneous behaviour (BIT-IDENTICAL), `sweep` is Lugia's
 // traveling wall, `clock` is Dialga's rotating safe lane (Part 2).
 function spawnChannelPunish(boss, pattern, params) {
-  // Optional per-boss data (BOSS_CHANNELS[].params) tunes shared geometry —
+  // Optional per-boss data (SKIN.bossChannels[].params) tunes shared geometry —
   // count / width / gap / warn multiplier / bounce / column color. Absent
   // params fall back to the original literals so no-params entries (Mewtwo /
   // Lugia / Dialga) stay BIT-IDENTICAL.
@@ -505,7 +506,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     return;
   }
   // ditto was disguised all along — first hit reveals it instead of damaging
-  if (br.isDitto && !br.revealed) {
+  if (SKIN.id === 'pokemon' && br.isDitto && !br.revealed) {
     br.revealed = true;
     br.poke = { id: 132, t: 'normal' };
     br.hp = br.maxHp = 1;
@@ -518,6 +519,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // Late-run mastery remains useful in every mode (ball, bolts, missiles,
   // explosions) without recreating the old giant weapon-capstone spike.
   if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
+  if (dmg < 90 && stackN('fang')) dmg *= 1 + 0.07 * stackN('fang'); // VOID FANG (dark affinity)
+  if (dmg < 90 && meta.source === 'charge' && stackN('hex')) dmg *= 1 + 0.09 * stackN('hex'); // UMBRAL HEX
   if (dmg < 90 && G.secretUpg.lens) dmg *= 1.15;
   if (br.staggerT > 0 && dmg < 90) dmg *= 1.35; // Psystrike stagger: the interrupt's reward window
   const starterDirect = dmg < 90 && !meta.starterChain && !meta.behavior && !meta.linked;
@@ -762,7 +765,21 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     // RALLY MASTER's shooter translation: kills are the only tempo there, so
     // they charge much harder (×2.5 total) — mega lands roughly every 2 waves
     const rallyKill = upgN('rally') ? (br.isBoss ? 0.04 : (G.mode !== 'classic' ? 0.012 : 0.004)) : 0;
-    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + rallyKill);
+    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + rallyKill
+      + 0.009 * stackN('tithe')); // BLOOD TITHE (dark affinity)
+    // HALO WARD (light affinity): a kill-count rhythm that raises a shield
+    if (stackN('halo')) {
+      G.haloKills = (G.haloKills || 0) + 1;
+      const need = Math.max(9, 25 - 4 * (stackN('halo') - 1));
+      if (G.haloKills >= need) {
+        G.haloKills = 0;
+        if (G.shieldCharges < shieldCap()) {
+          G.shieldCharges++;
+          addFloater(G.paddle.x, shipY() - 30, 'HALO WARD +1', '#fff59d', 12);
+          SFX.power();
+        }
+      }
+    }
     // RALLY proc: the surge ring on the rig flashes as the kill banks Mega
     if (rallyKill && G.megaT <= 0) G.surgeFlash = Math.max(G.surgeFlash || 0, 0.5);
     // SINGULARITY LENS (classic): every 5th break implodes for typed splash.
@@ -772,8 +789,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       const lensEl = G.ballElement || ((G.starter && G.starter !== 'none') ? G.starter : null);
       chargeSplash(br.bx + G.fx, br.by + G.fy, lensEl, upgN('horizon') ? 1 : 0.5);
     }
-    if (br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
-    if (br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
+    if (SKIN.id === 'pokemon' && br.poke.id === 25) { tone(990, 0.08, 'square', 0.06); setTimeout(() => tone(1320, 0.12, 'square', 0.05), 70); } // pika!
+    if (SKIN.id === 'pokemon' && br.poke.id === -1) { // MISSINGNO. — the item duplication glitch lives on
       setAnnounce('▒', '#b0bec5', 'MISSINGNO.', 'ITEM DUPLICATION! ×3 POWER-UPS', 2.2);
       G.score += 999;
       const ks = Object.keys(POWERS);
@@ -785,7 +802,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
     if (br.shiny) { // shiny: jackpot + guaranteed catch
       G.score += 500;
-      setAnnounce('fairy', '#ffd700', 'SHINY POKÉMON!', '+500 · GUARANTEED POKÉBALL DROP', 2.2);
+      setAnnounce('fairy', '#ffd700', SKIN.strings.shinyBang, SKIN.strings.shinyDrop, 2.2);
       G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy - 36, vy: 115, p: { key: 'pokeball' }, dexId: br.poke.id, shiny: true, rot: 0 });
       burst(br.bx + G.fx, br.by + G.fy, '#ffd700', 30, 320, 0.9);
       sparkle(br.bx + G.fx, br.by + G.fy, 10, true);
@@ -1137,6 +1154,10 @@ function collectPickup(pu) {
   haptic('item');
   webPickupProcs(); // RESCUE / SALVAGE / GUARDIAN pickup economy
   if (pu.p && (pu.p.key === 'heal' || pu.p.key === 'pokeball')) webGuardianCharge();
+  // GRACE LIGHT (light affinity): mending also banks Mega
+  if (pu.p && pu.p.key === 'heal' && stackN('grace') && G.megaT <= 0) {
+    G.mega = Math.min(1, G.mega + 0.15 * stackN('grace'));
+  }
   if (pu.secretShard || pu.p.key === 'riftShard') {
     const i = Math.max(0, Math.min(2, pu.shardIndex || 0));
     G.secret.shards[i] = true;
@@ -1151,12 +1172,11 @@ function collectPickup(pu) {
     SFX.mega();
     if (held === 3) {
       setAnnounce('fairy', '#ffffff', 'RIFT KEY COMPLETE!',
-        'THE NORMAL MEW ROUND HAS BEEN REPLACED', 3.5,
-        'SECRET ROUND · MEW VMAX IS BREAKING THROUGH');
+        SKIN.secret.replaced, 3.5,
+        SKIN.secret.breaking);
     } else {
       setAnnounce('fairy', '#d780ff', 'RIFT SHARD ' + held + '/3 SECURED',
-        i === 0 ? 'A SECOND PIECE IS HIDDEN IN KANTO\'S CHALLENGE'
-          : 'THE LAST PIECE RESTS BEYOND MEWTWO', 2.8,
+        i === 0 ? SKIN.secret.hint1 : SKIN.secret.hint2, 2.8,
         '+' + [400, 600, 1000][i] + ' · KEEP THE SET INTACT');
     }
   } else if (pu.p.key === 'element') {
@@ -1188,17 +1208,17 @@ function collectPickup(pu) {
       addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
     }
     chorusRecord(attackElement()); // BESTIARY CHORUS learns your live type
-    const nm = (NAMES[pu.dexId] || 'POKÉMON').toUpperCase();
+    const nm = (SKIN.names[pu.dexId] || SKIN.strings.creature).toUpperCase();
     const research = isNew ? dexRewardAt(DEX.size) : null;
     if (research) {
       setAnnounce(research.icon, research.color, research.name + ' UNLOCKED!',
-        research.desc, 3.1, DEX.size + ' POKÉMON RESEARCHED', pu.dexId, pu.shiny);
+        research.desc, 3.1, DEX.size + SKIN.strings.researched, pu.dexId, pu.shiny);
       SFX.mega();
     } else {
       setAnnounce(null, pu.shiny ? '#ffd700' : isNew ? '#66bb6a' : '#ef5350',
-        (pu.shiny ? 'SHINY ' : '') + nm + ' CAUGHT!',
+        (pu.shiny ? SKIN.strings.shinyTag + ' ' : '') + nm + ' CAUGHT!',
         (G.trial || G.daily) ? (G.daily ? 'DAILY — CATCH NOT REGISTERED · +250 PTS' : 'TRIAL — CATCH NOT REGISTERED · +250 PTS')
-          : isNew ? 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS' : 'ALREADY IN YOUR POKÉDEX · +250 PTS',
+          : isNew ? SKIN.strings.newEntry : SKIN.strings.dupEntry,
         2.2, null, pu.dexId, pu.shiny);
     }
     G.score += isNew ? 100 : 250;
@@ -1212,8 +1232,8 @@ function collectPickup(pu) {
 function bossAbility(boss) {
   const id = boss.poke.id;
   const ab = boss.secretBoss ? { name: 'MAX MIRAGE', cd: 5.4 }
-    : boss.mythic ? (MYTHIC_ABILITIES[id] || { name: 'MYTHIC BLINK', cd: 5 })
-      : BOSS_ABILITIES[id] || null;
+    : boss.mythic ? (SKIN.mythicAbilities[id] || { name: 'MYTHIC BLINK', cd: 5 })
+      : SKIN.bossAbilities[id] || null;
   if (!ab) return;
   // Signature attacks own the arena briefly. Pausing the baseline gun before
   // and after the ability prevents two unrelated patterns from forming an
@@ -1857,13 +1877,13 @@ function rollUpgradeChoices() {
     }),
     ...webPicked.map(w => ({
       web: w.def, webKind: w.kind,
-      tags: w.kind === 'apex' ? ['APEX', ...w.def.paths.map(pk => PATHS[pk].name)]
-        : w.kind === 'fusion' ? ['FUSION', ...w.def.paths.map(pk => PATHS[pk].name)]
+      tags: w.kind === 'apex' ? ['APEX', ...w.def.paths.map(pk => skinPathName(pk))]
+        : w.kind === 'fusion' ? ['FUSION', ...w.def.paths.map(pk => skinPathName(pk))]
           : [PATHS[w.def.paths[0]].name, PATHS[w.def.paths[1]].name],
       synergy: w.kind === 'apex'
-        ? 'APEX: TWO OF ITS FUSIONS INSTALLED + NINE RANKS ACROSS ' + w.def.paths.map(pk => PATHS[pk].name).join(' / ')
+        ? 'APEX: TWO OF ITS FUSIONS INSTALLED + NINE RANKS ACROSS ' + w.def.paths.map(pk => skinPathName(pk)).join(' / ')
         : w.kind === 'fusion'
-          ? 'FUSION: ' + w.def.paths.map(pk => PATHS[pk].name).join(' × ') +
+          ? 'FUSION: ' + w.def.paths.map(pk => skinPathName(pk)).join(' × ') +
             (w.def.bridge ? ' · VIA ' + webBridge(w.def.bridge).name : ' · CROSS-WEB') +
             ' · SLOT ' + (fusionsOwnedCount() + 1) + '/2'
           : 'BRIDGES ' + PATHS[w.def.paths[0]].name + ' AND ' + PATHS[w.def.paths[1]].name,
@@ -1881,7 +1901,7 @@ function rollUpgradeChoices() {
     // one seeded draw per satellite, THEN sort by the precomputed key —
     // gameRand() inside a comparator consumes an engine-defined number of
     // draws and desyncs seeded runs across browsers
-    const sats = WEB_SATELLITES.map(sat => ({ sat, item: stackItem(sat.stackKey), r: gameRand() }))
+    const sats = activeSatellites().map(sat => ({ sat, item: stackItem(sat.stackKey), r: gameRand() }))
       .sort((a, b) => ((pathLvl(b.sat.path) >= 4 ? 1 : 0) - (pathLvl(a.sat.path) >= 4 ? 1 : 0)) || (a.r - b.r));
     for (const { item } of sats) if (choices.length < 3) choices.push({ stack: item });
   }
@@ -2167,7 +2187,7 @@ function finalizeRun() {
   let newRecord = false;
   if (G.daily && !G.cheated) newRecord = recordDailyScore(G.score);
   else if (!G.trial && !G.cheated && G.score > G.best) {
-    G.best = G.score; saveStore('pkbrk-best', G.best); newRecord = true;
+    G.best = G.score; saveStore(storeKey('best'), G.best); newRecord = true;
   }
   const rs = G.runStats || {};
   G.runSummary = {
@@ -2668,18 +2688,19 @@ function updateDirector(dt) {
 function spawnBonusFlock() {
   const fromLeft = gameRand() < 0.5;
   const y0 = H * (0.3 + gameRand() * 0.1);
+  const bf = SKIN.bonusFlock; // species + copy are skin data (Pidgey on pokemon)
   for (let i = 0; i < 6; i++) {
     G.bricks.push({
       bx: fromLeft ? -50 - i * 48 : W + 50 + i * 48, by: y0,
       hx: 0, hy: 0, row: 0, col: i, w: 34, h: 30, hp: 1, maxHp: 1,
-      poke: { id: 16, t: 'flying' }, flash: 0, wobble: gameRand() * Math.PI * 2,
+      poke: { id: bf.id, t: bf.t }, flash: 0, wobble: gameRand() * Math.PI * 2,
       bare: true,
       // viewport-proportional speed: the fly-by lasts ~5s on every device
       crosser: { vx: (fromLeft ? 1 : -1) * Math.max(150, W * 0.2), bobPh: i * 0.9 },
     });
-    getSprite(16);
+    getSprite(bf.id);
   }
-  setAnnounce('swift', '#80d8ff', 'BONUS FLOCK!', 'SWIFT AND HARMLESS — CHAIN THEM FOR REWARDS', 2.4);
+  setAnnounce('swift', '#80d8ff', bf.name, bf.sub, 2.4);
   SFX.power();
 }
 // ---- gauntlet round transitions — used by the controller AND trial jumps
@@ -2725,13 +2746,13 @@ function gauntletWake() {
     }
   }
   if (G.mode === 'junkie' && legend) {
-    const style = LEGENDARY_ENTRANCE_STYLES[legend.poke.id] || 'psybreak';
+    const style = SKIN.legendaryEntranceStyles[legend.poke.id] || 'psybreak';
     beginGauntletEntry('legendary', 2, style, legend, TYPE_COLORS[legend.poke.t], 2.8);
   } else G.bossIntro = 1.4;
   G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
   SFX.roar();
   const gen2 = genFor(G.level);
-  const legendStyle = LEGENDARY_ENTRANCE_STYLES[gen2.boss.id] || 'psybreak';
+  const legendStyle = SKIN.legendaryEntranceStyles[gen2.boss.id] || 'psybreak';
   setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
     'ROUND 2 — THE LEGENDARY' + (G.mode === 'junkie' ? ' · 2 PHASES' : ''), 3,
     G.mode === 'junkie' ? gauntletEntranceName(legendStyle) : null, null, false, true);
@@ -2751,7 +2772,7 @@ function gauntletSummonMythic(forceSecret = false) {
       bx: W / 2, by: Math.max(145, H * 0.2), hx: W / 2, hy: Math.max(145, H * 0.2),
       row: -1, col: -1, w: vw, h: vh,
       hp: vHp, maxHp: vHp, phase: 1, phaseCount: 3, roundRole: 'secret', mythic: true, secretBoss: true, mewVmax: true,
-      poke: { id: 151, t: 'psychic', n: 'MEW VMAX' },
+      poke: { id: SKIN.secret.id, t: SKIN.secret.t, n: SKIN.secret.name },
       isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
       abilityCD: 4.4,
     });
@@ -2763,8 +2784,8 @@ function gauntletSummonMythic(forceSecret = false) {
     G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); G.flashT = Math.max(G.flashT, 0.2);
     SFX.roar();
     G.announce = null; G.announceQueue = [];
-    setAnnounce('fairy', '#d780ff', 'RIFT BREACH · MEW VMAX!',
-      'SECRET ROUND · 3 PHASES — THE NORMAL MEW FIGHT HAS BEEN REPLACED', 4,
+    setAnnounce('fairy', '#d780ff', SKIN.secret.announce,
+      SKIN.secret.announceSub, 4,
       'MAX RIFT · DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE', null, false, true);
     return;
   }
@@ -2777,7 +2798,7 @@ function gauntletSummonMythic(forceSecret = false) {
     bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
     w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
     hp: mHp, maxHp: mHp, phase: 1, phaseCount: 3, roundRole: 'mythical', mythic: true,
-    poke: { id: mid, t: mt2, n: NAMES[mid] },
+    poke: { id: mid, t: mt2, n: SKIN.names[mid] },
     isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
     abilityCD: 3.5,
   });
@@ -2785,12 +2806,12 @@ function gauntletSummonMythic(forceSecret = false) {
   burst(W / 2, 150, '#ff80ab', 40, 380, 0.9);
   ringFx(W / 2, 150, '#ff80ab', 8, 170, 5, 0.6);
   const myth = G.bricks[G.bricks.length - 1];
-  const mythStyle = MYTHIC_ENTRANCE_STYLES[mid] || 'wishgate';
+  const mythStyle = SKIN.mythicEntranceStyles[mid] || 'wishgate';
   if (G.mode === 'junkie') beginGauntletEntry('mythical', 3, mythStyle, myth, '#ff80ab', 2.8);
   else G.bossIntro = 1.4;
   G.shake = 12; G.freeze = Math.max(G.freeze, 0.12);
   SFX.roar();
-  setAnnounce('fairy', '#ff80ab', NAMES[mid].toUpperCase() + ' — THE MYTHICAL!',
+  setAnnounce('fairy', '#ff80ab', SKIN.names[mid].toUpperCase() + ' — THE MYTHICAL!',
     'FINAL ROUND · 3 PHASES — A NEW KIND OF FIGHT', 3.2,
     G.mode === 'junkie' ? gauntletEntranceName(mythStyle) : null, null, false, true);
 }
@@ -2960,15 +2981,15 @@ function update(dt) {
       if (!c.burst2 && c.t >= 2.45) { // the reveal — congratulations!
         c.burst2 = true;
         burst(cx, cy, '#ffffff', 40, 420, 1);
-        burst(cx, cy, ACTS[c.act].color, 30, 340, 0.9);
+        burst(cx, cy, SKIN.acts[c.act].color, 30, 340, 0.9);
         sparkle(cx, cy, 14, true);
-        ringFx(cx, cy, ACTS[c.act].color, 10, Math.min(W, H) * 0.42, 5, 0.7);
+        ringFx(cx, cy, SKIN.acts[c.act].color, 10, Math.min(W, H) * 0.42, 5, 0.7);
         G.shake = 10;
         SFX.gotcha();
       }
     } else if (!c.burst1 && c.t >= 0.5) { // no partner: the act card itself lands
       c.burst1 = true;
-      ringFx(cx, H * 0.4, ACTS[c.act].color, 8, Math.min(W, H) * 0.4, 4, 0.7);
+      ringFx(cx, H * 0.4, SKIN.acts[c.act].color, 8, Math.min(W, H) * 0.4, 4, 0.7);
       SFX.mega();
     }
     return;
@@ -3085,14 +3106,15 @@ function update(dt) {
     // contextual moments — either way it never shows again
     if (jc && (jc.step > 5 || G.level >= 3)) {
       G.jCoach = null;
-      saveStore('pkbrk-jcoach', 1);
+      saveStore(storeKey('jcoach'), 1);
     }
   }
-  // magikarp keeps it real
+  // magikarp keeps it real (pokemon-skin lore; the timer keeps cycling in
+  // every skin so seeded rand streams stay aligned across skins)
   G.splashCD -= dt;
   if (G.splashCD <= 0) {
     G.splashCD = 9 + gameRand() * 8;
-    const karp = G.bricks.find(b => !b.dead && b.poke.id === 129);
+    const karp = SKIN.id === 'pokemon' ? G.bricks.find(b => !b.dead && b.poke.id === 129) : null;
     if (karp && G.state === 'play') {
       karp.flash = 0.5;
       addFloater(karp.bx + G.fx, karp.by + G.fy - karp.h / 2 - 6, 'SPLASH! ...NOTHING HAPPENED', '#90a4ae', 11);
@@ -3601,14 +3623,14 @@ function update(dt) {
     // ---- choreography rides ON TOP of the march. Boss guards instead
     // ripple in rings around their legendary, who patrols its arena.
     if (boss) {
-      // every legendary OWNS its arena differently (BOSS_STYLE, data.js) —
+      // every legendary OWNS its arena differently (SKIN.bossStyle, data.js) —
       // the patrol widens and quickens with each phase either way
       const bp = boss.phase || 1;
       const t2 = G.swayT, sp2 = 0.45 + bp * 0.22;
       const jk3 = G.mode === 'junkie';
       const yAmp = jk3 ? 1 : 0.45; // classic keeps clear of its guard wall
       const style = boss.secretBoss ? 'maxrift' : boss.mythic
-        ? (MYTHIC_BATTLE_STYLES[boss.poke.id] || 'mythic') : (BOSS_STYLE[boss.poke.id] || 'anchor');
+        ? (SKIN.mythicBattleStyles[boss.poke.id] || 'mythic') : (SKIN.bossStyle[boss.poke.id] || 'anchor');
       switch (style) {
         case 'infinity': // a wide figure-eight through mid-air
           // THE HUNT (Lugia, phase 2+): tighten the patrol by chasing the
@@ -4410,7 +4432,7 @@ function update(dt) {
     const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (boss) {
       // signature ability (teleport, winds, sweeps, time warp...)
-      // DESPERATION CHANNEL (BOSS_CHANNELS, data.js — Mewtwo's PSYSTRIKE rolled
+      // DESPERATION CHANNEL (SKIN.bossChannels, data.js — Mewtwo's PSYSTRIKE rolled
       // across the roster): below hpFrac HP the desperation begins — a rooted
       // channel behind a loud warning. Uninterrupted, it fires a warned column
       // pattern (columns / sweep / clock) with real dodge lanes. A CHARGED shot
@@ -4420,7 +4442,7 @@ function update(dt) {
       // mythics carry the template too; `!boss.secretBoss` STAYS and is load-
       // bearing — Mew VMAX shares poke.id 151, and that clause is the only thing
       // keeping the secret reward channel-free (tested in the mythic duel suite).
-      const chDef = BOSS_CHANNELS[boss.poke.id];
+      const chDef = SKIN.bossChannels[boss.poke.id];
       if (G.mode === 'junkie' && chDef && !boss.secretBoss) {
         if (boss.staggerT > 0) boss.staggerT -= dt * ts;
         if (!boss.channel && (boss.channelCD || 0) > 0) boss.channelCD -= dt * ts;
@@ -4451,12 +4473,12 @@ function update(dt) {
           }
         }
       }
-      if (BOSS_ABILITIES[boss.poke.id] || boss.mythic || boss.secretBoss) {
+      if (SKIN.bossAbilities[boss.poke.id] || boss.mythic || boss.secretBoss) {
         boss.abilityCD -= dt * ts;
         if (boss.abilityCD <= 0 && !boss.channel && !(boss.staggerT > 0)) {
           const abilityBase = boss.secretBoss ? 5.4
-            : boss.mythic ? (MYTHIC_ABILITIES[boss.poke.id]?.cd || 5)
-              : (BOSS_ABILITIES[boss.poke.id]?.cd || 5);
+            : boss.mythic ? (SKIN.mythicAbilities[boss.poke.id]?.cd || 5)
+              : (SKIN.bossAbilities[boss.poke.id]?.cd || 5);
           boss.abilityCD = abilityBase * (bossLastStand(boss) ? 0.62 : boss.phase === 2 ? 0.78 : 1);
           bossAbility(boss);
         }
@@ -4550,9 +4572,9 @@ function update(dt) {
         const bossBase = G.mode === 'junkie' ? d.starBossShotInt : d.bossShotInt;
         G.bossShotCD = bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
           * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1)
-          // BASTION: Dialga's clockwork volley tightens once phase 2 opens — its
-          // arena control comes from gears + dilation, so the cadence, not chasing.
-          * (boss.poke.id === 483 && boss.phase >= 2 ? 0.85 : 1);
+          // BASTION cadence: a boss kit may tighten its volley once phase 2
+          // opens (p2FireMul — Dialga's clockwork on the pokemon skin).
+          * (boss.phase >= 2 ? ((SKIN.bossAbilities[boss.poke.id] || {}).p2FireMul ?? 1) : 1);
         const warn = G.mode === 'junkie' ? 0.72 : 0.55;
         G.telegraphs.push({ br: boss, boss: true, t: warn, max: warn });
       }
@@ -5067,7 +5089,7 @@ function update(dt) {
     // draft. The ceremony OWNS the partner evolution (bumps starterLvl now),
     // so buildLevel won't re-announce it with the plain banner later.
     if (!G.trial && !secretVictory && actIdx(G.level) > actIdx(G.level - 1)) {
-      const sm = STARTER_MON[G.starter];
+      const sm = SKIN.starterMon[G.starter];
       const newLvl = starterStage(G.level, G.starter);
       let evo = null;
       if (sm && newLvl > G.starterLvl) {

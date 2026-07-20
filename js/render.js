@@ -299,7 +299,7 @@ function drawAtmosphere(genIdx) {
     atmoKey = key;
     atmoCanvas = document.createElement('canvas'); atmoCanvas.width = W; atmoCanvas.height = H;
     const c = atmoCanvas.getContext('2d');
-    const accent = (GENS[genIdx] && GENS[genIdx].accent) || '#7ee08a';
+    const accent = (SKIN.gens[genIdx] && SKIN.gens[genIdx].accent) || '#7ee08a';
     // horizon glow: a soft band of the region accent low on the screen
     const hg = c.createRadialGradient(W / 2, H * 0.9, 10, W / 2, H * 0.9, H * 0.7);
     hg.addColorStop(0, accent + '30'); hg.addColorStop(0.5, accent + '10'); hg.addColorStop(1, accent + '00');
@@ -589,7 +589,7 @@ function drawBossMon(br, x, y) {
   // no shadowBlur on a 200px+ sprite (mobile GPU stall) — the rim-light
   // silhouette above already carries the glow
   if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
-  else drawGlyph(ctx, 'pokeball', 0, 0, br.h * 0.4, '#ffffff33');
+  else drawGlyph(ctx, SKIN.strings.dexGlyph, 0, 0, br.h * 0.4, '#ffffff33');
   if (flashS && br.flash > 0.3) { // hits light the legendary up from within
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = phased * introAlpha * (br.flash - 0.3) * 0.9;
@@ -651,12 +651,13 @@ function drawMewVmax(br, x, y) {
   }
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = introAlpha;
-  if (MEW_VMAX_IMG.complete && MEW_VMAX_IMG.naturalWidth) {
-    ctx.drawImage(MEW_VMAX_IMG, x - s / 2, yy - s / 2, s, s);
+  const vimg = SKIN.id === 'pokemon' ? MEW_VMAX_IMG : getSprite(SKIN.secret.id);
+  if (vimg && vimg.complete && vimg.naturalWidth) {
+    ctx.drawImage(vimg, x - s / 2, yy - s / 2, s, s);
     if (br.flash > 0.35) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = (br.flash - 0.35) * 0.65;
-      ctx.drawImage(MEW_VMAX_IMG, x - s / 2, yy - s / 2, s, s);
+      ctx.drawImage(vimg, x - s / 2, yy - s / 2, s, s);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = introAlpha;
     }
   } else drawGlyph(ctx, 'psychic', x, yy, s * 0.2, '#d780ff');
@@ -734,7 +735,7 @@ function drawBossBrick(br, x, y) {
   if (img.complete && img.naturalWidth) {
     const s = Math.min(br.w * 0.54, br.h * 0.92) * (1 + br.flash * 0.06);
     ctx.drawImage(img, x - s / 2, y - s / 2 - 3, s, s);
-  } else drawGlyph(ctx, 'pokeball', x, y, hh * 0.38, '#ffffff55');
+  } else drawGlyph(ctx, SKIN.strings.dexGlyph, x, y, hh * 0.38, '#ffffff55');
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = 0.12 + br.flash * 0.34;
   ctx.drawImage(glowSprite(), x - hw, y - hh, br.w, br.h * 0.75);
@@ -863,7 +864,7 @@ function drawBricks() {
         ctx.drawImage(img2, -s2 / 2, -s2 / 2, s2, s2);
         ctx.restore();
       } else {
-        drawGlyph(ctx, 'pokeball', x, y, br.h * 0.4, '#ffffff33');
+        drawGlyph(ctx, SKIN.strings.dexGlyph, x, y, br.h * 0.4, '#ffffff33');
       }
       if (br.flash > 0.35) { // hit flash: white overlay pop on the sprite
         ctx.globalAlpha = (br.flash - 0.35) * 0.9;
@@ -904,7 +905,7 @@ function drawBricks() {
         ctx.font = '800 8px Orbitron, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = '#e8eef6';
-        ctx.fillText((br.poke.n || NAMES[br.poke.id] || 'SENTINEL').toUpperCase(), x, sby - 8, sbw);
+        ctx.fillText((br.poke.n || SKIN.names[br.poke.id] || 'SENTINEL').toUpperCase(), x, sby - 8, sbw);
         roundRect(x - sbw / 2, sby, sbw, 6, 3);
         ctx.fillStyle = 'rgba(5,8,20,0.72)'; ctx.fill();
         if (frac > 0) {
@@ -1026,7 +1027,7 @@ function drawBricks() {
       ctx.fillStyle = `rgba(0,0,0,${Math.min(0.28, 0.1 * (br.maxHp - br.hp))})`;
       ctx.fill();
     }
-    if (br.poke.id === -1) { // MISSINGNO. — glitched static block
+    if (SKIN.id === 'pokemon' && br.poke.id === -1) { // MISSINGNO. — glitched static block
       for (let gi = 0; gi < 14; gi++) {
         ctx.fillStyle = ['#dcdcdc', '#9c9c9c', '#5d5d72', '#cfcfe8'][Math.floor(Math.random() * 4)];
         ctx.fillRect(x - hw + 6 + Math.random() * (br.w - 18), y - hh + 6 + Math.random() * (br.h - 16), 5 + Math.random() * 10, 4 + Math.random() * 8);
@@ -1058,7 +1059,7 @@ function drawBricks() {
         const pa = 0.16 + 0.08 * Math.sin(G.time * 3 + br.wobble);
         ctx.save();
         ctx.globalAlpha = phased * pa;
-        drawGlyph(ctx, 'pokeball', x, y, hh * 0.5, '#ffffff');
+        drawGlyph(ctx, SKIN.strings.dexGlyph, x, y, hh * 0.5, '#ffffff');
         ctx.restore();
       }
       if (br.shiny) { // sparkle glints orbiting a shiny
@@ -1906,7 +1907,7 @@ function drawPaddle() {
   }
   // SPACE JUNKIE mode: no paddle — you ARE the Pokémon
   if (G.mode === 'junkie') { drawPilotRig(x, py); ctx.restore(); return; }
-  const sMon = STARTER_MON[G.starter];
+  const sMon = SKIN.starterMon[G.starter];
   // the partner rides the left end of the paddle, growing as it evolves
   if (sMon && G.state !== 'menu') {
     const img = getSprite(sMon.ids[G.starterLvl - 1]);
@@ -3512,7 +3513,7 @@ function drawGauntletEntranceFx() {
   const e = G.gauntlet?.entry;
   if (!e || G.mode !== 'junkie') return;
   const p = Math.min(1, e.t / e.dur), pulse = Math.sin(p * Math.PI);
-  const styles = Object.keys(GAUNTLET_ENTRANCE_NAMES), si = Math.max(0, styles.indexOf(e.style));
+  const styles = Object.keys(SKIN.gauntletEntranceNames), si = Math.max(0, styles.indexOf(e.style));
   const cx = W / 2, cy = Math.min(H * 0.34, 245), col = e.color || '#80d8ff';
   const reduced = SETTINGS.reduceFlash ? 0.45 : 1;
   ctx.save();
@@ -3925,7 +3926,7 @@ function drawHUD() {
   const stg = stageIdx(G.level);
   const waveY = narrow ? 46 : (G.modifier ? 22 : 28);
   const waveText = G.secret.vmax ? 'SECRET RIFT · MEW VMAX'
-    : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + STAGE_NAMES[stg];
+    : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + SKIN.stageNames[stg];
   ctx.fillText(waveText, W / 2, waveY);
   if (G.modifier && !narrow) {
     ctx.font = '700 10px Orbitron, sans-serif';
@@ -4316,7 +4317,7 @@ function drawMenuAdventureBackdrop(L) {
   for (let i = 0; i < 9; i++) {
     const u = i / 8, x = 18 + u * (W - 36), y = H * (0.7 - 0.055 * Math.sin(u * Math.PI * 3));
     ctx.fillStyle = 'rgba(13,55,58,0.82)'; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = GENS[i].accent; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = SKIN.gens[i].accent; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
   }
   // A few wind-carried leaves make the scene feel alive without obscuring UI.
@@ -4549,15 +4550,25 @@ function drawMenuRedesign() {
   ctx.fillText(GAME_TITLE, brandX, L.titleY);
   const brandWidth = ctx.measureText(GAME_TITLE).width;
   ctx.shadowBlur = 0;
-  const editionText = 'POKÉMON EDITION';
+  // The edition pill IS the skin toggle (Round S7): tap to flip between the
+  // installed skins and reload. Render writes the live rect; input reads it —
+  // one geometry for draw + hit-test by construction.
+  const editionText = SKIN.edition + '  ⇄';
   ctx.font = '800 8px Orbitron, sans-serif';
   const editionW = ctx.measureText(editionText).width + 20;
   const ex = L.narrow ? W / 2 - editionW / 2 : L.pad + brandWidth + 14;
   const ey = L.narrow ? L.titleY + L.titleSize * 0.68 : L.titleY - 11;
-  roundRect(ex, ey, editionW, 22, 11); ctx.fillStyle = mode.accent + '24'; ctx.fill();
-  ctx.strokeStyle = mode.accent + '88'; ctx.stroke(); ctx.fillStyle = mode.accent;
+  skinPillRect = { x: ex, y: ey, w: editionW, h: 22 };
+  const hovSkin = inRect(mouseX, lastMouseY, skinPillRect);
+  roundRect(ex, ey, editionW, 22, 11); ctx.fillStyle = mode.accent + (hovSkin ? '3d' : '24'); ctx.fill();
+  ctx.strokeStyle = mode.accent + (hovSkin ? 'ee' : '88'); ctx.stroke(); ctx.fillStyle = hovSkin ? '#ffffff' : mode.accent;
   ctx.textAlign = 'center'; ctx.fillText(editionText, ex + editionW / 2, ey + 11.5);
-  drawHomeUtility(L.dex, '◓ POKÉDEX ' + DEX.size + '/' + dexTotal(), mode.accent);
+  if (hovSkin && !L.narrow) {
+    ctx.font = '700 7px Orbitron, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    const other = SKIN.id === 'pokemon' ? SKINS.aetherfall : SKINS.pokemon;
+    ctx.fillText('SWITCH TO ' + other.edition, ex + editionW / 2, ey + 32);
+  }
+  drawHomeUtility(L.dex, SKIN.strings.dexChar + ' ' + SKIN.strings.dexName + ' ' + DEX.size + '/' + dexTotal(), mode.accent);
   drawHomeUtility(L.adv, '⚙ SETTINGS', mode.accent);
 
   // Unified hero surface, with a calm copy column and a literal game preview.
@@ -4652,7 +4663,7 @@ function drawMenuRedesign() {
       const routeX = p.x + p.w - 250, routeY = p.y + p.h / 2;
       ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(routeX, routeY); ctx.lineTo(routeX + 218, routeY); ctx.stroke();
       for (let i = 0; i < 9; i++) {
-        ctx.fillStyle = i <= regionIdx(lvl) ? GENS[i].accent : '#263248';
+        ctx.fillStyle = i <= regionIdx(lvl) ? SKIN.gens[i].accent : '#263248';
         ctx.beginPath(); ctx.arc(routeX + i * 27.25, routeY, i === regionIdx(lvl) ? 5 : 3.5, 0, Math.PI * 2); ctx.fill();
       }
     }
@@ -4669,20 +4680,20 @@ function drawMenu() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.save(); ctx.shadowColor = 'rgba(6,38,55,0.7)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
   title(GAME_TITLE, L.titleY, L.titleSize, '#fff2a8'); ctx.restore();
-  // the SKIN is an edition stamp under the brand — swap SKIN_EDITION
-  // (config.js) to re-theme without touching the game's name
+  // the SKIN is an edition stamp under the brand — the active skin
+  // (js/skin.js) re-themes it without touching the game's name
   {
     // short viewports have no room for pill + tagline — the pill takes the
     // tagline's slot and the tagline is skipped below
     const py = L.short ? L.tagY : L.titleY + L.titleSize * 1.05;
     ctx.font = `700 ${Math.max(9, L.titleSize * 0.24)}px Orbitron, sans-serif`;
-    const tw = ctx.measureText('◓ ' + SKIN_EDITION).width + 26;
+    const tw = ctx.measureText('◓ ' + SKIN.edition).width + 26;
     const th = Math.max(16, L.titleSize * 0.44);
     roundRect(W / 2 - tw / 2, py - th / 2, tw, th, th / 2);
     ctx.fillStyle = 'rgba(9,61,75,0.68)'; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,242,168,0.7)'; ctx.stroke();
     ctx.fillStyle = '#fff2a8';
-    ctx.fillText('◓ ' + SKIN_EDITION, W / 2, py + 0.5);
+    ctx.fillText('◓ ' + SKIN.edition, W / 2, py + 0.5);
   }
   const maxW = W * 0.92;
   // Lead with the actual verbs. The first screen should explain the three
@@ -4706,7 +4717,7 @@ function drawMenu() {
     if (!L.short) {
       ctx.font = bodyFont(9.5, 700);
       ctx.fillStyle = '#315540';
-      ctx.fillText('POKÉMON FLIGHT SHOOTER · 27-STAGE CAMPAIGN', q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
+      ctx.fillText(SKIN.strings.quickHint, q.x + q.w / 2, q.y + q.h * 0.72, q.w - 18);
     }
     ctx.restore();
   }
@@ -4796,7 +4807,7 @@ function drawMenu() {
   ctx.textAlign = 'center';
   const rowFont = `700 ${L.short ? 11 : 12}px Orbitron, sans-serif`;
   for (const [g, label, colBase] of [
-    [db, '◓ POKÉDEX ' + DEX.size + '/' + dexTotal(), '#90a4ae'],
+    [db, SKIN.strings.dexChar + ' ' + SKIN.strings.dexName + ' ' + DEX.size + '/' + dexTotal(), '#90a4ae'],
     [L.adv, '⚙ SETTINGS', '#78909c'],
   ]) {
     const hov = inRect(mouseX, lastMouseY, g);
@@ -4818,11 +4829,11 @@ function drawMenu() {
 const MODE_MASCOTS = { classic: 74, blaster: 9 };
 const MENU_PILOT_ROTATION = [25, 4, 7, 1, 137];
 function menuStarfighterPilot(t) {
-  const chosen = STARTER_MON[SETTINGS.starter];
+  const chosen = SKIN.starterMon[SETTINGS.starter];
   if (chosen) return { id: chosen.ids[0], name: chosen.names[0].toUpperCase(), chosen: true };
   const i = SETTINGS.reduceFlash ? 0 : Math.floor(t / 3.6) % MENU_PILOT_ROTATION.length;
   const id = MENU_PILOT_ROTATION[i];
-  return { id, name: (NAMES[id] || 'POKÉMON').toUpperCase(), chosen: false };
+  return { id, name: (SKIN.names[id] || 'POKÉMON').toUpperCase(), chosen: false };
 }
 function drawMenuStarfighterRig(cx, cy, size, t, accent, hov) {
   const pilot = menuStarfighterPilot(t);
@@ -5239,16 +5250,17 @@ function drawPilotSetup(L, mode) {
   ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR FLIGHT PARTNER' : 'CHOOSE YOUR PARTNER', W / 2, L.sectionY);
   if (!L.short) {
     ctx.font = bodyFont(L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#90a4ae';
-    const selected = STARTER_MON[SETTINGS.starter];
+    const selected = SKIN.starterMon[SETTINGS.starter];
     const headerCopy = L.info.h <= 12 && selected
       ? selected.names[0].toUpperCase() + ' · ' + starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1).ability
       : 'ALL 18 ARE HERE · EACH CHANGES YOUR ATTACK TYPE AND PASSIVE';
     ctx.fillText(headerCopy, W / 2, L.sectionY + 18, maxW);
   }
-  for (let i = 0; i < STARTERS.length; i++) {
-    const st = STARTERS[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
+  const roster = skinStarters();
+  for (let i = 0; i < roster.length; i++) {
+    const st = roster[i], pg = L.starter(i), sel = SETTINGS.starter === st.key;
     const hov = inRect(mouseX, lastMouseY, pg), col = TYPE_COLORS[st.key];
-    const mon = STARTER_MON[st.key], copy = starterModeCopy(st.key, SETTINGS.mode, 1);
+    const mon = SKIN.starterMon[st.key], copy = starterModeCopy(st.key, SETTINGS.mode, 1);
     ctx.save();
     if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 15; }
     roundRect(pg.x, pg.y, pg.w, pg.h, Math.min(12, pg.h * 0.18));
@@ -5278,14 +5290,14 @@ function drawPilotSetup(L, mode) {
     ctx.restore();
   }
   if (L.info.h > 12) {
-    const mon = STARTER_MON[SETTINGS.starter], col = mon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
+    const mon = SKIN.starterMon[SETTINGS.starter], col = mon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
     roundRect(L.info.x, L.info.y, L.info.w, L.info.h, 12);
     ctx.fillStyle = 'rgba(7,11,27,0.7)'; ctx.fill(); ctx.strokeStyle = col + '66'; ctx.lineWidth = 1; ctx.stroke();
     if (mon) {
       const copy = starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1);
       fitText(copy.ability + ' — ' + copy.tier, L.info.y + L.info.h * 0.38,
         L.narrow ? 10.5 : 12, '750', col, L.info.w - 18, "Verdana, system-ui, sans-serif");
-      if (L.info.h > 50) fitText(mon.names.join(' → ') + ' · EVOLVES IN REGIONS 4 AND 7', L.info.y + L.info.h * 0.68,
+      if (L.info.h > 50) fitText(mon.names.join(' → ') + ' · ' + SKIN.strings.evolvesIn, L.info.y + L.info.h * 0.68,
         9.5, '550', '#90a4ae', L.info.w - 18, "Verdana, system-ui, sans-serif");
     } else fitText('TRAINING DRONE — NO TYPE ADVANTAGE OR PARTNER ABILITY', L.info.y + L.info.h / 2,
       10.5, '700', '#b0bec5', L.info.w - 18, "Verdana, system-ui, sans-serif");
@@ -5315,7 +5327,7 @@ function drawPilotSetup(L, mode) {
 function drawDifficultySetup(L, mode) {
   fitText('HOW INTENSE SHOULD THIS JOURNEY FEEL?', L.sectionY,
     L.narrow ? 13.5 : 16, '900', '#f1e7f8', W - 24, "Orbitron, sans-serif");
-  const S = L.summary, mon = STARTER_MON[SETTINGS.starter];
+  const S = L.summary, mon = SKIN.starterMon[SETTINGS.starter];
   const col = mon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
   roundRect(S.x, S.y, S.w, S.h, 15); ctx.fillStyle = 'rgba(7,11,27,0.78)'; ctx.fill();
   ctx.strokeStyle = col + '88'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -5340,6 +5352,26 @@ function drawDifficultySetup(L, mode) {
   ctx.font = `800 ${L.short ? 7 : 8.5}px Orbitron, sans-serif`; ctx.fillStyle = hovEdit ? '#fff' : '#b0bec5';
   ctx.fillText(L.narrow ? 'CHANGE' : 'CHANGE PARTNER', eb.x + eb.w / 2, eb.y + eb.h / 2, eb.w - 8);
 
+  // AFFINITY (skins with SKIN.affinities): the LIGHT/DARK lean, chosen here
+  // beside difficulty. Tapping the selected side again returns to neutral.
+  if (L.affinity) {
+    const affs = ['light', 'dark'];
+    for (let i = 0; i < 2; i++) {
+      const A = AFFINITIES[affs[i]], r = L.affinity(i);
+      const sel = SETTINGS.affinity === affs[i], hovA = inRect(mouseX, lastMouseY, r);
+      ctx.save();
+      if (sel) { ctx.shadowColor = A.color; ctx.shadowBlur = 12; }
+      roundRect(r.x, r.y, r.w, r.h, 10);
+      ctx.fillStyle = sel ? A.color + '30' : hovA ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+      ctx.strokeStyle = sel ? A.color : 'rgba(255,255,255,0.22)'; ctx.lineWidth = sel ? 2 : 1; ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.font = `900 ${L.short ? 9 : 11}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel ? '#ffffff' : A.color;
+      ctx.textAlign = 'center';
+      ctx.fillText((sel ? '◆ ' : '◇ ') + A.name + ' — ' + A.tag, r.x + r.w / 2, r.y + r.h / 2 + 0.5, r.w - 14);
+      ctx.restore();
+    }
+  }
   ctx.font = `800 ${L.narrow ? 12 : 13}px Orbitron, sans-serif`; ctx.fillStyle = '#90a4ae';
   ctx.fillText('CHOOSE YOUR CHALLENGE', W / 2, L.chipsLabelY);
   const keys = Object.keys(PRESETS);
@@ -5402,7 +5434,7 @@ function drawSetup() {
 function drawCeremony() {
   const c = G.ceremony;
   if (!c) return;
-  const A = ACTS[c.act], t = c.t;
+  const A = SKIN.acts[c.act], t = c.t;
   dim(Math.min(0.8, t * 1.6));
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const cx = W / 2, cy = H * 0.36;
@@ -5458,7 +5490,7 @@ function drawCeremony() {
       ctx.font = '700 13px Orbitron, sans-serif';
       ctx.fillStyle = '#e3f2fd';
       ctx.fillText(c.evo.abilityOnly ? c.evo.fromName + "'S POWER IS SURGING!"
-        : 'WHAT? ' + c.evo.fromName + ' IS EVOLVING!', cx, cy + ms * 0.66);
+        : SKIN.strings.evolvingLine(c.evo.fromName), cx, cy + ms * 0.66);
     } else if (showNew) {
       title(c.evo.abilityOnly ? c.evo.toName + ' · FULL POWER!' : c.evo.toName + '!',
         cy + ms * 0.62, Math.min(30, W / 16), col);
@@ -5517,8 +5549,8 @@ function drawCheats() {
   ctx.font = bodyFont(10, 600);
   ctx.fillStyle = '#bfa14a';
   ctx.fillText("TAP TO GRANT · BEST SCORE WON'T BE SAVED THIS RUN", C2.px + C2.pw / 2, C2.py + 58, C2.pw - 40);
-  for (let i = 0; i < CHEAT_ITEMS.length; i++) {
-    const it = CHEAT_ITEMS[i], g2 = C2.chip(i);
+  for (let i = 0; i < SKIN.cheatItems.length; i++) {
+    const it = SKIN.cheatItems[i], g2 = C2.chip(i);
     const hov = inRect(mouseX, lastMouseY, g2);
     roundRect(g2.x, g2.y, g2.w, g2.h, 10);
     ctx.fillStyle = hov ? 'rgba(255,213,79,0.2)' : 'rgba(255,213,79,0.06)';
@@ -5562,8 +5594,8 @@ function drawTrial() {
   ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
   ctx.stroke();
   // region grid — each chip shows the region and its legendary
-  for (let i = 0; i < GENS.length; i++) {
-    const g = GENS[i], r = T.region(i), sel = trialSel.region === i;
+  for (let i = 0; i < SKIN.gens.length; i++) {
+    const g = SKIN.gens[i], r = T.region(i), sel = trialSel.region === i;
     const hov = inRect(mouseX, lastMouseY, r);
     ctx.save();
     if (sel) { ctx.shadowColor = g.accent; ctx.shadowBlur = 12; }
@@ -5594,14 +5626,14 @@ function drawTrial() {
     ctx.stroke();
     ctx.font = `900 ${Math.min(11, r.w / 10)}px Orbitron, sans-serif`;
     ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
-    ctx.fillText((i + 1) + '/3 ' + STAGE_NAMES[i], r.x + r.w / 2, r.y + r.h / 2 + 1, r.w - 8);
+    ctx.fillText((i + 1) + '/3 ' + SKIN.stageNames[i], r.x + r.w / 2, r.y + r.h / 2 + 1, r.w - 8);
   }
   // LEGENDARY stage → pick a gauntlet round. STARFIGHTER Kanto also exposes
   // the secret replacement fight directly so it can be practiced on demand.
   if (T.rounds) {
-    const gsel = GENS[trialSel.region];
+    const gsel = SKIN.gens[trialSel.region];
     const labels = ['FULL GAUNTLET', '★ ' + gsel.boss.n.toUpperCase(),
-      gsel.gauntlet ? '✦ ' + (NAMES[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL',
+      gsel.gauntlet ? '✦ ' + (SKIN.names[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL',
       '◆ MEW VMAX · SECRET'];
     for (let i = 0; i < T.roundCount; i++) {
       const rr2 = T.round(i), sel2 = trialSel.round === i;
@@ -5727,7 +5759,7 @@ function drawDex() {
   const x0 = W / 2 - gw / 2;
   let y = 142 - dexScroll;
   const headerH = 54;
-  for (const g of GENS) {
+  for (const g of SKIN.gens) {
     const roster = regionRoster(g);
     const caught = roster.filter(id => DEX.has(id)).length;
     const rows = Math.ceil(roster.length / cols);
@@ -5778,7 +5810,7 @@ function drawDex() {
         ctx.textAlign = 'center';
         ctx.font = '700 8.5px Orbitron, sans-serif';
         ctx.fillStyle = has ? '#cfd8dc' : '#546e7a';
-        ctx.fillText(has ? (NAMES[id] || '#' + id).toUpperCase() : '???', cx, cy + half - 4, half * 2 - 8);
+        ctx.fillText(has ? (SKIN.names[id] || '#' + id).toUpperCase() : '???', cx, cy + half - 4, half * 2 - 8);
         if (shiny) drawGlyph(ctx, 'fairy', cx + half - 9, cy - half + 3, 5, '#ffd700');
       });
     }
@@ -5792,14 +5824,14 @@ function drawDex() {
   hg.addColorStop(0, 'rgba(5,8,25,0.97)'); hg.addColorStop(0.8, 'rgba(5,8,25,0.9)'); hg.addColorStop(1, 'rgba(5,8,25,0)');
   ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 136);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title('POKÉDEX', 44, Math.min(34, W / (W < 560 ? 16 : 12)), '#ef5350');
+  title(SKIN.strings.dexName, 44, Math.min(34, W / (W < 560 ? 16 : 12)), '#ef5350');
   ctx.font = '700 12px Orbitron, sans-serif';
   ctx.fillStyle = '#b0bec5';
   const total = dexTotal();
   ctx.fillText(DEX.size + ' / ' + total + ' CAUGHT' + (DEXS.size ? '  ·  ' + DEXS.size + ' SHINY' : '') + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, 82);
   const nextResearch = nextDexReward();
   if (nextResearch) {
-    const prevAt = DEX_REWARDS.filter(r => r.at < nextResearch.at).reduce((n, r) => Math.max(n, r.at), 0);
+    const prevAt = SKIN.dexRewards.filter(r => r.at < nextResearch.at).reduce((n, r) => Math.max(n, r.at), 0);
     const progress = Math.max(0, Math.min(1, (DEX.size - prevAt) / Math.max(1, nextResearch.at - prevAt)));
     ctx.font = '800 9.5px Orbitron, sans-serif';
     ctx.fillStyle = nextResearch.color;
@@ -5881,7 +5913,7 @@ function drawFullUpgradeTree() {
     p.x + p.w / 2, p.y + (T.compact ? 18 : 22), p.w - 116);
   // the build count spans the whole web: 24 tiers + 6 bridges + 15 fusions
   // + 2 apexes + 3 satellites (a satellite counts once at any rank) = 50
-  const satOwnedN = WEB_SATELLITES.filter(s => (G.stacks && G.stacks[s.stackKey]) > 0).length;
+  const satOwnedN = activeSatellites().filter(s => (G.stacks && G.stacks[s.stackKey]) > 0).length;
   const ownedN = totalBuildLevels() + satOwnedN;
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
   ctx.font = `700 ${T.compact ? 9 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
@@ -5897,7 +5929,7 @@ function drawFullUpgradeTree() {
   if (treeSel.kind === 'bridge') treeSel.bi = Math.max(0, Math.min(WEB_BRIDGES.length - 1, treeSel.bi | 0));
   if (treeSel.kind === 'fusion') treeSel.fi = Math.max(0, Math.min(WEB_FUSIONS.length - 1, treeSel.fi | 0));
   if (treeSel.kind === 'apex') treeSel.ai = Math.max(0, Math.min(WEB_APEXES.length - 1, treeSel.ai | 0));
-  if (treeSel.kind === 'sat') treeSel.si = Math.max(0, Math.min(WEB_SATELLITES.length - 1, treeSel.si | 0));
+  if (treeSel.kind === 'sat') treeSel.si = Math.max(0, Math.min(activeSatellites().length - 1, treeSel.si | 0));
 
   const map = T.map, C = T.center;
   ctx.save();
@@ -6009,8 +6041,8 @@ function drawFullUpgradeTree() {
         upgN(f.key) ? f.color : 'rgba(255,255,255,0.35)', owned && upgN(f.key), offered);
     }
   }
-  for (let si = 0; si < WEB_SATELLITES.length; si++) {
-    const sat = WEB_SATELLITES[si], item = stackItem(sat.stackKey);
+  for (let si = 0; si < activeSatellites().length; si++) {
+    const sat = activeSatellites()[si], item = stackItem(sat.stackKey);
     const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
     connectTo(T.node(PATH_KEYS.indexOf(sat.path), 3), T.satNode(si), item.color,
       rank > 0, choiceIndexForSel({ kind: 'sat', si }) >= 0);
@@ -6091,7 +6123,7 @@ function drawFullUpgradeTree() {
     const lb = T.label(pi);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `900 ${T.compact ? 10.5 : 10}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-    ctx.fillText(P.name, lb.x, lb.y, T.compact ? 88 : 90);
+    ctx.fillText(skinPathName(PATH_KEYS[pi]), lb.x, lb.y, T.compact ? 88 : 90);
     if (!T.compact) {
       ctx.font = '600 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
       ctx.fillText(pathRole(pk), lb.x, lb.y + 12, 100);
@@ -6216,8 +6248,8 @@ function drawFullUpgradeTree() {
     if (offered) offerFlag(n, offer, true);
     ctx.restore();
   }
-  for (let si = 0; si < WEB_SATELLITES.length; si++) {
-    const sat = WEB_SATELLITES[si], item = stackItem(sat.stackKey);
+  for (let si = 0; si < activeSatellites().length; si++) {
+    const sat = activeSatellites()[si], item = stackItem(sat.stackKey);
     const n = T.satNode(si);
     const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
     const unlocked = pathLvl(sat.path) >= 4;
@@ -6258,8 +6290,8 @@ function drawFullUpgradeTree() {
   ctx.beginPath(); ctx.arc(C.x, C.y, T.inner * 0.68, 0, Math.PI * 2); ctx.stroke();
   if (G.mode === 'junkie') drawPilotRig(C.x, C.y, true);
   else {
-    blitBadge('pokeball', C.x, C.y, Math.max(12, T.inner * 0.38), '#80d8ff', 'lit');
-    const sm = STARTER_MON[G.starter], img = sm && getSprite(sm.ids[G.starterLvl - 1]);
+    blitBadge(SKIN.strings.dexGlyph, C.x, C.y, Math.max(12, T.inner * 0.38), '#80d8ff', 'lit');
+    const sm = SKIN.starterMon[G.starter], img = sm && getSprite(sm.ids[G.starterLvl - 1]);
     if (img && img.complete && img.naturalWidth) {
       const ss = Math.max(26, T.inner * 0.72);
       ctx.drawImage(img, C.x - ss / 2, C.y - ss / 2, ss, ss);
@@ -6356,7 +6388,7 @@ function drawTreeDetailWeb(T) {
     const f = WEB_FUSIONS[treeSel.fi];
     const owned = !!upgN(f.key), eligible = fusionEligible(f);
     color = f.color; icon = f.icon; name = f.name;
-    heading = '★ FUSION · ' + f.paths.map(pk => PATHS[pk].name).join(' × ') +
+    heading = '★ FUSION · ' + f.paths.map(pk => skinPathName(pk)).join(' × ') +
       (f.bridge ? '' : ' · CROSS-WEB') + ' · ' + (f.role || '');
     desc = webNodeDesc(f);
     visual = f.visual;
@@ -6371,7 +6403,7 @@ function drawTreeDetailWeb(T) {
     const x = WEB_APEXES[treeSel.ai];
     const owned = !!upgN(x.key), eligible = apexEligible(x);
     color = x.color; icon = x.icon; name = x.name;
-    heading = '★★ APEX · ' + x.paths.map(pk => PATHS[pk].name).join(' × ') + ' · ' + (x.role || '');
+    heading = '★★ APEX · ' + x.paths.map(pk => skinPathName(pk)).join(' × ') + ' · ' + (x.role || '');
     desc = webNodeDesc(x);
     visual = x.visual;
     proc = (x.ready ? 'READY: ' + x.ready + ' · ' : '') + (x.proc || '') +
@@ -6381,13 +6413,13 @@ function drawTreeDetailWeb(T) {
       : eligible ? 'RECIPE COMPLETE · NOT OFFERED' : 'LOCKED';
     statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
   } else {
-    const sat = WEB_SATELLITES[treeSel.si], item = stackItem(sat.stackKey);
+    const sat = activeSatellites()[treeSel.si], item = stackItem(sat.stackKey);
     const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
     const unlocked = pathLvl(sat.path) >= 4;
     color = item.color; icon = item.icon; name = item.name;
     heading = 'MASTERY SATELLITE · REPEATS FOREVER';
     desc = item.desc;
-    visual = 'A COUNTED SATELLITE CHIP DOCKS ON THE ' + PATHS[sat.path].name + ' WEDGE';
+    visual = 'A COUNTED SATELLITE CHIP DOCKS ON THE ' + skinPathName(sat.path) + ' WEDGE';
     proc = 'ITS RANK READS OUT ON THE MAP AND THE WING RACK';
     locks = unlocked || offered || rank ? [] : webLockReason(sat, 'sat');
     status = rank ? 'OWNED ×' + rank : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
@@ -6473,7 +6505,7 @@ function drawTreeDetail(T) {
   ctx.globalAlpha = 1;
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-  ctx.fillText(P.name + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
+  ctx.fillText(skinPathName(pk) + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
   ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
   ctx.fillText(junkieTierName(pk, ti), d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
   ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
@@ -6553,20 +6585,20 @@ function drawTreeDetail(T) {
 // make the 27-wave campaign, boss cadence, and checkpoint-sized chunks legible
 // without opening another screen.
 function drawJourneyMap(y, compact = false) {
-  const completed = Math.min(GENS.length, Math.floor((Math.max(1, G.level) - 1) / STAGES));
-  const current = Math.min(GENS.length - 1, regionIdx(Math.max(1, G.level)));
+  const completed = Math.min(SKIN.gens.length, Math.floor((Math.max(1, G.level) - 1) / STAGES));
+  const current = Math.min(SKIN.gens.length - 1, regionIdx(Math.max(1, G.level)));
   const mapW = Math.min(W * 0.86, compact ? 470 : 650);
   const x0 = W / 2 - mapW / 2;
-  const step = mapW / (GENS.length - 1);
+  const step = mapW / (SKIN.gens.length - 1);
   ctx.save();
   ctx.lineWidth = compact ? 2 : 3;
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + mapW, y); ctx.stroke();
-  for (let i = 0; i < GENS.length; i++) {
+  for (let i = 0; i < SKIN.gens.length; i++) {
     const x = x0 + i * step;
     const done = i < completed;
-    const here = i === current && completed < GENS.length;
-    const col = done || here ? GENS[i].accent : '#455a64';
+    const here = i === current && completed < SKIN.gens.length;
+    const col = done || here ? SKIN.gens[i].accent : '#455a64';
     if (here) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
     ctx.beginPath(); ctx.arc(x, y, here ? 7 : done ? 6 : 5, 0, Math.PI * 2);
     ctx.fillStyle = done ? col : here ? '#eaf7ff' : '#162235'; ctx.fill();
@@ -6576,9 +6608,9 @@ function drawJourneyMap(y, compact = false) {
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = `800 ${compact ? 8.5 : 10}px Orbitron, sans-serif`;
-  ctx.fillStyle = completed >= GENS.length ? '#ffd54f' : GENS[current].accent;
-  ctx.fillText(completed >= GENS.length ? 'ALL 9 REGIONS CLEARED'
-    : 'REGION ' + (current + 1) + '/9 · ' + GENS[current].name + ' · STAGE ' + (stageIdx(G.level) + 1) + '/3',
+  ctx.fillStyle = completed >= SKIN.gens.length ? '#ffd54f' : SKIN.gens[current].accent;
+  ctx.fillText(completed >= SKIN.gens.length ? 'ALL 9 REGIONS CLEARED'
+    : 'REGION ' + (current + 1) + '/9 · ' + SKIN.gens[current].name + ' · STAGE ' + (stageIdx(G.level) + 1) + '/3',
     W / 2, y + (compact ? 17 : 20), mapW);
   ctx.restore();
 }
@@ -6694,7 +6726,7 @@ function drawEnding() {
       const enter = ease(Math.min(1, Math.max(0, (t - (ENDING_BEATS[1] + i * 0.85)) / 1.1)));
       if (enter <= 0) continue;
       const x0 = i * rw, base = H * 0.74, hgt = H * (0.16 + 0.05 * Math.sin(i * 2.1)) * enter;
-      const col = GENS[i].accent || '#66bb6a';
+      const col = SKIN.gens[i].accent || '#66bb6a';
       ctx.globalAlpha = 0.85 * enter;
       const g2 = ctx.createLinearGradient(0, base - hgt, 0, base + H * 0.26);
       g2.addColorStop(0, col); g2.addColorStop(1, mixHex(col, '#331c08', 0.55));
@@ -6741,7 +6773,7 @@ function drawEnding() {
     const salute = Math.max(0, Math.min(1, (bt - 5) / 0.4)) * Math.max(0, Math.min(1, (7 - bt) / 0.8));
     if (salute > 0) {
       for (let i = 0; i < 9; i++) {
-        const sil = getSilhouette(GENS[i].boss.id, GENS[i].accent);
+        const sil = getSilhouette(SKIN.gens[i].boss.id, SKIN.gens[i].accent);
         if (!sil) continue;
         const ang = -Math.PI / 2 + i * Math.PI * 2 / 9;
         ctx.globalAlpha = 0.6 * salute;
@@ -6837,10 +6869,10 @@ function drawEnding() {
     const modeLabel = (MODES.find(m => m.key === G.mode) || MODES[0]).label;
     const lines = [
       (s.score || G.score).toLocaleString() + ' PTS · ' + modeLabel + ' · ' + preset().label,
-      'PARTNER ' + (pilotInfo().id > 0 ? (NAMES[pilotInfo().id] || 'PARTNER').toUpperCase() : 'TRAINING DRONE')
+      'PARTNER ' + (pilotInfo().id > 0 ? (SKIN.names[pilotInfo().id] || 'PARTNER').toUpperCase() : 'TRAINING DRONE')
         + ' · ' + (s.catches || G.caughtRun) + ' CATCHES · ' + ((G.runStats && G.runStats.bossesDefeated) || 0) + ' BOSSES',
       s.path && s.path !== 'NO PATH YET' ? 'FAVOURITE PATH · ' + s.path : null,
-      G.secret && G.secret.completed ? 'KANTO RIFT · CONQUERED' : null,
+      G.secret && G.secret.completed ? (SKIN.secret.conquered || 'KANTO RIFT · CONQUERED') : null,
     ].filter(Boolean);
     // a soft parchment panel keeps the record readable over the panorama
     const panW = Math.min(W * 0.86, 520), panH = 26 + lines.length * 22;
@@ -6952,7 +6984,7 @@ function drawResults() {
   const R = G.results;
   if (!R) return;
   const t = G.stateT;
-  const gen = GENS[regionIdx(R.lvl)];
+  const gen = SKIN.gens[regionIdx(R.lvl)];
   const accent = gen.accent;
   const short = H < 560;
   const narrow = W < 620; // phones lay the medal rows out on two lines
@@ -7096,7 +7128,7 @@ function drawOverlays() {
     const megaReady = G.mega >= 1 && G.megaT <= 0;
     const orbFalling = G.powerups.some(p => p.orb);
     const txt =
-      jc.step === 1 ? (IS_TOUCH ? 'DRAG ANYWHERE — YOUR POKÉMON FOLLOWS' : 'MOVE THE MOUSE — YOUR POKÉMON FOLLOWS') :
+      jc.step === 1 ? (IS_TOUCH ? 'DRAG ANYWHERE — ' + SKIN.strings.follows : 'MOVE THE MOUSE — ' + SKIN.strings.follows) :
       jc.step === 2 ? (IS_TOUCH ? 'TAP FIRE TO ATTACK' : 'CLICK OR SPACE — FIRE') :
       jc.step === 3 ? (IS_TOUCH ? 'HOLD FIRE TO CHARGE A BIG SHOT' : 'HOLD SHIFT OR RIGHT-CLICK — CHARGE A BIG SHOT') :
       jc.step === 4 ? ((orbFalling || hit) ? 'GRAB THE FALLING ORB — IT CHANGES YOUR ATTACK TYPE' : null) :
@@ -7110,7 +7142,7 @@ function drawOverlays() {
     const draftShort = H < 520;
     const secretDraft = !!G.secret.rewardDraft;
     const wasBossStage = G.clearedStage === 2;
-    const clearedGen = GENS[regionIdx(Math.max(1, G.level - 1))];
+    const clearedGen = SKIN.gens[regionIdx(Math.max(1, G.level - 1))];
     const clearY = draftShort ? 36 : H * 0.16;
     const draftAccent = secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
     drawDraftBackdrop(draftAccent);
@@ -7165,7 +7197,7 @@ function drawOverlays() {
         const x0 = W / 2 - chainW / 2, ny = headerY - nh / 2;
         ctx.font = '800 8.5px Orbitron, sans-serif';
         ctx.fillStyle = P.color;
-        ctx.fillText(P.name + ' PATH · ' + pathRole(selC.pathKey), W / 2, ny - 8, chainW);
+        ctx.fillText(skinPathName(selC.pathKey) + ' PATH · ' + pathRole(selC.pathKey), W / 2, ny - 8, chainW);
         for (let ti = 0; ti < 4; ti++) {
           const nx = x0 + ti * (nw + 14);
           const ownedT = ti < lvlSel, isPick = ti === selC.tierIdx;
@@ -7388,7 +7420,7 @@ function drawOverlays() {
           ctx.textAlign = 'left';
           ctx.font = '900 9.5px Orbitron, sans-serif';
           ctx.fillStyle = col;
-          ctx.fillText(c.path.name + ' · ' + c.tags.join(' + ') + ' · TIER ' + (c.tierIdx + 1) + '/4', r.x + 66, r.y + 16, r.w - 74);
+          ctx.fillText(skinPathName(c.pathKey) + ' · ' + c.tags.join(' + ') + ' · TIER ' + (c.tierIdx + 1) + '/4', r.x + 66, r.y + 16, r.w - 74);
           ctx.font = '900 15px Orbitron, sans-serif';
           ctx.fillStyle = isCap ? col : '#fff';
           ctx.fillText(junkieTierName(c.pathKey, c.tierIdx), r.x + 66, r.y + 35, r.w - 74);
@@ -7400,7 +7432,7 @@ function drawOverlays() {
         } else if (L.short) { // short landscape: compact vertical card
           ctx.textAlign = 'center';
           ctx.font = '900 8.5px Orbitron, sans-serif'; ctx.fillStyle = col;
-          ctx.fillText(c.path.name + ' · ' + c.tags.join('+') + (isCap ? ' · CAP' : ''), r.x + r.w / 2, r.y + 12, r.w - 8);
+          ctx.fillText(skinPathName(c.pathKey) + ' · ' + c.tags.join('+') + (isCap ? ' · CAP' : ''), r.x + r.w / 2, r.y + 12, r.w - 8);
           pips(r.x + r.w / 2, r.y + 25);
           drawDraftBadge(tier.icon, r.x + r.w / 2, r.y + 48, 15, col, hov || isCap, i);
           ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = isCap ? col : '#fff';
@@ -7413,7 +7445,7 @@ function drawOverlays() {
           ctx.textAlign = 'center';
           ctx.font = '900 10px Orbitron, sans-serif';
           ctx.fillStyle = col;
-          ctx.fillText(c.path.name + (isCap ? ' · CAPSTONE' : ' · TIER ' + (c.tierIdx + 1) + '/4'), r.x + r.w / 2, r.y + 17, r.w - 20);
+          ctx.fillText(skinPathName(c.pathKey) + (isCap ? ' · CAPSTONE' : ' · TIER ' + (c.tierIdx + 1) + '/4'), r.x + r.w / 2, r.y + 17, r.w - 20);
           ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = '#b3e5fc';
           ctx.fillText(c.tags.join('  +  '), r.x + r.w / 2, r.y + 34, r.w - 18);
           pips(r.x + r.w / 2, r.y + 48);

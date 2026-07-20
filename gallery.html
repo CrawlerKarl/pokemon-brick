@@ -39,8 +39,11 @@ window.requestAnimationFrame = function () { return 0; };
 <!-- same scripts, same order as index.html (main.js included but its loop is inert) -->
 <script src="js/setup.js"></script>
 <script src="js/config.js"></script>
+<script src="js/skin.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/data.js"></script>
+<script src="js/aetherfall.js"></script>
+<script src="js/aetherart.js"></script>
 <script src="js/scenery.js"></script>
 <script src="js/state.js"></script>
 <script src="js/input.js"></script>
@@ -203,6 +206,46 @@ window.requestAnimationFrame = function () { return 0; };
   if (extras.length) shotSection('MISC KINDS — renderer shapes outside the type/boss tables',
     'Special-case silhouettes (secret fights, elite cannon fire…).',
     extras.map(k => ({ label: k.toUpperCase(), kind: k, type: 'psychic' })));
+
+  // ---- AETHERFALL UNIT SHEET (Round S5): every procedural unit the skin
+  // ships, straight from its own gens/spriteMaker, over bright + dark bands.
+  (function aetherfallSheet() {
+    const AFS = SKINS.aetherfall;
+    if (!AFS || !AFS.spriteMaker) return;
+    const ids = [];
+    for (let i = 0; i < 54; i++) ids.push(10 + i); // pilot vessels first
+    AFS.gens.forEach(g => {
+      Object.values(g.tiers).flat().forEach(([id]) => { if (!ids.includes(id)) ids.push(id); });
+      if (!ids.includes(g.boss.id)) ids.push(g.boss.id);
+      const mid = g.gauntlet.myth[0]; if (!ids.includes(mid)) ids.push(mid);
+    });
+    const h2 = document.createElement('h1');
+    h2.style.marginTop = '26px';
+    h2.textContent = 'AETHERFALL UNIT SHEET — ' + ids.length + ' procedural looks (no image assets)';
+    document.getElementById('sections').appendChild(h2);
+    const info = document.createElement('p');
+    info.textContent = 'Pilot vessels (18 classes × 3 forms), realm lines (form I→III), sentinels, legendaries, mythics. Baked by js/aetherart.js.';
+    document.getElementById('sections').appendChild(info);
+    for (const bandCols of [BRIGHT, DARK]) {
+      const cols = 18, cell = 72;
+      const rows = Math.ceil(ids.length / cols);
+      const cv = document.createElement('canvas');
+      cv.width = cols * cell; cv.height = rows * (cell + 14);
+      const g = cv.getContext('2d');
+      const bg = g.createLinearGradient(0, 0, 0, cv.height);
+      bg.addColorStop(0, bandCols[0]); bg.addColorStop(1, bandCols[1]);
+      g.fillStyle = bg; g.fillRect(0, 0, cv.width, cv.height);
+      ids.forEach((id, i) => {
+        const x = (i % cols) * cell, y = Math.floor(i / cols) * (cell + 14);
+        g.drawImage(AFS.spriteMaker(id, false), x + 4, y + 2, cell - 8, cell - 8);
+        g.fillStyle = bandCols === BRIGHT ? '#123' : '#9ab8ff';
+        g.font = '7px Menlo'; g.textAlign = 'center';
+        g.fillText((AFS.names[id] || '' + id).slice(0, 13), x + cell / 2, y + cell + 6);
+      });
+      cv.style.maxWidth = '100%';
+      document.getElementById('sections').appendChild(cv);
+    }
+  })();
 
   const err = document.createElement('p');
   err.style.marginTop = '18px';

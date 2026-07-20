@@ -1,14 +1,10 @@
 # HANDOFF — Starfighter campaign build-out (next session)
 
-> **STATUS: LIVE through M3 Round C + M4 complete.** Milestones 0/1
-> COMPLETE; M2 core round shipped; M3 Rounds A+B+C shipped (the
-> friendly entity + ESCORT/DEFEND protect objectives with the first
-> fail state); M4 Rounds A–D shipped (all 18 finale bosses on the
-> duel template, sentinel GUARD/OPENING, 27 bespoke entrances,
-> transition/defeat garnish, practice PHASE selection, music heat).
-> **AETHERFALL Round S1 is DESIGNED and ready to implement:**
-> `docs/S1_SKIN_SPINE_DESIGN.md` (from the full-codebase audit).
-> Invariant suite **71/71 green**. Everything below is deployed at
+> **STATUS: LIVE through M4 + the COMPLETE AETHERFALL skin (S1–S7).**
+> Milestones 0/1 complete; M2 core; M3 Rounds A+B+C; M4 Rounds A–D; and
+> the Milestone-10 release identity SHIPPED: the original AETHERFALL
+> skin is live behind the title-screen edition toggle, alongside the
+> untouched Pokémon skin. Suite **76 checks green**. Deployed at
 > https://crawlerkarl.github.io/pokemon-brick/.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
@@ -21,110 +17,67 @@ test → document → commit → push → confirm the Pages build.
 
 ## Read these first (completely)
 
-- `CLAUDE.md` — workflow + design invariants. **Do not regress anything
-  listed there.** The newest invariants cover the encounter director,
-  objective families, `br.crosser` entities, the charge timing arc, the
-  armor/veil pair, and the results-screen flow.
-- `README.md` — file map, system tour, tuning knobs, gotchas.
-- `docs/FULL_GAME_ROADMAP.md` — the 11-milestone plan with per-milestone
-  status and the quality-gate checklist. **This is the source of truth for
-  what's done vs. what's left.**
-- `docs/IMPLEMENTATION_LOG.md` — newest-first record of every shipped
-  round and the design decisions behind it.
+- `CLAUDE.md` — workflow + design invariants. **The newest invariant block
+  covers the SKIN system** (registry, key stability, per-skin storage,
+  checkpoint v4, procedural art rules, affinity limits, the toggle).
+- `README.md` — file map (now 14 modules incl. skin.js / aetherfall.js /
+  aetherart.js), system tour, gotchas.
+- `docs/FULL_GAME_ROADMAP.md` — the 11-milestone plan; M10's identity
+  decision is DONE (see its SHIPPED note).
+- `docs/IMPLEMENTATION_LOG.md` — newest-first; the AETHERFALL S1–S7 entry
+  documents every mechanism the skin added.
+- `docs/ORIGINAL_SKIN_PLAN.md` + `docs/S1_SKIN_SPINE_DESIGN.md` — the
+  approved design + audit the implementation followed.
 
 ---
 
-## Where the project stands
+## What the AETHERFALL arc shipped (2026-07-19)
 
-**Milestone 0 — instrumentation ✅** (`56a51c8`)
-Per-wave combat ledger (`G.runStats.levels`), `js/dev.js` (seeded URL/console
-launches, `window.DEV`, F9 balance dashboard, JSON run report),
-`gallery.html` projectile-readability audit, boss phase harness.
-
-**Milestone 1 — Kanto gold standard ✅** (through `fdb56c8`)
-Stage RESULTS interstitial + mastery medals + region intros, authored Kanto
-beats, the Mewtwo duel (focus orbs = normal-fire answer, Psystrike channel =
-charge interrupt), the flight-log narrative, Kanto sky flocks, and an
-instrumented demo audit of the whole region.
-
-**Milestone 2 — combat ecology 🔶** (`a00b803`)
-Resonant release, overcharge cost, SPECTRAL VEIL (the anti-charge-spam
-counterweight to armor), and heat fairness proven by test (7.6s spam
-overheat; fire-rate upgrades may only make it kinder). *Open:* cooling
-upgrades that reshape play style, heat swept across all difficulties.
-
-**Milestone 3 — encounter director 🔶** (`1886bdd`, `b3c1533`)
-Data-driven beat scripts per region (`REGION_GRAMMAR` → `G.director` →
-`updateDirector`/`runBeat`), a real threat-budget knob (`threatMul`), and
-the first win-condition-changing objective family (SURVIVE THE MIGRATION
-on Hoenn challenge). *Open:* see "Pick up here".
-
-**Milestone 4 — boss overhaul 🔶** (Rounds A+B)
-`BOSS_CHANNELS` (+ per-entry `params`) drives every finale legendary's
-desperation through `spawnChannelPunish` (columns/sweep±bounce/clock/
-rain/pincer, all on `G.columnStrikes`). Per-boss signatures on the
-deferred-shot lifecycle: Mewtwo orbs, Lugia feathers+TAILWIND, Dialga
-gears+TIME DILATION, Rayquaza shards+sweep wake, Zekrom conduits
-(+BOLT STRIKE columns), Yveltal drain wisps (clamped heal), Lunala
-motes (snap PHANTOM PHASE), Eternatus cysts (rain 7→9), Koraidon
-afterimages (dash-dropped launchers). Design doc:
-`docs/M4_BOSS_KITS.md`. *Open:* mythics/sentinels on the template;
-entrance FX for styles still on the default banner (skycoil, suncharge,
-maelstrom, timesplit); phase-transition animations, phase music
-layering, bespoke defeat animations, practice mode.
-
-**Also shipped by the user:** a mobile-first home/start-flow redesign
-(`4bd7489`) — one selected-mode hero, live gameplay dioramas, three-item
-mode switcher. Their work; treat `config.js`/`menuLayout` as theirs.
-
-**DECIDED by the user (2026-07-19):** the Milestone-10 release-identity
-question is RESOLVED — build an original sci-fi × fantasy skin
-(working title AETHERFALL) behind a runtime skin toggle, alongside the
-Pokémon skin. Full approved design: `docs/ORIGINAL_SKIN_PLAN.md`
-(SKINS registry, per-skin namespaced storage, 18 classes across 3
-disciplines mapping 1:1 onto the type engine, LIGHT/DARK affinity,
-parts-based procedural art, implementation rounds S1–S7). Names in
-that doc are tunable; the structures are locked. Internal keys NEVER
-change — skins are labels/art over the same engine.
-
----
+- **`js/skin.js`** — SKINS registry; `SKIN` resolved at boot (`?skin=` →
+  `SETTINGS.skin` → pokemon); `storeKey()` per-skin storage (pokemon keeps
+  LEGACY bare keys, aetherfall uses `pkbrk-aetherfall-*`); `STARTER_KEYS`
+  + runtime `skinStarters()`; `toggleSkin()` + `skinPillRect` (the title
+  edition pill is the switch); `skinEvolveVerb()`.
+- **Checkpoint v4** — `skin` + `affinity` fields; v1–v3 accepted forever;
+  cross-skin checkpoints treated as absent; `freshStacks()` seeds all
+  stack keys (incl. the six affinity satellites).
+- **`js/aetherfall.js`** — the original universe: 18 classes (3
+  disciplines), 9 realms, 54 unit lines ×3 forms (id space `r*100+n`,
+  pilots 10–63, sentinels +90..92, legendary +80, mythic +81), habitat
+  packs, intros/flavor/acts, boss-kit clones (same-slot mechanics,
+  original names — VELMORA…AURELION PRIME), `SKIN.strings` +
+  `SKIN.secret` (LUMINE VMAX), `treeLexicon` (path names per discipline
+  via `skinPathName`), mode-card copy patch.
+- **`js/aetherart.js`** — deterministic procedural renderer: 10 body
+  archetypes + pilot VESSEL, act design language (magic organic → tech
+  angular → magitech chrome+inlays), form escalation, legendary
+  flourishes keyed by BOSS_STYLE, radiant hue-shift variants, bake cache
+  honoring the `getSprite` contract (`SKIN.spriteMaker` dispatch).
+- **Affinity (S6)** — LIGHT/DARK pick on the difficulty screen (aetherfall
+  only), 3+3 satellites on STACK_ITEMS (`dawn/halo/grace` ·
+  `fang/tithe/hex`) via `activeSatellites()`; effects wired at real
+  chokes; web topology/caps untouched.
+- **Tests 71 → 76**; gallery.html gained the AETHERFALL unit sheet;
+  `verify-assets` stays pokemon-only by design (the S5 suite test IS the
+  aetherfall asset audit).
 
 ## Pick up here (choose one)
 
-### Option S — AETHERFALL Round S1 (the user's chosen direction — READY)
-The design is DONE: read `docs/ORIGINAL_SKIN_PLAN.md` (the approved
-plan) then `docs/S1_SKIN_SPINE_DESIGN.md` (the executable spec, built
-from a full-codebase audit — load-order traps, complete storage-key
-and easter-egg inventories, the global→SKIN.* migration checklist,
-checkpoint v4, and the three new tests). Acceptance gate: the whole
-suite bit-identical under the Pokémon skin. Implementation is one or
-two sequential agents; render.js's consumer breadth is the densest
-edit.
+### Option A — AETHERFALL polish pass (art + feel)
+The skin is complete and playable end to end, but it's a first-generation
+look. Worthwhile passes: richer per-line silhouette variation (the seeded
+flavor switches are in place), bespoke mythic bodies, projectile tinting
+by affinity, aetherfall-themed scenery accents (scenery.js is engine but
+takes palettes from `SKIN.gens`), and a skin-aware daily-run label.
 
-### Option A — Milestone 3 Round C: entity-based objective families
-The remaining families all need a **friendly/neutral entity type** (the one
-piece of new infrastructure): escort/defend a friendly Pokémon, capture
-without destroying, defend multiple lanes, chase a fleeing elite. Build the
-entity once, then the families are cheap. Also queued: lighter overlay
-objectives (break-N-projectiles, no-overheat section, shield-relay
-sequence, weather survival), the remaining 7 region grammars, and the beat
-types not yet built (formation reveal, elite intervention as a distinct
-spawn, hazard, victory).
+### Option B — M3 remaining objective families + region grammars
+Capture-without-destroying, multi-lane defend, chase-the-elite; the
+remaining 7 region grammars; unbuilt beat types (formation reveal, elite
+intervention, hazard, victory lap). All engine work — benefits BOTH skins.
 
-### Option B — the next mechanics milestone (M4 is done)
-M4 is functionally complete (Rounds A–D). Natural mechanics
-continuations: **M3 Round C** (entity-based objective families — the
-friendly/neutral entity type unlocks escort/capture/defend/chase, plus
-the remaining 7 region grammars and unbuilt beat types) or the **M2
-tail** (cooling upgrades that reshape play style, heat swept across
-difficulties). The M4 tail (per-species defeat animations, VMAX enrage
-garnish) is low-priority polish for an M9-era pass. The proven loop:
-design first (`docs/M4_BOSS_KITS.md` is the pattern), SEQUENTIAL
-implementation agents over shared files, full suite fronted, browser
-screenshots, docs, deploy.
-
-**Recommendation:** Option S (the user's chosen direction) unless they
-redirect; M3 Round C is the strongest mechanics slice otherwise.
+### Option C — M2 tail (cooling upgrades) or M9 balance
+The proven loop applies: design → implement → fronted suite → screenshots
+→ docs → deploy.
 
 ---
 
@@ -133,69 +86,46 @@ redirect; M3 Round C is the strongest mechanics slice otherwise.
 1. **Plan the round** — one coherent slice, logged in
    `docs/IMPLEMENTATION_LOG.md`.
 2. **Implement**, then `node --check js/<file>.js`.
-3. **Verify in the browser** — the preview throttles rAF, so drive the sim
-   from the console: `DEV.launch({level, mode:'junkie', diff, seed})`, then
-   loop `update(1/60)` and read `G.*`. `G.freeze=999; render()` freezes a
-   frame for a screenshot. Call `resize()` first; if `!W`, force
-   `W/H/canvas` and `buildStars(); buildVignette()`.
-4. **Run the suite** — open `/test.html` and **keep the tab FRONTED**
-   (background throttling makes it crawl; a full run is ~2–4 min). Poll
-   `window.TEST_DONE` / `window.TEST_RESULTS`.
-5. **Gates** — `npm run check`, `npm run verify-assets`, suite green, no
-   console errors, inspect 1280×720 + 390×844 + a short landscape, check
-   `reduceFlash` and touch, update README/CLAUDE/roadmap/log,
-   `git diff --check` clean.
-6. **Ship** — commit (end-user message + `Co-Authored-By: Claude ...`),
-   `git push`, then
+3. **Verify in the browser** — drive the sim from the console:
+   `DEV.launch({level, mode:'junkie', diff, seed})`, loop `update(1/60)`,
+   read `G.*`. Add `&skin=aetherfall` to any dev URL to test the skin
+   (dev launches propagate `?skin=` automatically).
+4. **Run the suite** — open `/test.html` **fronted** (~3–5 min), poll
+   `window.TEST_DONE` / `window.TEST_RESULTS`. 76 checks green.
+5. **Gates** — `npm run check`, `npm run verify-assets` (pokemon PNGs),
+   suite green, no console errors, check BOTH skins boot
+   (`/?skin=aetherfall` + default), 1280×720 + 390×844, `reduceFlash`,
+   docs updated, `git diff --check` clean.
+6. **Ship** — commit + push, then
    `gh api -X POST repos/CrawlerKarl/pokemon-brick/pages/builds` and poll
    `.../pages/builds/latest` until `.commit == HEAD && .status == "built"`.
 
 ---
 
-## Gotchas this session learned the hard way
+## Gotchas this arc learned (on top of the old list)
 
-- **The browser pane's viewport is SHARED across tabs.** Resizing for a
-  phone screenshot changes the size the test suite sees. The upgrade-web
-  camera test now forces the canonical 900×700 itself; if a layout test
-  fails oddly, check the viewport first.
-- **Don't poll agents with `until … sleep` loops.** Agent completions
-  notify automatically; a stray polling loop ran for 14 hours before it
-  was spotted.
-- **Killing a legendary in a test advances the gauntlet** (and triggers the
-  next round's entrance pause) — put any "boss dies" assertions LAST.
-- **Bonus-damage windows can trip phase transitions.** The Psystrike
-  stagger's ×1.35 pushed Mewtwo into phase 2 mid-test; force `br.phase`
-  back if you need a specific phase.
-- **`gameRand()` must never be called inside a sort comparator** — the draw
-  count is engine-defined and desyncs seeded runs. Precompute one draw per
-  element, then sort.
-- **The VOLLEY path's internal key is `arsenal`** (not `volley`).
-- **Storage always goes through `loadStore`/`saveStore`** — a raw
-  `JSON.parse(localStorage…)` at module scope once bricked startup.
+- **The browser pane's viewport is SHARED across tabs** — don't resize for
+  screenshots while the suite runs.
+- **aetherfall ids numerically collide with pokemon dex ids ON DISK**
+  (`assets/sprites/101.png` is Electrode) — which is why `getSprite`
+  dispatches to `SKIN.spriteMaker` BEFORE the PNG path. Never bypass it.
+- **`skinStarters()` caches per load** — it's invalidated only by reload;
+  fine because switching skins reloads.
+- **Suite tests that swap `SKIN` must try/finally-restore it** — three
+  existing skin tests are the pattern.
+- **The stale-failure trap**: a suite run reflects the code AT LOAD; a
+  fail you already fixed on disk stays red until the next run.
+- Old list: agents ≠ polling loops; `gameRand()` never in comparators;
+  VOLLEY's key is `arsenal`; storage via `loadStore`/`saveStore` only;
+  killing a legendary mid-test advances the gauntlet (assert last).
 
 ---
 
-## Balance notes banked for Milestone 9
+## The release-identity terms (unchanged)
 
-From the instrumented Kanto audit (scripted pilot, Normal, ~205s, 2
-knockouts, finished 1/4 HP):
-
-- Mewtwo's phase 1 melts too fast for the focus-orb showcase to breathe —
-  consider a larger P1 HP share or an orb volley on first engagement.
-- Finale-entry pressure spikes hard on a 1-HP carryover pilot (a
-  crystal/heavy hit at 9s); potion pity into finales may deserve a nudge.
-- Sustained fire is correctly punishing: 27 overheats / 54s locked.
-
----
-
-## The release-identity decision (now made — respect its terms)
-
-The user DECIDED (2026-07-19): an original creature universe ships as a
-runtime-selectable skin alongside the Pokémon skin
-(`docs/ORIGINAL_SKIN_PLAN.md`). What remains not yours to decide: any
-PUBLIC or commercial distribution of the Pokémon-branded skin still
-requires the user's explicit call, and the Pokémon skin must remain
-playable locally — never delete or degrade it while building the
-original skin. Names in the skin plan are tunable during
-implementation; its structures (skin registry, key stability, 18
-classes, LIGHT/DARK affinity, procedural art) are locked.
+The Pokémon skin must remain playable locally — never delete or degrade
+it. Any PUBLIC or commercial distribution of the Pokémon-branded skin
+still requires the user's explicit call. The AETHERFALL skin is the
+IP-clean identity; flipping the DEFAULT skin for a public build is a
+one-line change (`SETTINGS.skin` default + `activeSkinId` fallback)
+plus optionally lazy-loading the pokemon PNGs.

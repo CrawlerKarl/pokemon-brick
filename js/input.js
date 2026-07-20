@@ -387,12 +387,14 @@ window.addEventListener('keydown', e => {
   konamiIdx = e.code === KONAMI[konamiIdx] ? konamiIdx + 1 : (e.code === KONAMI[0] ? 1 : 0);
   if (konamiIdx === KONAMI.length) {
     konamiIdx = 0;
-    audio();
-    addToDex(151, true);
-    getSprite(151, true);
-    if (G.state === 'play' || G.state === 'serve') G.mega = 1;
-    SFX.mega();
-    setAnnounce('fairy', '#ec407a', 'MEW APPEARED!', 'SHINY MEW REGISTERED TO POKÉDEX · MEGA CHARGED', 3);
+    if (SKIN.id === 'pokemon') { // Mew is pokemon-skin lore
+      audio();
+      addToDex(151, true);
+      getSprite(151, true);
+      if (G.state === 'play' || G.state === 'serve') G.mega = 1;
+      SFX.mega();
+      setAnnounce('fairy', '#ec407a', 'MEW APPEARED!', 'SHINY MEW REGISTERED TO POKÉDEX · MEGA CHARGED', 3);
+    }
   }
 });
 let paused = false;
@@ -412,7 +414,7 @@ function togglePause() {
 function quitToMenu() {
   if (G.state !== 'play' && G.state !== 'serve' && !paused) return;
   SESSION_STATS.quits++;
-  if (!G.trial && !G.cheated && G.score > G.best) { G.best = G.score; saveStore('pkbrk-best', G.best); }
+  if (!G.trial && !G.cheated && G.score > G.best) { G.best = G.score; saveStore(storeKey('best'), G.best); }
   paused = false;
   G.state = 'menu';
   menuPage = 'modes'; // always land on the title page, not mid-setup
@@ -507,7 +509,7 @@ function treeStackAt(half) {
   if (half % 2 === 0) {
     const pi = Math.max(0, PATH_KEYS.indexOf(WEB_SPOKE_ORDER[half / 2]));
     for (let ti = 0; ti < 4; ti++) list.push({ kind: 'tier', pi, ti });
-    const si = WEB_SATELLITES.findIndex(s => s.path === PATH_KEYS[pi]);
+    const si = activeSatellites().findIndex(s => s.path === PATH_KEYS[pi]);
     if (si >= 0) list.push({ kind: 'sat', si, pi, ti: 3 });
     const fi = WEB_FUSIONS.findIndex(f => !f.bridge && fusionHalfPos(f) === half);
     if (fi >= 0) list.push({ kind: 'fusion', fi, pi, ti: 3 });
@@ -587,7 +589,7 @@ function choiceIndexForSel(sel) {
   if (sel.kind === 'bridge') return cs.findIndex(c => c.web && c.web.key === WEB_BRIDGES[sel.bi].key);
   if (sel.kind === 'fusion') return cs.findIndex(c => c.web && c.web.key === WEB_FUSIONS[sel.fi].key);
   if (sel.kind === 'apex') return cs.findIndex(c => c.web && c.web.key === WEB_APEXES[sel.ai].key);
-  if (sel.kind === 'sat') return cs.findIndex(c => c.stack && c.stack.key === WEB_SATELLITES[sel.si].stackKey);
+  if (sel.kind === 'sat') return cs.findIndex(c => c.stack && c.stack.key === activeSatellites()[sel.si].stackKey);
   return -1;
 }
 function treeSelForChoice(c) {
@@ -599,8 +601,8 @@ function treeSelForChoice(c) {
     return { kind: 'bridge', bi: Math.max(0, WEB_BRIDGE_KEYS.indexOf(c.web.key)), pi: 0, ti: 0 };
   }
   if (c.stack) {
-    const si = WEB_SATELLITES.findIndex(s => s.stackKey === c.stack.key);
-    if (si >= 0) return { kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path)), ti: 3 };
+    const si = activeSatellites().findIndex(s => s.stackKey === c.stack.key);
+    if (si >= 0) return { kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(activeSatellites()[si].path)), ti: 3 };
   }
   return null;
 }
@@ -730,7 +732,7 @@ function upgradeTreeLayout() {
     // apexes hold the outermost ring, beyond the halo
     apexNode: ai => at(-Math.PI / 2 + WEB_APEXES[ai].mapSlot * Math.PI / 3, radius * 1.3, drawR + 4),
     satNode: si => {
-      const pi = Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path));
+      const pi = Math.max(0, PATH_KEYS.indexOf(activeSatellites()[si].path));
       return at(spokeA(pi) + 0.3, radius * 0.93, Math.max(6, drawR * 0.72));
     },
   };
@@ -818,7 +820,7 @@ function pickUpgrade(i) {
       kind === 'apex' ? '★★ ' + c.web.name + ' ★★' : big ? '★ ' + c.web.name + ' ★' : c.web.name,
       webNodeDesc(c.web), big ? 3.4 : 2.6,
       kind === 'apex' ? 'APEX TRANSFORMATION — THE RIG ITSELF HAS CHANGED'
-        : kind === 'fusion' ? 'FUSION POWER ONLINE · ' + c.web.paths.map(pk => PATHS[pk].name).join(' × ')
+        : kind === 'fusion' ? 'FUSION POWER ONLINE · ' + c.web.paths.map(pk => skinPathName(pk)).join(' × ')
           : 'BRIDGE SYNERGY ONLINE · ' + PATHS[c.web.paths[0]].name + ' × ' + PATHS[c.web.paths[1]].name);
     queueSecretRewardNotice();
     if (big) SFX.mega();
@@ -859,7 +861,7 @@ function pickUpgrade(i) {
   setAnnounce(tier.icon, c.path.color,
     (capped ? '★ ' : '') + shownName + (capped ? ' ★' : ''),
     tierDesc(c.pathKey, c.tierIdx), capped ? 3 : 2.2,
-    (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + c.path.name + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
+    (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + skinPathName(c.pathKey) + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
   queueSecretRewardNotice();
   if (capped) SFX.mega();
 }
@@ -867,7 +869,7 @@ function pickUpgrade(i) {
 // every offer misses your build
 // ✦ grant a cheat item — marks the run so the best score isn't recorded
 function applyCheat(i) {
-  const it = CHEAT_ITEMS[i];
+  const it = SKIN.cheatItems[i];
   if (!it) return;
   if (!G.cheated) {
     G.cheated = true;
@@ -1017,9 +1019,9 @@ function onPress(x, y) {
         for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
           if (inRect(x, y, T.bridgeNode(bi))) { selectMapNode({ kind: 'bridge', bi, pi: 0, ti: 0 }); return; }
         }
-        for (let si = 0; si < WEB_SATELLITES.length; si++) {
+        for (let si = 0; si < activeSatellites().length; si++) {
           if (inRect(x, y, T.satNode(si))) {
-            selectMapNode({ kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(WEB_SATELLITES[si].path)), ti: 3 });
+            selectMapNode({ kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(activeSatellites()[si].path)), ti: 3 });
             return;
           }
         }
@@ -1053,7 +1055,7 @@ function onPress(x, y) {
       if (inRect(x, y, T.close) || !inRect(x, y, { x: T.px, y: T.py, w: T.pw, h: T.ph })) {
         trialOpen = false; return;
       }
-      for (let i = 0; i < GENS.length; i++) {
+      for (let i = 0; i < SKIN.gens.length; i++) {
         if (inRect(x, y, T.region(i))) {
           trialSel.region = i;
           if (i !== 0 && trialSel.round === 3) trialSel.round = 2;
@@ -1089,13 +1091,23 @@ function onPress(x, y) {
         SFX.wall(); return;
       }
       if (setupStep === 'pilot') {
-        for (let i = 0; i < STARTERS.length; i++) {
-          if (inRect(x, y, L.starter(i))) { SETTINGS.starter = STARTERS[i].key; saveSettings(); SFX.wall(); return; }
+        const roster = skinStarters();
+        for (let i = 0; i < roster.length; i++) {
+          if (inRect(x, y, L.starter(i))) { SETTINGS.starter = roster[i].key; saveSettings(); SFX.wall(); return; }
         }
         if (inRect(x, y, L.none)) { SETTINGS.starter = 'none'; saveSettings(); SFX.wall(); return; }
         if (inRect(x, y, L.next)) { setupStep = 'difficulty'; SFX.power(); return; }
       } else {
         if (inRect(x, y, L.editPilot)) { setupStep = 'pilot'; SFX.wall(); return; }
+        if (L.affinity) {
+          const affs = ['light', 'dark'];
+          for (let i = 0; i < 2; i++) {
+            if (inRect(x, y, L.affinity(i))) {
+              SETTINGS.affinity = SETTINGS.affinity === affs[i] ? null : affs[i];
+              saveSettings(); SFX.wall(); return;
+            }
+          }
+        }
         const keys = Object.keys(PRESETS);
         for (let i = 0; i < keys.length; i++) {
           if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
@@ -1109,6 +1121,7 @@ function onPress(x, y) {
     // action to enter setup. Keeping selection and launch separate prevents a
     // stray tap from dropping players into a setup flow they did not expect.
     const L = menuLayout();
+    if (skinPillRect && inRect(x, y, skinPillRect)) { SFX.power(); toggleSkin(); return; }
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
     if (inRect(x, y, L.quick)) {
       setupStep = 'pilot'; menuPage = 'setup'; SFX.power();
@@ -1131,7 +1144,7 @@ function onPress(x, y) {
       if (inRect(x, y, C2.close) || !inRect(x, y, { x: C2.px, y: C2.py, w: C2.pw, h: C2.ph })) {
         cheatOpen = false; return;
       }
-      for (let i = 0; i < CHEAT_ITEMS.length; i++) {
+      for (let i = 0; i < SKIN.cheatItems.length; i++) {
         if (inRect(x, y, C2.chip(i))) { applyCheat(i); return; }
       }
       return;

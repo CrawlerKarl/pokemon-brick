@@ -5,6 +5,62 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — AETHERFALL rounds S1–S7: the original skin ships
+
+The complete Milestone-10 release-identity build, in one arc. Designs:
+`ORIGINAL_SKIN_PLAN.md` (approved) + `S1_SKIN_SPINE_DESIGN.md` (audit).
+
+- **S1 · spine + storage.** `js/skin.js` between config and audio:
+  `SKINS` registry, `?skin=` → `SETTINGS.skin` → pokemon resolution,
+  `storeKey()` (pokemon keeps LEGACY bare keys — zero migration; other
+  skins get `pkbrk-<skin>-*`), `STARTER_KEYS` + runtime `skinStarters()`
+  (the config.js STARTERS literal is DEAD), `assembleSkins()` attach-by-
+  reference + stub default-fill. Checkpoint **v4** (`skin` + `affinity`
+  fields; v1–v3 accepted forever; cross-skin checkpoints treated as
+  absent). ~120 consumers migrated to `SKIN.*`; easter eggs (pika chirp,
+  MISSINGNO., Ditto, Magikarp, Konami Mew) gated `SKIN.id === 'pokemon'`
+  with rand streams kept aligned; Dialga's ×0.85 became data
+  (`BOSS_ABILITIES[483].p2FireMul`); `eff === -1` untouched.
+- **S2 · classes + strings.** 18 classes over the 18 type keys in three
+  disciplines (MAGIC awakens / TECH upgrades / MAGITECH synthesizes),
+  engine mods shared verbatim; `SKIN.strings` (dex → CODEX ⬢, shiny →
+  RADIANT, catch/research/coach/ending copy), `skinEvolveVerb()`,
+  discipline `treeLexicon` voicing the six path names via
+  `skinPathName()`, mode-card copy patch, drawGlyph 'sigil' + pokeball
+  choke-point redirect.
+- **S3 · world.** Nine realms (GREENSPELL MARCHES → SUNDERED CRADLE)
+  with palettes, 54 unit lines × 3 forms (realm-based id space r*100+n),
+  habitat packs, region intros, stage flavor, acts (THE OLD MAGIC / THE
+  ASCENDANCY / THE CONVERGENCE), research rewards, cheat labels, junkie
+  items, objective species remaps (courier 401 / beacon 616).
+- **S4 · bosses.** All 9 legendaries + 9 mythics + 27 sentinels clone
+  their same-slot pokemon kit rows bit-for-bit (style, channels,
+  params, projectile kinds, entrance styles) under new ids/names —
+  VELMORA (Mewtwo kit) through AURELION PRIME (Koraidon kit); move-name
+  strings all original (MIND SPIKE, GALEBREAK, DECREE OF HOURS…). The
+  rift secret is skin data (`SKIN.secret` — LUMINE VMAX on aetherfall).
+- **S5 · procedural art.** `js/aetherart.js`: deterministic seeded
+  parts renderer — 10 body archetypes (wisp/critter/beast/avian/serpent/
+  golem/drone/knight/fish/moth) + a bespoke pilot VESSEL archetype, act
+  design language (organic → angular+thrusters → chrome+glowing inlays),
+  form escalation (circlet → crown), legendary flourishes keyed by boss
+  STYLE (third eye / great wings / gear halo / storm pods / crescent /
+  six blades / dash fins), radiant hue-shift variants. Baked once,
+  cached, `.complete/.naturalWidth` contract — zero call-site changes,
+  zero network. getSprite dispatches through `SKIN.spriteMaker`.
+- **S6 · affinity.** LIGHT/DARK pick on the difficulty screen (skins
+  with `SKIN.affinities`; tap-again clears), 3+3 affinity satellites on
+  the STACK_ITEMS machinery (dawn/halo/grace · fang/tithe/hex) swapped
+  via `activeSatellites()` — slot rules and web caps untouched; effects
+  wired at real chokes (dropChance, kill-mega, shield grant, damage,
+  charge damage, score price). Checkpoint carries the pick.
+- **S7 · toggle.** The title edition pill IS the switch (render writes
+  the rect, input reads it; flip saves + reloads clean of `?skin=`).
+  gallery.html gained the 200-look AETHERFALL unit sheet.
+- **Tests 71 → 76**: legacy-key preservation, v3→v4 stamping, per-skin
+  isolation, S5 asset audit (every id classifies + bakes pixels +
+  radiant distinct), affinity trio gating. Migration tests updated v3→v4.
+
 ## 2026-07-19 — Milestone 3 Round C: the friendly entity + protect objectives
 
 The first entity-based objective families, on the game's first

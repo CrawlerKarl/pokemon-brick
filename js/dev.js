@@ -17,6 +17,8 @@
 //    ?seed=MYSEED         deterministic gameplay RNG (setRunSeed)
 //    ?upg=arsenal:3,aegis:2,vshred   grant path ranks / web nodes on top
 //    ?real=1              non-trial run (records count; default is trial)
+//    ?skin=aetherfall     boot under a skin (rides location.search, so it
+//                         propagates through every dev launch for free)
 //  Example: ?dev&level=3&round=1&mode=junkie&seed=MEWTWO-A&diff=normal
 // ============================================================
 const DEV_QS = new URLSearchParams(location.search);
@@ -32,7 +34,7 @@ function devNormalizeLaunch(o) {
     out.mode = DEV_MODE_ALIASES[String(o.mode).toLowerCase()];
   if (o.diff && PRESETS[String(o.diff).toLowerCase()]) out.diff = String(o.diff).toLowerCase();
   const st = o.starter != null ? String(o.starter).toLowerCase() : null;
-  if (st && (st === 'none' || STARTERS.some(s => s.key === st))) out.starter = st;
+  if (st && (st === 'none' || STARTER_KEYS.includes(st))) out.starter = st;
   let lv = parseInt(o.level, 10);
   if (!lv && o.region) {
     const r = Math.max(1, Math.min(9, parseInt(o.region, 10) || 1));
