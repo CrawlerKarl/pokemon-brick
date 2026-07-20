@@ -796,5 +796,41 @@
     "generatedAt": "2026-07-20",
     "promptLog": "PRODUCTION_RUN.md#508--neonprowler",
     "alphaValidated": true
+  },
+  "aetherfall:503": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#503--gridalpha",
+    "alphaValidated": true
+  },
+  "aetherfall:506": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#506--skyrise-sentry",
+    "alphaValidated": true
+  },
+  "aetherfall:509": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#509--noir-baron",
+    "alphaValidated": true
+  },
+  "aetherfall:510": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#510--adsprite",
+    "alphaValidated": true
+  },
+  "aetherfall:513": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#513--sludgeling",
+    "alphaValidated": true
+  },
+  "aetherfall:516": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#516--straykit",
+    "alphaValidated": true
   }
 }

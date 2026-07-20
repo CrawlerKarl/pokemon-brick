@@ -5,6 +5,31 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — Continuity pass + a caught regression (78/78 green)
+
+Housekeeping to make the folder self-contained, plus a real bug the
+suite gate caught:
+
+- **Docs made current.** Rewrote `NEXT_SESSION_HANDOFF.md` from scratch
+  (status, the art-override workflow, deploy loop, gotchas). Archived 10
+  implemented plan/handoff docs to `docs/archive/` (+ an index README) —
+  root is now just `CLAUDE.md` + `README.md`. Updated CLAUDE.md's title
+  invariant to THE THREE DOORS; roadmap M10 SHIPPED note + fixed stale
+  checkpoint-v3 / "regions 3-9 default" facts + repointed moved refs.
+- **Art:** swept 71 more production finals → **130 overrides live**
+  (all vessels + realms 1-5 creatures).
+- **Regression caught + fixed.** The full suite (triggered to close the
+  open gate) surfaced a crash: the adversarial-review `attackElement()`
+  → null fix (correct: a NO-PARTNER pilot is typeless/neutral) broke
+  `drawHUD` (render.js:3900), which called `.toUpperCase()` on the
+  element assuming junkie always has one — crashing every frame of a
+  NO-PARTNER Starfighter run. Fixed: the element readout renders null as
+  'NEUTRAL'. Every other `attackElement()` consumer was already
+  null-safe. **This is the value of the gate — the review fixes had NOT
+  yet cleared a full suite run, and this only manifested in the HUD
+  render path no finder dimension covered.** Re-run: 78/78 PASSED at
+  `45d7693`.
+
 ## 2026-07-20 — The voice & pacing pass (M3/M9 slice)
 
 Two authored layers that previously covered only the opening regions

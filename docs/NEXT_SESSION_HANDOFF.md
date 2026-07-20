@@ -8,11 +8,11 @@
 > https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys from
 > `main`). Repo `CrawlerKarl/pokemon-brick`.
 >
-> **ONE OPEN GATE:** the full invariant suite (`/test.html`, ~78 checks,
-> ~20 min) has NOT run since the two adversarial-review fixes on the
-> final commits of 2026-07-20. Everything shipped this session was
-> node-checked + console-verified + (for earlier rounds) suite-green, but
-> **run the suite once and confirm green before the next feature deploy.**
+> **GATE: GREEN.** The full invariant suite (`/test.html`, 78 checks) was
+> run to completion at commit `45d7693` — **78/78 PASSED**. That run also
+> CAUGHT a live regression (a HUD crash for no-partner Starfighter runs,
+> introduced by the review's `attackElement`→null fix) which is now fixed
+> and re-verified green. The tree is clean and everything is deployed.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
