@@ -5,6 +5,41 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — BREAKER guns: support arm, Starfighter grammar + the
+## production-art override layer
+
+**Guns (user report: "incredibly overpowered").** Root cause: Mega and
+LASER auto support-fire spawned untyped generic bolts at 0.3–0.6s with
+up to 4 barrels, and during Mega EVERY bolt was `explosive` — each one a
+~100px fireball hitting everything in radius, free of heat. Effective
+Mega auto DPS ≈ 17; LASER t3 ≈ 13. The ball could never compete.
+- Support fire is now the PARTNER's typed volley: bolts carry
+  `pilotInfo().shape` + `attackElement()` + partner tier in classic too —
+  the Starfighter look/feel/type-chart complexity, one grammar across
+  modes (PRISM mastery now matters to classic gunplay).
+- Numbers: auto cadence 0.8/0.6/0.45s (was 0.6/0.42/0.3), bolts ×0.7;
+  `explosive` comes ONLY from FIREBALL — Mega keeps its ×1.25/1.4 bolt
+  bonus + HYPERNOVA cadence, never a free fireball carpet. Mega auto
+  ≈ 2.2 DPS, LASER t3 ≈ 6.2 — the guns support, the ball clears.
+- The CHARGE ARC now runs in classic while armed (hold right-click/
+  Shift/FIRE-pad): resonance window, overcharge cost, shell-cracking —
+  and never accumulates unarmed (ball-first preserved).
+- Suite 77 → 78: 'classic guns: partner-typed support fire, no Mega
+  fireball carpet' (typed bolts, 0.7 power, lazy cadence, FIREBALL owns
+  AoE, charge armed-only).
+
+**Production-art override layer.** The user's generation pipeline
+(art/aetherfall-production/ — style bible, 518-asset manifest, chroma-
+key workflow) now plugs straight into the game: `npm run art-overrides`
+scans `sprites/final/af-<id>-*.png` → `js/aetherfall-overrides.
+generated.js`; `aetherart.js` blits each override ONTO its cached
+canvas on load (same object identity — every reference upgrades in
+place, procedural bake covers the gap and every unmapped id). Radiant
+variants hue-rotate the PNG + keep sparkles/aura. gallery.html reports
+coverage ("N overridden by production art"). Local same-origin files
+only — the no-remote-fetch rule stands. First 5 finals (Pyromancer,
+Thistling line, Velmora) live in-game.
+
 ## 2026-07-20 — BREAKER balance: the deflector core (width was a trap)
 
 User report: classic's enemy fire sometimes reads impossible to dodge,

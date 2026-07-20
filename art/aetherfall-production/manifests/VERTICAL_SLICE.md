@@ -1,8 +1,10 @@
 # Aetherfall blended-style vertical slice
 
 Generated with the built-in image-generation workflow on 2026-07-20. The
-style-lock image was the shared reference for every asset. Briarkin also used
-Thistling as a family-identity reference; Thornwarden used Briarkin.
+style-lock image was the shared reference for every asset. Infernomancer used
+Pyromancer as its family-identity reference, and Suncaller used Infernomancer.
+Briarkin also used Thistling as a family-identity reference; Thornwarden used
+Briarkin.
 
 Every source was generated on a perfectly flat chroma-key background, copied
 into `sprites/source/`, extracted locally with the image-generation skill's
@@ -28,6 +30,48 @@ Lighting/mood: shared top-left soft cinematic key and cool rim; controlled glow 
 Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.
 Constraints: do not use #00ff00 anywhere in the subject; no cast shadow, contact shadow, reflection, pedestal, environment, text, logo, watermark, particles, detached flame trails, smoke, or aura; one vessel only; no border; no frame; clear upward-facing player-ship orientation; strong thumbnail silhouette; must remain readable at 48 px.
 Avoid: airplane realism, generic fighter jet, humanoid robot, giant wings, boss-level ornament, plastic toy finish, flat vector art, pixel art, existing-franchise resemblance, large transparent fire plumes.
+```
+
+## 11 — Infernomancer
+
+- Mix: 76% Relicforge / 24% Arcane Alloy
+- Source: `sprites/source/af-011-infernomancer-source.png`
+- Final: `sprites/final/af-011-infernomancer.png`
+- Export: 128×128 RGBA
+
+```text
+Use case: stylized-concept
+Asset type: final Aetherfall player-pilot vessel sprite source, stable id 11
+Input images: Image 1 is the definitive blended Aetherfall production style reference. Image 2 is PYROMANCER, form I and the exact family-identity anchor. Preserve Image 2's dark hammered bronze teardrop hull, black steel, aged brass, ember-glass canopy, central open brazier reactor, paired blue-white rear thrusters, fire-rune grammar, upward player-ship orientation, and clean symmetrical silhouette. Create a new evolved vessel, not an edit sheet and not multiple images.
+Primary request: Create INFERNOMANCER, form II of the fire-class player vessel and the unmistakable evolved version of Image 2. Lengthen and strengthen the teardrop brazier-chariot hull while keeping it nimble. Add a broader armored ember-glass canopy, a deeper protected central furnace-brazier, two longer swept flame-shaped wing plates with layered heat shields, reinforced brass hinge collars, four compact precision thruster nozzles arranged as two rear pairs, and one additional heat-vent spine along the nose. Fire-rune engravings are richer and the metal shows controlled heat bluing and wear. It must still feel like a piloted magical starfighter, never humanoid and never a living animal. Form II is visibly more capable than Pyromancer but leaves room for a ceremony-grade third form.
+Style mix: 76% Relicforge Miniatures, 24% Arcane Alloy. Premium pre-rendered 3D game sprite, hand-painted material variation, five to six major material zones, modest layered rune engraving, selective sharp highlights, original magitech design.
+Style/medium: stylized 3D vessel rendered as a clean 2D sprite; hammered bronze, heat-stained black steel, dark ceramic armor, ember glass, aged brass, controlled orange-white furnace light and small blue-white thruster light; crisp antialiased silhouette.
+Composition/framing: one isolated full-body vessel only, centered, identical three-quarter front/top game camera to Image 2, nose pointing upward with a slight view of its top surface, symmetrical main silhouette, all wing tips and four thrusters fully visible, generous even padding, stable center of mass, square sprite source. Do not reproduce Image 2 side-by-side.
+Lighting/mood: shared top-left soft cinematic key and cool opposing rim; controlled glow confined to brazier, canopy, engraved rune channels, heat vents, and engine nozzles.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal. The entire background must be one perfectly uniform color with no shadows, gradients, texture, reflections, floor plane, vignette, border, or lighting variation.
+Constraints: do not use #00ff00 anywhere in the vessel; no cast shadow, contact shadow, reflection, pedestal, environment, text, logo, watermark, particles, detached flame trails, smoke, aura, border, or frame; exactly one vessel; preserve family identity from Image 2; clear upward-facing player-ship orientation; strong thumbnail silhouette; must remain readable at 48 px.
+Avoid: redesigning the family, airplane realism, generic fighter jet, humanoid robot, creature anatomy, giant wings, boss-level ornament, excessive filigree, plastic toy finish, flat vector art, pixel art, existing-franchise resemblance, large transparent fire plumes.
+```
+
+## 12 — Suncaller
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-012-suncaller-source.png`
+- Final: `sprites/final/af-012-suncaller.png`
+- Export: 128×128 RGBA
+
+```text
+Use case: stylized-concept
+Asset type: final Aetherfall player-pilot vessel sprite source, stable id 12
+Input images: Image 1 is the definitive blended Aetherfall production style reference. Image 2 is INFERNOMANCER, form II and the exact family-identity anchor. Preserve Image 2's elongated dark hammered bronze and heat-stained black-steel teardrop hull, ember-glass canopy, central circular furnace-brazier, layered flame-wing grammar, aged brass construction, four blue-white rear thrusters, upward player-ship orientation, and symmetrical family silhouette. Create a new evolved vessel, not an edit sheet and not multiple images.
+Primary request: Create SUNCALLER, form III and final ceremony-grade evolution of the fire-class player vessel. It is a majestic solar reliquary starfighter grown from Image 2: a slightly broader lance-shaped hull with reinforced dark ceramic and black-steel armor, a faceted golden-orange ember-glass command canopy, a brilliant contained miniature-sun reactor in the center held by a heavy engraved brass gimbal, two grand swept flame-shaped main wings with layered inner heat shields, two smaller upper stabilizer fins that complete a restrained sun-crown silhouette, four precise blue-white thrusters, paired armored heat-vent spines, and refined solar-rune inlays. Add a solid segmented brass solar arc behind and around the central reactor, integrated into the hull rather than floating, so it reads like ceremony-grade engineering without becoming a boss halo. It must unmistakably be the final evolution of Image 2, still a piloted magical starfighter, never humanoid and never a living creature.
+Style mix: 60% Relicforge Miniatures, 40% Arcane Alloy. Premium pre-rendered 3D game sprite, hand-painted material variation, six to eight clearly separated material zones, selective painterly surface wear, layered rune engraving, sharper controlled highlights, original magitech design. Most ornate fire pilot form, but clearly below sentinel or boss detail density.
+Style/medium: stylized 3D vessel rendered as a clean 2D sprite; hammered bronze, heat-blued black steel, matte dark ceramic, aged and polished brass, faceted ember glass, controlled gold-orange solar core and small blue-white thruster light; crisp antialiased silhouette.
+Composition/framing: one isolated full-body vessel only, centered, identical three-quarter front/top game camera to Image 2, nose pointing upward with a slight view of the top surface, symmetrical main silhouette, all main wing tips, upper stabilizers, integrated solar arc, nose, and four thrusters fully visible, generous even padding, stable center of mass, square sprite source. Do not reproduce Image 2 side-by-side.
+Lighting/mood: shared top-left cinematic key and cool opposing rim with slightly richer final-form material contrast; controlled bloom confined to canopy, contained sun reactor, rune channels, heat vents, and engine nozzles.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal. The entire background must be one perfectly uniform color with no shadows, gradients, texture, reflections, floor plane, vignette, border, or lighting variation.
+Constraints: do not use #00ff00 anywhere in the vessel; no cast shadow, contact shadow, reflection, pedestal, environment, text, logo, watermark, particles, detached flame trails, smoke, aura, border, or frame; exactly one vessel; preserve family identity from Image 2; integrated solid solar arc only, no floating halo; clear upward-facing player-ship orientation; wing tips must not touch the canvas edges; strong thumbnail silhouette; must remain readable at 48 px.
+Avoid: redesigning the family, airplane realism, generic fighter jet, humanoid robot, creature anatomy, cathedral-sized silhouette, boss-level ornament, excessive filigree, giant disconnected halo, plastic toy finish, flat vector art, pixel art, existing-franchise resemblance, transparent fire plumes.
 ```
 
 ## 101 — Thistling

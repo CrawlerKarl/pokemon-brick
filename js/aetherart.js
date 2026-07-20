@@ -3908,10 +3908,70 @@
     return out;
   }
 
+  // ---------- PRODUCTION-ART OVERRIDES ----------
+  // The art pipeline (art/aetherfall-production/, see its STYLE_BIBLE)
+  // generates finished sprites per stable id; tools/build-art-overrides.js
+  // publishes them as AETHERFALL_ART_OVERRIDES. When an override exists,
+  // the PNG is blitted ONTO the already-cached canvas the moment it loads —
+  // same object identity, so every live reference upgrades in place and the
+  // procedural bake covers the load gap (and every id with no override).
+  // Local same-origin files only — the no-remote-fetch rule stands.
+  const OVERRIDE_LOADED = {};
+  function applyOverride(cv, id, shiny) {
+    const src = (typeof AETHERFALL_ART_OVERRIDES !== 'undefined') && AETHERFALL_ART_OVERRIDES[id];
+    if (!src) return;
+    const key = (shiny ? 's' : '') + id;
+    if (OVERRIDE_LOADED[key]) return;
+    OVERRIDE_LOADED[key] = true;
+    const img = new Image();
+    img.onload = () => {
+      const c = cv.getContext('2d');
+      const size = cv.width;
+      c.save();
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, size, size);
+      // keep the boss/radiant presence aura behind the production art
+      const cls = classify(id);
+      const boss = cls && (cls.kind === 'legend' || cls.kind === 'myth' || cls.kind === 'sentinel');
+      const P = makePalette(cls ? cls.type : 'normal', shiny);
+      if (boss || shiny) {
+        const g = c.createRadialGradient(size / 2, size / 2, 4, size / 2, size / 2, size * 0.48);
+        g.addColorStop(0, (shiny ? '#ffe97a' : P.base) + '4d');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g; c.fillRect(0, 0, size, size);
+      }
+      // letterbox-fit, centered; radiant variants hue-shift when supported
+      const scale = Math.min(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      if (shiny && 'filter' in c) c.filter = 'hue-rotate(150deg) saturate(1.15)';
+      c.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      c.filter = 'none';
+      if (shiny) { // radiant sparkles ride above, same as procedural bakes
+        const R = rng(id * 13 + 5);
+        c.fillStyle = '#fff8d0';
+        for (let i = 0; i < 6; i++) {
+          const x = size / 2 + (R() - 0.5) * size * 0.7, y = size / 2 + (R() - 0.5) * size * 0.7;
+          c.save(); c.translate(x, y);
+          c.beginPath(); c.moveTo(0, -4.4); c.lineTo(1.3, -1.3); c.lineTo(4.4, 0); c.lineTo(1.3, 1.3);
+          c.lineTo(0, 4.4); c.lineTo(-1.3, 1.3); c.lineTo(-4.4, 0); c.lineTo(-1.3, -1.3);
+          c.closePath(); c.fill(); c.restore();
+        }
+      }
+      c.restore();
+    };
+    img.src = src;
+  }
+
   AF.spriteMaker = function (id, shiny) {
     const key = (shiny ? 's' : '') + id;
-    if (!CACHE[key]) CACHE[key] = bake(id, shiny);
+    if (!CACHE[key]) {
+      CACHE[key] = bake(id, shiny);
+      applyOverride(CACHE[key], id, shiny);
+    }
     return CACHE[key];
   };
   AF.spriteClassify = classify;
+  // the gallery sheet reports pipeline coverage
+  AF.artOverrideCount = () => (typeof AETHERFALL_ART_OVERRIDES !== 'undefined')
+    ? Object.keys(AETHERFALL_ART_OVERRIDES).length : 0;
 })();

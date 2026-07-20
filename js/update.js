@@ -3014,7 +3014,10 @@ function update(dt) {
   // pauses so no stray bolt leaks out before the charged shot.
   G.chargeCD = Math.max(0, G.chargeCD - dt);
   let charging = false, chargedThisFrame = false;
-  if (G.mode !== 'classic' && G.state === 'play') {
+  // CLASSIC joins the charge arc whenever its blaster is ARMED (laser
+  // window, Mega, or an offense capstone) — the full Starfighter grammar:
+  // hold to charge, resonance sweet-spot, overcharge cost, shell-cracking.
+  if ((G.mode !== 'classic' || blasterArmed()) && G.state === 'play') {
     // A FIRE touch still down past the intent threshold promotes into a charge;
     // a quicker release is dispatched as one normal shot by input.js.
     if (touchFirePendingId !== null && performance.now() - touchFirePendingT >= TOUCH_CHARGE_HOLD_MS) {
@@ -4101,15 +4104,21 @@ function update(dt) {
   if (laserActive && G.state === 'play') {
     G.laserCD -= dt;
     if (G.laserCD <= 0) {
-      // slowed down — lasers support the ball, they don't replace it.
-      // Mega grants only tier-1 support fire now.
+      // SUPPORT fire, not a second weapon: the volley is the PARTNER's typed
+      // attack (same shape/element/tier language as Starfighter), each bolt
+      // at 0.7 power, on a deliberately lazy cadence — the ball must always
+      // out-clear the guns. Explosions come ONLY from the FIREBALL power;
+      // Mega keeps its ×1.25 bolt bonus and cadence capstones, never a free
+      // fireball carpet (that carpet was the old "guns are OP" root cause).
       const tier = Math.max(G.fx_laser ? G.fx_laser.tier : 0, G.megaT > 0 ? 1 : 0);
-      G.laserCD = tier >= 3 ? 0.3 : tier >= 2 ? 0.42 : 0.6;
+      G.laserCD = tier >= 3 ? 0.45 : tier >= 2 ? 0.6 : 0.8;
       const pw = paddleW();
       const xs = tier >= 3 ? [-pw / 2, -pw / 6, pw / 6, pw / 2] : [-pw / 2 + 8, pw / 2 - 8];
+      const pil = pilotInfo(); // mode-agnostic: the partner arms the guns
       // shipY, not PADDLE_Y — the junkie pilot fires from wherever it flies
       xs.forEach(off => G.lasers.push({ x: G.paddle.x + off, y: shipY() - 14,
-        explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0 }));
+        powerMul: 0.7, explosive: !!G.fx_fire, mega: G.megaT > 0,
+        shape: pil.shape, element: attackElement(), tier: G.starterLvl }));
       SFX.laser();
     }
   }

@@ -127,7 +127,10 @@
       "finalFile": "sprites/final/af-011-infernomancer.png",
       "previewFile": "sprites/previews/af-011-infernomancer-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "VERTICAL_SLICE.md#11--infernomancer",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:12",
@@ -150,7 +153,10 @@
       "finalFile": "sprites/final/af-012-suncaller.png",
       "previewFile": "sprites/previews/af-012-suncaller-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "VERTICAL_SLICE.md#12--suncaller",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:13",

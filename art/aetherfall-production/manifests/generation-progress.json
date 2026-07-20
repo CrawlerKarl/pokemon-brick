@@ -5,6 +5,18 @@
     "promptLog": "VERTICAL_SLICE.md#10--pyromancer",
     "alphaValidated": true
   },
+  "aetherfall:11": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#11--infernomancer",
+    "alphaValidated": true
+  },
+  "aetherfall:12": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "VERTICAL_SLICE.md#12--suncaller",
+    "alphaValidated": true
+  },
   "aetherfall:101": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",

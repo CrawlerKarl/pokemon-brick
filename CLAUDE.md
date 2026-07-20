@@ -32,7 +32,15 @@ NEVER rename a key:
   weapon; there is NO free blaster. The blaster is EARNED and gated by
   `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or
   tier 3 of an offense path (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
-  touch FIRE pad is hidden, and the shoot hint is suppressed.
+  touch FIRE pad is hidden, the shoot hint is suppressed, and the charge
+  arc never accumulates. WHEN ARMED, the guns are the PARTNER's typed
+  support arm (balance round 2026-07-20): bolts carry `pilotInfo().shape` /
+  `attackElement()` / partner tier exactly like Starfighter, the full
+  charge arc works (resonance/overcharge/shell-crack), and SUPPORT stays
+  support — auto lasers fire at 0.8/0.6/0.45s (t1/2/3) with 0.7-power
+  bolts, and `explosive` splash comes ONLY from FIREBALL (`fx_fire`),
+  never free with Mega. The ball must always out-clear the guns
+  (suite: 'classic guns' test).
 - **blaster** (UI: BLASTER) — same waves, NO ball; you clear everything by shooting. Charge
   a fat piercing shot with right-click / Shift, or on touch **hold the FIRE
   pad** (a quick tap fires one normal shot; no separate CHARGE pad). Wiring:

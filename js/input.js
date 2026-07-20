@@ -1249,10 +1249,11 @@ function fireAction(auto = false) {
   const novaHeat = G.novaStage ? [1, 1.1, 1.25, 1.5][G.novaStage] : 1;
   const heatRate = G.mode === 'junkie' ? (preset().heatBuild || 0.42) : 0.4;
   addWeaponHeat(heatRate * cd * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * masteryCool * novaHeat);
-  // SPACE JUNKIE mode: the shot IS the pilot's attack — the SHAPE follows the
-  // species, the color + type follow the current element (green fire, etc.)
-  const pil = G.mode === 'junkie' ? pilotInfo() : null;
-  if (pil) G.attackAnim = 1; // the pilot visibly ATTACKS — lunge + flash
+  // The shot IS the partner's attack in EVERY mode now — the SHAPE follows
+  // the species, the color + type follow the current element. Classic's
+  // armed blaster fires the same typed bolts the Starfighter pilot does.
+  const pil = pilotInfo();
+  if (G.mode === 'junkie') G.attackAnim = 1; // the pilot visibly ATTACKS — lunge + flash
   // PRISMSTORM ARRAY: the primed volley fans into five tuned lanes instead
   if (upgN('prismstorm') && G.prismReady) {
     G.prismReady = false;
@@ -1280,14 +1281,14 @@ function fireAction(auto = false) {
     G.lasers.push({
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
       y: shipY() - 16, basic: true, // fires from wherever the ship flies
-      explosive: !!G.fx_fire || G.megaT > 0,
+      explosive: !!G.fx_fire, // splash is FIREBALL's identity — Mega keeps its ×bonus, not free AoE
       powerMul: nBolts > 1 ? 0.6 : 1,
       heavy: !!upgN('heavy'), pulse, nova: pulse && !!upgN('impactX'), calib,
       wall: !!(upgN('battery') && G.wallSeg > 0), // BULWARK: fire through the wall
       mega: G.megaT > 0,
-      shape: pil ? pil.shape : null,
-      element: pil ? attackElement() : null,
-      tier: pil ? G.starterLvl : 1, // the attack itself grows as the partner evolves
+      shape: pil.shape,
+      element: attackElement(),
+      tier: G.starterLvl, // the attack itself grows as the partner evolves
     });
   }
   SFX.blaster();
@@ -1314,15 +1315,15 @@ function fireCharge(c, resonant = false) {
   const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1) * (lanceShot ? 1.5 : 1)
     * (resonant ? 1.25 : 1);
   const pierce = (lanceShot ? 99 : 1 + Math.round(c * 3)) + (resonant ? 1 : 0);  // drills through 1..4 blocks
-  const pil = G.mode === 'junkie' ? pilotInfo() : null;
-  if (pil) G.attackAnim = 1.4; // charge release = the big attack animation
+  const pil = pilotInfo(); // every mode: the charge is the partner's big attack
+  if (G.mode === 'junkie') G.attackAnim = 1.4; // charge release = the big attack animation
   G.lasers.push({
     x: G.paddle.x, y: shipY() - 18, basic: true, charged: true, lance: lanceShot,
     power, pierce, r: (12 + c * 22) * (upgN('heavy') ? 1.15 : 1),
-    heavy: !!upgN('heavy'), explosive: !!G.fx_fire || G.megaT > 0, mega: G.megaT > 0,
-    shape: pil ? pil.shape : null,
-    element: pil ? attackElement() : null,
-    tier: pil ? G.starterLvl : 1,
+    heavy: !!upgN('heavy'), explosive: !!G.fx_fire, mega: G.megaT > 0,
+    shape: pil.shape,
+    element: attackElement(),
+    tier: G.starterLvl,
   });
   // the big shot dumps a decent slug of heat — a full charge is ~0.6 of the
   // bar, so leaning on the charge (or chaining them) really can overheat you.

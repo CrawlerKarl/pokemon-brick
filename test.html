@@ -73,6 +73,7 @@ window.requestAnimationFrame = function () { return 0; };
 <script src="js/audio.js"></script>
 <script src="js/data.js"></script>
 <script src="js/aetherfall.js"></script>
+<script src="js/aetherfall-overrides.generated.js"></script>
 <script src="js/aetherart.js"></script>
 <script src="js/scenery.js"></script>
 <script src="js/state.js"></script>
@@ -1410,7 +1411,65 @@ window.requestAnimationFrame = function () { return 0; };
     for (let i = 0; i < 30; i++) { G.paddle.x = W / 2; G.invuln = 2; update(1 / 60); }
     assert(G.telegraphs.every(t => t.boss), 'wave telegraphs were scheduled past the 8-shot ceiling');
     G.enemyShots = []; G.fx_wide = null; delete G.upg.wide;
+    SETTINGS.starter = 'none'; G.starter = null; // no partner mods leak forward
     return 'fixed core under ×2.05 width · wing shots + beams deflect free · core costs 1 life · 8-shot ceiling holds';
+  });
+
+  // 2b-iii) CLASSIC GUNS (balance round): the armed blaster is the PARTNER's
+  // typed support arm — Starfighter's grammar (typed bolts, tier scaling,
+  // charge arc) at support power. Mega never fires free explosive bolts and
+  // auto support fire stays lazy + 0.7-power; the ball must out-clear it.
+  test('classic guns: partner-typed support fire, no Mega fireball carpet', async () => {
+    SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+    resetRun(5, true, { seed: 'gun-balance' });
+    G.state = 'play'; G.stateT = 9; G.invuln = 2;
+    G.balls = [makeBall(W / 2, PADDLE_Y() - 24)]; G.balls[0].stuck = true;
+    // 1) Mega auto support fire: typed, 0.7 power, NOT explosive
+    G.mega = 1; G.megaT = 3; G.lasers = []; G.laserCD = 0;
+    for (let i = 0; i < 20 && !G.lasers.length; i++) { G.invuln = 2; update(1 / 60); }
+    assert(G.lasers.length >= 2, 'Mega support fire did not fire');
+    for (const L of G.lasers) {
+      assert(!L.explosive, 'a Mega bolt was explosive without FIREBALL (the old OP carpet)');
+      assert(L.element === 'fire' && L.shape === 'flame', 'support bolt is not partner-typed (' + L.element + '/' + L.shape + ')');
+      assert(L.powerMul === 0.7, 'support bolt power is ' + L.powerMul + ', want 0.7');
+      assert(L.tier === G.starterLvl, 'support bolt tier must ride the partner tier');
+    }
+    // cadence is the lazy support rate (tier-1 during plain Mega: 0.8s)
+    const cd0 = G.laserCD;
+    assert(cd0 > 0.7, 'Mega support cadence too fast: ' + cd0);
+    // 2) FIREBALL restores the splash — that power OWNS explosions
+    G.fx_fire = { t: 9, tier: 1 }; G.lasers = []; G.laserCD = 0;
+    for (let i = 0; i < 20 && !G.lasers.length; i++) { G.invuln = 2; update(1 / 60); }
+    assert(G.lasers.length && G.lasers.every(L => L.explosive), 'FIREBALL bolts must stay explosive');
+    G.fx_fire = null;
+    // 3) manual armed fire is typed too, and the charge arc works in classic
+    fireAction(true); // the first press LAUNCHES the parked ball (ball-first!)
+    G.lasers = []; G.blasterCD = 0; G.megaT = 3;
+    fireAction(true);
+    assert(G.lasers.length >= 1 && G.lasers[0].element === 'fire' && G.lasers[0].shape === 'flame',
+      'manual classic bolt is not the partner\'s typed attack');
+    assert(!G.lasers[0].explosive, 'manual Mega bolt still explosive');
+    G.lasers = [];
+    fireCharge(1, false);
+    const ch = G.lasers.find(L => L.charged);
+    assert(ch && ch.element === 'fire' && ch.power >= 5, 'classic charge shot missing or untyped');
+    // 4) charge ACCUMULATES in classic only while armed
+    G.lasers = []; G.charge = 0; G.chargeFullT = 0; G.megaT = 3; chargeHeld = true;
+    for (let i = 0; i < 30; i++) { G.invuln = 2; update(1 / 60); }
+    assert(G.charge > 0.3, 'holding charge while ARMED did not build (' + G.charge.toFixed(2) + ')');
+    chargeHeld = false;
+    for (let i = 0; i < 4; i++) { G.invuln = 2; update(1 / 60); } // release fires it
+    // the trial deep-start may have granted an offense capstone — clear the
+    // tree so UNARMED really means unarmed for the ball-first assertion
+    G.path = {}; G.upg = {};
+    G.megaT = 0; G.mega = 0; G.charge = 0; chargeHeld = true;
+    for (let i = 0; i < 30; i++) { G.invuln = 2; update(1 / 60); }
+    assert(G.charge === 0, 'charge built while UNARMED in classic (ball-first rule broken)');
+    chargeHeld = false;
+    G.lasers = [];
+    // leave no damage-modding partner behind — later tests do integer math
+    SETTINGS.starter = 'none'; G.starter = null;
+    return 'typed support bolts (flame, tier-scaled, ×0.7) · no free Mega splash · FIREBALL owns AoE · charge arc armed-only';
   });
 
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
