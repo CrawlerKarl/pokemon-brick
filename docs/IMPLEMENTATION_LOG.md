@@ -5,6 +5,33 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — The voice & pacing pass (M3/M9 slice)
+
+Two authored layers that previously covered only the opening regions
+now cover the whole campaign:
+
+- **Flight-log flavor, all 27 stages × both skins** (`STAGE_FLAVOR` /
+  aetherfall `stageFlavor`). One narrative line after every clear, in
+  each world's own voice — the pilot's FLIGHT LOG across nine regions
+  (migration weather, Coronet cold, rush-hour Unova, stadium Galar,
+  paradox Paldea), and the EXPEDITION LOG across nine realms (vow
+  gales, the drowned world, the sibyls' boilers, the night board of
+  the glass spire, the crucible's ticketed war). Stage-2 lines hook
+  the next region; day numbers run 1–27; objective stages reference
+  their objective (migration/escort/defend).
+- **All nine region grammars authored** (`REGION_GRAMMAR` — was Kanto
+  + Johto + a default). Each region paces differently using ONLY the
+  tested beat actions: Hoenn gusts in squalls and leaves the migration
+  alone; Sinnoh's escort owns its arrival (empty grammar there — the
+  traveler IS the story) with avalanche-front raids in the challenge;
+  Unova runs rush-hour surge→raid→finalPush; Kalos gifts a bonus
+  flock and lets DEFEND carry the challenge; Alola gives a genuine
+  mid-wave breather before its trial; Galar rolls stadium pressure in
+  waves to a championship finish; Paldea opens aggressive and runs
+  the journey in miniature. Live-sim verified: every authored beat
+  fires in order on Unova/Alola/Galar/Paldea seeds, zero errors;
+  objective stages (2:1, 3:0, 5:1) keep their proven shapes.
+
 ## 2026-07-20 — Title overhaul: THE THREE DOORS + the calm roster
 
 User brief: the home screen was overwhelming and the 18-partner grid

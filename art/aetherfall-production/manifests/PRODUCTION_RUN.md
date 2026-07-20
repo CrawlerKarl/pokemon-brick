@@ -478,3 +478,256 @@ Create one isolated game sprite for Aetherfall: VENOMSMITH, poison-element pilot
 ```text
 Create one isolated game sprite for Aetherfall: QUAKEBINDER, ground-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Terrashaper family ancestor. Evolve that Terrashaper into a reinforced seismic drill craft: retain its vertical sandstone drill-prow silhouette, amber geode canopy, rock-slab stabilizers, and twin rear thrusters, but enlarge the faceted stone drill, add layered ochre and dark-brown hull plates, brass seismic coils and braces, symmetric basalt shoulder slabs, small steel shock dampers, and brighter amber crystal seams. The evolution must clearly be the same ship upgraded. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted stone and metal, crisp beveled facets, restrained wear, bold readable silhouette. Exact composition: craft centered, perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, viewed from a consistent three-quarter front-top camera; drill nose points straight up, engines straight down; no diagonal tilt, banking, yaw, or sideways pose. One complete vehicle only, fully inside frame, generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
 ```
+
+## 33 — Warmaster
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-033-warmaster-source.png`
+- Final: `sprites/final/af-033-warmaster.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WARMASTER, fighting-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Shocktrooper family ancestor. Evolve that Shocktrooper into a ceremony-grade command assault interceptor while unmistakably preserving its vertical ivory blade-prow, crimson gem canopy, paired crescent steel blade wings, red layered hull, brass hardware, and twin rear drives. Upgrade it with a taller tiered ivory ram prow, broader layered scarlet command armor, three nested steel impact edges per side integrated into the wings, a central ivory diamond shield boss, richer gold-brass reinforcing ribs, compact dark mechanical joints, and four symmetrical blue-white rear thrusters. Keep the design below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 distinct material zones, premium hand-painted tabletop-miniature construction, sharp bevels, selective scratches, controlled glow, heroic but compact silhouette. Exact composition: craft centered and perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera, nose straight up and engines straight down; no diagonal tilt, banking, yaw, or side view. One complete vehicle only, all wing tips and exhausts fully inside frame, generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no detached weapons or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 36 — Toxin Baron
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-036-toxin-baron-source.png`
+- Final: `sprites/final/af-036-toxin-baron.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: TOXIN BARON, poison-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Venomsmith family ancestor. Evolve that Venomsmith into a ceremony-grade alchemical command craft while unmistakably preserving its vertical pointed violet hull, amber faceted canopy, paired stacked toxin cylinders, brass containment collars, purple tubing, steel injector blades, and rear drives. Upgrade it with four symmetric armored reagent chambers containing opaque orchid-purple fluid, layered royal-violet hull plates, elaborate but legible brass pressure manifolds, crown-like steel nose clamps, two small catalyst sigils, dark mechanical valve housings, and four compact magenta-white rear thrusters. No green or cyan subject colors. Keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 distinct material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective edge wear, controlled opaque reagent glow, original design. Exact composition: craft centered and perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera, nose straight up and engines straight down; no diagonal tilt, banking, yaw, or side view. One complete vehicle only, all tanks, tubes, blade tips, and exhausts fully inside frame, generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no floating bubbles, fumes, drips, or particles. Solid perfectly uniform chroma-key green #00ff00 background; absolutely no green or cyan anywhere on the craft. Square image.
+```
+
+## 39 — Worldcarver
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-039-worldcarver-source.png`
+- Final: `sprites/final/af-039-worldcarver.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WORLDCARVER, ground-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Quakebinder family ancestor. Evolve that Quakebinder into a ceremony-grade tectonic carving vessel while unmistakably preserving its tall spiral stone drill prow, amber geode canopy, symmetric rock-slab stabilizers, basalt hull, brass seismic pistons, and twin rear engines. Upgrade it with a grand multi-tier spiral drill of interlocked dark basalt and sandstone bands, broader articulated side slabs, layered ochre command armor, bright amber crystal fault lines, two pairs of brass-and-steel seismic dampers, a protected faceted geode reactor, and four compact blue-white rear thrusters. Keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 distinct material zones, premium hand-painted tabletop-miniature construction, crisp chiseled facets, selective wear, controlled amber glow, original design. Exact composition: craft centered and perfectly upright on the 12-o'clock drill point to 6-o'clock exhaust axis, consistent three-quarter front-top camera, drill straight up and engines straight down; no diagonal tilt, banking, yaw, or side view. One complete vehicle only, all stone slab tips, dampers, and exhausts fully inside frame, generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no rubble, dust, floating rocks, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 40 — Psion
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-040-psion-source.png`
+- Final: `sprites/final/af-040-psion.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: PSION, psychic-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact psychic eye-cockpit vessel: a slender pearl-lilac vertical teardrop hull, one large almond-shaped ivory canopy inset near the nose with a deep-violet iris lens and tiny cyan-white pupil glow, two short swept amethyst lash fins, a single thick aged-gold focus ring integrated around the mid-hull, subtle engraved concentric thought lines, and one compact blue-white rear thruster. It must read as a piloted spaceship whose canopy evokes an eye, not a living eyeball or creature. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engine straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no detached rings, no orbiting objects, no aura or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 43 — Swarm Operator
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-043-swarm-operator-source.png`
+- Final: `sprites/final/af-043-swarm-operator.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SWARM OPERATOR, bug-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact mechanical hive-carrier vessel: a vertical hexagonal olive-and-ochre armored hull tapered to a small pointed nose, five shallow honeycomb cell plates, one central opaque amber command-lens canopy, two small symmetric brass-and-dark-steel micro-drone docking pods physically attached at the shoulders, short beetle-shell side fins, and two compact blue-white rear thrusters. It is a piloted machine with insect-inspired engineering, not a living insect and not a cloud of separate bugs. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted enamel and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no detached drones, no swarm, no wings in motion, no particles. Solid flat chroma-key magenta #ff00ff background, perfectly uniform and empty; do not use magenta on the craft. Square image.
+```
+
+## 46 — Siegewright
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-046-siegewright-source.png`
+- Final: `sprites/final/af-046-siegewright.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SIEGEWRIGHT, rock-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact flying rampart vessel: a vertical blocky sandstone-and-brown fortress hull tapered around a short dark-steel triangular ram prow, two symmetric squat tower pods built into the shoulders with three simple crenellations each, shallow stone-block seams, a narrow opaque amber visor canopy, aged-brass corner braces, and two compact blue-white rear thrusters. It must read as a piloted spacecraft styled like a miniature moving fortification, not a castle building, tank, or rock creature. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted stone and metal, crisp chiseled bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock ram nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no scenery, rubble, dust, smoke, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 41 — Farseer
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-041-farseer-source.png`
+- Final: `sprites/final/af-041-farseer.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FARSEER, psychic-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Psion family ancestor. Evolve that Psion while unmistakably preserving its upright pearl-lilac teardrop hull, large almond ivory eye-canopy with deep-violet iris, amethyst lash fins, aged-gold focus ring, engraved thought lines, and rear drive. Upgrade it with a taller layered nose, richer lavender armor, a larger faceted violet iris lens, two nested aged-gold focus rings physically attached to the hull by symmetrical shoulder pivots, longer swept psychic fins, small dark mechanical joints, and two compact blue-white rear thrusters. It must remain a piloted eye-inspired spaceship, not a living eye or face. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic and metal, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no detached rings, orbiting objects, aura, rays, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 44 — Dronemaster
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-044-dronemaster-source.png`
+- Final: `sprites/final/af-044-dronemaster.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DRONEMASTER, bug-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Swarm Operator family ancestor. Evolve that Swarm Operator while unmistakably preserving its upright olive-and-ochre tapered hive hull, amber command-lens canopy, honeycomb plates, brass-and-dark-steel shoulder docking pods, beetle-shell side fins, and twin drives. Upgrade it with seven deeper armored honeycomb cells, four compact micro-drone pods physically docked in two symmetrical shoulder racks, layered olive carapace armor, wider ochre wing shields, thicker brass cell frames, small dark mechanical hinges, and three compact blue-white rear thrusters. It must remain a piloted mechanical carrier, not a living insect or detached swarm. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted enamel and metal, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no detached drones, free-flying bugs, swarm cloud, motion blur, or particles. Solid flat chroma-key magenta #ff00ff background, perfectly uniform and empty; do not use magenta on the craft. Square image.
+```
+
+## 47 — Bulwarkwright
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-047-bulwarkwright-source.png`
+- Final: `sprites/final/af-047-bulwarkwright.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BULWARKWRIGHT, rock-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Siegewright family ancestor. Evolve that Siegewright while unmistakably preserving its upright blocky sandstone fortress hull, dark-steel triangular ram prow, twin crenellated tower pods, amber visor canopy, block seams, brass braces, and twin drives. Upgrade it with a longer reinforced steel-and-basalt ram, broader two-tier tower shoulders with heavier crenellations, layered sandstone wall armor, thick brown foundation plates, brass corner buttresses and rivets, a protected larger amber command visor, and three compact blue-white rear thrusters. It must remain a piloted flying fortress craft, not a building, tank, or creature. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted stone and metal, crisp chiseled bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock ram nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no scenery, rubble, dust, smoke, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 42 — Omnimind
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-042-omnimind-source.png`
+- Final: `sprites/final/af-042-omnimind.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: OMNIMIND, psychic-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Farseer family ancestor. Evolve that Farseer into a ceremony-grade psychic command vessel while unmistakably preserving its upright pearl-lilac layered hull, enormous almond ivory eye-canopy with faceted violet iris, swept amethyst lash fins, gold focus-ring structure, and twin rear drives. Upgrade it with a taller crown-point nose, a more intricate multi-faceted indigo iris and white pupil core, three nested aged-gold focus arcs physically joined to the hull by brass pivots, two pairs of elegant purple psychic fins, richer lavender ceramic plates, dark mechanical joints, and four compact blue-white rear thrusters. It must remain a piloted eye-inspired spaceship, not a living eye or face; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock crown nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no detached rings, orbiting objects, aura, beams, rays, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 45 — Hivemarshal
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-045-hivemarshal-source.png`
+- Final: `sprites/final/af-045-hivemarshal.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: HIVEMARSHAL, bug-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Dronemaster family ancestor. Evolve that Dronemaster into a ceremony-grade mechanical hive command carrier while unmistakably preserving its upright olive-and-ochre layered hull, amber command-lens canopy, honeycomb armor cells, paired brass drone racks, beetle-shell wing shields, and three rear drives. Upgrade it with nine legible armored honeycomb cells, six compact micro-drone pods physically locked into three symmetrical docking pairs, broader ochre carapace shields, tiered olive command armor, a small crown-like brass antenna plate integrated at the nose, dark steel hinges and conduits, and four compact blue-white rear thrusters. It must remain a piloted machine, not a living insect or loose swarm; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled amber glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no detached drones, free-flying bugs, swarm cloud, motion blur, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the craft. Square image.
+```
+
+## 48 — Citadel Prime
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-048-citadel-prime-source.png`
+- Final: `sprites/final/af-048-citadel-prime.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: CITADEL PRIME, rock-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Bulwarkwright family ancestor. Evolve that Bulwarkwright into a ceremony-grade airborne citadel craft while unmistakably preserving its upright sandstone fortress hull, long dark-steel ram prow, twin crenellated side towers, central amber visor, brass buttresses, stone blockwork, and clustered rear drives. Upgrade it with a grand layered basalt-and-steel ram, three integrated fortress towers with distinct stepped crenellations, thicker sandstone wall tiers, dark-brown foundation armor, ornate but legible gold-brass corner braces, a protected tall amber command-crystal canopy, and four compact blue-white rear thrusters. It must remain a piloted flying vessel rather than a literal building, tank, or creature; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp chiseled bevels, selective wear, controlled glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock ram nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no text, no emblem, no border, no ground plane, no cast shadow, no scenery, banners, rubble, dust, smoke, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 49 — Necromancer
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-049-necromancer-source.png`
+- Final: `sprites/final/af-049-necromancer.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: NECROMANCER, ghost-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact bone-ribbed spirit skiff: a vertical charcoal-violet teardrop hull, one short ivory scythe-shaped prow blade integrated along the nose, three simple curved ivory rib braces across the hull, one central opaque cyan-violet soul-core canopy, two small symmetric sealed soul-lantern canisters physically attached at the shoulders, dark steel fittings, and one compact blue-white rear thruster. It must read as a piloted machine with funerary motifs, not a skeleton creature, coffin, or floating ghost. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock scythe nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engine straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no skull face, no text, no emblem, no border, no ground plane, no cast shadow, no mist, smoke, aura, spectral wisps, detached lanterns, bones, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 52 — Wyrmrider
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-052-wyrmrider-source.png`
+- Final: `sprites/final/af-052-wyrmrider.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WYRMRIDER, dragon-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact dragon-prow longship spacecraft: a vertical indigo-blue armored hull, a small sculpted metal dragon-head figurehead integrated into the nose with two ivory horns, two short symmetric rigid sail wings framed in weathered gold and filled with opaque deep-blue enamel panels, three shallow scale rows on the hull, one narrow sapphire canopy, dark steel joints, and one compact blue-white rear thruster. It must read as a piloted vessel with a carved dragon motif, not a living dragon or animal rider. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted enamel and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock dragon prow to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engine straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no living creature, no text, no emblem, no border, no ground plane, no cast shadow, no fire breath, smoke, clouds, aura, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 55 — Shadowmancer
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-055-shadowmancer-source.png`
+- Final: `sprites/final/af-055-shadowmancer.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SHADOWMANCER, dark-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact stealth dagger-wing vessel: a narrow vertical matte-black and midnight-violet spear hull, two short symmetric forward-swept dagger wings with dark steel edges, one thin opaque ultraviolet slit canopy, subtle purple edge inlays, a small obsidian diamond focus plate, and two compact blue-violet rear thrusters. It must read as a piloted stealth spacecraft, not a bat, demon, humanoid, or floating weapon. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted matte ceramic and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock spear nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no shadow trail, ribbons, smoke, aura, detached blades, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 50 — Gravecaller
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-050-gravecaller-source.png`
+- Final: `sprites/final/af-050-gravecaller.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GRAVECALLER, ghost-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Necromancer family ancestor. Evolve that Necromancer while unmistakably preserving its upright charcoal-violet skiff hull, ivory scythe prow, curved bone rib braces, faceted violet soul-core canopy, attached soul-lantern canisters, dark fittings, and rear drive. Upgrade it with a longer layered ivory scythe blade integrated into the nose, five curved bone braces, four sealed cyan-violet lantern canisters physically mounted in two symmetric shoulder pairs, richer purple ceramic armor, dark steel clasps, and two compact blue-white rear thrusters. It must remain a piloted funerary machine, not a skeleton creature, coffin, or ghost. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic, bone, and metal, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock scythe nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no skull face, no text, no emblem, no border, no ground plane, no cast shadow, no mist, smoke, aura, spectral wisps, detached bones, lanterns, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 53 — Drakeknight
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-053-drakeknight-source.png`
+- Final: `sprites/final/af-053-drakeknight.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DRAKEKNIGHT, dragon-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Wyrmrider family ancestor. Evolve that Wyrmrider while unmistakably preserving its upright indigo longship hull, sculpted metal dragon-head prow with ivory horns, framed opaque blue sail wings, scale-row armor, sapphire canopy, gold trim, and rear drive. Upgrade it with a larger armored dragon figurehead, four shorter ivory horns, broader two-layer rigid sail wings, five overlapping cobalt scale rows, stronger weathered-gold frames, dark steel shoulder hinges, a larger faceted sapphire canopy, and two compact blue-white rear thrusters. It must remain a piloted vessel with a carved dragon motif, not a living dragon or rider. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted enamel and metal, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock dragon prow to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no living creature, no text, no emblem, no border, no ground plane, no cast shadow, no fire breath, smoke, clouds, aura, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 56 — Nightblade
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-056-nightblade-source.png`
+- Final: `sprites/final/af-056-nightblade.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: NIGHTBLADE, dark-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Shadowmancer family ancestor. Evolve that Shadowmancer while unmistakably preserving its upright matte-black spear hull, violet crystal-slit canopy, forward-swept dagger wings, dark steel edges, purple inlays, obsidian focus plate, and twin violet drives. Upgrade it with a taller layered stealth nose, longer double-edged dagger wings with nested midnight-violet armor, a larger thin ultraviolet canopy slit, two obsidian diamond focus plates, reinforced dark-steel shoulder pivots, subtle silver edge bevels, and three compact blue-violet rear thrusters. It must remain a piloted stealth spacecraft, not a bat, demon, humanoid, or floating weapon. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted matte ceramic and metal, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock spear nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no shadow trail, ribbons, smoke, aura, detached blades, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 51 — Deathsinger
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-051-deathsinger-source.png`
+- Final: `sprites/final/af-051-deathsinger.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DEATHSINGER, ghost-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Gravecaller family ancestor. Evolve that Gravecaller into a ceremony-grade funerary command skiff while unmistakably preserving its upright charcoal-violet hull, long ivory scythe prow, layered bone ribs, faceted violet soul-core canopy, symmetric sealed lantern canisters, dark fittings, and twin rear drives. Upgrade it with a grand tiered ivory scythe blade integrated along the full nose, seven legible curved bone braces, six sealed cyan-violet soul-lantern canisters physically mounted in three symmetric pairs, layered royal-purple ceramic armor, a small ivory funerary mask plate that is abstract rather than a literal skull, ornate dark-steel clasps, and four compact blue-white rear thrusters. It must remain a piloted machine, not a skeleton creature, coffin, or ghost; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock scythe nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no literal skull face, no text, no emblem, no border, no ground plane, no cast shadow, no mist, smoke, aura, spectral wisps, detached bones, lanterns, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 54 — Wyrmmarshal
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-054-wyrmmarshal-source.png`
+- Final: `sprites/final/af-054-wyrmmarshal.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WYRMMARSHAL, dragon-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Drakeknight family ancestor. Evolve that Drakeknight into a ceremony-grade dragon-fleet command vessel while unmistakably preserving its upright indigo longship hull, sculpted armored dragon-head figurehead, ivory horns, layered rigid blue sail wings, cobalt scale armor, sapphire canopy, gold frames, and twin rear drives. Upgrade it with a majestic but compact metal dragon prow bearing six short ivory horns, three-tier symmetrical rigid sail wings, seven overlapping royal-blue scale rows, richer weathered-gold structural frames, dark-steel articulated pivots, a taller faceted sapphire command canopy, and four compact blue-white rear thrusters. It must remain a piloted vessel with a carved dragon motif, not a living dragon or rider; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled blue glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock dragon prow to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no living creature, no text, no emblem, no border, no ground plane, no cast shadow, no fire breath, smoke, clouds, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 57 — Voiddancer
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-057-voiddancer-source.png`
+- Final: `sprites/final/af-057-voiddancer.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: VOIDDANCER, dark-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Nightblade family ancestor. Evolve that Nightblade into a ceremony-grade stealth command vessel while unmistakably preserving its upright matte-black spear hull, tall ultraviolet crystal-slit canopy, paired sweeping dagger wings, nested midnight armor, dark-steel edges, violet diamond focus plates, and rear drive cluster. Upgrade it with an elongated layered obsidian prow, two pairs of elegant scimitar-dagger wings with sharp silver-black bevels, three vertically aligned faceted violet focus crystals, richer midnight-purple armor, reinforced circular shoulder pivots, fine controlled ultraviolet inlays, and four compact blue-violet rear thrusters. It must remain a piloted stealth spacecraft, not a bat, demon, humanoid, or floating weapon; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled violet glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock spear nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no shadow trail, ribbons, smoke, aura, detached blades, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 58 — Engineer
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-058-engineer-source.png`
+- Final: `sprites/final/af-058-engineer.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: ENGINEER, steel-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact modular engineering gun-platform vessel: a vertical gunmetal-gray rectangular hull with softened beveled corners, two short symmetric articulated tool arms ending in round wrench-like manipulators, two small parallel steel cannon barrels integrated at the nose, three simple bolted armor plates, one narrow opaque cyan visor canopy, aged-brass hinge collars, and two compact blue-white rear thrusters. It must read as a piloted spacecraft and mobile workshop, not a humanoid robot, tank, or floating tools. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted metal and enamel, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock cannon nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no hands, no text, no emblem, no border, no ground plane, no cast shadow, no detached tools, sparks, smoke, projectiles, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 61 — Feywarden
+
+- Mix: 88% Relicforge / 12% Arcane Alloy
+- Source: `sprites/source/af-061-feywarden-source.png`
+- Final: `sprites/final/af-061-feywarden.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FEYWARDEN, fairy-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact butterfly court-barge spacecraft: a vertical pearl-white and blush-pink teardrop hull, two short symmetric rigid butterfly-shaped wing shields with opaque rose and pale-blue enamel panels, one small oval sapphire-pink canopy, aged-gold wing frames, a single integrated gold halo arch around the nose, subtle heart-diamond filigree, and one compact blue-white rear thruster. It must read as a piloted ornamental vessel, not a living fairy, butterfly, insect, or humanoid. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock halo nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engine straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no detached motes, glitter, flowers, ribbons, aura, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```

@@ -1707,6 +1707,30 @@ const STAGE_FLAVOR = {
   '0:0': '"THE PIDGEY FLOCKS SCATTER AT YOUR ENGINE WASH. SOMETHING HAS THEM SPOOKED."  — FLIGHT LOG, DAY 1',
   '0:1': '"ARMORED SHELLS ON ROOKIE WILDS? SOMEONE IS ORGANIZING THEM."  — FLIGHT LOG, DAY 2',
   '0:2': '"THE GENETIC POKÉMON WITHDRAWS TO THE EAST. THE BELL TOWERS OF JOHTO ARE RINGING."  — FLIGHT LOG, DAY 3',
+  '1:0': '"THE BELLS RANG BEFORE I CROSSED THE RIDGE. THE MONKS KNEW I WAS COMING."  — FLIGHT LOG, DAY 4',
+  '1:1': '"THE THREE BEASTS RUN AHEAD OF THE STORM, NOT FROM IT. TESTING ME, I THINK."  — FLIGHT LOG, DAY 5',
+  '1:2': '"THE GUARDIAN OF THE SEAS BOWED AND DOVE. THE TRADE WINDS SMELL OF HOENN SALT."  — FLIGHT LOG, DAY 6',
+  '2:0': '"SQUALL AFTER SQUALL, AND WINGULL RIDING EVERY ONE. THE SEA HERE HAS MOODS."  — FLIGHT LOG, DAY 7',
+  '2:1': '"A WHOLE MIGRATION CROSSED MY LANE TODAY. YOU DON\'T FIGHT WEATHER. YOU OUTLAST IT."  — FLIGHT LOG, DAY 8',
+  '2:2': '"THE SKY SERPENT UNCOILED FROM THE OZONE. AFTER THAT, MOUNTAINS SOUND RESTFUL."  — FLIGHT LOG, DAY 9',
+  '3:0': '"COLD THINS THE AIR AND THE ENGINE COMPLAINS. A SMALL TRAVELER NEEDED A WING TODAY."  — FLIGHT LOG, DAY 10',
+  '3:1': '"CORONET\'S SHADOW CROSSES HALF THE REGION. THE LAKES WATCH ME LIKE THREE OPEN EYES."  — FLIGHT LOG, DAY 11',
+  '3:2': '"TIME HICCUPPED. MY CLOCK AND MY HEART DISAGREE BY A DAY. UNOVA\'S LIGHTS AHEAD."  — FLIGHT LOG, DAY 12',
+  '4:0': '"A CITY THAT NEVER LOOKS UP. THE FLOCKS HERE FLY BETWEEN BUILDINGS, NOT OVER THEM."  — FLIGHT LOG, DAY 13',
+  '4:1': '"RUSH HOUR ON THE SKYWAY. EVERY LANE CONTESTED, EVERY HORN ELECTRIC."  — FLIGHT LOG, DAY 14',
+  '4:2': '"THE BLACK LIGHTNING ASKED WHAT I BELIEVE. I SHOWED IT. WEST TO KALOS."  — FLIGHT LOG, DAY 15',
+  '5:0': '"GARDENS BELOW, MIRRORS ABOVE. EVEN THE AMBUSHES HERE ARE BEAUTIFUL."  — FLIGHT LOG, DAY 16',
+  '5:1': '"HELD THE RELAY WHILE THE SWARM SPLIT ITS AIM. GUARD DUTY SHARPENS THE HANDS."  — FLIGHT LOG, DAY 17',
+  '5:2': '"THE WING OF RUIN CAST NO SHADOW GOING DOWN. ISLANDS SING ON THE LONG BAND."  — FLIGHT LOG, DAY 18',
+  '6:0': '"WARM WIND, OPEN THROTTLE, AND SOMEONE LEFT FRUIT ON MY WING AT THE LAST STOP."  — FLIGHT LOG, DAY 19',
+  '6:1': '"THE TOTEMS MARKED MY PATH IN FLOWERS AND WARNING CALLS. TRIALS ARE POLITE HERE."  — FLIGHT LOG, DAY 20',
+  '6:2': '"THE MOONE POKÉMON FOLDED INTO THE DARK BETWEEN STARS. GALAR\'S CHIMNEYS ON THE HORIZON."  — FLIGHT LOG, DAY 21',
+  '7:0': '"EVERY TOWN HERE HAS A PITCH AND A CROWD. THEY CHEER FOR GOOD DODGES. I OBLIGE."  — FLIGHT LOG, DAY 22',
+  '7:1': '"STADIUM LIGHTS AT MIDNIGHT. THE DARKEST DAY ISN\'T A STORY HERE — IT\'S A FORECAST."  — FLIGHT LOG, DAY 23',
+  '7:2': '"ETERNITY BLINKED. THE CROWD WENT HOME HAPPY. ONE ROAD LEFT — SOUTH TO PALDEA."  — FLIGHT LOG, DAY 24',
+  '8:0': '"CRYSTAL IN THE BADLANDS, AND WILDS THAT DON\'T MATCH ANY FIELD GUIDE I OWN."  — FLIGHT LOG, DAY 25',
+  '8:1': '"PAST AND FUTURE HUNT IN THE SAME CANYON HERE. MY SHADOW FLEW AHEAD OF ME TWICE."  — FLIGHT LOG, DAY 26',
+  '8:2': '"THE WINGED KING FELL AND THE SKY HELD ITS BREATH. NINE REGIONS. ONE DAWN LEFT."  — FLIGHT LOG, DAY 27',
 };
 function stageFlavor(lvl) { return SKIN.stageFlavor[regionIdx(lvl) + ':' + stageIdx(lvl)] || null; }
 // (ENCOUNTER DIRECTOR region grammar appended below — see REGION_GRAMMAR)
@@ -1729,6 +1753,39 @@ const REGION_GRAMMAR = [
   // through a raid, a breather, then a relentless final push.
   { arrival: [{ p: 0.5, type: 'surge' }],
     challenge: [{ p: 0.55, type: 'raid' }, { afterPrev: 4.0, type: 'recovery' }, { p: 0.2, type: 'finalPush' }] },
+  // HOENN — weather country: squalls. The arrival gusts early and again
+  // late; the challenge keeps the proven raid→breather shape because the
+  // MIGRATION objective owns its drama (never stack blind danger on it).
+  { arrival: [{ p: 0.65, type: 'surge' }, { afterPrev: 6.5, type: 'surge' }],
+    challenge: [{ p: 0.5, type: 'raid' }, { afterPrev: 4.2, type: 'recovery' }] },
+  // SINNOH — the cold climb: the ESCORT owns the arrival (no beats — the
+  // traveler is the story). The challenge is mountain pressure: two raids
+  // rolling down like avalanche fronts with one thin ledge between.
+  { arrival: [],
+    challenge: [{ p: 0.6, type: 'raid' }, { afterPrev: 4.6, type: 'recovery' }, { p: 0.3, type: 'raid' }] },
+  // UNOVA — the city that never sleeps: traffic surges into a rush-hour
+  // raid, and the last block is a hard commute all the way down.
+  { arrival: [{ p: 0.55, type: 'surge' }],
+    challenge: [{ p: 0.6, type: 'surge' }, { afterPrev: 3.6, type: 'raid' }, { p: 0.22, type: 'finalPush' }] },
+  // KALOS — beauty first: the arrival offers a bonus flock over radiant
+  // skies; the challenge stays default-shaped because DEFEND THE RELAY
+  // supplies its own split-attention pressure.
+  { arrival: [{ p: 0.5, type: 'bonusFlock' }],
+    challenge: [{ p: 0.5, type: 'raid' }, { afterPrev: 4.2, type: 'recovery' }] },
+  // ALOLA — island time: the arrival gives a true breather mid-wave (the
+  // welcome), then the trial turns serious — a raid that surges before
+  // it ends. Hospitality first, trials second.
+  { arrival: [{ p: 0.55, type: 'recovery' }],
+    challenge: [{ p: 0.6, type: 'raid' }, { afterPrev: 3.8, type: 'surge' }, { afterPrev: 5.0, type: 'recovery' }] },
+  // GALAR — the darkest day looms: stadium pressure in waves — raid,
+  // brief rope-a-dope breather, raid again, and a championship finish.
+  { arrival: [{ p: 0.5, type: 'surge' }],
+    challenge: [{ p: 0.62, type: 'raid' }, { afterPrev: 3.4, type: 'recovery' }, { afterPrev: 5.5, type: 'raid' }, { p: 0.18, type: 'finalPush' }] },
+  // PALDEA — the frontier bares its teeth on sight: an early raid on
+  // arrival, then the challenge runs the full journey in miniature —
+  // surge, one last breath, and everything at once.
+  { arrival: [{ p: 0.62, type: 'raid' }],
+    challenge: [{ p: 0.58, type: 'surge' }, { afterPrev: 4.0, type: 'recovery' }, { p: 0.24, type: 'finalPush' }] },
 ];
 // Any region without an authored grammar gets a calm arrival and a single
 // escalation → recovery challenge arc — never an empty stage, pending each

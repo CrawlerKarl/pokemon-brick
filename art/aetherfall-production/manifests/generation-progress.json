@@ -137,6 +137,12 @@
     "promptLog": "PRODUCTION_RUN.md#32--shocktrooper",
     "alphaValidated": true
   },
+  "aetherfall:33": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#33--warmaster",
+    "alphaValidated": true
+  },
   "aetherfall:34": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
@@ -149,6 +155,12 @@
     "promptLog": "PRODUCTION_RUN.md#35--venomsmith",
     "alphaValidated": true
   },
+  "aetherfall:36": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#36--toxin-baron",
+    "alphaValidated": true
+  },
   "aetherfall:37": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
@@ -159,6 +171,132 @@
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
     "promptLog": "PRODUCTION_RUN.md#38--quakebinder",
+    "alphaValidated": true
+  },
+  "aetherfall:39": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#39--worldcarver",
+    "alphaValidated": true
+  },
+  "aetherfall:40": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#40--psion",
+    "alphaValidated": true
+  },
+  "aetherfall:41": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#41--farseer",
+    "alphaValidated": true
+  },
+  "aetherfall:42": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#42--omnimind",
+    "alphaValidated": true
+  },
+  "aetherfall:43": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#43--swarm-operator",
+    "alphaValidated": true
+  },
+  "aetherfall:44": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#44--dronemaster",
+    "alphaValidated": true
+  },
+  "aetherfall:45": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#45--hivemarshal",
+    "alphaValidated": true
+  },
+  "aetherfall:46": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#46--siegewright",
+    "alphaValidated": true
+  },
+  "aetherfall:47": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#47--bulwarkwright",
+    "alphaValidated": true
+  },
+  "aetherfall:48": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#48--citadel-prime",
+    "alphaValidated": true
+  },
+  "aetherfall:49": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#49--necromancer",
+    "alphaValidated": true
+  },
+  "aetherfall:50": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#50--gravecaller",
+    "alphaValidated": true
+  },
+  "aetherfall:51": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#51--deathsinger",
+    "alphaValidated": true
+  },
+  "aetherfall:52": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#52--wyrmrider",
+    "alphaValidated": true
+  },
+  "aetherfall:53": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#53--drakeknight",
+    "alphaValidated": true
+  },
+  "aetherfall:54": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#54--wyrmmarshal",
+    "alphaValidated": true
+  },
+  "aetherfall:55": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#55--shadowmancer",
+    "alphaValidated": true
+  },
+  "aetherfall:56": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#56--nightblade",
+    "alphaValidated": true
+  },
+  "aetherfall:57": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#57--voiddancer",
+    "alphaValidated": true
+  },
+  "aetherfall:58": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#58--engineer",
+    "alphaValidated": true
+  },
+  "aetherfall:61": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#61--feywarden",
     "alphaValidated": true
   },
   "aetherfall:101": {
