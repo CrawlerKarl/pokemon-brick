@@ -52,9 +52,16 @@ const AETHERFALL_ART_OVERRIDES = {
   "56": "art/aetherfall-production/sprites/final/af-056-nightblade.png",
   "57": "art/aetherfall-production/sprites/final/af-057-voiddancer.png",
   "58": "art/aetherfall-production/sprites/final/af-058-engineer.png",
+  "59": "art/aetherfall-production/sprites/final/af-059-armorwright.png",
+  "60": "art/aetherfall-production/sprites/final/af-060-bastionsmith.png",
   "61": "art/aetherfall-production/sprites/final/af-061-feywarden.png",
+  "62": "art/aetherfall-production/sprites/final/af-062-feyknight.png",
+  "63": "art/aetherfall-production/sprites/final/af-063-courtsovereign.png",
   "101": "art/aetherfall-production/sprites/final/af-101-thistling.png",
   "102": "art/aetherfall-production/sprites/final/af-102-briarkin.png",
   "103": "art/aetherfall-production/sprites/final/af-103-thornwarden.png",
+  "104": "art/aetherfall-production/sprites/final/af-104-pipkin.png",
+  "107": "art/aetherfall-production/sprites/final/af-107-flittern.png",
+  "110": "art/aetherfall-production/sprites/final/af-110-meadowkit.png",
   "180": "art/aetherfall-production/sprites/final/af-180-velmora-the-first-oracle.png"
 };
