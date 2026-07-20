@@ -235,6 +235,16 @@ phone — flag anything only verifiable there.
   PHANTOM PHASE and 2 kills snap it; Koraidon afterimages ride
   `boss.sweep` drops (`imageDrops` rider — distinct from Rayquaza's
   instant-micro `wake` rider; the two must never be conflated).
+  SENTINELS (round 1) run the GUARD/OPENING rhythm (M4 Round D): ×0.55
+  damage behind a hex-ring tell, and the sentinel that just fired its
+  typed special is OPEN for 2.4s (full damage, first hit ×1.2) — the
+  scale lives in damageBrick gated STRICTLY on `subBoss`; `openT`
+  mutates in update only. All 27 entrance styles have bespoke motifs in
+  `drawGauntletEntranceFx` (strokes only — no gradients/shadowBlur).
+  Practice: `jumpToGauntletRound(round, phase)` lands mid-band HP; the
+  trial PHASE row and hit-testing share `trialLayout` rects. Music:
+  `bossMusicHeat()` (audio.js, 0/1/2) is the ONLY phase→music bridge —
+  keep it pure and keep `buildMusicPattern` phase-agnostic.
 - **Armor and veil are a matched pair.** SHELL ARMOR rewards the charged
   shot; **SPECTRAL VEIL** (`br.specVeil`/`specVeilActive`, region 3+, ≤2
   spirit flyers) punishes charge-spraying — charged bolts phase THROUGH

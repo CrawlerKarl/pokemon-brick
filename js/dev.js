@@ -41,6 +41,7 @@ function devNormalizeLaunch(o) {
   }
   out.level = Math.max(1, Math.min(27, lv || 1));
   out.round = Math.max(0, Math.min(3, parseInt(o.round, 10) || 0));
+  if (o.phase != null) out.phase = Math.max(1, parseInt(o.phase, 10) || 1); // jumpToGauntletRound clamps to phaseCount
   if (o.seed != null && o.seed !== '') out.seed = String(o.seed);
   if (o.upg) out.upg = String(o.upg);
   out.real = o.real === true || o.real === '1' || o.real === 1;
@@ -74,7 +75,7 @@ function devLaunch(opts = {}) {
   trialOpen = false; advOpen = false; cheatOpen = false;
   resetRun(o.level, !o.real, o.seed != null ? { seed: o.seed } : {});
   if (o.upg) devGrantBuild(o.upg);
-  if (stageIdx(G.level) === 2) jumpToGauntletRound(o.round);
+  if (stageIdx(G.level) === 2) jumpToGauntletRound(o.round, o.phase);
   console.log('[DEV] launched', {
     level: o.level, region: regionIdx(o.level) + 1, stage: stageIdx(o.level) + 1,
     round: o.round, mode: G.mode, preset: SETTINGS.preset, seed: G.runSeed,

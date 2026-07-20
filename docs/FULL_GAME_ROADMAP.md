@@ -216,8 +216,29 @@ Shipped (Round A):
   ROAR OF TIME clock channel (rotating safe lane).
 - [x] Both duels + the Mewtwo regression covered by the suite (57 → 59).
 
-All nine legendaries and all nine mythicals now carry the template.
-Still open for later rounds — sentinels, plus the polish items: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
+Shipped (Round D — sentinels + presentation polish):
+- [x] **Sentinel GUARD/OPENING rhythm** — sentinels take ×0.55 while
+  guarded (hex ring tell); the one that just fired its typed special
+  drops guard for 2.4s (full damage, first hit ×1.2, `OPENING!` +
+  once-per-wave teach strip). Round 1 is now "punish the attacker."
+- [x] **All 27 entrance styles have bespoke motifs** — 13 new FX
+  branches (skycoil, suncharge, maelstrom, timesplit, psybreak,
+  wishgate, timebloom, victorflare, shadowstep, stampede, monolith,
+  orbit, cocoon), strokes-only, reduceFlash-aware.
+- [x] **Phase-transition + defeat garnish** — `br.enrageAnimT` scale
+  pulse + radial speed lines on transitions; boss deaths add brief
+  dramatic slow-mo + a triple type-colored ring echo.
+- [x] **Practice phase selection** — `jumpToGauntletRound(round,
+  phase)` (mid-band HP), trial-screen PHASE chip row (2/3 chips),
+  `DEV.boss(region, round, {phase})`.
+- [x] **Phase music layering** — `bossMusicHeat()` 0/1/2 ladder drives
+  musicTick: heat 1 = the intense layer, heat 2 (last stand) adds
+  double-time hats + a denser counter pulse. Patterns/cfg untouched.
+- [x] Suite 67 → 69.
+
+Still open (M4 tail, low-priority polish): bespoke per-species defeat
+animations; VMAX enrage garnish (renders via drawMewVmax); the other
+polish item: unique entrance + silhouette (◐ `GAUNTLET_ENTRANCE_NAMES`),
 three distinct phases (◐ phase framework exists), species projectile family
 (◐ `BOSS_PROJECTILE_KIND`), weak point/opening/interrupt, one move best
 answered by normal fire + one by charge, phase-transition animation, phase

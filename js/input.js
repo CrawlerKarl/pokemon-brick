@@ -921,7 +921,7 @@ function retryFromSummary() {
   else resetRun(G.runStartLevel || 1, !!G.trial);
 }
 function trialFromSummary() {
-  trialSel.region = regionIdx(G.level); trialSel.stage = stageIdx(G.level); trialSel.round = 0;
+  trialSel.region = regionIdx(G.level); trialSel.stage = stageIdx(G.level); trialSel.round = 0; trialSel.phase = 1;
   G.state = 'menu'; menuPage = 'setup'; setupStep = 'difficulty'; trialOpen = true;
 }
 function startTrialSelection() {
@@ -930,7 +930,7 @@ function startTrialSelection() {
   // Legendary-stage trials can skip directly to any finale tier. Kanto's
   // fourth STARFIGHTER tile forces the Rift encounter without changing the
   // player's persistent key or rewards.
-  if (trialSel.stage === 2) jumpToGauntletRound(trialSel.round);
+  if (trialSel.stage === 2) jumpToGauntletRound(trialSel.round, trialSel.round >= 1 ? trialSel.phase : undefined);
 }
 async function shareDailyResult() {
   const text = dailyShareText();
@@ -1057,15 +1057,21 @@ function onPress(x, y) {
         if (inRect(x, y, T.region(i))) {
           trialSel.region = i;
           if (i !== 0 && trialSel.round === 3) trialSel.round = 2;
+          trialSel.phase = 1; // new region = new boss — reset the practice phase
           SFX.wall(); return;
         }
       }
       for (let i = 0; i < STAGES; i++) {
-        if (inRect(x, y, T.stage(i))) { trialSel.stage = i; trialSel.round = 0; SFX.wall(); return; }
+        if (inRect(x, y, T.stage(i))) { trialSel.stage = i; trialSel.round = 0; trialSel.phase = 1; SFX.wall(); return; }
       }
       if (T.rounds) {
         for (let i = 0; i < T.roundCount; i++) {
-          if (inRect(x, y, T.round(i))) { trialSel.round = i; SFX.wall(); return; }
+          if (inRect(x, y, T.round(i))) { trialSel.round = i; trialSel.phase = 1; SFX.wall(); return; }
+        }
+      }
+      if (T.phases) {
+        for (let i = 0; i < T.phaseCount; i++) {
+          if (inRect(x, y, T.phase(i))) { trialSel.phase = i + 1; SFX.wall(); return; } // chips are 1-indexed phases
         }
       }
       if (inRect(x, y, T.start)) {

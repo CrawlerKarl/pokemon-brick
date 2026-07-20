@@ -5,6 +5,46 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-19 — Milestone 4 Round D: sentinel rhythm + presentation
+
+The combat template was complete (18 duels); Round D gave round 1 a
+rhythm and caught presentation up. Design: `M4_BOSS_KITS.md` ROUND D.
+- **Sentinel GUARD/OPENING** (`br.openT`, damageBrick scaling strictly
+  on `subBoss`): guarded ×0.55 behind a hexagonal ring tell; firing
+  `subAbility` drops that sentinel's guard 2.4s (full damage, first
+  hit ×1.2, ring-shatter + `OPENING!`, once-per-wave strip teach
+  `SENTINELS GUARD — STRIKE AFTER THEY ATTACK!`). Ledger records
+  scaled damage (armor pattern). Choreography invariants intact.
+- **Entrance FX**: 13 new motif branches in `drawGauntletEntranceFx`
+  — every one of the 27 styles now has bespoke geometry (strokes/arcs
+  only, wash scaled by the reduced factor).
+- **Transition/defeat garnish**: `br.enrageAnimT = 0.9` on phase-up
+  (decays beside `br.flash` in update) → ×1.06 silhouette pulse + 8
+  radial speed lines in drawBossMon (motion, no added flash); isBoss
+  death → `G.dramaticT ≥ 0.45` + triple type-colored ring echo.
+  Known gap: Mew VMAX renders via drawMewVmax, so no enrage pulse
+  there (logged).
+- **Practice phase selection**: `jumpToGauntletRound(round, phase)` →
+  `jumpToBossPhase` clamps to phaseCount and lands mid-band HP (no
+  retroactive shockwave/adds — practice caveat); trial screen gained
+  a PHASE chip row (2 chips legendary / 3 mythic+secret, resets on
+  round/stage change, render + hit-test share `trialLayout` rects);
+  `DEV.boss(region, round, {phase})`.
+- **Music heat**: `bossMusicHeat()` (audio.js, pure, testable) — 0
+  none/phase-1/sentinels/dormant; 1 past phase 1 (or Mega over a live
+  boss); 2 last stand. musicTick: heat ≥1 = the old intense layer
+  exactly; heat 2 adds off-16th half-gain hats + a quiet off-beat
+  diatonic-third counter echo. `buildMusicPattern` untouched
+  (soundtrack signatures stable). Semantic shift, intentional: Mega
+  during the sentinel round no longer triggers the layer (sentinels
+  read 0 — matches "sentinels stay 0").
+- Suite 67 → 69 (guard/opening rhythm; phase jump + heat ladder).
+  Verified: 69/69 fronted, screenshots (timesplit entrance, sentinel
+  guard rings with Zapdos open mid-BOLT STRIKE, trial phase row),
+  console clean.
+- Still open in M4 (logged, low priority): per-species defeat
+  animations; VMAX enrage garnish.
+
 ## 2026-07-19 — Milestone 4 Round C: the nine mythicals
 
 Round 3 of every gauntlet now duels by the template — lighter kits

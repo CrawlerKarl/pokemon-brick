@@ -572,6 +572,24 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
     } else if (element === G.ballElement) G.resistStreak = 0;
   }
+  // SENTINEL GUARD / OPENING (round-1 gauntlet). Sentinels hold a guard that
+  // halves incoming damage until they commit to their OWN special; the opening
+  // it leaves (br.openT, set in subAbility, decayed in updateSentinels) takes
+  // full damage, and the FIRST hit landed in that window bites ×1.2. Scales
+  // like SHELL ARMOR — inside damageBrick, so the combat ledger stays honest
+  // (no new loseLife path). STRICTLY gated on subBoss: it never touches
+  // legendaries or mythics.
+  if (br.subBoss) {
+    if ((br.openT || 0) > 0) {
+      if (!br.openHit) { br.openHit = true; dmg *= 1.2; } // window's first strike rewarded
+    } else {
+      dmg *= 0.55; // guarded — punish mindless spray
+      if (!G.sentinelGuardTaught) {
+        G.sentinelGuardTaught = true; // once per wave — announce STRIP, never a center card
+        setAnnounce('alert', '#80d8ff', 'SENTINELS GUARD', 'STRIKE AFTER THEY ATTACK!', 2.6);
+      }
+    }
+  }
   statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
   br.hp -= dmg;
   if (dmg < 90 && G.secretUpg.echo && !meta.secretEcho) {
@@ -634,6 +652,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // This short gate protects boss choreography without creating a long
       // invulnerable stall.
       br.phaseT = Math.max(br.phaseT || 0, 0.78);
+      br.enrageAnimT = 0.9; // render garnish: scale-pulse + speed-lines (decays in update)
       const lastStand = newPhase === phaseCount;
       SFX.enrage();
       G.shake = 14; G.flashT = 0.18;
@@ -780,7 +799,19 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     G.comboPop = 1;
     G.shake = Math.min(G.shake + (br.isBoss ? 14 : 4), 16);
     G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
-    if (br.isBoss) { SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30); }
+    if (br.isBoss) {
+      SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30);
+      // brief slow-mo even mid-gauntlet (the next round's entrance pause absorbs
+      // it; dramaticT only scales timescale, so the condition-driven wake survives)
+      G.dramaticT = Math.max(G.dramaticT || 0, 0.45);
+      // triple type-colored expanding ring echo — staggered start radii read as
+      // three chasing shockwaves in the boss's own element
+      const dc = TYPE_COLORS[br.poke.t] || '#80d8ff';
+      const dbx = br.bx + G.fx, dby = br.by + G.fy;
+      ringFx(dbx, dby, dc, 8, Math.min(W * 0.22, 180), 5, 0.55);
+      ringFx(dbx, dby, dc, 34, Math.min(W * 0.34, 270), 4, 0.68);
+      ringFx(dbx, dby, dc, 64, Math.min(W * 0.46, 360), 3, 0.82);
+    }
     else SFX.brick();
     triggerBrickBehavior(br);
     // every region's arrival wave seeds a Sky Warp on the first kill —
@@ -2272,6 +2303,12 @@ function subAbility(br2) {
   addFloater(br2.bx + G.fx, br2.by + G.fy - br2.h / 2 - 26,
     (SUB_ABILITY_NAMES[t3] || 'ONSLAUGHT') + '!', TYPE_COLORS[t3], 14);
   SFX.enemyShot();
+  // committing to its attack drops the guard: a 2.4s OPENING window (full
+  // damage, first hit ×1.2). Per-sentinel state, decayed in updateSentinels.
+  br2.openT = 2.4;
+  br2.openHit = false; // fresh ×1.2 flag for this window
+  ringFx(br2.bx + G.fx, br2.by + G.fy, '#ffd54f', 6, 58, 3, 0.4); // guard ring shatters outward
+  addFloater(br2.bx + G.fx, br2.by + G.fy - br2.h / 2 - 44, 'OPENING!', '#ffd54f', 15);
 }
 // ---- SENTINEL choreography: the trio cycles through THREE formations on
 // one clock — a rotating triangle, a sweeping battle line, and spread
@@ -2303,6 +2340,7 @@ function updateSentinels(dt, ts) {
     br2.bx += (tx2 - G.fx - br2.bx) * kk2;
     br2.by += (ty2 - G.fy - br2.by) * kk2;
     br2.hx = br2.bx; br2.hy = br2.by;
+    if (br2.openT > 0) br2.openT = Math.max(0, br2.openT - dt * ts); // OPENING window decays on the sentinel clock
   }
   // typed specials on a shared cadence — round 1 presses the attack
   if (G.state === 'play') {
@@ -2568,7 +2606,7 @@ function spawnBonusFlock() {
 // Jump a freshly built legendary stage straight to a later gauntlet round:
 // 1 = the legendary, 2 = the mythical, 3 = the Kanto Mew VMAX secret.
 // Shared by the trial picker, the dev launcher, and the boss test harness.
-function jumpToGauntletRound(round) {
+function jumpToGauntletRound(round, phase) {
   if (!(round > 0) || !G.gauntlet) return;
   for (const b of G.bricks) if (b.subBoss) b.dead = true;
   gauntletWake();
@@ -2576,6 +2614,20 @@ function jumpToGauntletRound(round) {
     for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
     gauntletSummonMythic(round === 3);
   }
+  if (phase != null) jumpToBossPhase(round, phase);
+}
+// PRACTICE ONLY: drop the just-summoned boss straight into a chosen phase,
+// with HP parked in the MIDDLE of that phase's band. No retroactive shockwave
+// or adds fire — a documented practice caveat. Used by the trial picker + dev.
+function jumpToBossPhase(round, phase) {
+  const boss = round >= 2
+    ? G.bricks.find(b => !b.dead && b.isBoss && (b.mythic || b.secretBoss))
+    : G.bricks.find(b => !b.dead && b.isBoss && !b.mythic && !b.secretBoss);
+  if (!boss) return;
+  const pc = bossPhaseCount(boss);
+  const ph = Math.max(1, Math.min(pc, Math.round(phase))); // clamp to this boss's phaseCount
+  boss.phase = ph;
+  boss.hp = Math.max(1, Math.round(boss.maxHp * ((pc - ph + 0.5) / pc)));
 }
 function gauntletWake() {
   const gj = G.gauntlet;
@@ -2772,6 +2824,8 @@ function update(dt) {
   // rate and desynced during hit-stop. 4.8/s ≈ the old 0.08/frame at 60fps.
   for (const br of G.bricks) {
     if (br.flash > 0) br.flash = Math.max(0, br.flash - dt * 4.8);
+    // enrage garnish timer (phase transition) — render only READS it, like flash
+    if (br.enrageAnimT > 0) br.enrageAnimT = Math.max(0, br.enrageAnimT - dt * 1.1);
     // after an entry lands, its idle bob eases in instead of popping on
     if (br.settleT != null && br.settleT < 1) br.settleT = Math.min(1, br.settleT + dt * 1.4);
     if (!paused && (G.state === 'play' || G.state === 'serve') && !br.dead && br.behavior === 'regen' && br.hp < br.maxHp) {

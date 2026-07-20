@@ -3204,7 +3204,123 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  test('sentinel guard/opening rhythm', async () => {
+    // ROUND D §1: round-1 sentinels GUARD (×0.55) until they commit to their
+    // OWN special; that opens a 2.4s window on THAT sentinel — full damage,
+    // first hit ×1.2 — while the other two stay guarded. The window decays back
+    // to the guard, and the felled trio still WAKES the legendary (round 2).
+    // Damage scaling is STRICTLY subBoss; the 18 boss/mythic duels prove it
+    // never leaks onto legendaries/mythics.
+    const oldMode = SETTINGS.mode, oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(3, true, { seed: 'sentinel-rhythm' }); // Kanto finale — gauntlet round 0
+      paused = false; G.freeze = 0;
+      G.starter = null;                                 // pure damageBrick math (no starter multiplier)
+      G.invuln = 999; G.lives = 99;
+      G.dramaticT = 0; G.fx_slow = null; G.starterChillT = 0; // steady time scale
+      if (G.gauntlet) G.gauntlet.entry = null;          // skip the PRISM DESCENT intro
+      const subs = G.bricks.filter(b => b.subBoss && !b.dead);
+      assert(subs.length === 3, 'round 1 must field three sentinels, got ' + subs.length);
+      assert(subs.every(b => b.phaseCount === 1), 'sentinels must stay one-phase encounters');
+      for (const b of subs) { b.hp = b.maxHp = 400; } // survive every measurement below
+      const delta = (br, d) => { const h0 = br.hp; damageBrick(br, d, br.bx + G.fx, br.by + G.fy, null, {}); return h0 - br.hp; };
+      const g = subs[0];
+      // GUARDED: ×0.55
+      g.openT = 0; g.openHit = false;
+      assert(Math.abs(delta(g, 10) - 5.5) < 0.01, 'guarded sentinel did not take ×0.55');
+      // OPENING: force its OWN special → guard drops on IT ONLY
+      subAbility(g);
+      assert(g.openT > 2 && g.openHit === false, 'subAbility did not open the sentinel guard window');
+      assert((subs[1].openT || 0) <= 0 && (subs[2].openT || 0) <= 0, 'a sibling sentinel opened its guard too');
+      // first hit in the window = ×1.2, subsequent = ×1.0
+      assert(Math.abs(delta(g, 10) - 12) < 0.01, 'first OPENING hit was not ×1.2');
+      assert(Math.abs(delta(g, 10) - 10) < 0.01, 'a later OPENING hit was not full ×1.0');
+      // a still-guarded sibling stays ×0.55 during the window
+      assert(Math.abs(delta(subs[1], 10) - 5.5) < 0.01, 'a sibling was not still guarded during the window');
+      // EXPIRY: decay the window on the sentinel clock → guard restored (×0.55)
+      G.state = 'play';
+      for (let k = 0; k < 60 * 4 && g.openT > 0; k++) update(1 / 60);
+      assert((g.openT || 0) <= 0, 'the OPENING window never expired');
+      assert(Math.abs(delta(g, 10) - 5.5) < 0.01, 'the guard did not re-close after the window');
+      // WAKE CHAIN: fell all three → the legendary wakes (round 2)
+      for (const b of subs) b.dead = true;
+      await runFrames(30);
+      const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
+      assert(boss && G.gauntlet.phase === 1, 'felling the sentinels did not wake the legendary (round 2)');
+      return 'guarded ×0.55 · opening ×1.0 (first ×1.2) on the attacker only · window decays back to guard · 3 sentinels/phaseCount 1/wake chain intact';
+    } finally { SETTINGS.mode = oldMode; SETTINGS.preset = oldPreset; }
+  });
+
+  test('practice phase jump + music heat ladder', async () => {
+    // ROUND D §4/§5: jumpToGauntletRound(round, phase) drops the summoned boss
+    // into a chosen phase at the MIDDLE of its HP band, clamped to phaseCount.
+    // bossMusicHeat() reads those states as a 0/1/2 ladder: sentinels 0,
+    // legendary last-stand 2, mythic phase 2 → 1 / phase 3 → 2. The trial layout
+    // exposes a phase chip row only for a boss round (2 vs 3 chips).
+    const oldMode = SETTINGS.mode, oldPreset = SETTINGS.preset;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      assert(typeof bossMusicHeat === 'function', 'bossMusicHeat() helper is missing');
+      // --- LEGENDARY (2 phases): phase 2 = last stand → mid-band 0.25, heat 2 ---
+      resetRun(6, true, { seed: 'phase-jump-legend2' }); // Johto finale (never the Kanto secret)
+      paused = false; G.freeze = 0; G.megaT = 0;
+      jumpToGauntletRound(1, 2);
+      const legend = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant && !b.mythic && !b.secretBoss);
+      assert(legend && bossPhaseCount(legend) === 2, 'round-1 jump did not wake a 2-phase legendary');
+      assert(legend.phase === 2, 'phase jump did not land legendary phase 2 (got ' + legend.phase + ')');
+      assert(Math.abs(legend.hp / legend.maxHp - 0.25) < 0.03, 'legendary phase-2 HP not mid-band (' + (legend.hp / legend.maxHp).toFixed(3) + ')');
+      assert(bossMusicHeat() === 2, 'legendary last stand should read music heat 2');
+      // phase-1 request → mid-band 0.75, heat 0 (not escalated, no Mega)
+      resetRun(6, true, { seed: 'phase-jump-legend1' });
+      paused = false; G.freeze = 0; G.megaT = 0;
+      jumpToGauntletRound(1, 1);
+      const legend1 = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant && !b.mythic && !b.secretBoss);
+      assert(legend1.phase === 1 && Math.abs(legend1.hp / legend1.maxHp - 0.75) < 0.03, 'legendary phase-1 band wrong');
+      assert(bossMusicHeat() === 0, 'a live phase-1 legendary (no Mega) should read heat 0');
+      G.megaT = 1; assert(bossMusicHeat() === 1, 'Mega over a live boss should lift heat to 1'); G.megaT = 0;
+      // --- MYTHIC (3 phases): phase 2 → heat 1, phase 3 → heat 2 ---
+      resetRun(6, true, { seed: 'phase-jump-myth2' });
+      paused = false; G.freeze = 0; G.megaT = 0;
+      jumpToGauntletRound(2, 2);
+      let myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
+      assert(myth && bossPhaseCount(myth) === 3, 'round-2 jump did not summon a 3-phase mythic');
+      assert(myth.phase === 2 && Math.abs(myth.hp / myth.maxHp - 0.5) < 0.03, 'mythic phase-2 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
+      assert(bossMusicHeat() === 1, 'mythic phase 2 (not last stand) should read heat 1');
+      resetRun(6, true, { seed: 'phase-jump-myth3' });
+      paused = false; G.freeze = 0; G.megaT = 0;
+      jumpToGauntletRound(2, 3);
+      myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
+      assert(myth.phase === 3 && Math.abs(myth.hp / myth.maxHp - 1 / 6) < 0.03, 'mythic phase-3 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
+      assert(bossMusicHeat() === 2, 'mythic phase 3 (last stand) should read heat 2');
+      // --- CLAMP (dev path parity): requesting phase 9 pins to phaseCount ---
+      resetRun(6, true, { seed: 'phase-clamp' });
+      paused = false; G.freeze = 0; G.megaT = 0;
+      jumpToGauntletRound(2, 9);
+      const clamped = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
+      assert(clamped.phase === 3, 'phase 9 did not clamp to a 3-phase mythic (got ' + clamped.phase + ')');
+      // --- SENTINELS: gauntlet round 0 → heat 0 (subBoss isn't a boss; legend dormant) ---
+      resetRun(6, true, { seed: 'phase-sentinels' });
+      paused = false; G.freeze = 0; G.megaT = 0;
+      assert(G.gauntlet && G.gauntlet.phase === 0 && G.bricks.some(b => b.subBoss && !b.dead), 'round-0 sentinel setup failed');
+      assert(bossMusicHeat() === 0, 'sentinels (dormant legendary) must read heat 0');
+      // --- TRIAL LAYOUT: phase row only for round >= 1 (2 vs 3 chips), rects inside the panel ---
+      const restore = { region: trialSel.region, stage: trialSel.stage, round: trialSel.round, phase: trialSel.phase };
+      trialSel.region = 3; trialSel.stage = 2; trialSel.round = 0; trialSel.phase = 1; // Sinnoh legendary (non-Kanto)
+      assert(!trialLayout().phases, 'round 0 must not expose a phase row');
+      trialSel.round = 1;
+      assert(trialLayout().phases && trialLayout().phaseCount === 2, 'a legendary round should show 2 phase chips');
+      trialSel.round = 2;
+      assert(trialLayout().phases && trialLayout().phaseCount === 3, 'a mythic round should show 3 phase chips');
+      const T = trialLayout(), pr = T.phase(0), pr2 = T.phase(2);
+      assert(pr.y > T.py && pr2.y + pr2.h < T.py + T.ph, 'a phase chip escaped the trial panel (render/hit-test share rects)');
+      Object.assign(trialSel, restore);
+      return 'phase jump lands phase + mid-band HP (legendary 2 / mythic 3, phase-9 clamp); heat ladder 0/1/2: sentinels 0 · legendary last-stand 2 · mythic 2→1 / 3→2 · Mega→1';
+    } finally { SETTINGS.mode = oldMode; SETTINGS.preset = oldPreset; }
+  });
+
   test('Kanto distant flocks: capped, high sky, Kanto-only', async () => {
+    SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';
     SETTINGS.mode = 'junkie';

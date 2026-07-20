@@ -500,6 +500,10 @@ function drawBossMon(br, x, y) {
   const phCol = lastStand ? '#ff1744' : ph === 2 ? '#ff8a65' : col;
   const t = G.time;
   const s = Math.max(br.w * 1.15, br.h * 1.9);
+  // PHASE ENRAGE garnish (br.enrageAnimT set on transition, decayed in update):
+  // a scale-pulse on the silhouette + speed-lines behind it. Motion/shape only.
+  const enr = Math.max(0, br.enrageAnimT || 0), enrK = enr / 0.9;
+  const enrSc = 1 + 0.06 * Math.sin(t * 20) * enrK;
   // legendaries move like themselves too
   let bobY = Math.sin(t * 1.6 + br.wobble) * 5, gaitRot = Math.sin(t * 1.1 + br.wobble) * 0.03, sclY = 1;
   if (GAIT_FLAP.has(br.poke.t)) { bobY = Math.sin(t * 4.2 + br.wobble) * 6.5; sclY = 1 + 0.045 * Math.sin(t * 8.4 + br.wobble); }
@@ -530,6 +534,23 @@ function drawBossMon(br, x, y) {
     ctx.stroke();
   }
   ctx.globalAlpha = phased * introAlpha;
+  // enrage speed-lines: 8 short radial strokes fanning OUT behind the boss,
+  // growing + fading as the timer decays (source-over strokes — no glow flash)
+  if (enr > 0) {
+    ctx.save();
+    ctx.strokeStyle = phCol; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.globalAlpha = phased * introAlpha * 0.5 * enrK;
+    const spin2 = t * 2, r1 = s * (0.5 + 0.12 * (1 - enrK)), r2 = s * (0.78 + 0.2 * (1 - enrK));
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + spin2;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * r1, yb + Math.sin(a) * r1 * 0.7);
+      ctx.lineTo(x + Math.cos(a) * r2, yb + Math.sin(a) * r2 * 0.7);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = phased * introAlpha;
+  }
   // last stand: crackling sparks around the body
   if (lastStand) {
     ctx.strokeStyle = '#ff8a80'; ctx.lineWidth = 1.6;
@@ -552,7 +573,7 @@ function drawBossMon(br, x, y) {
   ctx.save();
   ctx.translate(x, yb);
   ctx.rotate(gaitRot);
-  ctx.scale(1, sclY);
+  ctx.scale(enrSc, sclY * enrSc); // enrage scale-pulse rides the gait scale
   if (shadow) {
     ctx.globalAlpha = phased * introAlpha * 0.35;
     ctx.drawImage(shadow, -s / 2 + 7, -s / 2 + 10, s, s * 0.97);
@@ -885,6 +906,21 @@ function drawBricks() {
         ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, Math.PI * 1.5); ctx.stroke();
         ctx.strokeStyle = frac > 0.5 ? '#9ccc65' : frac > 0.25 ? '#ffd54f' : '#ff7043';
         ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); ctx.stroke();
+      }
+      if (br.subBoss && !(br.openT > 0)) {
+        // SENTINEL GUARD tell: a steady hexagon = ×0.55 until it attacks. Pure
+        // strokes (reduceFlash-safe — a SHAPE, not a luminance pulse). The ring
+        // is ABSENT during the OPENING window (openT>0) when the guard is down.
+        const gr = s2 * 0.66, rot = G.time * 0.25 + br.wobble;
+        ctx.lineWidth = 2; ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(128,216,255,0.72)';
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = rot + i * Math.PI / 3;
+          const px = x + Math.cos(a) * gr, py = yb + Math.sin(a) * gr;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.stroke();
       }
       if (br.shellArmor) {
         // SHELL ARMOR tell: a hard silver casing with a cyan charge-scan —
@@ -3524,6 +3560,141 @@ function drawGauntletEntranceFx() {
   } else if (e.style === 'maxrift') {
     ctx.globalAlpha = pulse; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(0, -baseR); ctx.bezierCurveTo(-45, -baseR * 0.4, 50, baseR * 0.25, 0, baseR); ctx.stroke();
+  } else if (e.style === 'skycoil') {
+    // two interleaved serpent-coils winding UP through the sigil
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.globalAlpha = pulse * 0.82;
+    for (let c = 0; c < 2; c++) {
+      ctx.beginPath();
+      for (let k = 0; k <= 22; k++) {
+        const yy = baseR - k / 22 * baseR * 2, xx = Math.sin(k * 0.7 + c * Math.PI + p * 6) * baseR * 0.34;
+        k === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+    }
+  } else if (e.style === 'suncharge') {
+    // radial sun rays + low horizontal speed lines
+    ctx.lineWidth = 2; ctx.globalAlpha = pulse * 0.85;
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6 + p * 0.5, r1 = baseR * 0.3, r2 = baseR * (0.82 + 0.16 * (i % 2));
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); ctx.stroke();
+    }
+    ctx.globalAlpha = pulse * 0.5;
+    for (let i = -2; i <= 2; i++) {
+      const yy = i * baseR * 0.26;
+      ctx.beginPath(); ctx.moveTo(-baseR * (0.9 + p * 0.4), yy); ctx.lineTo(baseR * 0.3, yy); ctx.stroke();
+    }
+  } else if (e.style === 'maelstrom') {
+    // double spiral of storm arcs converging on center
+    ctx.lineWidth = 2.5; ctx.globalAlpha = pulse * 0.8;
+    for (let s2 = 0; s2 < 2; s2++) {
+      ctx.beginPath();
+      for (let k = 0; k <= 40; k++) {
+        const rr2 = baseR * (1 - k / 40), a = k * 0.4 + s2 * Math.PI + dir * p * 3;
+        const xx = Math.cos(a) * rr2, yy = Math.sin(a) * rr2 * 0.72;
+        k === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+    }
+  } else if (e.style === 'timesplit') {
+    // cracked clock: offset arc fragments + tick marks
+    ctx.lineWidth = 2.5; ctx.globalAlpha = pulse * 0.8;
+    for (let i = 0; i < 5; i++) {
+      const a0 = i * Math.PI * 2 / 5 + p * 0.4, off = (i % 2 ? 1 : -1) * baseR * 0.05;
+      ctx.beginPath(); ctx.arc(off, off * 0.6, baseR * 0.72, a0, a0 + Math.PI * 2 / 5 * 0.7); ctx.stroke();
+    }
+    ctx.lineWidth = 2; ctx.globalAlpha = pulse * 0.65;
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * baseR * 0.6, Math.sin(a) * baseR * 0.6);
+      ctx.lineTo(Math.cos(a) * baseR * 0.74, Math.sin(a) * baseR * 0.74); ctx.stroke();
+    }
+  } else if (e.style === 'psybreak') {
+    // concentric ripple rings with one (rotating) broken gap
+    ctx.lineWidth = 2.5; ctx.globalAlpha = pulse * 0.8;
+    const gapA = p * 2;
+    for (let r = 0; r < 4; r++) {
+      const rr2 = baseR * (0.3 + r * 0.22);
+      ctx.beginPath(); ctx.arc(0, 0, rr2, gapA + 0.5, gapA + Math.PI * 2 - 0.5); ctx.stroke();
+    }
+  } else if (e.style === 'wishgate') {
+    // portal arc ringed by five orbiting stars
+    ctx.lineWidth = 3; ctx.globalAlpha = pulse * 0.8;
+    ctx.beginPath(); ctx.arc(0, 0, baseR * 0.5, p * 2, p * 2 + Math.PI * 1.5); ctx.stroke();
+    ctx.lineWidth = 2; ctx.globalAlpha = pulse * 0.9;
+    for (let i = 0; i < 5; i++) {
+      const a = i * Math.PI * 2 / 5 + dir * p * 1.5, sx3 = Math.cos(a) * baseR * 0.82, sy3 = Math.sin(a) * baseR * 0.82 * 0.7, sr = 6;
+      ctx.beginPath();
+      ctx.moveTo(sx3 - sr, sy3); ctx.lineTo(sx3 + sr, sy3);
+      ctx.moveTo(sx3, sy3 - sr); ctx.lineTo(sx3, sy3 + sr); ctx.stroke();
+    }
+  } else if (e.style === 'timebloom') {
+    // petal arcs unfolding OUT from the sigil as p grows
+    ctx.lineWidth = 2.5; ctx.globalAlpha = pulse * 0.8;
+    const petals = 6, open = baseR * (0.28 + p * 0.5);
+    for (let i = 0; i < petals; i++) {
+      const a = i * Math.PI * 2 / petals + p * 0.6;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * open, Math.sin(a) * open * 0.7, baseR * 0.26, baseR * 0.12, a, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else if (e.style === 'victorflare') {
+    // bold V flare + inner echo + rising ember dots
+    ctx.lineWidth = 4; ctx.globalAlpha = pulse; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-baseR * 0.5, -baseR * 0.5); ctx.lineTo(0, baseR * 0.42); ctx.lineTo(baseR * 0.5, -baseR * 0.5); ctx.stroke();
+    ctx.lineWidth = 2; ctx.globalAlpha = pulse * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(-baseR * 0.3, -baseR * 0.5); ctx.lineTo(0, baseR * 0.25); ctx.lineTo(baseR * 0.3, -baseR * 0.5); ctx.stroke();
+    ctx.globalAlpha = pulse * 0.85;
+    for (let i = 0; i < 8; i++) {
+      const ex = Math.sin(i * 2.3) * 0.5 * baseR, ey = baseR * 0.4 - ((i / 8 + p) % 1) * baseR * 1.2;
+      ctx.beginPath(); ctx.arc(ex, ey, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (e.style === 'shadowstep') {
+    // three dark echo rings stepping to one side
+    ctx.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 3; i++) {
+      const ox = -i * baseR * 0.3 * dir;
+      ctx.fillStyle = '#05030f'; ctx.globalAlpha = pulse * (0.68 - i * 0.2) * reduced;
+      ctx.beginPath(); ctx.ellipse(ox, 0, baseR * 0.46, baseR * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = pulse * (0.82 - i * 0.2); ctx.stroke();
+    }
+  } else if (e.style === 'stampede') {
+    // dust chevrons marching across the sigil
+    ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.globalAlpha = pulse * 0.8;
+    for (let row = -1; row <= 1; row++) {
+      for (let i = 0; i < 4; i++) {
+        const prog = (i / 4 + p + row * 0.13) % 1, xx = -baseR + prog * baseR * 2, yy = row * baseR * 0.3;
+        ctx.beginPath(); ctx.moveTo(xx - 14, yy - 12); ctx.lineTo(xx, yy); ctx.lineTo(xx - 14, yy + 12); ctx.stroke();
+      }
+    }
+  } else if (e.style === 'monolith') {
+    // vertical monolith slabs of varying height
+    ctx.lineWidth = 2.5; ctx.globalAlpha = pulse * 0.78;
+    for (let i = -2; i <= 2; i++) {
+      const xx = i * baseR * 0.32, hh = baseR * (0.7 + 0.25 * Math.sin(i * 1.3 + p * 3));
+      ctx.strokeRect(xx - baseR * 0.1, -hh, baseR * 0.2, hh * 2);
+    }
+  } else if (e.style === 'orbit') {
+    // three orbit ellipses at different tilts, each with a travelling dot
+    ctx.lineWidth = 2.5; ctx.globalAlpha = pulse * 0.8;
+    for (let i = 0; i < 3; i++) {
+      const tilt = i * Math.PI / 3 + p * 0.5;
+      ctx.beginPath(); ctx.ellipse(0, 0, baseR * 0.75, baseR * 0.28, tilt, 0, Math.PI * 2); ctx.stroke();
+      const oa = dir * p * 4 + i * 2, ex = Math.cos(oa) * baseR * 0.75, ey = Math.sin(oa) * baseR * 0.28;
+      const rx = ex * Math.cos(tilt) - ey * Math.sin(tilt), ry = ex * Math.sin(tilt) + ey * Math.cos(tilt);
+      ctx.beginPath(); ctx.arc(rx, ry, 4, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (e.style === 'cocoon') {
+    // woven cocoon oval with a cross-hatch weave
+    ctx.lineWidth = 2; ctx.globalAlpha = pulse * 0.78;
+    const ow = baseR * 0.5, oh = baseR * 0.8;
+    ctx.beginPath(); ctx.ellipse(0, 0, ow, oh, 0, 0, Math.PI * 2); ctx.stroke();
+    for (let i = -3; i <= 3; i++) {
+      const yy = i * baseR * 0.2, halfW = ow * Math.sqrt(Math.max(0, 1 - (yy / oh) ** 2)), sk = Math.sin(i * 0.8 + p * 4) * 6;
+      ctx.beginPath(); ctx.moveTo(-halfW, yy - sk); ctx.lineTo(halfW, yy + sk); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-halfW, yy + sk); ctx.lineTo(halfW, yy - sk); ctx.stroke();
+    }
   }
   ctx.restore();
 
@@ -5425,6 +5596,22 @@ function drawTrial() {
       ctx.font = `900 ${Math.min(10, rr2.w / 11)}px Orbitron, sans-serif`;
       ctx.fillStyle = sel2 ? (secret ? '#80d8ff' : '#ff80ab') : '#cfd8dc';
       ctx.fillText(labels[i], rr2.x + rr2.w / 2, rr2.y + rr2.h / 2 + 1, rr2.w - 8);
+    }
+  }
+  // PHASE picker — practice a boss round from any phase (mid-band HP).
+  if (T.phases) {
+    for (let i = 0; i < T.phaseCount; i++) {
+      const pr = T.phase(i), sel = trialSel.phase === i + 1;
+      const hovp = inRect(mouseX, lastMouseY, pr);
+      roundRect(pr.x, pr.y, pr.w, pr.h, 8);
+      ctx.fillStyle = sel ? 'rgba(255,213,79,0.22)' : hovp ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+      ctx.fill();
+      ctx.lineWidth = sel ? 2 : 1;
+      ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.22)';
+      ctx.stroke();
+      ctx.font = `900 ${Math.min(10, pr.w / 7)}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
+      ctx.fillText('PHASE ' + (i + 1), pr.x + pr.w / 2, pr.y + pr.h / 2 + 1, pr.w - 8);
     }
   }
   // start button

@@ -1,12 +1,13 @@
 # HANDOFF — Starfighter campaign build-out (next session)
 
-> **STATUS: LIVE through Milestone 4 Round C.** Milestones 0 and 1 are
-> COMPLETE; Milestone 2 has its core round shipped; Milestone 3 has
-> Rounds A+B shipped; Milestone 4 Rounds A+B+C are shipped — **all nine
-> finale legendaries AND all nine mythicals carry the boss-duel
-> template** (`BOSS_CHANNELS` + params, five punish patterns, per-boss
-> signatures; Mew VMAX stays channel-free via `!secretBoss`, tested).
-> Invariant suite **67/67 green**. Everything below is deployed at
+> **STATUS: LIVE through Milestone 4 Round D — M4 is functionally
+> COMPLETE.** Milestones 0 and 1 COMPLETE; M2 core round shipped; M3
+> Rounds A+B shipped; M4 Rounds A–D shipped: all 18 finale bosses on
+> the duel template, sentinel GUARD/OPENING rhythm, all 27 bespoke
+> entrance motifs, transition/defeat garnish, practice PHASE
+> selection, and `bossMusicHeat()` phase layering. Remaining M4 tail
+> (low priority): per-species defeat animations, VMAX enrage garnish.
+> Invariant suite **69/69 green**. Everything below is deployed at
 > https://crawlerkarl.github.io/pokemon-brick/.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
@@ -108,22 +109,20 @@ sequence, weather survival), the remaining 7 region grammars, and the beat
 types not yet built (formation reveal, elite intervention as a distinct
 spawn, hazard, victory).
 
-### Option B — Milestone 4 Round D: sentinels + boss polish
-Legendaries AND mythics are DONE. Remaining M4 surface: give the
-round-1 **sentinels** one readable typed opening each (they have
-`subAbility` typed specials — a light template pass, not full duels),
-and the polish column: bespoke entrance FX for styles still on the
-default banner (skycoil, suncharge, maelstrom, timesplit),
-phase-transition animations, phase music layering, bespoke defeat
-animations, practice mode with phase selection (trial round picker is
-the base). The proven loop: design in `docs/M4_BOSS_KITS.md` first,
-implement via SEQUENTIAL agents over the shared dispatch
-(update.js/data.js/test.html collide — hand each agent the previous
-one's extension-shape notes).
+### Option B — the next mechanics milestone (M4 is done)
+M4 is functionally complete (Rounds A–D). Natural mechanics
+continuations: **M3 Round C** (entity-based objective families — the
+friendly/neutral entity type unlocks escort/capture/defend/chase, plus
+the remaining 7 region grammars and unbuilt beat types) or the **M2
+tail** (cooling upgrades that reshape play style, heat swept across
+difficulties). The M4 tail (per-species defeat animations, VMAX enrage
+garnish) is low-priority polish for an M9-era pass. The proven loop:
+design first (`docs/M4_BOSS_KITS.md` is the pattern), SEQUENTIAL
+implementation agents over shared files, full suite fronted, browser
+screenshots, docs, deploy.
 
-**Recommendation:** the polish column is now the bigger win — the
-combat template is complete across 18 bosses; entrances/music/defeat
-ceremonies are where the finale presentation still lags the mechanics.
+**Recommendation:** Option S (the user's chosen direction) unless they
+redirect; M3 Round C is the strongest mechanics slice otherwise.
 
 ---
 

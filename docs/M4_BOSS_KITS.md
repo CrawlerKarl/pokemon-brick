@@ -448,3 +448,125 @@ Two looping duel tests cloning the legendary skeleton but with
 (untouched); junkie choreography + unique-entrances tests (mythic
 phaseCount/entrances unchanged); projectile grammar; flyer overlap;
 heat band; ledger.
+
+---
+---
+
+# ROUND D — sentinel openings + presentation polish
+
+The combat template is complete (18 duels). Round D fills the
+remaining M4 surface: round 1 gets a readable rhythm, and the
+presentation layer catches up to the mechanics.
+
+## 1. SENTINEL GUARD/OPENING cycle (combat)
+
+Sentinels today are always damageable and fire typed specials on a
+shared cadence — round 1 is pure attrition. New rhythm: **punish the
+attacker.**
+
+- **GUARD stance (default):** every living sentinel takes **×0.55
+  damage** while guarded. Tell: a steady hexagonal guard ring around
+  the sentinel (shape, not luminance — reduceFlash-safe), drawn in the
+  bare-mon path.
+- **OPENING (after ITS OWN special):** the sentinel that just fired
+  `subAbility` drops its guard for **2.4s** — full damage, plus the
+  first hit landed during an opening deals **×1.2**. Tell: the guard
+  ring shatters outward (small ring burst), an `OPENING!` floater on
+  the sentinel, and the ring is absent for the window. A once-per-wave
+  strip notice teaches it: `SENTINELS GUARD — STRIKE AFTER THEY
+  ATTACK!`
+- Numbers keep round-1 TTK roughly flat for a player who follows the
+  rhythm (×1.0–1.2 on openings ≈ old always-×1.0 focus) and slower for
+  mindless spray (×0.55).
+- **Invariants preserved:** 3 subBoss bricks, `phaseCount 1`, PRISM
+  entry, the wake chain; openings are per-sentinel state
+  (`br2.openT`), mutated in update only; ledger untouched (damage
+  scaling happens inside damageBrick like armor does).
+- Implementation: scale in `damageBrick` where sentinel damage lands
+  (mirror how SHELL ARMOR scales), `openT` set in `subAbility`
+  dispatch, decayed with the sentinel clock. Guard ring render next to
+  the sentinel's bare-mon draw; no per-frame gradients (strokes only).
+
+## 2. Entrance FX — bespoke motifs for the 13 default styles (render)
+
+`drawGauntletEntranceFx` gains motif branches (strokes/arcs only, all
+scaled by the existing `reduced` wash factor where luminance-based;
+geometry always draws):
+- `skycoil` — two interleaved serpent-coil arcs winding up the sigil.
+- `suncharge` — radial sun rays + low horizontal speed lines.
+- `maelstrom` — a double spiral of storm arcs converging on center.
+- `timesplit` — a cracked clock: offset arc fragments + tick marks.
+- `psybreak` — concentric psychic ripple rings with one broken gap.
+- `wishgate` — a ring of five small stars orbiting a portal arc.
+- `timebloom` — petal arcs unfolding around the sigil.
+- `victorflare` — a bold V of flare strokes + ember dots.
+- `shadowstep` — three offset dark silhouette echo rings.
+- Sentinel styles `stampede/monolith/orbit/cocoon` — one light motif
+  each (dust chevrons / vertical monolith slabs / three orbit ellipses
+  / a woven cocoon oval).
+After this, ALL 27 entrance styles have bespoke motifs. The
+unique-entrances test only checks style identity — unaffected.
+
+## 3. Phase-transition + defeat garnish (update + render)
+
+- **Transition:** the `newPhase > br.phase` block sets
+  `br.enrageAnimT = 0.9`. Render: while active, the boss silhouette
+  scale-pulses (~×1.06 sine) and 8 short radial speed-line strokes
+  fan out behind it, fading with the timer. reduceFlash: keep the
+  pulse + lines (motion/shape), skip nothing else new (no added
+  luminance flash — the existing G.flashT already respects settings).
+- **Defeat:** on an `isBoss` death (any mode with bare bosses), add
+  `G.dramaticT = max(G.dramaticT, 0.45)` (brief slow-mo even
+  mid-gauntlet — the next round's entrance pause absorbs it) and a
+  triple type-colored expanding ring echo on top of the existing
+  faint ghost + bossDown. No per-species bespoke animation this round
+  (logged as still-open polish).
+
+## 4. Practice: phase selection (trial + dev)
+
+- `jumpToGauntletRound(round, phase)` — optional `phase` (clamped to
+  the summoned boss's `phaseCount`): after the summon, set
+  `boss.phase = phase` and `boss.hp = maxHp` scaled to the MIDDLE of
+  that phase's HP band (`(phaseCount - phase + 0.5) / phaseCount`).
+  No retroactive shockwave/adds (documented practice caveat).
+- Trial UI (`trialLayout` + input.js + the trial render): a PHASE chip
+  row appears when `stage === 2 && round >= 1` — 2 chips for the
+  legendary, 3 for mythic/secret. `trialSel.phase` resets on
+  round/stage change. Render and hit-testing share the layout rects
+  (project invariant).
+- `DEV.boss(region, round, {phase})` → devLaunch passes it through.
+
+## 5. Phase music layering (audio)
+
+Extend the binary `intense` scaffold into a graded, TESTABLE helper:
+- `bossMusicHeat()` (audio.js, pure — reads `G`): returns **0** (no
+  boss / phase 1 / sentinels), **1** (a multi-phase boss past phase 1
+  but not last stand — i.e. mythic phase 2 — or `G.megaT > 0`), **2**
+  (last stand: `phase === phaseCount` with `phaseCount >= 2`).
+- `musicTick` consumes it: heat ≥1 = today's intense layer (extra
+  kick + octave sparkle); heat 2 adds a double-time hat row and a
+  denser counter pulse. `buildMusicPattern`/cfg untouched — the
+  soundtrack test's signatures stay valid.
+- Legendary phase 2 (last stand for phaseCount 2) = heat 2; mythic
+  phase 2 = heat 1, phase 3 = heat 2; sentinels stay 0.
+
+## Tests (suite 67 → 69)
+
+- **`sentinel guard/opening rhythm`**: L3 gauntlet round 0 — guarded
+  sentinel takes ×0.55 (damageBrick delta); force `subAbility` on one
+  → that sentinel's `openT > 0`, damage ×1.0 and first-hit ×1.2 while
+  open, the OTHER two stay guarded; window expires (`openT` → 0 →
+  ×0.55 again); choreography invariants intact (3 bricks, phaseCount
+  1, wake chain still fires when all three fall).
+- **`practice phase jump + music heat ladder`**: `jumpToGauntletRound
+  (1, 2)` at L6 → legendary `phase === 2`, hp in the phase-2 band;
+  `bossMusicHeat() === 2`; `jumpToGauntletRound(2, 2)` → mythic phase
+  2, heat 1; phase 3 → heat 2; sentinels (round 0) → heat 0; trial
+  layout exposes the phase row only for round ≥ 1 (2 vs 3 chips);
+  `DEV`-path phase clamp (requesting phase 9 clamps to phaseCount).
+
+**Guards:** all 18 duel tests + mythic A/B (sentinel damage scaling
+must not leak onto bosses — gate strictly on `subBoss`); junkie
+choreography + unique-entrances; soundtrack test (cfg untouched);
+boss phase harness (transition math unchanged — `enrageAnimT` is
+additive).

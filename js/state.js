@@ -832,6 +832,7 @@ function buildLevel(lvl) {
       legend.dormant = true;
       legend.bx = legend.hx = -2000; // parked off-stage until round 2
       G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp, subT: 0, subAbilityCD: 4, entry: null };
+      G.sentinelGuardTaught = false; // the guard/opening strip teaches once per wave
       const subs = gen.gauntlet.subs;
       const subHp = Math.max(5, Math.round(bossHp * (subs.length === 1 ? 0.85 : 0.42)));
       for (let i = 0; i < subs.length; i++) {

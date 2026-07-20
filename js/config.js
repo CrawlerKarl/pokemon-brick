@@ -323,7 +323,7 @@ function advLayout() {
 }
 // trial mode overlay: 3×3 region grid + stage picker + start
 let trialOpen = false;
-const trialSel = { region: 0, stage: 0, round: 0 };
+const trialSel = { region: 0, stage: 0, round: 0, phase: 1 };
 function trialLayout() {
   const pw = Math.min(470, W * 0.94);
   const chipW = (pw - 60 - 20) / 3, chipH = 48, stageH = 38;
@@ -336,17 +336,25 @@ function trialLayout() {
   const roundCount = secretRound ? 4 : 3;
   const roundH = 34, roundRows = secretRound ? 2 : 1;
   const roundGap = rounds ? roundRows * (roundH + 8) + 6 : 0;
-  const ph = gridY + 3 * (chipH + 10) + 30 + stageH + roundGap + 84;
+  // Picking a BOSS round (>=1) reveals a PHASE chip row so any phase can be
+  // practiced: 2 chips for the legendary (round 1), 3 for a mythic/secret.
+  const phases = rounds && trialSel.round >= 1;
+  const phaseCount = trialSel.round >= 2 ? 3 : 2;
+  const phaseH = 30, phaseGap = phases ? phaseH + 16 : 0;
+  const ph = gridY + 3 * (chipH + 10) + 30 + stageH + roundGap + phaseGap + 84;
   const px = W / 2 - pw / 2, py = Math.max(16, H / 2 - ph / 2);
   const stageY = py + gridY + 3 * (chipH + 10) + 24;
+  const phaseY = stageY + stageH + 12 + roundRows * (roundH + 8) + 4;
+  const phaseW = (pw - 60 - 10 * (phaseCount - 1)) / phaseCount;
   return {
-    px, py, pw, ph, rounds, secretRound, roundCount,
+    px, py, pw, ph, rounds, secretRound, roundCount, phases, phaseCount,
     region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + 10), w: chipW, h: chipH }),
     stage: i => ({ x: px + 30 + i * (chipW + 10), y: stageY, w: chipW, h: stageH }),
     round: i => secretRound
       ? ({ x: px + 30 + (i % 2) * ((pw - 70) / 2 + 10),
           y: stageY + stageH + 12 + Math.floor(i / 2) * (roundH + 8), w: (pw - 70) / 2, h: roundH })
       : ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
+    phase: i => ({ x: px + 30 + i * (phaseW + 10), y: phaseY, w: phaseW, h: phaseH }),
     start: { x: px + pw / 2 - 110, y: py + ph - 60, w: 220, h: 44 },
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };

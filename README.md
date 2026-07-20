@@ -436,6 +436,21 @@ case 150, update.js):
 The pattern (one move answered by normal fire, one by charge, desperation
 with readable counterplay) is Milestone 4's template for every boss.
 
+### Round D: sentinel rhythm + presentation polish (Milestone 4)
+Round 1 now has a combat read: **sentinels GUARD** (×0.55 damage behind
+a hexagonal ring) and the one that just fired its typed special drops
+its guard for 2.4s — full damage, first hit ×1.2, `OPENING!` — punish
+the attacker. All **27 entrance styles** now have bespoke motifs in
+`drawGauntletEntranceFx` (cracked-clock timesplit, serpent skycoil,
+storm maelstrom, sun-ray suncharge, star-ring wishgate, …). Phase
+transitions add a silhouette pulse + radial speed lines
+(`br.enrageAnimT`); boss defeats add brief dramatic slow-mo + a triple
+type-colored ring echo. The trial screen gained a **PHASE row**
+(`jumpToGauntletRound(round, phase)` lands mid-band HP;
+`DEV.boss(r, round, {phase})`). The boss score now layers by phase:
+`bossMusicHeat()` 0/1/2 — heat 1 is the intense layer, heat 2 (last
+stand) adds double-time hats and a denser counter pulse.
+
 ### Round C: the nine mythicals (Milestone 4 — round 3 gets teeth)
 Every gauntlet's mythical now duels by the template — lighter kits than
 the legendaries (shorter fights), all riding the same machinery with

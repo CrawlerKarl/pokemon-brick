@@ -214,6 +214,23 @@ function currentMusicScene() {
   const boss = inCombat && (!!G.gauntlet || G.bricks.some(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss)));
   return { genIdx, boss, key: genIdx + ':' + (boss ? 'boss' : 'route') };
 }
+// Graded boss-music heat (pure — reads G, no audio API). musicTick consumes
+// it: 0 = no live boss / phase 1 / sentinels (subBoss isn't isBoss, so they
+// never register); 1 = a multi-phase boss past phase 1 but not last stand
+// (mythic phase 2), OR Mega active over any live boss; 2 = last stand
+// (phase === phaseCount with phaseCount >= 2 — legendary phase 2, mythic phase 3).
+function bossMusicHeat() {
+  let boss = null;
+  for (const b of G.bricks) {
+    if (b.dead || b.dormant || !b.isBoss) continue;
+    boss = b; break; // only ever one active boss on stage
+  }
+  if (!boss) return 0;
+  const pc = bossPhaseCount(boss), ph = boss.phase || 1;
+  if (ph >= pc && pc >= 2) return 2;    // last stand
+  if (ph > 1 || G.megaT > 0) return 1;  // escalated, or Mega popped mid-fight
+  return 0;
+}
 function musicTick() {
   if (!AC || !MUSIC.on || paused || document.hidden) return;
   const scene = currentMusicScene();
@@ -226,14 +243,18 @@ function musicTick() {
   }
   if (MUSIC.nextT < AC.currentTime - 0.4) MUSIC.nextT = AC.currentTime + 0.05;
   const cfg = musicPat.cfg, stepDur = 60 / cfg.bpm / 4;
-  const liveBoss = G.bricks.find(b => !b.dead && (b.isBoss || b.subBoss));
-  const intense = G.megaT > 0 || (liveBoss && (liveBoss.phase || 1) >= Math.max(2, liveBoss.phaseCount || 2));
+  // Graded boss heat (audio.js:222): 0 = none/phase-1/sentinels, 1 = escalated
+  // (mythic phase 2 or Mega popped) — reproduces today's intense layer exactly,
+  // 2 = last stand — adds a double-time hat row + a denser counter pulse.
+  const heat = bossMusicHeat();
   while (MUSIC.nextT < AC.currentTime + 0.3) {
     const s = MUSIC.step, inBar = s % 16, bar = Math.floor(s / 16), t = MUSIC.nextT;
-    if (cfg.kick.includes(inBar)) kickAt(t, cfg.boss || intense);
-    if (intense && cfg.boss && inBar === 15) kickAt(t, true);
+    if (cfg.kick.includes(inBar)) kickAt(t, cfg.boss || heat >= 1);
+    if (heat >= 1 && cfg.boss && inBar === 15) kickAt(t, true);
     if (cfg.snare.includes(inBar)) drumAt(snareBuf, t, cfg.boss ? 0.024 : 0.017, 1500);
     if (cfg.hat.includes(inBar)) drumAt(hatBuf, t, cfg.boss ? 0.011 : 0.006, 5700);
+    // last stand: fill the OFF 16th-steps with a half-gain hat — a double-time row
+    else if (heat >= 2) drumAt(hatBuf, t, (cfg.boss ? 0.011 : 0.006) * 0.5, 5700);
     const bassDegree = musicPat.bass[s];
     if (bassDegree != null) {
       const bf = midiFreq(cfg.root - 24 + musicScaleSemitone(cfg.scale, bassDegree));
@@ -243,12 +264,18 @@ function musicTick() {
     if (degree != null) {
       const f = midiFreq(cfg.root + 12 + musicScaleSemitone(cfg.scale, degree));
       musicVoiceAt(cfg.voice, f, t, stepDur * (cfg.boss ? 1.25 : 1.55), cfg.boss ? 0.015 : 0.014, true);
-      if (intense) playAt(f * 2, t, stepDur * 0.66, 'square', 0.0038, true);
+      if (heat >= 1) playAt(f * 2, t, stepDur * 0.66, 'square', 0.0038, true);
     }
     const counterDegree = musicPat.counter[s];
     if (counterDegree != null) {
       const cf = midiFreq(cfg.root + 12 + musicScaleSemitone(cfg.scale, counterDegree));
       musicVoiceAt(cfg.boss ? 'pulse' : 'flute', cf, t, stepDur * 1.8, 0.0052, false);
+      // last stand: an off-beat diatonic-third echo thickens the counter into a
+      // denser pulse (one extra quiet voice per counter note — cheap)
+      if (heat >= 2) {
+        const ef = midiFreq(cfg.root + 12 + musicScaleSemitone(cfg.scale, counterDegree + 2));
+        musicVoiceAt(cfg.boss ? 'pulse' : 'flute', ef, t + stepDur * 0.5, stepDur * 1.1, 0.0034, false);
+      }
     }
     // A three-note diatonic pad changes every bar, giving exploration forward
     // motion and boss battles a harmonic floor under their busier percussion.
