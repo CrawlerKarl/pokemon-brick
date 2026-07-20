@@ -1121,8 +1121,10 @@ function onPress(x, y) {
     // action to enter setup. Keeping selection and launch separate prevents a
     // stray tap from dropping players into a setup flow they did not expect.
     const L = menuLayout();
-    if (skinPillRect && inRect(x, y, skinPillRect)) { SFX.power(); toggleSkin(); return; }
+    // CONTINUE outranks the skin pill: a return-player tap in any overlap
+    // zone must resume the journey, never silently flip skins + reload
     if (L.resume && inRect(x, y, L.resume)) { resumeRun(); return; }
+    if (skinPillRect && inRect(x, y, skinPillRect)) { SFX.power(); toggleSkin(); return; }
     // the daily badge overlaps the Breaker card — test it first
     if (inRect(x, y, L.daily)) { startDailyRun(); return; }
     // THE THREE DOORS: tapping a game card selects it AND walks straight

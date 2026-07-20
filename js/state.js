@@ -56,7 +56,13 @@ function pilotInfo() {
   }
   return { id: 0, t: 'normal', shape: 'volt' };
 }
-function attackElement() { return G.ballElement || pilotInfo().t; }
+// OFFENSE type. Symmetric with playerType() below: a NO-PARTNER player is
+// TYPELESS (null), not 'normal' — otherwise their earned support bolts would
+// eat a phantom rock/steel/ghost resist that the typeless ball never takes.
+// A live ball-element override (power-up orb) always wins.
+function attackElement() {
+  return G.ballElement || ((G.starter && G.starter !== 'none') ? pilotInfo().t : null);
+}
 // the player's current DEFENSIVE type — how effective an enemy's typed attack
 // is against US. Junkie: the pilot's live element. Paddle modes: the ball's
 // element, else the starter's innate type (no starter → typeless, all neutral).

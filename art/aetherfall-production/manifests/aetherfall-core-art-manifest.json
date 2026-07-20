@@ -1375,7 +1375,10 @@
       "finalFile": "sprites/final/af-059-armorwright.png",
       "previewFile": "sprites/previews/af-059-armorwright-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#59--armorwright",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:60",
@@ -1398,7 +1401,10 @@
       "finalFile": "sprites/final/af-060-bastionsmith.png",
       "previewFile": "sprites/previews/af-060-bastionsmith-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#60--bastionsmith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:61",
@@ -1447,7 +1453,10 @@
       "finalFile": "sprites/final/af-062-feyknight.png",
       "previewFile": "sprites/previews/af-062-feyknight-preview.png",
       "promptRecipe": "pilot:pilotII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#62--feyknight",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:63",
@@ -1470,7 +1479,10 @@
       "finalFile": "sprites/final/af-063-courtsovereign.png",
       "previewFile": "sprites/previews/af-063-courtsovereign-preview.png",
       "promptRecipe": "pilot:pilotIII",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#63--courtsovereign",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:101",
@@ -1571,7 +1583,10 @@
       "finalFile": "sprites/final/af-104-pipkin.png",
       "previewFile": "sprites/previews/af-104-pipkin-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#104--pipkin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:105",
@@ -1640,7 +1655,10 @@
       "finalFile": "sprites/final/af-107-flittern.png",
       "previewFile": "sprites/previews/af-107-flittern-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#107--flittern",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:108",
@@ -1709,7 +1727,10 @@
       "finalFile": "sprites/final/af-110-meadowkit.png",
       "previewFile": "sprites/previews/af-110-meadowkit-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#110--meadowkit",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:111",

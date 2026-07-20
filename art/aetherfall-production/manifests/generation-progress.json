@@ -293,10 +293,34 @@
     "promptLog": "PRODUCTION_RUN.md#58--engineer",
     "alphaValidated": true
   },
+  "aetherfall:59": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#59--armorwright",
+    "alphaValidated": true
+  },
+  "aetherfall:60": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#60--bastionsmith",
+    "alphaValidated": true
+  },
   "aetherfall:61": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
     "promptLog": "PRODUCTION_RUN.md#61--feywarden",
+    "alphaValidated": true
+  },
+  "aetherfall:62": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#62--feyknight",
+    "alphaValidated": true
+  },
+  "aetherfall:63": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#63--courtsovereign",
     "alphaValidated": true
   },
   "aetherfall:101": {
@@ -315,6 +339,24 @@
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
     "promptLog": "VERTICAL_SLICE.md#103--thornwarden",
+    "alphaValidated": true
+  },
+  "aetherfall:104": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#104--pipkin",
+    "alphaValidated": true
+  },
+  "aetherfall:107": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#107--flittern",
+    "alphaValidated": true
+  },
+  "aetherfall:110": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#110--meadowkit",
     "alphaValidated": true
   },
   "aetherfall:180": {

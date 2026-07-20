@@ -731,3 +731,80 @@ Create one isolated game sprite for Aetherfall: ENGINEER, steel-element pilot fo
 ```text
 Create one isolated game sprite for Aetherfall: FEYWARDEN, fairy-element pilot form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for its exact upright nose-up ship axis, centered three-quarter front-top camera, and rear-thruster placement; do not copy its fire materials or silhouette. Design a compact butterfly court-barge spacecraft: a vertical pearl-white and blush-pink teardrop hull, two short symmetric rigid butterfly-shaped wing shields with opaque rose and pale-blue enamel panels, one small oval sapphire-pink canopy, aged-gold wing frames, a single integrated gold halo arch around the nose, subtle heart-diamond filigree, and one compact blue-white rear thruster. It must read as a piloted ornamental vessel, not a living fairy, butterfly, insect, or humanoid. Relicforge/Arcane blend 88/12, 4-5 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic and metal, crisp bevels, restrained wear, simple readable form-I silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock halo nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engine straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no detached motes, glitter, flowers, ribbons, aura, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
 ```
+
+## 59 — Armorwright
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-059-armorwright-source.png`
+- Final: `sprites/final/af-059-armorwright.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: ARMORWRIGHT, steel-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Engineer family ancestor. Evolve that Engineer while unmistakably preserving its upright rectangular gunmetal hull, twin nose cannon barrels, cyan segmented visor canopy, bolted armor plates, symmetric articulated tool arms, brass joints, and twin rear drives. Upgrade it with a taller reinforced hull, four compact parallel nose barrels, five layered steel armor plates, two heavier multi-joint utility arms ending in round clamp tools, broader brass shoulder collars, visible dark hydraulic pistons, a larger opaque cyan command visor, and three compact blue-white rear thrusters. It must remain a piloted mobile workshop craft, not a humanoid robot, tank, or floating tools. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted metal and enamel, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock cannon nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no hands, no text, no emblem, no border, no ground plane, no cast shadow, no detached tools, sparks, smoke, projectiles, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 62 — Feyknight
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-062-feyknight-source.png`
+- Final: `sprites/final/af-062-feyknight.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FEYKNIGHT, fairy-element pilot form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Feywarden family ancestor. Evolve that Feywarden while unmistakably preserving its upright pearl-white and blush hull, rigid butterfly-shaped wing shields, rose and pale-blue enamel panels, oval pink canopy, aged-gold frames, integrated halo arch, filigree, and rear drive. Upgrade it with a taller layered court-barge hull, two-tier butterfly wing shields with additional opaque lavender panels, a faceted rose-sapphire canopy, two nested gold halo arches physically joined at the nose, richer heart-diamond filigree, small dark mechanical wing pivots, and two compact blue-white rear thrusters. It must remain a piloted ornamental vessel, not a living fairy, butterfly, insect, or humanoid. Relicforge/Arcane blend 80/20, 5-7 clean material zones, chunky tabletop-miniature proportions, hand-painted ceramic and metal, crisp bevels, restrained wear, stronger but readable form-II silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock halo nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no detached motes, glitter, flowers, ribbons, aura, or particles. Solid flat chroma-key green #00ff00 background, perfectly uniform and empty; do not use green on the craft. Square image.
+```
+
+## 60 — Bastionsmith
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-060-bastionsmith-source.png`
+- Final: `sprites/final/af-060-bastionsmith.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BASTIONSMITH, steel-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Armorwright family ancestor. Evolve that Armorwright into a ceremony-grade armored engineering command vessel while unmistakably preserving its upright rectangular gunmetal hull, clustered nose barrels, tall cyan visor canopy, layered bolted plates, articulated clamp arms, brass joints, hydraulic pistons, and three rear drives. Upgrade it with six compact parallel nose barrels, seven stepped steel armor plates, two heavy multi-joint utility arms with round clamp tools plus two small physically attached shoulder tool pods, broad gold-brass reinforcement rails, exposed dark hydraulic cylinders, a tall faceted cyan command visor, and four compact blue-white rear thrusters. It must remain a piloted mobile workshop spacecraft, not a humanoid robot, tank, or floating tools; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled cyan glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock cannon nose to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no hands, no text, no emblem, no border, no ground plane, no cast shadow, no detached tools, sparks, smoke, projectiles, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 63 — Courtsovereign
+
+- Mix: 60% Relicforge / 40% Arcane Alloy
+- Source: `sprites/source/af-063-courtsovereign-source.png`
+- Final: `sprites/final/af-063-courtsovereign.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: COURTSOVEREIGN, fairy-element pilot form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Feyknight family ancestor. Evolve that Feyknight into a ceremony-grade fairy-court command barge while unmistakably preserving its upright pearl-white layered hull, two-tier rigid butterfly wing shields, rose, pale-blue and lavender opaque panels, faceted pink canopy, nested gold halo arches, heart-diamond filigree, wing pivots, and twin rear drives. Upgrade it with a taller crown-tipped court hull, three-tier symmetrical butterfly wing shields, three nested aged-gold halo arches physically joined at the nose, a larger rose-sapphire command canopy, richer but legible pink-and-gold filigree, small dark mechanical hinges, and four compact blue-white rear thrusters. It must remain a piloted ornamental spacecraft, not a living fairy, butterfly, insect, or humanoid; keep it below sentinel/boss density and readable at 48 pixels. Relicforge/Arcane blend 60/40, 6-8 clean material zones, premium hand-painted tabletop-miniature construction, crisp bevels, selective wear, controlled rose glow, heroic final-form silhouette. Exact composition: one craft centered, perfectly upright on the 12-o'clock halo crown to 6-o'clock exhaust axis, consistent three-quarter front-top camera; nose straight up, engines straight down; no diagonal tilt, banking, yaw, or side view. Fully inside frame with generous even margin, orthographic game-sprite presentation, no pilot, no face, no text, no emblem, no border, no ground plane, no cast shadow, no detached motes, glitter, flowers, ribbons, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the craft. Square image.
+```
+
+## 104 — Pipkin
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-104-pipkin-source.png`
+- Final: `sprites/final/af-104-pipkin.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: PIPKIN, fairy-element common creature, Greenspell Marches family 2 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny fey orchard familiar: a round pearl-cream pip-fruit body with a blush-pink lower half, two small leaf-shaped ears made of pale gold, one curled stem crest, large friendly sapphire-pink glassy eyes, a tiny gold seed-shaped nose plate, two stubby arms, and two short rounded feet. Add one small rose gem set into the forehead so the future Glimmerkin and Courtglimmer evolution is clear. It should feel magical and endearing but constructed like a hand-painted collectible miniature, not plush, flat cartoon, or human child. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered ceramic, leaf-metal accents, controlled eye and gem glow. Full body centered in a neutral alert standing pose, consistent three-quarter front view, all ears, crest, hands, and feet visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, ground plane, cast shadow, scenery, text, logo, border, wings, wand, crown, detached motes, glitter, flowers, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 107 — Flittern
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-107-flittern-source.png`
+- Final: `sprites/final/af-107-flittern.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FLITTERN, flying-element common creature, Greenspell Marches family 3 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny sky-finch familiar: a compact round pale-blue bird body with a cream chest, one short upward feather crest, large friendly amber glassy eyes, a small aged-brass beak, two short swept winglets with opaque blue feather plates and thin bronze leading edges, a fan of three tail feathers, and two tiny dark-metal talons. It should read as a charming living bird translated into hand-painted miniature materials, with no pilot gear or mechanical engine. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered feather-ceramic, controlled eye glow. Full body centered in a neutral alert perched-standing pose, consistent three-quarter front view, both winglets, crest, tail tips, and feet visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, branch, ground plane, cast shadow, scenery, text, logo, border, clouds, wind streaks, detached feathers, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 110 — Meadowkit
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-110-meadowkit-source.png`
+- Final: `sprites/final/af-110-meadowkit.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: MEADOWKIT, normal-element common creature, Greenspell Marches family 4 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny meadow deer-kit familiar: a compact warm-tan fawn body with an oversized rounded head, large friendly dark-amber glassy eyes, two wide cream inner ears, two tiny ivory antler buds, a cream muzzle and chest patch, four short sturdy legs with dark-brown hooves, and a small leaf-shaped brass charm fixed at the chest. Its future Prancelet and Sovereign elk evolution should be legible, but this form stays very young and simple. It should feel alive yet sculpted as a premium hand-painted collectible miniature, not plush, flat cartoon, or ordinary realistic deer. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and small metal accent, controlled eye glow. Full body centered in a neutral alert standing pose, consistent three-quarter front view, both ears, antler buds, all four hooves, and tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, grass, ground plane, cast shadow, scenery, text, logo, border, flowers, detached leaves, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```

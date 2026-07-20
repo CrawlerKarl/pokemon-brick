@@ -4621,7 +4621,11 @@ function drawMenuRedesign() {
   ctx.font = '800 8px Orbitron, sans-serif';
   const editionW = ctx.measureText(editionText).width + 20;
   const ex = L.narrow ? W / 2 - editionW / 2 : L.pad + brandWidth + 14;
-  const ey = L.narrow ? L.titleY + L.titleSize * 0.68 : L.titleY - 11;
+  // clamp the narrow pill so it can never spill into the CONTINUE band /
+  // mode cards on short landscape phones (667×375) — keep its bottom above
+  // whatever starts the content zone
+  const contentTop = (L.resume ? L.resume.y : L.hero.y) - 24;
+  const ey = L.narrow ? Math.min(L.titleY + L.titleSize * 0.68, contentTop) : L.titleY - 11;
   skinPillRect = { x: ex, y: ey, w: editionW, h: 22 };
   const hovSkin = inRect(mouseX, lastMouseY, skinPillRect);
   roundRect(ex, ey, editionW, 22, 11); ctx.fillStyle = mode.accent + (hovSkin ? '3d' : '24'); ctx.fill();
