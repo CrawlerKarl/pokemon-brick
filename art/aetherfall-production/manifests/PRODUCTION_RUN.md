@@ -808,3 +808,762 @@ Create one isolated game sprite for Aetherfall: FLITTERN, flying-element common 
 ```text
 Create one isolated game sprite for Aetherfall: MEADOWKIT, normal-element common creature, Greenspell Marches family 4 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny meadow deer-kit familiar: a compact warm-tan fawn body with an oversized rounded head, large friendly dark-amber glassy eyes, two wide cream inner ears, two tiny ivory antler buds, a cream muzzle and chest patch, four short sturdy legs with dark-brown hooves, and a small leaf-shaped brass charm fixed at the chest. Its future Prancelet and Sovereign elk evolution should be legible, but this form stays very young and simple. It should feel alive yet sculpted as a premium hand-painted collectible miniature, not plush, flat cartoon, or ordinary realistic deer. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and small metal accent, controlled eye glow. Full body centered in a neutral alert standing pose, consistent three-quarter front view, both ears, antler buds, all four hooves, and tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, grass, ground plane, cast shadow, scenery, text, logo, border, flowers, detached leaves, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
 ```
+
+## 105 — Glimmerkin
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-105-glimmerkin-source.png`
+- Final: `sprites/final/af-105-glimmerkin.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GLIMMERKIN, fairy-element evolved creature, Greenspell Marches family 2 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Pipkin family ancestor. Evolve Pipkin while unmistakably preserving its pearl-cream pip-fruit body, blush-pink lower petals and limbs, pale-gold leaf ears, curled stem crest, large pink gem eyes, gold seed nose plate, and rose forehead gem. Develop it into a slightly taller pear-shaped fey familiar with a layered gold leaf collar, two longer leaf ears plus two small side leaflets, a more elegant curled stem, two rose gems aligned on the forehead and chest, longer rounded arms and feet, and subtle pale-lavender ceramic panels. It must clearly be the same creature one stage older, still endearing and not humanoid, plush, or flat cartoon. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp bevels, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing pose, same three-quarter front camera as the ancestor, all leaf tips, crest, hands, and feet visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, ground plane, cast shadow, scenery, text, logo, border, wings, wand, crown, detached motes, glitter, flowers, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 108 — Galefinch
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-108-galefinch-source.png`
+- Final: `sprites/final/af-108-galefinch.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GALEFINCH, flying-element evolved creature, Greenspell Marches family 3 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Flittern family ancestor. Evolve Flittern while unmistakably preserving its round pale-blue bird body, cream chest and face, amber glassy eyes, brass beak, blue feather-ceramic winglets with bronze leading edges, crest, tail fan, and dark-metal talons. Develop it into a larger athletic sky finch with a longer swept double crest, broader partially opened wings built from layered opaque blue feathers, stronger bronze wing braces, a cream ruff, five tail feathers, longer talons, and two small sapphire wind-gems inset at the wing shoulders. It must clearly be the same bird one stage older, still a living creature rendered as a miniature rather than a machine. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp bevels, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert perched-standing pose, same three-quarter front camera as the ancestor, both wings, crest, tail tips, and feet visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, branch, ground plane, cast shadow, scenery, text, logo, border, clouds, wind streaks, detached feathers, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 111 — Prancelet
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-111-prancelet-source.png`
+- Final: `sprites/final/af-111-prancelet.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: PRANCELET, normal-element evolved creature, Greenspell Marches family 4 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Meadowkit family ancestor. Evolve Meadowkit while unmistakably preserving its warm-tan fawn coat, oversized friendly amber eyes, wide cream-lined ears, ivory antler buds, cream muzzle and chest, dark-brown hooves, leaf-shaped brass chest charm, and short tail. Develop it into a graceful adolescent meadow deer with slightly longer legs, a more defined muzzle, small forked ivory antlers, a fuller cream chest ruff, symmetrical pale fawn spots, reinforced dark hooves, and a larger brass leaf medallion with one amber gem. It must clearly be the same deer one stage older, stylized and collectible rather than plush or realistic wildlife. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp sculpted fur planes, restrained wear on the charm, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral poised standing pose, same three-quarter front camera as the ancestor, both ears, all antler tips, four hooves, and tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, grass, ground plane, cast shadow, scenery, text, logo, border, flowers, detached leaves, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 106 — Courtglimmer
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-106-courtglimmer-source.png`
+- Final: `sprites/final/af-106-courtglimmer.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: COURTGLIMMER, fairy-element elite creature, Greenspell Marches family 2 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Glimmerkin family ancestor. Evolve Glimmerkin while unmistakably preserving its pearl-cream pear-shaped pip body, blush-pink petal lower half and limbs, long pale-gold leaf ears and side leaflets, curled stem crest, large pink gem eyes, gold seed nose plate, layered leaf collar, and aligned rose gems. Develop it into a regal orchard-court familiar with a taller elegant fruit silhouette, a three-leaf gold crown grown around the curled stem, four long symmetric leaf ears, a layered gold-and-lavender petal mantle, three vertically aligned rose gems, richer pale-lavender ceramic panels, longer graceful arms and feet, and a small gold court medallion integrated at the chest. It must clearly be the same non-humanoid creature at its final stage, courtly but below sentinel/boss density, not plush or flat cartoon. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp bevels, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a poised neutral standing pose, same three-quarter front camera as the ancestor, all crown, leaf, hand, and foot tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, ground plane, cast shadow, scenery, text, logo, border, separate wings, wand, detached motes, glitter, flowers, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 109 — Stormplume
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-109-stormplume-source.png`
+- Final: `sprites/final/af-109-stormplume.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: STORMPLUME, flying-element elite creature, Greenspell Marches family 3 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Galefinch family ancestor. Evolve Galefinch while unmistakably preserving its pale-blue and cream sky-finch body, amber eyes, brass beak, long swept feather crest, layered opaque blue wings with bronze braces, cream ruff, sapphire shoulder gems, tail fan, and dark talons. Develop it into a majestic storm bird with a taller three-blade swept crest, broader proudly spread wings built from layered pale-blue and deep-indigo feather plates, weathered-gold leading frames, a fuller ivory chest ruff, five sapphire wind-gems set symmetrically across shoulders and breast, seven long tail feathers, and strong dark-metal talons. It must clearly be the same living bird at its final stage, regal but below sentinel/boss density and never mechanical. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp feather facets, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a poised alert standing pose with wings spread enough to read but not flying, same three-quarter front camera as the ancestor, all crest, wing, tail, and talon tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, branch, ground plane, cast shadow, scenery, text, logo, border, clouds, lightning, wind streaks, detached feathers, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 112 — Soverelk
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-112-soverelk-source.png`
+- Final: `sprites/final/af-112-soverelk.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SOVERELK, normal-element elite creature, Greenspell Marches family 4 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Prancelet family ancestor. Evolve Prancelet while unmistakably preserving its warm-tan deer coat, large amber eyes, cream-lined ears, forked ivory antlers, cream muzzle and chest ruff, pale fawn spots, dark hooves, full tail, and brass leaf medallion with amber gem. Develop it into a proud adult sovereign elk with a stronger neck and body, grand symmetrical branching ivory antlers with restrained gold root collars, a layered cream ceremonial chest ruff, richer tawny fur-ceramic planes, two rows of pale flank spots, reinforced dark-brown hooves, a larger ornate brass leaf medallion with three amber stones, and a fuller leaf-shaped tail. It must clearly be the same deer at its final stage, regal but below sentinel/boss density, stylized and collectible rather than ordinary wildlife. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp sculpted fur planes, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud neutral standing pose, same three-quarter front camera as the ancestor, all antler, ear, four-hoof, and tail tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, grass, ground plane, cast shadow, scenery, text, logo, border, flowers, detached leaves, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 113 — Mothling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-113-mothling-source.png`
+- Final: `sprites/final/af-113-mothling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: MOTHLING, bug-element common creature, Greenspell Marches family 5 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny twilight moth familiar: a compact round charcoal-lavender fuzzy body, an oversized cream face ruff, large friendly amber glassy eyes, two short curled aged-brass antennae, two pairs of small opaque lavender wing plates with cream eye-spot markings and thin bronze edges, six tiny dark legs tucked beneath the body, and one small violet spell-gem fixed at the chest. It should feel like a living moth translated into a hand-painted collectible miniature, not a mechanical drone, plush toy, or flat cartoon. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and metal, controlled eye and gem glow. Full body centered in a neutral alert standing-hover pose with feet visible and wings at rest, consistent three-quarter front view, all antenna, wing, and leg tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, branch, ground plane, cast shadow, scenery, text, logo, border, moon, dust, detached scales, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 116 — Rillet
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-116-rillet-source.png`
+- Final: `sprites/final/af-116-rillet.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: RILLET, water-element common creature, Greenspell Marches family 6 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny stream-otter familiar: a compact round turquoise-blue body with a cream belly and muzzle, oversized friendly deep-blue glassy eyes, two small fin-shaped ears, four short webbed feet, one broad curled river tail, a small aged-brass droplet plate on the forehead, and two pale-blue cheek fins. Its future Brooksprite and Riverlord evolution should be legible, but this form stays young and simple. It should feel alive yet sculpted as a hand-painted collectible miniature, not plush, realistic wildlife, or a fish on legs. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered water-ceramic and small metal accent, controlled eye glow. Full body centered in a neutral alert standing pose, consistent three-quarter front view, both ears, cheek fins, all four feet, and full tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water puddle, ground plane, cast shadow, scenery, text, logo, border, splashes, bubbles, mist, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 201 — Zephyrkin
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-201-zephyrkin-source.png`
+- Final: `sprites/final/af-201-zephyrkin.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: ZEPHYRKIN, flying-element common creature, Belltower Reaches family 1 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny wind-monkey novice familiar: a compact pale-gray and sky-blue simian body with an oversized rounded head, large friendly sapphire glassy eyes, two wide wing-shaped ears with opaque pale-blue inner panels, a short curled tail, two small hands and broad feet, a cream brow tuft, and one miniature aged-brass temple bell fixed on a blue cord at the chest. This begins the Galemonk and Windabbot evolution line, so it should suggest a playful young monk without clothing, humanoid realism, or comedy props. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and brass, controlled eye glow. Full body centered in a calm neutral crouched-standing pose, consistent three-quarter front view, both wing ears, hands, feet, and full curled tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, temple, ground plane, cast shadow, scenery, text, logo, border, clouds, wind streaks, staff, detached bells, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 114 — Duskwing
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-114-duskwing-source.png`
+- Final: `sprites/final/af-114-duskwing.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DUSKWING, bug-element evolved creature, Greenspell Marches family 5 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Mothling family ancestor. Evolve Mothling while unmistakably preserving its round charcoal-lavender fuzzy body, cream face ruff, large amber eyes, curled brass antennae, two pairs of lavender wing plates with cream eye spots and bronze edges, six dark legs, and violet chest gem. Develop it into a larger twilight moth with a slightly elongated body, longer double-curled antennae, broader opaque dusk-purple wings with layered cream crescent markings, thicker bronze frames, a fuller ivory face collar, stronger segmented legs, and three violet spell-gems aligned across the breast. It must clearly be the same living moth one stage older, not a mechanical drone, plush toy, or flat cartoon. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp wing bevels, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing-hover pose with feet visible and wings at rest, same three-quarter front camera as the ancestor, all antenna, wing, and leg tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, branch, ground plane, cast shadow, scenery, text, logo, border, moon, dust, detached scales, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 117 — Brooksprite
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-117-brooksprite-source.png`
+- Final: `sprites/final/af-117-brooksprite.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BROOKSPRITE, water-element evolved creature, Greenspell Marches family 6 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Rillet family ancestor. Evolve Rillet while unmistakably preserving its turquoise stream-otter body, cream belly and muzzle, deep-blue eyes, fin-shaped ears, pale cheek fins, four webbed feet, broad curled river tail, and brass forehead droplet. Develop it into a larger agile brook otter with a slightly longer body and neck, layered teal and pale-blue ceramic plates, larger double-lobed cheek fins, stronger webbed paws with brass wrist bands, a wider wave-curled tail with cream inlay, two aligned brass droplet plates on forehead and chest, and one sapphire water gem. It must clearly be the same living creature one stage older, not a fish on legs, plush, or ordinary wildlife. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp water-carved bevels, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing pose, same three-quarter front camera as the ancestor, both ears, cheek fins, all four webbed feet, and full tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water puddle, ground plane, cast shadow, scenery, text, logo, border, splashes, bubbles, mist, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 202 — Galemonk
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-202-galemonk-source.png`
+- Final: `sprites/final/af-202-galemonk.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GALEMONK, flying-element evolved creature, Belltower Reaches family 1 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Zephyrkin family ancestor. Evolve Zephyrkin while unmistakably preserving its pale-gray and sky-blue wind-monkey body, friendly sapphire eyes, enormous wing-shaped ears, cream brow tuft, small hands and broad feet, curled tail, blue cord, and brass temple bell. Develop it into a calm adolescent gale monk with a taller athletic body, longer wing-ear panels with ivory frames, a swept cream head crest, stronger hands and feet, a longer double-curled tail, pale-blue spiral markings on forearms and thighs, two simple brass wrist rings, and a larger engraved bell with one sapphire wind-stone. It must clearly be the same creature one stage older, monk-like without clothing, human realism, staff, or comedy props. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp fur-ceramic planes, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm balanced crouched-standing pose, same three-quarter front camera as the ancestor, both wing ears, hands, feet, and full curled tail visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, temple, ground plane, cast shadow, scenery, text, logo, border, clouds, wind streaks, staff, detached bells, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 115 — Spellmoth
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-115-spellmoth-source.png`
+- Final: `sprites/final/af-115-spellmoth.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SPELLMOTH, bug-element elite creature, Greenspell Marches family 5 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Duskwing family ancestor. Evolve Duskwing while unmistakably preserving its charcoal-purple fuzzy body, ivory face collar, amber eyes, long curled brass antennae, two pairs of broad lavender wings with cream eye and crescent markings, bronze frames, six segmented legs, and violet breast gems. Develop it into a regal spell moth with a longer plush-sculpted body, crown-like triple curls at the antenna tips, grand opaque deep-violet and pale-lavender wing plates patterned with restrained cream moon-eye motifs, ornate weathered-gold borders, a fuller layered ivory ruff, stronger dark legs with brass joints, and five amethyst spell-gems across the breast and wing roots. It must clearly be the same living moth at its final stage, mystical but below sentinel/boss density and never a machine. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp wing facets, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a neutral alert standing-hover pose with feet visible and wings proudly opened, same three-quarter front camera as the ancestor, all antenna, wing, and leg tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, branch, ground plane, cast shadow, scenery, text, logo, border, moon backdrop, dust, detached scales, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 118 — Riverlord
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-118-riverlord-source.png`
+- Final: `sprites/final/af-118-riverlord.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: RIVERLORD, water-element elite creature, Greenspell Marches family 6 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Brooksprite family ancestor. Evolve Brooksprite while unmistakably preserving its turquoise otter body, cream muzzle and belly, blue eyes, fin ears, large cheek fins, layered water-ceramic plates, four webbed paws with brass bands, wave-curled tail, brass droplet plates, and sapphire gem. Develop it into a proud adult river guardian with a stronger elongated body and neck, rich teal and deep-blue flowing armor plates, triple-lobed pale-blue cheek fins, larger webbed paws with engraved brass cuffs, a grand double-wave tail with cream inlays, three aligned brass droplet plates, and three sapphire river stones set at forehead, chest, and tail root. It must clearly be the same living river-otter creature at its final stage, majestic but below sentinel/boss density, not a fish on legs or ordinary wildlife. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp water-carved bevels, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud neutral standing pose, same three-quarter front camera as the ancestor, all ear, fin, webbed-foot, and tail tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water puddle, ground plane, cast shadow, scenery, text, logo, border, splashes, bubbles, mist, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 203 — Windabbot
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-203-windabbot-source.png`
+- Final: `sprites/final/af-203-windabbot.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WINDABBOT, flying-element elite creature, Belltower Reaches family 1 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Galemonk family ancestor. Evolve Galemonk while unmistakably preserving its pale-gray and sky-blue wind-monkey body, sapphire eyes, enormous wing-shaped ears with ivory frames, swept cream crest, blue spiral markings, strong hands and feet, double-curled tail, brass wrist rings, blue cord, and engraved bell with wind-stone. Develop it into a serene adult wind abbot with a taller powerful simian body, grand layered wing-ear panels, a three-blade ivory head crest, richer pale-blue spiral markings across shoulders and limbs, broad hands and feet, a long triple-curled tail, ornate but simple brass forearm cuffs, and a large ceremonial temple bell holding three sapphire wind-stones. It must clearly be the same living creature at its final stage, monk-like but below sentinel/boss density, without clothing, human realism, staff, or comedy props. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp fur-ceramic planes, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a calm balanced crouched-standing pose, same three-quarter front camera as the ancestor, all wing-ear, crest, hand, foot, and tail tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, temple, ground plane, cast shadow, scenery, text, logo, border, clouds, wind streaks, staff, detached bells, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 204 — Fistling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-204-fistling-source.png`
+- Final: `sprites/final/af-204-fistling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FISTLING, fighting-element common creature, Belltower Reaches family 2 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny sky-martial cub: a compact russet-and-cream red-panda-like body with an oversized round head, large friendly amber glassy eyes, two short rounded ears, a curled striped tail, short sturdy legs, and two oversized forepaws protected by simple dark-steel gauntlet plates with aged-brass wrist bands. Add one small pale-blue wind knot fixed at the chest. This begins the Ironpalm and Skyfist Sage line, so the large disciplined paws are its defining motif, but it must remain a living creature rather than a humanoid fighter. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and metal, controlled eye glow. Full body centered in a calm ready standing pose with both paws lowered and visible, consistent three-quarter front view, all ear, paw, foot, and tail tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, arena, ground plane, cast shadow, scenery, text, logo, border, boxing gloves, weapons, motion streaks, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 207 — Chimeling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-207-chimeling-source.png`
+- Final: `sprites/final/af-207-chimeling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: CHIMELING, psychic-element common creature, Belltower Reaches family 3 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny living chime familiar: a compact pearl-lilac round body with an oversized friendly face, large sapphire-violet glassy eyes, two long tuning-fork-shaped ears edged in aged gold, two stubby arms, two rounded feet, a small triple-prong ivory crest, one engraved brass handbell fixed at the chest, and a violet resonance gem set in the forehead. This begins the Bellsage and Resonarch line, so it should suggest psychic sound without being a floating inanimate bell, human child, or robot. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered ceramic and brass, controlled eye and gem glow. Full body centered in a calm neutral standing pose, consistent three-quarter front view, both tuning-fork ears, crest, hands, feet, and bell visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, temple, ground plane, cast shadow, scenery, text, logo, border, musical notes, sound waves, floating bells, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 210 — Vesperling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-210-vesperling-source.png`
+- Final: `sprites/final/af-210-vesperling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: VESPERLING, ghost-element common creature, Belltower Reaches family 4 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its cactus body. Design a tiny dusk-bat bell spirit: a compact charcoal-violet bat body with a rounded bell-shaped torso, an ivory mask-like face that is friendly rather than skull-like, large cyan-violet glassy eyes, two short pointed ears, two small opaque purple wing plates with dark-brass edges, two tiny clawed feet, and one aged-brass clapper charm physically attached beneath the chest. This begins the Tollgeist and Knellwraith line, so the bell silhouette is essential, but it must remain a solid living creature rather than smoke or an inanimate bell. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and metal, controlled eye glow. Full body centered in a neutral alert standing-hover pose with feet visible and wings at rest, consistent three-quarter front view, all ear, wing, foot, and clapper tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, tower, ground plane, cast shadow, scenery, text, logo, border, mist, smoke, aura, floating chains, detached bells, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 205 — Ironpalm
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-205-ironpalm-source.png`
+- Final: `sprites/final/af-205-ironpalm.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: IRONPALM, fighting-element evolved creature, Belltower Reaches family 2 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Fistling family ancestor. Evolve Fistling while unmistakably preserving its russet-and-cream red-panda-like body, friendly amber eyes, rounded ears, curled striped tail, sturdy legs, oversized forepaws, dark-steel gauntlet plates, aged-brass wrist bands, and pale-blue chest wind knot. Develop it into a larger disciplined sky-martial beast with a taller athletic quadruped-upright stance, thicker forearms, broader layered iron palm plates, engraved brass knuckle bands, a longer double-curled striped tail, cream shoulder ruffs, pale-blue wind markings on the forearms, and two small sapphire wind studs set into the gauntlets. It must clearly be the same living creature one stage older, not a humanoid fighter, wrestler, or robot. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp metal bevels, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm ready standing pose with both armored palms lowered and visible, same three-quarter front camera as the ancestor, all ear, paw, foot, and tail tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, arena, ground plane, cast shadow, scenery, text, logo, border, boxing gloves, weapons, motion streaks, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 208 — Bellsage
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-208-bellsage-source.png`
+- Final: `sprites/final/af-208-bellsage.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BELLSAGE, psychic-element evolved creature, Belltower Reaches family 3 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Chimeling family ancestor. Evolve Chimeling while unmistakably preserving its pearl-lilac round living body, friendly sapphire-violet eyes, tuning-fork ears edged in aged gold, stubby limbs, ivory prong crest, engraved chest bell, forehead resonance gem, and ceramic-brass construction. Develop it into a poised adolescent chime sage with a slightly taller pear-shaped body, longer double-pronged tuning-fork ears, a five-prong ivory crown crest, stronger rounded hands and feet, layered pearl and lilac ceramic panels, two symmetrical engraved brass bells fixed at the shoulders, a larger central chest bell, and three violet resonance gems aligned on forehead and breast. It must clearly be the same living creature one stage older, psychic and musical without becoming an inanimate bell, human child, or robot. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp ceramic facets, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm neutral standing pose, same three-quarter front camera as the ancestor, both tuning-fork ears, crest, hands, feet, and all attached bells visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, temple, ground plane, cast shadow, scenery, text, logo, border, musical notes, sound waves, floating bells, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 211 — Tollgeist
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-211-tollgeist-source.png`
+- Final: `sprites/final/af-211-tollgeist.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: TOLLGEIST, ghost-element evolved creature, Belltower Reaches family 4 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Vesperling family ancestor. Evolve Vesperling while unmistakably preserving its charcoal-violet dusk-bat body, rounded bell-shaped torso, friendly ivory mask face, cyan-violet eyes, pointed ears, opaque purple wing plates with dark-brass edges, tiny clawed feet, and attached brass clapper charm. Develop it into a larger dusk-bell bat with a taller flared bell torso, a longer elegant ivory face mask, swept twin ears, broader segmented violet wings with engraved brass frames, stronger dark feet, a layered brass collar, two small attached side chimes, and a larger central clapper set with one amethyst ghost stone. It must clearly be the same solid living creature one stage older, eerie but not horrific, smoky, skeletal, or an inanimate bell. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp wing and bell bevels, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing-hover pose with feet visible and wings at rest, same three-quarter front camera as the ancestor, all ear, wing, foot, side-chime, and clapper tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, tower, ground plane, cast shadow, scenery, text, logo, border, mist, smoke, aura, floating chains, detached bells, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 206 — Skyfist Sage
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-206-skyfist-sage-source.png`
+- Final: `sprites/final/af-206-skyfist-sage.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SKYFIST SAGE, fighting-element elite creature, Belltower Reaches family 2 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Ironpalm family ancestor. Evolve Ironpalm while unmistakably preserving its russet-and-cream red-panda-like body, amber eyes, rounded ears, cream shoulder ruffs, long curled striped tail, thick forearms, oversized layered iron palm plates, brass bands, pale-blue wind markings, chest wind knot, and sapphire gauntlet studs. Develop it into a serene adult sky-martial guardian with a taller powerful beast body, a swept cream brow crest, grand symmetrical steel forearm and palm armor with engraved brass knuckle frames, broader pale-blue spiral markings across shoulders and limbs, a long triple-curled striped tail, ornate but restrained brass shoulder rings, and three sapphire wind stones aligned across both gauntlets and chest knot. It must clearly be the same living creature at its final stage, disciplined but below sentinel/boss density, never a humanoid fighter or robot. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp metal facets, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a calm ready standing pose with both enormous armored palms lowered and visible, same three-quarter front camera as the ancestor, all ear, crest, paw, foot, and tail tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, arena, ground plane, cast shadow, scenery, text, logo, border, boxing gloves, weapons, motion streaks, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 209 — Resonarch
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-209-resonarch-source.png`
+- Final: `sprites/final/af-209-resonarch.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: RESONARCH, psychic-element elite creature, Belltower Reaches family 3 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Bellsage family ancestor. Evolve Bellsage while unmistakably preserving its pearl-lilac living body, sapphire-violet eyes, long tuning-fork ears edged in gold, ivory crown crest, rounded hands and feet, layered ceramic panels, attached shoulder and chest bells, and aligned violet resonance gems. Develop it into a regal adult resonance monarch with a taller balanced body, grand triple-pronged tuning-fork ears, a seven-prong ivory diadem crest, richer pearl, lavender, and deep-violet ceramic panels, stronger sculpted limbs, an ornate arc of four small brass bells physically fixed across the shoulders, one large ceremonial chest bell, and five amethyst resonance stones aligned from forehead to breast. It must clearly be the same living creature at its final stage, psychic and musical but below sentinel/boss density, never an inanimate bell, human, or robot. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp ceramic and brass facets, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a poised neutral standing pose, same three-quarter front camera as the ancestor, all tuning-fork, crest, hand, foot, and attached-bell tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, temple, ground plane, cast shadow, scenery, text, logo, border, musical notes, sound waves, floating bells, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 212 — Knellwraith
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-212-knellwraith-source.png`
+- Final: `sprites/final/af-212-knellwraith.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: KNELLWRAITH, ghost-element elite creature, Belltower Reaches family 4 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Tollgeist family ancestor. Evolve Tollgeist while unmistakably preserving its charcoal-violet dusk-bat body, flared bell-shaped torso, ivory mask face, cyan-violet eyes, swept ears, broad opaque violet wings with brass frames, dark clawed feet, layered brass collar, attached side chimes, and amethyst central clapper. Develop it into a majestic adult knell-bat with a larger cathedral-bell torso, a crowned elongated ivory mask, tall triple-point ears, grand segmented deep-violet wings with ornate weathered-brass ribs, stronger clawed feet, layered breast armor, four small attached toll chimes, and a large central clapper holding three amethyst ghost stones. It must clearly be the same solid living creature at its final stage, ominous but below sentinel/boss density, never smoky, skeletal, horrific, or an inanimate bell. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp wing and bell facets, selective wear on metal, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud neutral standing-hover pose with feet visible and wings opened, same three-quarter front camera as the ancestor, all ear, wing, foot, attached-chime, and clapper tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, tower, ground plane, cast shadow, scenery, text, logo, border, mist, smoke, aura, floating chains, detached bells, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 213 — Sprigling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-213-sprigling-source.png`
+- Final: `sprites/final/af-213-sprigling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SPRIGLING, grass-element common creature, Belltower Reaches family 5 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its monkey body. Design a tiny tea-grove spirit: a compact warm-brown dormouse-like body with an oversized rounded head, large friendly moss-green glassy eyes, two leaf-shaped ears, a cream muzzle and belly, four short paws, one curled twig tail ending in three opaque jade tea leaves, a small pale-green sprout crest, and one aged-brass teacup-shaped charm fixed at the chest. This begins the Teawarden and Groveabbot line, so tea leaves and gentle grove wisdom are its defining motifs, but it must remain a living creature rather than a plant pot, humanoid monk, or ordinary mouse. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and brass, controlled eye glow. Full body centered in a calm neutral standing pose, consistent three-quarter front view, both leaf ears, all four paws, sprout crest, full twig tail, and chest charm visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, teacup, table, branch, ground plane, cast shadow, scenery, text, logo, border, loose leaves, steam, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 216 — Bellkit
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-216-bellkit-source.png`
+- Final: `sprites/final/af-216-bellkit.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BELLKIT, normal-element common creature, Belltower Reaches family 6 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its monkey body. Design a tiny songcat familiar: a compact cream-and-soft-gray kitten-like body with an oversized round head, large friendly sky-blue glassy eyes, two wide triangular ears with pale-blue inner panels, four short paws, one curled tail, a small ivory brow tuft, three subtle dark note-shaped spots on the flanks, and one round aged-brass bell physically fixed to a blue collar at the chest. This begins the Chantling and Hymnkeeper line, so the clear bell collar and musical markings are defining motifs, but it must remain a living animal rather than a human singer, plush toy, or inanimate bell. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and brass, controlled eye glow. Full body centered in a calm attentive standing pose with mouth closed, consistent three-quarter front view, both ears, all four paws, full curled tail, collar, and attached bell visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, stage, ground plane, cast shadow, scenery, text, logo, border, musical notes floating in air, sound waves, microphone, detached bells, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 214 — Teawarden
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-214-teawarden-source.png`
+- Final: `sprites/final/af-214-teawarden.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: TEAWARDEN, grass-element evolved creature, Belltower Reaches family 5 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Sprigling family ancestor. Evolve Sprigling while unmistakably preserving its warm-brown dormouse-like living body, cream muzzle and belly, moss-green eyes, leaf-shaped ears, short paws, curled twig tail with tea leaves, sprout crest, and brass teacup charm. Develop it into a larger gentle tea-grove guardian with a slightly taller sturdy body, broader layered jade leaf ears with weathered-brass veins, a five-leaf crown sprout, cream cheek ruffs, stronger paws with simple brass wrist rings, a longer double-curled twig tail ending in a fan of five opaque tea leaves, pale-green vine markings along the shoulders, and a larger engraved teacup charm holding one emerald tea stone. It must clearly be the same living creature one stage older, wise but not humanoid, a plant pot, or ordinary wildlife. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp leaf and fur-ceramic facets, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm neutral standing pose, same three-quarter front camera as the ancestor, all leaf-ear, crown, paw, tail, and chest-charm tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, teacup, table, branch, ground plane, cast shadow, scenery, text, logo, border, loose leaves, steam, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 217 — Chantling
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-217-chantling-source.png`
+- Final: `sprites/final/af-217-chantling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: CHANTLING, normal-element evolved creature, Belltower Reaches family 6 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Bellkit family ancestor. Evolve Bellkit while unmistakably preserving its cream-and-soft-gray songcat body, friendly sky-blue eyes, wide triangular ears with pale-blue panels, four paws, curled tail, ivory brow tuft, dark note-shaped flank markings, blue collar, and attached round brass bell. Develop it into a poised adolescent songcat with a taller graceful feline body, longer wing-like ears, a swept triple ivory crest, stronger paws, a longer double-curled tail, richer pale-blue scroll markings across cheeks and flanks, two simple brass ankle rings, a layered blue collar, and three small engraved brass bells physically fixed along the collar with one sapphire voice stone. It must clearly be the same living animal one stage older, musical without becoming a human singer, plush toy, or inanimate bell. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp fur-ceramic planes, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm attentive standing pose with mouth closed, same three-quarter front camera as the ancestor, all ear, crest, paw, tail, collar, and attached-bell tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, stage, ground plane, cast shadow, scenery, text, logo, border, musical notes floating in air, sound waves, microphone, detached bells, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 215 — Groveabbot
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-215-groveabbot-source.png`
+- Final: `sprites/final/af-215-groveabbot.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GROVEABBOT, grass-element elite creature, Belltower Reaches family 5 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Teawarden family ancestor. Evolve Teawarden while unmistakably preserving its warm-brown dormouse-like body, cream muzzle and belly, moss-green eyes, grand leaf ears with brass veins, crown sprout, cream cheek ruffs, strong paws with brass rings, long curled twig tail with tea leaves, pale-green vine markings, and engraved teacup charm with emerald stone. Develop it into a serene adult grove abbot with a taller powerful but gentle beast body, enormous layered jade tea-leaf ears, a seven-leaf crown crest, fuller ivory cheek and shoulder ruffs, broad paws with ornate brass cuffs, richer vine-scroll markings across shoulders and flanks, a long triple-curled branch tail ending in a fan of seven opaque leaves, and a large ceremonial teacup reliquary fixed at the chest holding three emerald tea stones. It must clearly be the same living creature at its final stage, wise but below sentinel/boss density, never humanoid, a plant pot, or ordinary wildlife. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp leaf, fur-ceramic, and brass facets, selective metal wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a calm proud standing pose, same three-quarter front camera as the ancestor, all leaf-ear, crown, paw, tail, leaf-fan, and attached-reliquary tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, teacup on the ground, table, branch, ground plane, cast shadow, scenery, text, logo, border, loose leaves, steam, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 218 — Hymnkeeper
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-218-hymnkeeper-source.png`
+- Final: `sprites/final/af-218-hymnkeeper.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: HYMNKEEPER, normal-element elite creature, Belltower Reaches family 6 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Chantling family ancestor. Evolve Chantling while unmistakably preserving its cream-and-soft-gray songcat body, sky-blue eyes, long wing-like ears with blue panels, swept ivory crest, four strong paws, long curled tail, pale-blue cheek and flank scroll markings, brass ankle rings, layered blue collar, attached bells, and sapphire voice stone. Develop it into a majestic adult hymn guardian with a taller regal feline body, grand feathered wing-ear panels, a five-blade ivory head crest, broader paws with engraved brass ankle cuffs, richer pale-blue and charcoal song-scroll markings across the body, a long triple-curled tail, an ornate layered blue-and-brass collar holding five attached ceremonial bells, and three sapphire voice stones aligned across the throat and breast. It must clearly be the same living animal at its final stage, musical but below sentinel/boss density, never a human singer, plush toy, or inanimate bell. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp fur-ceramic and metal facets, selective metal wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a calm proud standing pose with mouth closed, same three-quarter front camera as the ancestor, all ear, crest, paw, tail, collar, and attached-bell tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, stage, ground plane, cast shadow, scenery, text, logo, border, musical notes floating in air, sound waves, microphone, detached bells, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 301 — Saltling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-301-saltling-source.png`
+- Final: `sprites/final/af-301-saltling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SALTLING, water-element common creature, Drowned Expanse family 1 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its songcat body. Design a tiny brine-seal cadet: a compact deep-teal seal-pup body with an oversized rounded head, large friendly navy glassy eyes, a cream muzzle and belly, two short fore-flippers, two small hind flippers, a stubby forked tail, two pale salt-crystal whisker plates on each cheek, one small ivory wave crest, and an aged-brass anchor badge fixed at the chest. This begins the Brinekin and Tidemarshal line, so the salt plates, seal body, and maritime badge are its defining motifs, but it must remain a living creature rather than a sailor, toy, or ordinary seal. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered hide-ceramic and brass, controlled eye glow. Full body centered in a calm alert standing-swim pose with all four flippers visible, consistent three-quarter front view, all crest, whisker, flipper, tail, and badge tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, beach, ship, ground plane, cast shadow, scenery, text, logo, border, bubbles, splashes, salt spray, weapon, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 304 — Floeling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-304-floeling-source.png`
+- Final: `sprites/final/af-304-floeling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FLOELING, ice-element common creature, Drowned Expanse family 2 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its songcat body. Design a tiny iceberg-turtle hatchling: a compact midnight-blue turtle body with an oversized friendly round head, large sapphire glassy eyes, a cream jaw, four short paddle feet, a tiny tail, a thick faceted pale-cyan ice-floe shell with an ivory rim, two small translucent-looking but fully opaque ice fins on the cheeks, and one aged-silver snowflake stud fixed at the forehead. This begins the Glacikin and Bergsovereign line, so the floating-ice shell is its defining motif, but it must remain a living turtle-like creature rather than a rock, vehicle, or ordinary sea turtle. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered hide-ceramic, frosted opaque ice, and small metal accent, controlled eye glow. Full body centered in a calm sturdy standing pose, consistent three-quarter front view, head, all four paddle feet, full shell, cheek fins, tail, and forehead stud visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, snowbank, iceberg scenery, ground plane, cast shadow, text, logo, border, frost cloud, snowflakes, splashes, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 307 — Dredgling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-307-dredgling-source.png`
+- Final: `sprites/final/af-307-dredgling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DREDGLING, dark-element common creature, Drowned Expanse family 3 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its songcat body. Design a tiny abyssal eel-newt: a compact curved charcoal-indigo body with an oversized rounded head, large friendly amber-violet glassy eyes, a cream lower jaw, two small side fins, four tiny webbed feet, a short paddle tail, one stubby forehead lure physically attached by a dark stalk and ending in an amber lamp bead, and three aged-brass scale plates along the spine. This begins the Gloomeel and Abysswarden line, so the eel curve, lure, and abyssal armor are defining motifs, but it must remain a solid living creature rather than smoke, a realistic anglerfish, or a mechanical submarine. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered hide-ceramic and brass, controlled eye and lure glow. Full body centered in a neutral alert standing-swim pose, consistent three-quarter front view, both fins, all four feet, full tail, lure, and spine plates visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, teeth, gore, mist, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 302 — Brinekin
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-302-brinekin-source.png`
+- Final: `sprites/final/af-302-brinekin.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BRINEKIN, water-element evolved creature, Drowned Expanse family 1 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Saltling family ancestor. Evolve Saltling while unmistakably preserving its deep-teal brine-seal body, friendly navy eyes, cream muzzle and belly, four flippers, forked tail, pale salt-crystal cheek whiskers, ivory wave crest, and attached brass anchor badge. Develop it into a larger confident brine guardian with a longer powerful seal body, broader fore-flippers with simple brass cuffs, stronger hind flippers, a larger split tail, three salt-crystal whisker plates on each cheek, a swept double-wave ivory crest, layered teal shoulder plates, pale-blue tide markings along the flanks, and a larger engraved anchor medallion holding one sapphire brine stone. It must clearly be the same living creature one stage older, maritime without becoming a sailor, toy, or ordinary seal. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp hide-ceramic, salt crystal, and metal facets, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm alert standing-swim pose with all four flippers visible, same three-quarter front camera as the ancestor, all crest, whisker, flipper, tail, and attached-medallion tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, beach, ship, ground plane, cast shadow, scenery, text, logo, border, bubbles, splashes, salt spray, weapon, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 305 — Glacikin
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-305-glacikin-source.png`
+- Final: `sprites/final/af-305-glacikin.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GLACIKIN, ice-element evolved creature, Drowned Expanse family 2 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Floeling family ancestor. Evolve Floeling while unmistakably preserving its midnight-blue turtle body, sapphire eyes, cream jaw, four paddle feet, tiny tail, faceted pale-cyan ice-floe shell with ivory rim, opaque ice cheek fins, and silver forehead snowflake. Develop it into a larger sturdy glacier turtle with a broader head and neck, stronger paddle feet with ivory claws, larger triple-pronged cheek fins, a high layered shell of opaque pale-blue glacier facets over a deep-blue core, weathered-silver shell bands, a swept ice brow crest, two aligned snowflake studs, and one sapphire frost stone set at the shell front. It must clearly be the same living turtle-like creature one stage older, never a rock, vehicle, or ordinary sea turtle. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp frosted ice and hide-ceramic facets, restrained metal wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm sturdy standing pose, same three-quarter front camera as the ancestor, head, all four paddle feet, full glacier shell, cheek fins, crest, tail, and studs visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, snowbank, iceberg scenery, ground plane, cast shadow, text, logo, border, frost cloud, snowflakes, splashes, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 308 — Gloomeel
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-308-gloomeel-source.png`
+- Final: `sprites/final/af-308-gloomeel.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GLOOMEEL, dark-element evolved creature, Drowned Expanse family 3 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Dredgling family ancestor. Evolve Dredgling while unmistakably preserving its charcoal-indigo eel-newt body, friendly amber-violet eyes, cream lower jaw, side fins, four webbed feet, paddle tail, attached forehead lamp lure, and aged-brass spine plates. Develop it into a longer stronger abyssal eel with a sinuous low body, larger webbed feet, broad violet side fins, a longer blade-shaped paddle tail, a double-curved lure stalk ending in a brighter amber lamp bead, five layered brass dorsal plates, subtle purple scale bands, and two amber abyss stones set into the first and last spine plates. It must clearly be the same solid living creature one stage older, eerie without becoming smoke, a realistic anglerfish, monster gore, or a mechanical submarine. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp hide-ceramic and brass facets, restrained wear, controlled eye, lure, and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing-swim pose, same three-quarter front camera as the ancestor, both fins, all four feet, full tail, lure, and every spine plate visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, teeth, gore, mist, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 303 — Tidemarshal
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-303-tidemarshal-source.png`
+- Final: `sprites/final/af-303-tidemarshal.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: TIDEMARSHAL, water-element elite creature, Drowned Expanse family 1 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Brinekin family ancestor. Evolve Brinekin while unmistakably preserving its deep-teal brine-seal body, navy eyes, cream muzzle and belly, four strong flippers, split tail, salt-crystal cheek whiskers, double-wave ivory crest, teal shoulder plates, pale tide markings, brass flipper cuffs, and anchor medallion with sapphire stone. Develop it into a proud adult tide marshal with a longer powerful seal body, broad plated fore-flippers, grand forked tail fins, four salt-crystal whisker blades on each cheek, a triple-wave ivory crown crest, layered teal-and-brass shoulder and breast armor, richer pale-blue tide-scroll markings, ornate engraved flipper cuffs, and a large ceremonial anchor reliquary fixed at the chest holding three sapphire brine stones. It must clearly be the same living creature at its final stage, commanding but below sentinel/boss density, maritime without becoming a sailor, weapon-bearing humanoid, or ordinary seal. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp hide-ceramic, salt crystal, and metal facets, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud alert standing-swim pose with all four flippers visible, same three-quarter front camera as the ancestor, all crest, whisker, flipper, tail, and attached-reliquary tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, beach, ship, ground plane, cast shadow, scenery, text, logo, border, bubbles, splashes, salt spray, weapon, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 306 — Bergsovereign
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-306-bergsovereign-source.png`
+- Final: `sprites/final/af-306-bergsovereign.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BERGSOVEREIGN, ice-element elite creature, Drowned Expanse family 2 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Glacikin family ancestor. Evolve Glacikin while unmistakably preserving its midnight-blue glacier-turtle body, sapphire eyes, cream jaw, four powerful paddle feet, tail, triple-pronged ice cheek fins, high faceted glacier shell, weathered-silver shell bands, ice brow crest, snowflake studs, and sapphire frost stone. Develop it into a majestic adult iceberg sovereign with a broader armored head and neck, enormous paddle feet with ivory claws, grand five-pronged cheek fins, a towering crown-shaped shell of layered opaque blue-white glacier peaks over a deep-blue core, ornate but restrained silver structural bands, a triple-blade ice brow crown, three aligned snowflake studs, and three sapphire frost stones set across the shell front and sides. It must clearly be the same living turtle-like creature at its final stage, sovereign but below sentinel/boss density, never a rock formation, vehicle, or ordinary sea turtle. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp frosted ice, hide-ceramic, and silver facets, selective metal wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud sturdy standing pose, same three-quarter front camera as the ancestor, head, all four paddle feet, full glacier shell, cheek fins, crest, tail, studs, and stones visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, snowbank, iceberg scenery, ground plane, cast shadow, text, logo, border, frost cloud, snowflakes, splashes, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 309 — Abysswarden
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-309-abysswarden-source.png`
+- Final: `sprites/final/af-309-abysswarden.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: ABYSSWARDEN, dark-element elite creature, Drowned Expanse family 3 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Gloomeel family ancestor. Evolve Gloomeel while unmistakably preserving its charcoal-indigo eel-newt body, amber-violet eyes, cream jaw, violet side fins, four strong webbed feet, long blade paddle tail, double-curved attached lamp lure, layered brass dorsal plates, purple scale bands, and amber abyss stones. Develop it into a majestic adult abyss guardian with a longer muscular sinuous body, broad five-lobed side fins, larger armored webbed feet, a grand double-blade tail, a triple-curved crown lure ending in one large amber lamp bead, seven ornate weathered-brass dorsal plates continuing onto the tail, richer violet scale bands, and five amber abyss stones aligned across the lure base and spine. It must clearly be the same solid living creature at its final stage, ominous but below sentinel/boss density, never smoke, a realistic anglerfish, monster gore, or a mechanical submarine. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp hide-ceramic and brass facets, selective wear, controlled eye, lure, and gem glow, grand but readable silhouette. Full body centered in a proud neutral standing-swim pose, same three-quarter front camera as the ancestor, both fins, all four feet, full tail, lure, and every spine plate visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, teeth, gore, mist, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 310 — Driftgeist
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-310-driftgeist-source.png`
+- Final: `sprites/final/af-310-driftgeist.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DRIFTGEIST, ghost-element common creature, Drowned Expanse family 4 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its seal body. Design a tiny shipwreck seahorse ghost: a compact solid charcoal-blue sea-drake body with an oversized friendly ivory mask-like face, large cyan-violet glassy eyes, two short driftwood antler nubs, two small opaque torn-sail side fins edged in aged brass, two tiny clawed forefeet, a curled seahorse tail, three barnacle-like ivory studs, and one miniature brass ship-wheel charm physically fixed at the chest. This begins the Wreckwraith and Drowned King line, so driftwood crown, sail fins, and ship-wheel relic are defining motifs, but it must remain a solid living ghost creature rather than smoke, a human corpse, or a miniature ship. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered hide-ceramic, driftwood, and brass, controlled eye glow. Full body centered in a neutral alert standing-hover pose with forefeet visible, consistent three-quarter front view, all antler, fin, foot, curled-tail, stud, and charm tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, shipwreck, seabed, ground plane, cast shadow, scenery, text, logo, border, mist, smoke, bubbles, detached debris, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 313 — Finwyrm
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-313-finwyrm-source.png`
+- Final: `sprites/final/af-313-finwyrm.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FINWYRM, dragon-element common creature, Drowned Expanse family 5 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its seal body. Design a tiny sea-dragon hatchling: a compact turquoise-and-cream serpentine dragon body with an oversized friendly head, large deep-blue glassy eyes, two short ivory coral horns, two broad opaque pale-blue wing-like side fins, four small webbed claw feet, a curled finned tail, three darker teal scale plates along the spine, and one aged-brass spiral shell stud fixed at the chest. This begins the Seawyrm and Maelstrom Wyrm line, so the coral horns, wing fins, and curled aquatic dragon body are defining motifs, but it must remain a living creature rather than a fish, ordinary lizard, or mechanical sea serpent. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered scale-ceramic and brass, controlled eye glow. Full body centered in a neutral alert standing-swim pose, consistent three-quarter front view, both horns, both side fins, all four feet, full curled tail, spine plates, and chest stud visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, reef, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, splashes, lightning, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 316 — Kelpling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-316-kelpling-source.png`
+- Final: `sprites/final/af-316-kelpling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: KELPLING, grass-element common creature, Drowned Expanse family 6 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its seal body. Design a tiny kelp-seahare familiar: a compact warm-brown rounded marine-mammal body with an oversized friendly head, large amber-green glassy eyes, a cream muzzle and belly, two long olive kelp-blade ears, four short webbed feet, a stubby tail ending in three opaque jade fronds, two small kelp shoulder leaves, and one aged-brass mooring-ring charm fixed at the chest. This begins the Wrackweed and Sargasso Shade line, so the kelp ears, frond tail, and mooring ring are defining motifs, but it must remain a solid living creature rather than loose seaweed, a plant pile, or ordinary sea hare. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic, opaque kelp, and brass, controlled eye glow. Full body centered in a calm neutral standing-swim pose, consistent three-quarter front view, both kelp ears, all four feet, shoulder leaves, full tail fronds, and chest ring visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, beach, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, loose seaweed, mist, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 311 — Wreckwraith
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-311-wreckwraith-source.png`
+- Final: `sprites/final/af-311-wreckwraith.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WRECKWRAITH, ghost-element evolved creature, Drowned Expanse family 4 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Driftgeist family ancestor. Evolve Driftgeist while unmistakably preserving its solid charcoal-blue shipwreck seahorse body, friendly ivory mask face, cyan-violet eyes, driftwood antler nubs, opaque torn-sail side fins with brass edges, clawed forefeet, curled tail, barnacle studs, and attached ship-wheel charm. Develop it into a larger wreck spirit with a taller armored seahorse torso, a longer ivory prow-like mask, branching driftwood crown antlers, broader layered sail fins held by weathered-brass ribs, stronger foreclaws, a longer double-curled tail, five ivory barnacle studs, dark-blue hull-like side plates, and a larger engraved ship-wheel relic fixed at the chest holding one amethyst wreck stone. It must clearly be the same solid living ghost creature one stage older, eerie without becoming smoke, a human corpse, or a miniature ship. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp ceramic, driftwood, sail-cloth, and brass facets, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing-hover pose with forefeet visible, same three-quarter front camera as the ancestor, all antler, fin, foot, curled-tail, barnacle, and attached-relic tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, shipwreck, seabed, ground plane, cast shadow, scenery, text, logo, border, mist, smoke, bubbles, detached debris, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 314 — Seawyrm
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-314-seawyrm-source.png`
+- Final: `sprites/final/af-314-seawyrm.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SEAWYRM, dragon-element evolved creature, Drowned Expanse family 5 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Finwyrm family ancestor. Evolve Finwyrm while unmistakably preserving its turquoise-and-cream aquatic dragon body, deep-blue eyes, ivory coral horns, pale-blue wing-like side fins, four webbed claw feet, curled finned tail, dark teal spine plates, and brass spiral-shell chest stud. Develop it into a longer agile sea dragon with a taller neck and sinuous body, branching coral horns, broader double-lobed side fins, stronger webbed feet, a longer double-curled tail with a blade fin, five layered teal dorsal plates, pale-blue tide markings across shoulders and flanks, two simple brass ankle rings, and a larger spiral-shell medallion holding one sapphire current stone. It must clearly be the same living creature one stage older, draconic without becoming an ordinary fish, lizard, or mechanical sea serpent. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp scale-ceramic, fin, and metal facets, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a neutral alert standing-swim pose, same three-quarter front camera as the ancestor, all horns, side fins, four feet, full tail, spine plates, rings, and chest medallion visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, reef, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, splashes, lightning, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 317 — Wrackweed
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-317-wrackweed-source.png`
+- Final: `sprites/final/af-317-wrackweed.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: WRACKWEED, grass-element evolved creature, Drowned Expanse family 6 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Kelpling family ancestor. Evolve Kelpling while unmistakably preserving its warm-brown kelp-seahare body, amber-green eyes, cream muzzle and belly, olive kelp-blade ears, four webbed feet, frond-tipped tail, shoulder leaves, and attached brass mooring-ring charm. Develop it into a larger sturdy wrack beast with a longer low body, broader double-layer kelp ears with aged-brass veins, stronger webbed feet with simple brass ankle rings, a longer curled tail ending in a fan of five opaque jade fronds, layered kelp shoulder and back leaves, pale-olive tide-vine markings along the flanks, and a larger engraved mooring ring fixed at the chest holding one emerald sargassum stone. It must clearly be the same solid living creature one stage older, overgrown without becoming loose seaweed, a plant pile, or ordinary sea hare. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp fur-ceramic, opaque kelp, and brass facets, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm neutral standing-swim pose, same three-quarter front camera as the ancestor, all kelp-ear, foot, back-leaf, tail-frond, ring, and stone tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, beach, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, loose seaweed, mist, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 312 — Drowned King
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-312-drowned-king-source.png`
+- Final: `sprites/final/af-312-drowned-king.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DROWNED KING, ghost-element elite creature, Drowned Expanse family 4 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Wreckwraith family ancestor. Evolve Wreckwraith while unmistakably preserving its solid charcoal-blue shipwreck seahorse body, ivory prow-mask, cyan-violet eyes, branching driftwood antlers, opaque torn-sail fins with brass ribs, strong foreclaws, curled armored tail, barnacle studs, hull-like side plates, and ship-wheel relic with amethyst stone. Develop it into a majestic adult drowned monarch with a taller powerful seahorse torso, a crowned elongated ivory prow mask, grand many-branched driftwood antlers, enormous layered wreck-sail fins held by ornate weathered-brass ribs, armored foreclaws, a long triple-curled tail plated like a ship hull, seven ivory barnacle studs, layered navy breast armor, and a large royal ship-wheel reliquary fixed at the chest holding three amethyst wreck stones. It must clearly be the same solid living ghost creature at its final stage, regal but below sentinel/boss density, never smoke, a human corpse, or a miniature ship. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp ceramic, driftwood, sail-cloth, and brass facets, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud neutral standing-hover pose with forefeet visible, same three-quarter front camera as the ancestor, all antler, fin, foot, curled-tail, barnacle, and attached-reliquary tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, shipwreck, seabed, ground plane, cast shadow, scenery, text, logo, border, crown floating separately, mist, smoke, bubbles, detached debris, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 315 — Maelstrom Wyrm
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-315-maelstrom-wyrm-source.png`
+- Final: `sprites/final/af-315-maelstrom-wyrm.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: MAELSTROM WYRM, dragon-element elite creature, Drowned Expanse family 5 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Seawyrm family ancestor. Evolve Seawyrm while unmistakably preserving its turquoise-and-cream aquatic dragon body, deep-blue eyes, branching ivory coral horns, broad pale-blue side fins, four strong webbed feet, long curled finned tail, layered teal dorsal plates, pale-blue tide markings, brass ankle rings, and spiral-shell medallion with sapphire stone. Develop it into a majestic adult maelstrom dragon with a taller powerful neck and sinuous body, a grand crown of branching coral horns, enormous triple-lobed wing fins with ivory frames, broad armored webbed feet, a long triple-curled tail ending in a double blade fin, seven ornate deep-teal dorsal plates, richer white-blue current-scroll markings, engraved brass ankle cuffs, and a large spiral-shell reliquary fixed at the chest holding three sapphire current stones. It must clearly be the same living creature at its final stage, stormlike but below sentinel/boss density, never an ordinary fish, lizard, or mechanical sea serpent. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp scale-ceramic, fin, and brass facets, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud neutral standing-swim pose, same three-quarter front camera as the ancestor, all horns, side fins, four feet, full tail, dorsal plates, cuffs, and attached-reliquary tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, reef, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, splashes, lightning, whirlpool, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 318 — Sargasso Shade
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-318-sargasso-shade-source.png`
+- Final: `sprites/final/af-318-sargasso-shade.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SARGASSO SHADE, grass-element elite creature, Drowned Expanse family 6 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Wrackweed family ancestor. Evolve Wrackweed while unmistakably preserving its solid warm-brown kelp-seahare body, amber-green eyes, cream muzzle and belly, broad kelp ears with brass veins, four strong webbed feet, curled frond tail, layered kelp mantle, olive tide-vine markings, brass ankle rings, and mooring-ring medallion with emerald stone. Develop it into a majestic adult sargassum guardian with a longer powerful low body, enormous triple-layer olive and jade kelp ears, broad webbed feet with engraved brass cuffs, a dense but readable mantle of opaque kelp leaves across shoulders and spine, a long triple-curled branchlike tail ending in a fan of seven jade fronds, richer tide-vine scroll markings, and a large mooring-ring reliquary fixed at the chest holding three emerald sargassum stones. It must clearly be the same solid living creature at its final stage, shadowy but below sentinel/boss density, never smoke, loose seaweed, a plant pile, or ordinary sea hare. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp fur-ceramic, opaque kelp, and brass facets, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a calm proud standing-swim pose, same three-quarter front camera as the ancestor, all kelp-ear, foot, mantle-leaf, tail-frond, cuff, and attached-reliquary tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, water, beach, seabed, ground plane, cast shadow, scenery, text, logo, border, bubbles, loose seaweed, mist, smoke, aura, or particles. Solid perfectly uniform chroma-key magenta #ff00ff background; do not use magenta on the creature. Square image.
+```
+
+## 401 — Cogling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-401-cogling-source.png`
+- Final: `sprites/final/af-401-cogling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: COGLING, steel-element common creature, Foundry Peaks family 1 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its seal body. Design a tiny gear-pangolin familiar: a compact charcoal-gray living pangolin body with an oversized friendly rounded head, large sapphire glassy eyes, a cream muzzle, four short clawed feet, a curled tail made of overlapping dark-steel scale plates, two small aged-brass cog discs fixed behind the cheeks like ears, three simple steel back scales, and one blue rivet stone set at the chest. This begins the Gearwright and Foundry Warden line, so cog cheeks, plated back, and gearlike curled tail are defining motifs, but it must remain a living creature rather than a robot, vehicle, or loose machine part. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered hide-ceramic, steel, and brass, controlled eye and gem glow. Full body centered in a calm alert standing pose, consistent three-quarter front view, both cog ears, all four feet, every back scale, full curled tail, and chest stone visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, workshop, ground plane, cast shadow, scenery, text, logo, border, tools, loose gears, sparks, smoke, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 404 — Slagling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-404-slagling-source.png`
+- Final: `sprites/final/af-404-slagling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SLAGLING, rock-element common creature, Foundry Peaks family 2 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its seal body. Design a tiny cooled-slag beetle: a compact low charcoal-basalt beetle body with an oversized friendly armored head, large amber glassy eyes, two short blunt horn nubs, six sturdy dark legs, a rounded carapace made of three irregular matte black slag plates with thin dormant orange seams, an ivory lower jaw, and one aged-iron hexagonal clinker plate fixed at the forehead. This begins the Cindergolem and Basalt Engine line, so the heavy cooled-slag carapace and blunt horns are defining motifs, but it must remain a living rock beetle rather than a vehicle, pile of stones, or mechanical engine. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered basalt-ceramic and iron, controlled eye and seam glow. Full body centered in a calm sturdy standing pose, consistent three-quarter front view, both horn nubs, all six legs, full carapace, seam pattern, jaw, and forehead plate visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, forge, lava, ground plane, cast shadow, scenery, text, logo, border, flames, smoke, sparks, rubble, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 407 — Forgeling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-407-forgeling-source.png`
+- Final: `sprites/final/af-407-forgeling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FORGELING, fire-element common creature, Foundry Peaks family 3 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its seal body. Design a tiny copper forge salamander: a compact russet-copper living salamander body with an oversized friendly head, large bright amber glassy eyes, a cream lower jaw and belly, four short clawed feet, a curled tail ending in a dark-steel hammer-shaped fin, two small brass bellows-like cheek gills, three copper back plates, and one physically enclosed orange furnace stone set safely behind a dark-steel grate at the chest. This begins the Cruciburn and Smeltlord line, so bellows gills, hammer tail, and enclosed forge core are defining motifs, but it must remain a living creature rather than a tool, robot, or open furnace. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered scale-ceramic, copper, and steel, controlled eye and core glow. Full body centered in a calm ready standing pose, consistent three-quarter front view, both gills, all four feet, all back plates, full hammer tail, and enclosed chest core visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, forge room, lava, ground plane, cast shadow, scenery, text, logo, border, hammer held as a weapon, flames, smoke, sparks, molten splashes, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 402 — Gearwright
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-402-gearwright-source.png`
+- Final: `sprites/final/af-402-gearwright.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: GEARWRIGHT, steel-element evolved creature, Foundry Peaks family 1 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Cogling family ancestor. Evolve Cogling while unmistakably preserving its charcoal-gray living pangolin body, friendly sapphire eyes, cream muzzle, four clawed feet, curled plated tail, brass cog-disc ears, steel back scales, and blue chest rivet stone. Develop it into a larger sturdy gear pangolin with a longer armored body, broader paws with simple brass ankle rings, larger interlocking steel scales across the back and shoulders, double-layer brass cog ears, a longer tightly curled gearlike tail with an engraved brass hub, pale-blue rivet lines across the flanks, and three sapphire rivet stones aligned on the chest and tail hub. It must clearly be the same living creature one stage older, crafted without becoming a robot, vehicle, or loose machine assembly. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp hide-ceramic, steel, and brass facets, restrained wear, controlled eye and gem glow, stronger but readable silhouette. Full body centered in a calm alert standing pose, same three-quarter front camera as the ancestor, both cog ears, all four feet, every back scale, full curled tail, and all rivet stones visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, workshop, ground plane, cast shadow, scenery, text, logo, border, tools, loose gears, sparks, smoke, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 405 — Cindergolem
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-405-cindergolem-source.png`
+- Final: `sprites/final/af-405-cindergolem.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: CINDERGOLEM, rock-element evolved creature, Foundry Peaks family 2 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Slagling family ancestor. Evolve Slagling while unmistakably preserving its charcoal-basalt living beetle body, friendly amber eyes, blunt horn nubs, six sturdy legs, rounded cooled-slag carapace with dormant orange seams, ivory jaw, and iron hexagonal forehead plate. Develop it into a larger heavy slag beetle with a broader armored head, two forward-curving basalt horns, six thicker segmented legs with iron joint rings, a high carapace made of five irregular matte-black slag plates, restrained orange cinder seams, stronger ivory mandible plates, layered iron brow armor, and one enclosed ember stone set into the central carapace plate. It must clearly be the same living rock beetle one stage older, golem-like without becoming a vehicle, pile of stones, or mechanical engine. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp basalt-ceramic and iron facets, restrained wear, controlled eye, seam, and stone glow, stronger but readable silhouette. Full body centered in a calm sturdy standing pose, same three-quarter front camera as the ancestor, both horns, all six legs, full carapace, seams, jaw, brow armor, and ember stone visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, forge, lava, ground plane, cast shadow, scenery, text, logo, border, flames, smoke, sparks, rubble, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 408 — Cruciburn
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-408-cruciburn-source.png`
+- Final: `sprites/final/af-408-cruciburn.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: CRUCIBURN, fire-element evolved creature, Foundry Peaks family 3 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Forgeling family ancestor. Evolve Forgeling while unmistakably preserving its russet-copper living salamander body, friendly amber eyes, cream jaw and belly, four clawed feet, curled hammer-fin tail, brass bellows cheek gills, copper back plates, and enclosed orange furnace core behind a steel chest grate. Develop it into a larger powerful forge salamander with a longer muscular body, broader paws with dark-steel claws, larger double-bellows cheek gills, five layered copper-and-steel dorsal plates, a longer tail ending in a broad integrated hammerhead fin, simple brass ankle cuffs, pale-orange heat etchings on shoulders and flanks, and a larger safely enclosed crucible stone behind an engraved steel breast grate. It must clearly be the same living creature one stage older, forge-like without becoming a tool, robot, or open furnace. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp scale-ceramic, copper, brass, and steel facets, restrained wear, controlled eye and core glow, stronger but readable silhouette. Full body centered in a calm ready standing pose, same three-quarter front camera as the ancestor, both gills, all four feet, all dorsal plates, full hammer tail, cuffs, etchings, and enclosed core visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, forge room, lava, ground plane, cast shadow, scenery, text, logo, border, hammer held as a weapon, flames, smoke, sparks, molten splashes, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 403 — Foundry Warden
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-403-foundry-warden-source.png`
+- Final: `sprites/final/af-403-foundry-warden.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FOUNDRY WARDEN, steel-element elite creature, Foundry Peaks family 1 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Gearwright family ancestor. Evolve Gearwright while unmistakably preserving its charcoal-gray living pangolin body, sapphire eyes, cream muzzle, four strong clawed feet, interlocking steel back scales, double-layer brass cog ears, tightly curled gearlike tail with brass hub, pale-blue rivet lines, brass ankle rings, and sapphire rivet stones. Develop it into a majestic adult foundry guardian with a longer powerful armored body, broad paws with engraved brass cuffs, grand overlapping dark-steel scales across head, shoulders, back, and tail, triple-layer cog-disc ears, a massive tightly curled tail resembling a shield gear while still organically attached, richer blue rivet tracery across the flanks, and five sapphire rivet stones aligned from breast to tail hub. It must clearly be the same living creature at its final stage, imposing but below sentinel/boss density, never a robot, vehicle, or loose machine assembly. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp hide-ceramic, steel, and brass facets, selective wear, controlled eye and gem glow, grand but readable silhouette. Full body centered in a proud calm standing pose, same three-quarter front camera as the ancestor, both cog ears, all four feet, every back scale, full curled tail, cuffs, and all rivet stones visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, workshop, ground plane, cast shadow, scenery, text, logo, border, tools, loose gears, sparks, smoke, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 406 — Basalt Engine
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-406-basalt-engine-source.png`
+- Final: `sprites/final/af-406-basalt-engine.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BASALT ENGINE, rock-element elite creature, Foundry Peaks family 2 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Cindergolem family ancestor. Evolve Cindergolem while unmistakably preserving its charcoal-basalt living beetle body, amber eyes, forward-curving horns, six segmented legs with iron rings, high cooled-slag carapace, restrained orange seams, ivory mandibles, iron brow armor, and enclosed ember stone. Develop it into a colossal-looking but sprite-scaled adult slag beetle with a broader armored head, grand triple-pronged basalt horns, six massive segmented legs with engraved iron joint bands, a high carapace of seven interlocking matte-black basalt plates, controlled orange cinder seams, reinforced ivory mandibles, layered dark-iron face armor, and three enclosed ember stones set across the carapace centerline. It must clearly be the same living rock beetle at its final stage, engine-like in strength but below sentinel/boss density, never a vehicle, pile of stones, or literal machine. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp basalt-ceramic and iron facets, selective wear, controlled eye, seam, and stone glow, grand but readable silhouette. Full body centered in a proud sturdy standing pose, same three-quarter front camera as the ancestor, all horn tips, all six legs, full carapace, seams, mandibles, face armor, bands, and stones visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, forge, lava, ground plane, cast shadow, scenery, text, logo, border, flames, smoke, sparks, rubble, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 409 — Smeltlord
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-409-smeltlord-source.png`
+- Final: `sprites/final/af-409-smeltlord.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SMELTLORD, fire-element elite creature, Foundry Peaks family 3 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Cruciburn family ancestor. Evolve Cruciburn while unmistakably preserving its russet-copper living salamander body, amber eyes, cream jaw and belly, four powerful clawed feet, integrated hammerhead tail, double-bellows cheek gills, layered copper-and-steel dorsal plates, brass ankle cuffs, orange heat etchings, and safely enclosed crucible core behind a steel breast grate. Develop it into a majestic adult smelt guardian with a longer muscular body, broad armored paws, grand triple-bellows brass cheek gills, seven ornate copper-and-dark-steel dorsal plates, a long segmented tail ending in an enormous integrated double-faced hammer fin, engraved brass limb cuffs, richer controlled heat-scroll etchings across shoulders and flanks, and a large enclosed furnace reliquary fixed at the breast holding three orange smelt stones behind an ornate steel grate. It must clearly be the same living creature at its final stage, forge-lord-like but below sentinel/boss density, never a humanoid, tool, robot, or open furnace. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp scale-ceramic, copper, brass, and steel facets, selective wear, controlled eye and core glow, grand but readable silhouette. Full body centered in a proud ready standing pose, same three-quarter front camera as the ancestor, all gill, foot, dorsal-plate, hammer-tail, cuff, etching, and enclosed-core tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, forge room, lava, ground plane, cast shadow, scenery, text, logo, border, hammer held as a weapon, flames, smoke, sparks, molten splashes, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 410 — Drillkin
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-410-drillkin-source.png`
+- Final: `sprites/final/af-410-drillkin.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DRILLKIN, ground-element common creature, Foundry Peaks family 4 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its pangolin body. Design a tiny drill-mole familiar: a compact umber-brown living mole body with an oversized friendly head, large amber glassy eyes, two small rounded ears, four short digging paws with dark-steel claws, a stubby tail, one short conical dark-steel drill horn organically fixed above the nose, three charcoal back plates, and one aged-brass hex-bolt stud fixed at the chest. This begins the Boreback and Quarry Titan line, so the integrated drill horn, digging paws, and back plates are defining motifs, but it must remain a living mole-like creature rather than a machine, vehicle, or handheld drill. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic, steel, and brass, controlled eye glow. Full body centered in a calm ready crouched-standing pose, consistent three-quarter front view, both ears, all four paws, drill horn, all back plates, full tail, and chest stud visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, mine, tunnel, ground plane, cast shadow, scenery, text, logo, border, loose rocks, dirt cloud, sparks, tool, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 413 — Sparkrivet
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-413-sparkrivet-source.png`
+- Final: `sprites/final/af-413-sparkrivet.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SPARKRIVET, electric-element common creature, Foundry Peaks family 5 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its pangolin body. Design a tiny spark-ferret familiar: a compact golden-yellow and charcoal living ferret body with an oversized friendly head, large electric-blue glassy eyes, two short triangular ears edged in dark steel, four small paws, a long curled tail ending in an integrated open-ring wrench shape made from two hornlike tips, three blue rivet spots along each flank, two aged-brass coil bands fixed around the tail base, and one sapphire spark stud set at the forehead. This begins the Voltwrench and Dynamo Sage line, so the rivet spots, coil bands, and wrenchlike living tail are defining motifs, but it must remain a living animal rather than a tool, robot, or battery. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic, steel, and brass, controlled eye and stud glow. Full body centered in a calm alert standing pose, consistent three-quarter front view, both ears, all four paws, full curled tail and its horn tips, every rivet spot, coil band, and forehead stud visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, workshop, ground plane, cast shadow, scenery, text, logo, border, loose tools, lightning bolts, sparks, cables, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 416 — Fumeling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-416-fumeling-source.png`
+- Final: `sprites/final/af-416-fumeling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: FUMELING, poison-element common creature, Foundry Peaks family 6 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its pangolin body. Design a tiny soot-toad familiar: a compact round charcoal-violet living toad body with an oversized friendly face, large amber-lilac glassy eyes, a cream lower jaw and belly, four short sturdy feet, two stubby chimney-shaped horn tubes growing from the shoulders with dark-brass rims, three matte soot plates across the back, subtle violet poison spots, and one aged-brass circular filter charm physically fixed at the chest. This begins the Sootbelch and Smogreeve line, so chimney horns, soot plates, and filter charm are defining motifs, but it must remain a solid living toad rather than smoke, a gas cloud, robot, or industrial appliance. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered skin-ceramic, soot, and brass, controlled eye glow. Full body centered in a calm neutral crouched-standing pose with mouth closed, consistent three-quarter front view, both chimney horns, all four feet, all soot plates, every poison spot, and filter charm visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, factory, pipework, ground plane, cast shadow, scenery, text, logo, border, smoke, fumes, gas cloud, bubbles, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 411 — Boreback
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-411-boreback-source.png`
+- Final: `sprites/final/af-411-boreback.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: BOREBACK, ground-element evolved creature, Foundry Peaks family 4 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Drillkin family ancestor. Evolve Drillkin while unmistakably preserving its umber-brown living mole body, friendly amber eyes, rounded ears, four digging paws with steel claws, stubby tail, integrated conical drill horn, charcoal back plates, and brass hex-bolt chest stud. Develop it into a larger low-slung bore beast with a broader armored head, a longer three-segment dark-steel drill horn organically fixed above the nose, huge digging forepaws, stronger hind paws, five overlapping charcoal back plates, simple aged-brass wrist bands, pale ochre strata markings across the shoulders and flanks, and three amber quarry stones aligned on forehead, chest, and first back plate. It must clearly be the same living mole-like creature one stage older, earthmoving without becoming a machine, vehicle, or handheld drill. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp fur-ceramic, steel, and brass facets, restrained wear, controlled eye and stone glow, stronger but readable silhouette. Full body centered in a calm ready crouched-standing pose, same three-quarter front camera as the ancestor, both ears, all four paws, drill horn, every back plate, full tail, bands, markings, and stones visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, mine, tunnel, ground plane, cast shadow, scenery, text, logo, border, loose rocks, dirt cloud, sparks, tool, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 414 — Voltwrench
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-414-voltwrench-source.png`
+- Final: `sprites/final/af-414-voltwrench.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: VOLTWRENCH, electric-element evolved creature, Foundry Peaks family 5 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Sparkrivet family ancestor. Evolve Sparkrivet while unmistakably preserving its golden-yellow and charcoal living ferret body, friendly electric-blue eyes, steel-edged ears, four paws, long curled open-ring wrenchlike tail with horn tips, blue rivet spots, brass coil bands, and sapphire forehead stud. Develop it into a larger agile voltage ferret with a longer athletic body, taller steel-edged ears, stronger paws with simple brass ankle rings, a long double-curled tail ending in a broader organic open ring with two gold-capped horn tips, richer charcoal lightning-chevron fur zones, five sapphire rivet stones along each flank, three engraved brass coil bands around the tail base, and three sapphire spark stones aligned on forehead and chest. It must clearly be the same living animal one stage older, engineered-looking without becoming a tool, robot, cable, or battery. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp fur-ceramic, steel, and brass facets, restrained wear, controlled eye and stone glow, stronger but readable silhouette. Full body centered in a calm alert standing pose, same three-quarter front camera as the ancestor, both ears, all four paws, full curled tail and horn tips, every rivet stone, coil band, ankle ring, and spark stone visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, workshop, ground plane, cast shadow, scenery, text, logo, border, loose tools, lightning bolts, sparks, cables, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 417 — Sootbelch
+
+- Mix: 80% Relicforge / 20% Arcane Alloy
+- Source: `sprites/source/af-417-sootbelch-source.png`
+- Final: `sprites/final/af-417-sootbelch.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SOOTBELCH, poison-element evolved creature, Foundry Peaks family 6 form II. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Fumeling family ancestor. Evolve Fumeling while unmistakably preserving its round charcoal-violet living toad body, amber-lilac eyes, cream jaw and belly, four sturdy feet, brass-rimmed chimney shoulder horns, matte soot back plates, violet poison spots, and attached circular filter charm. Develop it into a larger broad soot toad with a heavier crouched body, two taller segmented chimney horns fixed at the shoulders, four smaller closed vent nubs along the back, five layered soot plates, larger violet poison spots, stronger feet with simple dark-brass ankle rings, an engraved brass throat collar, and a larger circular filter relic fixed at the chest holding one amethyst toxin stone. It must clearly be the same solid living toad one stage older, industrial without becoming smoke, a gas cloud, robot, or appliance. Relicforge/Arcane blend 80/20, evolved tier, 4-5 clean material zones, chunky hand-painted collectible-miniature proportions, crisp skin-ceramic, soot, and brass facets, restrained wear, controlled eye and stone glow, stronger but readable silhouette. Full body centered in a calm neutral crouched-standing pose with mouth closed, same three-quarter front camera as the ancestor, all chimney, vent, foot, soot-plate, poison-spot, collar, and attached-filter tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, factory, pipework, ground plane, cast shadow, scenery, text, logo, border, smoke, fumes, gas cloud, bubbles, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 412 — Quarry Titan
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-412-quarry-titan-source.png`
+- Final: `sprites/final/af-412-quarry-titan.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: QUARRY TITAN, ground-element elite creature, Foundry Peaks family 4 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Boreback family ancestor. Evolve Boreback while unmistakably preserving its umber-brown living mole body, amber eyes, rounded ears, enormous steel-clawed digging paws, integrated segmented drill horn, overlapping charcoal back plates, brass wrist bands, ochre strata markings, tail, and amber quarry stones. Develop it into a majestic adult quarry beast with a broader powerful low-slung body, a grand five-segment dark-steel drill horn organically fixed above the nose, massive armored forepaws, strong hind paws, seven layered charcoal back plates extending toward the tail, ornate engraved brass forearm cuffs, richer pale-ochre strata geometry across shoulders and flanks, and five amber quarry stones aligned from brow to back. It must clearly be the same living mole-like creature at its final stage, titan-like but below sentinel/boss density, never a machine, vehicle, or handheld drill. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp fur-ceramic, steel, and brass facets, selective wear, controlled eye and stone glow, grand but readable silhouette. Full body centered in a proud ready crouched-standing pose, same three-quarter front camera as the ancestor, both ears, all four paws, every drill segment, every back plate, full tail, cuffs, markings, and stones visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, mine, tunnel, ground plane, cast shadow, scenery, text, logo, border, loose rocks, dirt cloud, sparks, tool, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 415 — Dynamo Sage
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-415-dynamo-sage-source.png`
+- Final: `sprites/final/af-415-dynamo-sage.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: DYNAMO SAGE, electric-element elite creature, Foundry Peaks family 5 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Voltwrench family ancestor. Evolve Voltwrench while unmistakably preserving its golden-yellow and charcoal living ferret body, electric-blue eyes, tall steel-edged ears, strong paws, long forked open-ring tail with gold-capped horn tips, charcoal lightning-chevron fur zones, sapphire rivet stones, brass coil bands, ankle rings, and aligned spark stones. Develop it into a majestic adult dynamo ferret with a taller elegant body, grand blade-shaped steel-edged ears, broad paws with engraved brass cuffs, a long triple-curled tail ending in a large organic open ring with two ornate gold-capped horn tips, richer gold-and-charcoal chevron markings, seven sapphire rivet stones along each flank, five ornate brass coil bands around the tail base, and five sapphire dynamo stones aligned from forehead to breast. It must clearly be the same living animal at its final stage, sage-like but below sentinel/boss density, never a humanoid, tool, robot, cable, or battery. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp fur-ceramic, steel, and brass facets, selective wear, controlled eye and stone glow, grand but readable silhouette. Full body centered in a calm proud standing pose, same three-quarter front camera as the ancestor, all ear, paw, full-tail, horn-tip, rivet, coil-band, cuff, and dynamo-stone tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, workshop, ground plane, cast shadow, scenery, text, logo, border, loose tools, lightning bolts, sparks, cables, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 418 — Smogreeve
+
+- Mix: 68% Relicforge / 32% Arcane Alloy
+- Source: `sprites/source/af-418-smogreeve-source.png`
+- Final: `sprites/final/af-418-smogreeve.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SMOGREEVE, poison-element elite creature, Foundry Peaks family 6 form III and final family evolution. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language and the second reference as the exact Sootbelch family ancestor. Evolve Sootbelch while unmistakably preserving its broad charcoal-violet living toad body, amber-lilac eyes, cream jaw and belly, four strong feet, tall brass-rimmed chimney shoulder horns, closed back vent nubs, layered soot plates, violet poison spots, dark-brass ankle rings, engraved throat collar, and filter relic with amethyst stone. Develop it into a majestic adult smog guardian with a massive but readable crouched body, two grand segmented chimney horns fixed at the shoulders, six smaller closed brass-rimmed vents aligned down the back, seven matte soot armor plates, richer violet poison nodules and spots, broad feet with engraved dark-brass cuffs, layered brass throat armor, and a large circular filter reliquary fixed at the chest holding three amethyst toxin stones. It must clearly be the same solid living toad at its final stage, oppressive but below sentinel/boss density, never smoke, a gas cloud, robot, or industrial appliance. Relicforge/Arcane blend 68/32, elite tier, 5-7 clean material zones, premium hand-painted collectible-miniature construction, crisp skin-ceramic, soot, and brass facets, selective wear, controlled eye and stone glow, grand but readable silhouette. Full body centered in a proud neutral crouched-standing pose with mouth closed, same three-quarter front camera as the ancestor, all chimney, vent, foot, soot-plate, poison-spot, cuff, throat-armor, and attached-filter tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, factory, pipework, ground plane, cast shadow, scenery, text, logo, border, smoke, fumes, gas cloud, bubbles, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 501 — Ampling
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-501-ampling-source.png`
+- Final: `sprites/final/af-501-ampling.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: AMPLING, electric-element common creature, Chrome Sprawl family 1 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its ferret body or wrenchlike tail. Design a tiny grid-hound pup: a compact navy-blue and ivory living sighthound body with an oversized friendly head, large bright amber-blue glassy eyes, two broad upright ears with opaque cyan inner panels, four slim paws, a short curled tail ending in a copper contact cap, three simple cyan circuit bars along each flank, two aged-copper coil discs fixed at the collar, and one sapphire amp stone set at the chest. This begins the Surgehound and Gridalpha line, so upright panel ears, grid markings, and capped tail are defining motifs, but it must remain a living dog-like creature rather than a robot, cable, plug, or battery. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic, copper, and small steel accents, controlled eye and stone glow. Full body centered in a calm alert standing pose, consistent three-quarter front view, both ears, all four paws, full capped tail, every circuit bar, collar disc, and chest stone visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, street, ground plane, cast shadow, scenery, text, logo, border, cables, plugs, lightning bolts, sparks, neon signs, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 504 — Chromekit
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-504-chromekit-source.png`
+- Final: `sprites/final/af-504-chromekit.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: CHROMEKIT, steel-element common creature, Chrome Sprawl family 2 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its ferret body. Design a tiny chrome-wing sentry chick: a compact pearl-gray living bird body with an oversized friendly rounded head, large sapphire glassy eyes, a short ivory beak, two small taloned feet, two short opaque silver wing plates with dark-steel edges, a stubby fan tail, a three-prong steel crest, three pale-blue rivet spots across the breast, and one aged-brass lens stud fixed at the forehead. This begins the Platedrone and Skyrise Sentry line, so the plated wings, lens stud, and compact aerial silhouette are defining motifs, but it must remain a living birdlike creature rather than a robot drone, aircraft, or security camera. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered feather-ceramic, steel, and brass, controlled eye and lens glow. Full body centered in a calm alert standing-hover pose with feet visible and wings at rest, consistent three-quarter front view, all crest, wing, foot, fan-tail, rivet, and lens tips visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, rooftop, ground plane, cast shadow, scenery, text, logo, border, propellers, camera beam, skyline, sparks, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```
+
+## 507 — Shadelurk
+
+- Mix: 90% Relicforge / 10% Arcane Alloy
+- Source: `sprites/source/af-507-shadelurk-source.png`
+- Final: `sprites/final/af-507-shadelurk.png`
+- Export: 128×128 RGBA
+
+```text
+Create one isolated game sprite for Aetherfall: SHADELURK, dark-element common creature, Chrome Sprawl family 3 form I. Use the first reference only for the locked Relicforge Miniatures / Arcane Alloy rendering language. Use the second reference only for common-creature scale, generous framing, chunky proportions, and consistent three-quarter front camera; do not copy its ferret colors or wrenchlike tail. Design a tiny neon shadow cat: a compact charcoal-black living feline body with an oversized friendly head, large violet-cyan glassy eyes, two pointed ears, four quiet paws, a long curled tail, an ivory muzzle and brow slash, three restrained magenta and cyan luminous-looking but painted stripe marks along the flanks, dark-brass claw caps, and one violet noir stone fixed to a slim aged-brass collar at the chest. This begins the Neonprowler and Noir Baron line, so the silent cat silhouette, noir collar, and dual-color neon stripes are defining motifs, but it must remain a solid living animal rather than smoke, a humanoid thief, or a cybernetic robot. Relicforge/Arcane blend 90/10, common tier, only 3-4 clean material zones, simple bold silhouette, lightly weathered fur-ceramic and brass, controlled eye and stone glow. Full body centered in a calm watchful crouched-standing pose, consistent three-quarter front view, both ears, all four paws, full curled tail, every stripe, claw cap, collar, and chest stone visible, generous even margin, readable at 48 pixels. One creature only, no base, pedestal, alley, ground plane, cast shadow, scenery, text, logo, border, neon sign, mist, smoke, weapon, aura, or particles. Solid perfectly uniform chroma-key green #00ff00 background; do not use green on the creature. Square image.
+```

@@ -347,10 +347,34 @@
     "promptLog": "PRODUCTION_RUN.md#104--pipkin",
     "alphaValidated": true
   },
+  "aetherfall:105": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#105--glimmerkin",
+    "alphaValidated": true
+  },
+  "aetherfall:106": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#106--courtglimmer",
+    "alphaValidated": true
+  },
   "aetherfall:107": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
     "promptLog": "PRODUCTION_RUN.md#107--flittern",
+    "alphaValidated": true
+  },
+  "aetherfall:108": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#108--galefinch",
+    "alphaValidated": true
+  },
+  "aetherfall:109": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#109--stormplume",
     "alphaValidated": true
   },
   "aetherfall:110": {
@@ -359,10 +383,400 @@
     "promptLog": "PRODUCTION_RUN.md#110--meadowkit",
     "alphaValidated": true
   },
+  "aetherfall:111": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#111--prancelet",
+    "alphaValidated": true
+  },
+  "aetherfall:112": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#112--soverelk",
+    "alphaValidated": true
+  },
+  "aetherfall:113": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#113--mothling",
+    "alphaValidated": true
+  },
+  "aetherfall:114": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#114--duskwing",
+    "alphaValidated": true
+  },
+  "aetherfall:115": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#115--spellmoth",
+    "alphaValidated": true
+  },
+  "aetherfall:116": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#116--rillet",
+    "alphaValidated": true
+  },
+  "aetherfall:117": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#117--brooksprite",
+    "alphaValidated": true
+  },
+  "aetherfall:118": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#118--riverlord",
+    "alphaValidated": true
+  },
   "aetherfall:180": {
     "status": "generated-validated",
     "generatedAt": "2026-07-20",
     "promptLog": "VERTICAL_SLICE.md#180--velmora-the-first-oracle",
+    "alphaValidated": true
+  },
+  "aetherfall:201": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#201--zephyrkin",
+    "alphaValidated": true
+  },
+  "aetherfall:202": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#202--galemonk",
+    "alphaValidated": true
+  },
+  "aetherfall:203": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#203--windabbot",
+    "alphaValidated": true
+  },
+  "aetherfall:204": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#204--fistling",
+    "alphaValidated": true
+  },
+  "aetherfall:207": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#207--chimeling",
+    "alphaValidated": true
+  },
+  "aetherfall:210": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#210--vesperling",
+    "alphaValidated": true
+  },
+  "aetherfall:205": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#205--ironpalm",
+    "alphaValidated": true
+  },
+  "aetherfall:208": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#208--bellsage",
+    "alphaValidated": true
+  },
+  "aetherfall:211": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#211--tollgeist",
+    "alphaValidated": true
+  },
+  "aetherfall:206": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#206--skyfist-sage",
+    "alphaValidated": true
+  },
+  "aetherfall:209": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#209--resonarch",
+    "alphaValidated": true
+  },
+  "aetherfall:212": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#212--knellwraith",
+    "alphaValidated": true
+  },
+  "aetherfall:213": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#213--sprigling",
+    "alphaValidated": true
+  },
+  "aetherfall:216": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#216--bellkit",
+    "alphaValidated": true
+  },
+  "aetherfall:214": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#214--teawarden",
+    "alphaValidated": true
+  },
+  "aetherfall:217": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#217--chantling",
+    "alphaValidated": true
+  },
+  "aetherfall:215": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#215--groveabbot",
+    "alphaValidated": true
+  },
+  "aetherfall:218": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#218--hymnkeeper",
+    "alphaValidated": true
+  },
+  "aetherfall:301": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#301--saltling",
+    "alphaValidated": true
+  },
+  "aetherfall:304": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#304--floeling",
+    "alphaValidated": true
+  },
+  "aetherfall:307": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#307--dredgling",
+    "alphaValidated": true
+  },
+  "aetherfall:302": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#302--brinekin",
+    "alphaValidated": true
+  },
+  "aetherfall:305": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#305--glacikin",
+    "alphaValidated": true
+  },
+  "aetherfall:308": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#308--gloomeel",
+    "alphaValidated": true
+  },
+  "aetherfall:303": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#303--tidemarshal",
+    "alphaValidated": true
+  },
+  "aetherfall:306": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#306--bergsovereign",
+    "alphaValidated": true
+  },
+  "aetherfall:309": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#309--abysswarden",
+    "alphaValidated": true
+  },
+  "aetherfall:310": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#310--driftgeist",
+    "alphaValidated": true
+  },
+  "aetherfall:313": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#313--finwyrm",
+    "alphaValidated": true
+  },
+  "aetherfall:316": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#316--kelpling",
+    "alphaValidated": true
+  },
+  "aetherfall:311": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#311--wreckwraith",
+    "alphaValidated": true
+  },
+  "aetherfall:314": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#314--seawyrm",
+    "alphaValidated": true
+  },
+  "aetherfall:317": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#317--wrackweed",
+    "alphaValidated": true
+  },
+  "aetherfall:312": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#312--drowned-king",
+    "alphaValidated": true
+  },
+  "aetherfall:315": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#315--maelstrom-wyrm",
+    "alphaValidated": true
+  },
+  "aetherfall:318": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#318--sargasso-shade",
+    "alphaValidated": true
+  },
+  "aetherfall:401": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#401--cogling",
+    "alphaValidated": true
+  },
+  "aetherfall:404": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#404--slagling",
+    "alphaValidated": true
+  },
+  "aetherfall:407": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#407--forgeling",
+    "alphaValidated": true
+  },
+  "aetherfall:402": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#402--gearwright",
+    "alphaValidated": true
+  },
+  "aetherfall:405": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#405--cindergolem",
+    "alphaValidated": true
+  },
+  "aetherfall:408": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#408--cruciburn",
+    "alphaValidated": true
+  },
+  "aetherfall:403": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#403--foundry-warden",
+    "alphaValidated": true
+  },
+  "aetherfall:406": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#406--basalt-engine",
+    "alphaValidated": true
+  },
+  "aetherfall:409": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#409--smeltlord",
+    "alphaValidated": true
+  },
+  "aetherfall:410": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#410--drillkin",
+    "alphaValidated": true
+  },
+  "aetherfall:413": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#413--sparkrivet",
+    "alphaValidated": true
+  },
+  "aetherfall:416": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#416--fumeling",
+    "alphaValidated": true
+  },
+  "aetherfall:411": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#411--boreback",
+    "alphaValidated": true
+  },
+  "aetherfall:414": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#414--voltwrench",
+    "alphaValidated": true
+  },
+  "aetherfall:417": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#417--sootbelch",
+    "alphaValidated": true
+  },
+  "aetherfall:412": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#412--quarry-titan",
+    "alphaValidated": true
+  },
+  "aetherfall:415": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#415--dynamo-sage",
+    "alphaValidated": true
+  },
+  "aetherfall:418": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#418--smogreeve",
+    "alphaValidated": true
+  },
+  "aetherfall:501": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#501--ampling",
+    "alphaValidated": true
+  },
+  "aetherfall:504": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#504--chromekit",
+    "alphaValidated": true
+  },
+  "aetherfall:507": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#507--shadelurk",
     "alphaValidated": true
   }
 }
