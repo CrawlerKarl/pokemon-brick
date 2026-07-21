@@ -13,11 +13,18 @@ bare storage keys) and **AETHERFALL EDITION** (an original sci-fi × fantasy
 universe, 100% procedural art, namespaced storage). `js/skin.js` owns the
 `SKINS` registry + `SKIN` (resolved at boot: `?skin=` → `SETTINGS.skin` →
 pokemon); presentation/world tables ride `SKIN.*`, the engine (type keys,
-effectiveness, modes, paths, web) is shared. 14 JS modules in `js/`, loaded
+effectiveness, modes, paths, web) is shared. 16 JS modules in `js/`, loaded
 in order (later reference earlier) via `<script>` tags in `index.html`
-(skin.js sits between config and audio; aetherfall.js + aetherart.js after
-data.js; dev.js is dev-only tooling, loaded second-to-last). No build
-step / deps / framework. `G` (state.js) is the god-object holding all
+(skin.js sits between config and audio; **data.js is ENGINE-ONLY since
+2026-07-21 — the pokemon world lives in js/pokeworld.js, loaded right after
+it** and replaced by a stub in the AETHERFALL distribution; aetherfall.js +
+aetherart.js after pokeworld; dev.js is dev-only tooling, loaded
+second-to-last). Shared balance numbers for the 18 partner lines live in
+engine `STARTER_KIT`; both skins' rosters build from it. No build
+step / deps / framework for the GAME itself; `npm run build-dist`
+(tools/build-aetherfall-dist.js) assembles the pokemon-free **AETHERFALL
+standalone distribution** into `dist-aetherfall/` (gitignored) — see the
+release section at the bottom of this file. `G` (state.js) is the god-object holding all
 runtime state. The campaign roadmap lives in `docs/FULL_GAME_ROADMAP.md`
 (+ `docs/IMPLEMENTATION_LOG.md`) — consult it before starting a round.
 **Resuming after a break? Start at `docs/NEXT_SESSION_HANDOFF.md`** — it
@@ -470,3 +477,24 @@ phone — flag anything only verifiable there.
 - Fine to delegate mechanical/analysis work to subagents; reserve top models for
   open-ended design. Verify visual work by screenshot, not just asserts.
 - End-user commit messages + `Co-Authored-By: Claude ...` trailer.
+
+## The AETHERFALL standalone release (2026-07-21)
+- **Two repos, one source of truth.** This repo stays the WORKSHOP (both
+  skins, tests, art pipeline, docs). The public, pokemon-free game lives in
+  `CrawlerKarl/aetherfall` and is GENERATED — never hand-edited — by
+  `npm run build-dist` → `dist-aetherfall/` (gitignored here). To release:
+  build, copy into a checkout of the aetherfall repo, commit, push, and the
+  Pages build serves it. Every gameplay change is made HERE first, gated by
+  the suite, then re-built + shipped.
+- **What the dist does**: pokeworld.js → an engine-defaults stub; skin.js
+  loses the pokemon registry entry (the `[POKEMON-SKIN-START/END]` markers —
+  keep them intact); the Mew konami egg is stripped (`[POKEMON-EGG]`
+  markers); pokemon-termed comments dropped; music region labels / MODE
+  defaults / fallback literals mapped to realm wording; NO assets/sprites;
+  the 518 final PNGs ship. The tool node --checks every emitted module and
+  prints a franchise-term RESIDUE report — a release requires RESIDUE: none.
+- **Internal identifiers ship unchanged by design** (`br.poke`, `pkbrk-*`
+  storage keys, the `mewVmax` flag, `SKIN.id === 'pokemon'` dead gates):
+  engine vocabulary, never user-visible; renaming would fork the runtime.
+- The pokemon skin must stay playable IN THIS REPO — never delete or
+  degrade it; the suite's bit-identity guard still rules every refactor.

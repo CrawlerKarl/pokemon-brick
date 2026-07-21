@@ -2,7 +2,7 @@
 'use strict';
 // verify-assets.js — static roster/sprite consistency check (no deps, no DOM).
 //
-// Reads js/data.js as TEXT and cross-checks:
+// Reads js/pokeworld.js (the pokemon world tables) as TEXT and cross-checks:
 //   (a) every Pokémon id in the GENS rosters + boss entries has a NAMES entry
 //   (b) every such id has a sprite file at assets/sprites/<id>.png
 //   (c) informational: sprite files on disk referenced by no roster
@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const dataPath = path.join(root, 'js', 'data.js');
+const dataPath = path.join(root, 'js', 'pokeworld.js');
 const spritesDir = path.join(root, 'assets', 'sprites');
 
 const src = fs.readFileSync(dataPath, 'utf8');
@@ -26,9 +26,9 @@ function section(text, startMarker, endMarker) {
   return text.slice(s, e + endMarker.length);
 }
 const gensSrc = section(src, 'const GENS', '\n];');
-if (!gensSrc) { console.error('FAIL: could not locate the GENS section in js/data.js'); process.exit(1); }
+if (!gensSrc) { console.error('FAIL: could not locate the GENS section in js/pokeworld.js'); process.exit(1); }
 const namesSrc = section(src, 'const NAMES', '};');
-if (!namesSrc) { console.error('FAIL: could not locate the NAMES section in js/data.js'); process.exit(1); }
+if (!namesSrc) { console.error('FAIL: could not locate the NAMES section in js/pokeworld.js'); process.exit(1); }
 
 // ---- roster ids: tier entries look like [19,'normal']; bosses like boss: { id: 150, ----
 const rosterIds = new Set();

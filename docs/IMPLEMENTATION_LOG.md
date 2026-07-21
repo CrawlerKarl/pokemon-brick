@@ -5,6 +5,57 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-21 — AETHERFALL becomes a standalone game (the release-identity move)
+
+Owner: "Create the new version of the game absent any pokemon, fully to the
+magitech and light/dark idea." Decisions (owner-picked): new repo + Pages
+site · FULL strip · brand = AETHERFALL · affinity front-and-center.
+
+- **Radiant art complete.** The pipeline landed radiant variants for all 259
+  ids; `build-art-overrides` now emits TWO maps (base + radiant — a radiant
+  file can never shadow the base), and shiny bakes load the real prismatic
+  art (hue-rotate stays only as fallback). 259+259 live.
+- **Leak audit.** Everything pokemon-visible in the aetherfall runtime is now
+  skin-routed: PATHS bond labels (KEEPER'S PACT / AETHER REVIVE patch in the
+  active-skin hook + the revive floater reads the live tier name), the
+  hardcoded MEW VMAX labels (boss bar, trial round row, wave label),
+  KANTO/MEW fallback strings (riftName/homeRegion/missWarn on SKIN.secret),
+  the Mega bang (SKIN.strings.megaBang — AETHER SURGE! on aetherfall; the
+  sub-copy is mode-honest now, calm classic has no lasers), and **LUMINE
+  VMAX → LUMINE ASCENDANT** (VMAX is Pokémon TCG language).
+- **data.js split** (agent-executed, deep-equality verified): engine-only
+  data.js (1347 lines) + new js/pokeworld.js (the entire pokemon world:
+  STARTER_MON, GENS, NAMES, HABITAT_PACKS, boss kits, flavor, the
+  assembleSkins call). STARTER_KIT (engine) now carries the shared balance
+  numbers; pokemon AND aetherfall rosters both build from it.
+  MOTION_PROFILES moved to pokeworld too (dex-id table). Script lists
+  updated (index/test/gallery.html); tools retargeted.
+- **Skin registry is single-skin capable**: defaultSkinId() = first
+  registered skin, assembleSkins tolerates an absent pokemon entry, the
+  edition pill renders only when ≥2 skins are installed, and the wordmark is
+  SKIN.brand — AETHERFALL titles as AETHERFALL, pokemon keeps WAVEBREAKER.
+- **Affinity front-and-center** (affinity skins): the LIGHT ☀ / DARK ☾ pick
+  is now two tall ceremonial cards that pulse until chosen; the launch
+  button gates on it (CHOOSE ☀ LIGHT OR ☾ DARK); committing flashes the
+  card (no return to neutral). In combat: affinity halo on the pilot
+  (radiant glints on light), affinity ring on the charge orb, an
+  affinity-colored shock on Mega activation, and a permanent ☀/☾ chip
+  beside the HUD element readout.
+- **The distribution builder** (`npm run build-dist` →
+  tools/build-aetherfall-dist.js → dist-aetherfall/, gitignored): all 16 js
+  modules with pokeworld.js replaced by an engine-defaults stub and the
+  pokemon registry entry stripped ([POKEMON-SKIN-START/END] markers);
+  index.html retitled; fonts only (NO assets/sprites); the 518 final PNGs;
+  serve.js + README + .nojekyll. Pokemon-termed comment lines dropped
+  (full-line + safe trailing), music region labels and MODE defaults mapped
+  to realm wording, fallback literals swapped, the Mew konami egg stripped
+  ([POKEMON-EGG] markers). Gate inside the tool: node --check on every
+  module + a franchise-term residue report — **RESIDUE: none**. Internal
+  identifiers (br.poke, pkbrk-* keys, mewVmax flag) ship unchanged by
+  design — engine vocabulary, never user-visible.
+
+---
+
 ## 2026-07-20 — Rift shards are EARNED + the VMAX bounty is one choose-2 draft
 
 Owner: shards were too easy in region 1 ("perhaps you have to shoot down

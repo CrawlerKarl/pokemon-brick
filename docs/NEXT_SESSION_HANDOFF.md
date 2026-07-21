@@ -8,7 +8,20 @@
 > https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys from
 > `main`). Repo `CrawlerKarl/pokemon-brick`.
 >
-> **NEWEST (2026-07-20b): the Rift is EARNED.** Kanto's shards are one-shot
+> **NEWEST (2026-07-21): AETHERFALL IS A STANDALONE GAME.** The owner's
+> release-identity move landed: radiant art for all 259 ids (base+radiant
+> override maps, real prismatic shiny), every pokemon leak in the aetherfall
+> runtime skin-routed (incl. LUMINE VMAX → LUMINE ASCENDANT), data.js split
+> into engine + js/pokeworld.js (STARTER_KIT carries shared balance
+> numbers; suite-verified deep-equal), the skin registry is single-skin
+> capable with SKIN.brand wordmarks, the LIGHT/DARK affinity is a REQUIRED
+> ceremonial pick with combat VFX (halo/charge ring/Mega shock/HUD chip),
+> and `npm run build-dist` generates the pokemon-free distribution
+> (dist-aetherfall/, RESIDUE: none) which deploys to the
+> **CrawlerKarl/aetherfall** repo + Pages site. See CLAUDE.md's release
+> section for the two-repo flow. THIS repo remains the workshop.
+>
+> **PREVIOUS (2026-07-20b): the Rift is EARNED.** Kanto's shards are one-shot
 > skill tests now — shooter modes get a swift RIFT COURIER crosser you must
 > shoot down before it exits (escape = shard lost; `SKIN.secret.courier`),
 > BREAKER gets a fast swaying one-pass fall you must paddle-catch. And the

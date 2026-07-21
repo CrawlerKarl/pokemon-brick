@@ -387,6 +387,7 @@ window.addEventListener('keydown', e => {
   konamiIdx = e.code === KONAMI[konamiIdx] ? konamiIdx + 1 : (e.code === KONAMI[0] ? 1 : 0);
   if (konamiIdx === KONAMI.length) {
     konamiIdx = 0;
+    // [POKEMON-EGG-START] — stripped from the AETHERFALL distribution
     if (SKIN.id === 'pokemon') { // Mew is pokemon-skin lore
       audio();
       addToDex(151, true);
@@ -395,6 +396,7 @@ window.addEventListener('keydown', e => {
       SFX.mega();
       setAnnounce('fairy', '#ec407a', 'MEW APPEARED!', 'SHINY MEW REGISTERED TO POKÉDEX · MEGA CHARGED', 3);
     }
+    // [POKEMON-EGG-END]
   }
 });
 let paused = false;
@@ -750,7 +752,7 @@ function queueSecretRewardNotice() {
   const reward = G.secret.lastReward;
   if (!reward) return;
   setAnnounce(reward.icon, reward.color, reward.name + ' EQUIPPED',
-    reward.desc, 3, 'SECRET UPGRADE · ONLY FOUND BEYOND THE KANTO RIFT');
+    reward.desc, 3, 'SECRET UPGRADE · ONLY FOUND BEYOND THE ' + (SKIN.secret.riftName || 'KANTO RIFT'));
   G.secret.lastReward = null;
 }
 function beginUpgradeInstallFx(icon, color, name, pathKey = null, tierIdx = 0, big = false) {
@@ -1110,8 +1112,11 @@ function onPress(x, y) {
           const affs = ['light', 'dark'];
           for (let i = 0; i < 2; i++) {
             if (inRect(x, y, L.affinity(i))) {
-              SETTINGS.affinity = SETTINGS.affinity === affs[i] ? null : affs[i];
-              saveSettings(); SFX.wall(); return;
+              // committing to a path is a MOMENT, not a toggle — you can switch
+              // sides here, but you can never return to "no side"
+              SETTINGS.affinity = affs[i];
+              G.affinityFx = { key: affs[i], until: G.time + 0.9 };
+              saveSettings(); SFX.mega(); haptic('mega'); return;
             }
           }
         }
@@ -1119,7 +1124,15 @@ function onPress(x, y) {
         for (let i = 0; i < keys.length; i++) {
           if (inRect(x, y, presetGeom(i))) { SETTINGS.preset = keys[i]; saveSettings(); SFX.wall(); return; }
         }
-        if (inRect(x, y, startBtnGeom())) { resetRun(); return; }
+        if (inRect(x, y, startBtnGeom())) {
+          // affinity skins launch only with a chosen path (LIGHT or DARK)
+          if (SKIN.affinities && !SETTINGS.affinity) {
+            G.affinityFx = { key: 'both', until: G.time + 0.9 };
+            SFX.wall();
+            return;
+          }
+          resetRun(); return;
+        }
         if (inRect(x, y, L.trial)) { trialOpen = true; SFX.wall(); return; }
       }
       return;
@@ -1398,6 +1411,13 @@ function tryMega() {
   if (G.state !== 'play' || G.megaT > 0 || G.mega < 1) return;
   G.megaT = megaDur(); G.mega = 0;
   statsMega();
+  // the chosen path answers the transformation (light/dark skins): a radiant
+  // gold or umbral violet shock rides the Mega activation
+  const affCol = affinityColor();
+  if (affCol) {
+    ringFx(G.paddle.x, shipY(), affCol, 8, 150, 4, 0.55);
+    burst(G.paddle.x, shipY(), affCol, 22, 300, 0.7);
+  }
   // AURORA DRIVE: Mega opens with a typed nova against the nearest enemies
   if (upgN('aurora')) {
     const el = attackElement();
@@ -1436,5 +1456,8 @@ function tryMega() {
   G.shake = 14;
   haptic('boss');
   SFX.mega();
-  setAnnounce('mega', '#ffd54f', 'MEGA EVOLUTION!', 'PIERCING BALLS · AUTO-LASERS', 2.5);
+  // the bang is skin voice (MEGA EVOLUTION is pokemon language); the sub is
+  // mode-honest — calm classic has no guns, the shooters get support fire
+  setAnnounce('mega', '#ffd54f', SKIN.strings.megaBang || 'MEGA EVOLUTION!',
+    G.mode === 'classic' ? 'PIERCING OVERDRIVE BALL' : 'PIERCING BOLTS · AUTO SUPPORT FIRE', 2.5);
 }

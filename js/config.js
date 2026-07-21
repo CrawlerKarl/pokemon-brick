@@ -290,7 +290,9 @@ function setupLayout() {
   // a skin with affinities (AETHERFALL) adds the LIGHT/DARK pick between
   // the pilot summary and the difficulty chips; other skins reserve no room
   const hasAff = typeof SKIN !== 'undefined' && !!SKIN.affinities;
-  const affH = hasAff ? (short ? 26 : 34) : 0;
+  // the LIGHT/DARK choice is a REQUIRED, ceremonial pick on affinity skins —
+  // two tall mirrored cards, not a slim optional toggle (2026-07-21)
+  const affH = hasAff ? (short ? 40 : 58) : 0;
   const affY = summaryY + summaryH + (short ? 6 : 10);
   const affW = Math.min(summaryW, 560);
   const diffLabelY = summaryY + summaryH + (hasAff ? affH + (short ? 12 : 18) : 0) + (short ? 14 : 25);

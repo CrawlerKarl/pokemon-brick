@@ -3236,7 +3236,7 @@ function update(dt) {
         if (G.secret.pendingShard === br.courier.shardIndex) G.secret.pendingShard = null;
         setAnnounce('alert', '#78909c', 'THE COURIER ESCAPED',
           'SHARD ' + (br.courier.shardIndex + 1) + '/3 IS GONE', 2.5,
-          'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
+          SKIN.secret.missWarn || 'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
         SFX.wall();
       }
     }
@@ -5133,7 +5133,7 @@ function update(dt) {
       if (G.secret.pendingShard === pu.shardIndex) G.secret.pendingShard = null;
       setAnnounce('alert', '#78909c', 'THE RIFT CLOSED',
         'SHARD ' + (pu.shardIndex + 1) + '/3 WAS LEFT BEHIND', 2.5,
-        'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
+        SKIN.secret.missWarn || 'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
     } else if (!pu.dead && pu.y > H + 30) pu.dead = true;
   }
   G.powerups = G.powerups.filter(p => !p.dead);
@@ -5191,7 +5191,7 @@ function update(dt) {
     // Poké Revive capstone: every region you finish grants a life
     if (clearedStage === 2 && upgN('revive')) {
       G.lives++;
-      addFloater(W / 2, H * 0.42, 'POKÉ REVIVE — +1 LIFE', '#ec407a', 20);
+      addFloater(W / 2, H * 0.42, PATHS.bond.tiers[3].name + ' — +1 LIFE', '#ec407a', 20);
     }
     // draft: advance one of up to three paths (skip maxed ones)
     rollUpgradeChoices();

@@ -23,8 +23,12 @@
 const SKIN_QS = new URLSearchParams(location.search).get('skin');
 
 const SKINS = {
+  // [POKEMON-SKIN-START] — the AETHERFALL distribution build strips this
+  // entry (tools/build-aetherfall-dist.js); keep the markers on their own
+  // lines and keep the whole pokemon entry between them.
   pokemon: {
     id: 'pokemon',
+    brand: 'WAVEBREAKER', // the big title-screen wordmark (skin identity)
     edition: 'POKÉMON EDITION',
     // setup-grid order (labels resolve at runtime via skinStarters —
     // the old config.js STARTERS literal is gone; parse order made it
@@ -33,11 +37,13 @@ const SKINS = {
       'ice', 'fighting', 'poison', 'ground', 'psychic', 'bug',
       'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'],
   },
+  // [POKEMON-SKIN-END]
   // S1 stub — exists so per-skin isolation is testable. Content lands in
   // rounds S2+ (classes/world/bosses/art); until then every table
   // defaults to the pokemon set at assembly.
   aetherfall: {
     id: 'aetherfall',
+    brand: 'AETHERFALL', // the world IS the brand (release identity, 2026-07-21)
     edition: 'AETHERFALL EDITION',
     starterOrder: ['fire', 'water', 'grass', 'electric', 'normal', 'flying',
       'ice', 'fighting', 'poison', 'ground', 'psychic', 'bug',
@@ -45,14 +51,18 @@ const SKINS = {
   },
 };
 
+// The registry is SHIP-SHAPE at any membership: a build that registers only
+// one skin (the AETHERFALL distribution ships without the pokemon world)
+// resolves to whatever exists — no fallback may assume pokemon is present.
+function defaultSkinId() { return SKINS.pokemon ? 'pokemon' : Object.keys(SKINS)[0]; }
 function activeSkinId() {
-  const id = SKIN_QS || SETTINGS.skin || 'pokemon';
-  return SKINS[id] ? id : 'pokemon';
+  const id = SKIN_QS || SETTINGS.skin || defaultSkinId();
+  return SKINS[id] ? id : defaultSkinId();
 }
 let SKIN = SKINS[activeSkinId()];
 // settings validation lives HERE, not config.js — config parses before
 // SKINS exists. (The ?skin= override is transient and never saved.)
-if (!SKINS[SETTINGS.skin]) SETTINGS.skin = 'pokemon';
+if (!SKINS[SETTINGS.skin]) SETTINGS.skin = defaultSkinId();
 
 // per-skin storage keys — see the header comment for the legacy rule
 function storeKey(base) {
@@ -82,7 +92,11 @@ function skinStarters() {
 // live rect each frame; input hit-tests it. Flipping saves + reloads clean
 // (the reload drops any ?skin= override so the SAVED choice rules).
 let skinPillRect = null;
+// a single-skin build has nothing to toggle — render skips the pill and
+// input never sees a rect
+function skinToggleAvailable() { return Object.keys(SKINS).length > 1; }
 function toggleSkin() {
+  if (!skinToggleAvailable()) return;
   const ids = Object.keys(SKINS);
   const next = ids[(ids.indexOf(SKIN.id) + 1) % ids.length];
   SETTINGS.skin = next;
@@ -102,14 +116,19 @@ function skinEvolveVerb(starterKey) {
 // attach the pokemon tables by reference, then default-fill every other
 // skin so a stub skin is always complete (isolation without content).
 function assembleSkins(tables) {
-  Object.assign(SKINS.pokemon, tables);
+  // pokemon-absent builds (the AETHERFALL dist) call this with engine-neutral
+  // defaults only — every clause must tolerate a missing pokemon entry
+  if (SKINS.pokemon) Object.assign(SKINS.pokemon, tables);
   for (const s of Object.values(SKINS)) {
     if (s === SKINS.pokemon) continue;
     for (const k of Object.keys(tables)) if (!(k in s)) s[k] = tables[k];
   }
   // per-skin derived sets refresh from each skin's OWN gens (a skin with
-  // its own world must never inherit another skin's boss-only id space)
+  // its own world must never inherit another skin's boss-only id space).
+  // A skin whose world tables load LATER (aetherfall refreshes its own set
+  // at load) may not have gens yet when defaults are engine-only.
   for (const s of Object.values(SKINS)) {
+    if (!s.gens) continue;
     s.bossOnlyIds = new Set(s.gens.flatMap(g => [
       g.boss.id,
       ...(g.gauntlet ? g.gauntlet.subs.map(([id]) => id) : []),

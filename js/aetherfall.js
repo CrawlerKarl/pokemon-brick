@@ -1,8 +1,9 @@
 'use strict';
 // ============================================================
 //  AETHERFALL — the original sci-fi × fantasy skin.
-//  Design: docs/ORIGINAL_SKIN_PLAN.md (approved). Loads AFTER data.js:
-//  the engine tables exist and assembleSkins() has already default-filled
+//  Design: docs/ORIGINAL_SKIN_PLAN.md (approved). Loads AFTER data.js
+//  (engine) + pokeworld.js (pokemon world): the tables exist and
+//  assembleSkins() (pokeworld.js tail) has already default-filled
 //  SKINS.aetherfall with pokemon aliases — this file REPLACES the content
 //  tables with the original universe and refreshes the derived sets.
 //  The pokemon skin is never touched.
@@ -24,9 +25,9 @@
 
   // ---------- S2 · THE 18 CLASSES (three disciplines of six) ----------
   // Engine abilities/mods are shared verbatim with the pokemon skin
-  // (STARTER_MON is the single source of truth for numbers); only names,
-  // blurbs and flavor change. Discipline drives evolution language + the
-  // upgrade-web lexicon.
+  // (STARTER_KIT, data.js, is the single source of truth for numbers);
+  // only names, blurbs and flavor change. Discipline drives evolution
+  // language + the upgrade-web lexicon.
   const CLASSES = {
     //            forms (I → II → III)                                    ability            discipline
     fire:     { n: ['PYROMANCER', 'INFERNOMANCER', 'SUNCALLER'],       ab: 'KINDLE',            d: 'magic',
@@ -86,18 +87,18 @@
   const pilotIds = {};
   STARTER_KEYS.forEach((k, i) => { pilotIds[k] = [10 + i * 3, 11 + i * 3, 12 + i * 3]; });
 
-  // starterMon: engine numbers by reference, display fields replaced.
-  // modeCopy tier text carries over verbatim (pure numbers, no lore).
+  // starterMon: engine numbers by reference (STARTER_KIT), display fields
+  // replaced. modeTiers text carries over verbatim (pure numbers, no lore).
   const starterMon = {};
   for (const k of STARTER_KEYS) {
-    const src = STARTER_MON[k], c = CLASSES[k];
+    const kit = STARTER_KIT[k], c = CLASSES[k];
     const modeCopy = {};
-    for (const [mode, mc] of Object.entries(src.modeCopy)) {
-      modeCopy[mode] = { ability: c.ab, blurb: c.blurb, tiers: mc.tiers };
+    for (const [mode, tiers] of Object.entries(kit.modeTiers)) {
+      modeCopy[mode] = { ability: c.ab, blurb: c.blurb, tiers };
     }
     starterMon[k] = {
       ids: pilotIds[k], names: c.n, ability: c.ab, blurb: c.blurb,
-      tiers: src.tiers, mods: src.mods, modeCopy,
+      tiers: kit.tiers, mods: kit.mods, modeCopy,
       discipline: c.d,
     };
   }
@@ -502,6 +503,7 @@
     endingTitle: 'THE SUNDERING HEALED',
     quickHint: 'AETHERKIN FLIGHT SHOOTER · 27-STAGE CAMPAIGN',
     healName: 'MENDING DRAUGHT',
+    megaBang: 'AETHER SURGE!', // the Mega bang in this world's voice
     riftDesc: "ONE OF THREE PIECES THAT REWRITES THE MARCHES' FINAL ROUND",
     partnerWord: 'VESSEL',
     regionWord: 'REALM',
@@ -509,9 +511,14 @@
 
   // the rift-secret encounter (engine flow; species + copy are skin data)
   const secret = {
-    id: 181, t: 'psychic', name: 'LUMINE VMAX',
-    breaking: 'SECRET ROUND · LUMINE VMAX IS BREAKING THROUGH',
-    announce: 'RIFT BREACH · LUMINE VMAX!',
+    // ASCENDANT, not "VMAX" — that suffix is Pokémon TCG language and has no
+    // place in the IP-clean identity
+    id: 181, t: 'psychic', name: 'LUMINE ASCENDANT',
+    breaking: 'SECRET ROUND · LUMINE ASCENDANT IS BREAKING THROUGH',
+    announce: 'RIFT BREACH · LUMINE ASCENDANT!',
+    riftName: 'MARCHES RIFT',
+    homeRegion: 'MARCHES',
+    missWarn: 'MISS ANY PIECE AND THE MARCHES KEEP THEIR NORMAL FINALE',
     announceSub: 'SECRET ROUND · 3 PHASES — THE NORMAL LUMINE FIGHT HAS BEEN REPLACED',
     replaced: 'THE NORMAL LUMINE ROUND HAS BEEN REPLACED',
     hint1: "A SECOND PIECE IS HIDDEN IN THE MARCHES' CHALLENGE",
@@ -562,9 +569,14 @@
     ...(g.gauntlet ? g.gauntlet.subs.map(([id]) => id) : []),
     ...(g.gauntlet ? [g.gauntlet.myth[0]] : []),
   ]));
-  // active-skin hooks: patch parse-before-skin surfaces (mode cards)
+  // active-skin hooks: patch parse-before-skin surfaces (mode cards, and the
+  // few shared PATHS labels that carried pokemon flavor — classic/blaster
+  // read tier.name/visual directly, junkie already rides SKIN.junkieItems)
   if (SKIN === AF) {
     for (const m of MODES) if (MODE_COPY[m.key]) Object.assign(m, MODE_COPY[m.key]);
-    document.title = 'Wavebreaker — Aetherfall Edition';
+    Object.assign(PATHS.bond.tiers[1], { name: "KEEPER'S PACT",
+      visual: 'A BINDING SIGIL CREST LOCKS TO THE REAR RIG' });
+    Object.assign(PATHS.bond.tiers[3], { name: 'AETHER REVIVE' });
+    document.title = 'AETHERFALL'; // the world is the brand (2026-07-21)
   }
 })();

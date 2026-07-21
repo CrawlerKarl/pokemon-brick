@@ -1,7 +1,7 @@
 // Downloads every Pokémon sprite the game uses into assets/sprites/ so the
 // game doesn't depend on externally hosted artwork at play time.
 // Usage: node tools/fetch-sprites.js
-// Re-run after adding new Pokémon to the rosters in js/data.js (skips files
+// Re-run after adding new Pokémon to the rosters in js/pokeworld.js (skips files
 // that already exist). Optionally shrink afterwards, e.g. on macOS:
 //   sips -Z 256 assets/sprites/*.png
 const fs = require('fs');
@@ -13,7 +13,7 @@ const outDir = path.join(root, 'assets', 'sprites');
 fs.mkdirSync(outDir, { recursive: true });
 
 // scrape every id out of the rosters + bosses, plus the easter-egg mons
-const data = fs.readFileSync(path.join(root, 'js', 'data.js'), 'utf8');
+const data = fs.readFileSync(path.join(root, 'js', 'pokeworld.js'), 'utf8');
 const ids = new Set([132, 151]); // Ditto reveal, Konami Mew
 for (const m of data.matchAll(/\[(\d+),'/g)) ids.add(+m[1]);
 for (const m of data.matchAll(/id: (\d+)/g)) ids.add(+m[1]);

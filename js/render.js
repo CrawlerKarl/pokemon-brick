@@ -666,7 +666,7 @@ function drawMewVmax(br, x, y) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = '#fff'; ctx.shadowColor = phCol; ctx.shadowBlur = 12;
-  ctx.fillText('SECRET BOSS · MEW VMAX', x, barY - 14, barW + 30);
+  ctx.fillText('SECRET BOSS · ' + SKIN.secret.name, x, barY - 14, barW + 30);
   ctx.shadowBlur = 0;
   roundRect(x - barW / 2, barY, barW, 10, 5);
   ctx.fillStyle = 'rgba(2,4,16,0.82)'; ctx.fill();
@@ -1629,6 +1629,24 @@ function drawPilotRig(x, py, preview = false) {
   ag.addColorStop(0, col + '3c'); ag.addColorStop(0.7, col + '14'); ag.addColorStop(1, col + '00');
   ctx.fillStyle = ag;
   ctx.beginPath(); ctx.arc(x, y, s * 0.8, 0, Math.PI * 2); ctx.fill();
+  // AFFINITY HALO (light/dark skins): the chosen path rides the pilot — a
+  // slow-breathing ring in radiant gold or umbral violet, brighter under Mega
+  const affCol = affinityColor();
+  if (affCol && !preview) {
+    const breathe = 0.55 + 0.25 * Math.sin(G.time * (mega ? 6 : 2.2));
+    ctx.save();
+    ctx.globalAlpha = (mega ? 0.5 : 0.3) * breathe;
+    ctx.strokeStyle = affCol; ctx.lineWidth = mega ? 2.4 : 1.6;
+    ctx.beginPath(); ctx.arc(x, y, s * (0.62 + 0.05 * breathe), 0, Math.PI * 2); ctx.stroke();
+    if (SETTINGS.affinity === 'light') { // radiant: four cardinal glints
+      ctx.fillStyle = affCol;
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + G.time * 0.5;
+        ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.64, y + Math.sin(a) * s * 0.64, 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
   // jet exhaust under the mon, flickering in the element color
   const fl = (preview ? 0.68 : 1) + 0.35 * Math.sin(G.time * 26) + 0.18 * Math.sin(G.time * 57);
   ctx.save();
@@ -2890,6 +2908,14 @@ function drawProjectiles() {
       ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.stroke();
     }
+    // the chosen affinity wraps the winding charge (light/dark skins)
+    const chAff = affinityColor();
+    if (chAff) {
+      ctx.globalAlpha = 0.35 + 0.3 * G.charge;
+      ctx.strokeStyle = chAff; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(cx, cy, r + 7, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   }
   for (const m of G.missiles) {
@@ -3911,6 +3937,15 @@ function drawHUD() {
         ? ' · PARTNER'
         : ' · POWER-UP · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's');
     ctx.fillText('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72);
+    // AFFINITY chip rides the same line (light/dark skins): the path is
+    // permanent run identity, so it lives beside the element, always visible
+    const affCol = affinityColor();
+    if (affCol) {
+      const tagW = ctx.measureText('⬤ ' + tag).width;
+      ctx.fillStyle = affCol;
+      ctx.fillText((SETTINGS.affinity === 'light' ? '  ☀ LIGHT' : '  ☾ DARK'),
+        20 + tagW + 6, G.combo > 1 ? 90 : 72);
+    }
   }
   // skill tree at a glance — Phoenix-style: your build is always visible
   {
@@ -3948,7 +3983,7 @@ function drawHUD() {
   const gen = genFor(G.level);
   const stg = stageIdx(G.level);
   const waveY = narrow ? 46 : (G.modifier ? 22 : 28);
-  const waveText = G.secret.vmax ? 'SECRET RIFT · MEW VMAX'
+  const waveText = G.secret.vmax ? 'SECRET RIFT · ' + SKIN.secret.name
     : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + SKIN.stageNames[stg];
   ctx.fillText(waveText, W / 2, waveY);
   if (G.modifier && !narrow) {
@@ -4615,31 +4650,35 @@ function drawMenuRedesign() {
   ctx.textAlign = L.narrow ? 'center' : 'left';
   ctx.font = `900 ${L.titleSize}px Orbitron, sans-serif`;
   ctx.fillStyle = '#ffffff'; ctx.shadowColor = mode.accent; ctx.shadowBlur = 12;
-  ctx.fillText(GAME_TITLE, brandX, L.titleY);
-  const brandWidth = ctx.measureText(GAME_TITLE).width;
+  const brandText = SKIN.brand || GAME_TITLE; // the wordmark is skin identity
+  ctx.fillText(brandText, brandX, L.titleY);
+  const brandWidth = ctx.measureText(brandText).width;
   ctx.shadowBlur = 0;
   // The edition pill IS the skin toggle (Round S7): tap to flip between the
   // installed skins and reload. Render writes the live rect; input reads it —
-  // one geometry for draw + hit-test by construction.
-  const editionText = SKIN.edition + '  ⇄';
-  ctx.font = '800 8px Orbitron, sans-serif';
-  const editionW = ctx.measureText(editionText).width + 20;
-  const ex = L.narrow ? W / 2 - editionW / 2 : L.pad + brandWidth + 14;
-  // clamp the narrow pill so it can never spill into the CONTINUE band /
-  // mode cards on short landscape phones (667×375) — keep its bottom above
-  // whatever starts the content zone
-  const contentTop = (L.resume ? L.resume.y : L.hero.y) - 24;
-  const ey = L.narrow ? Math.min(L.titleY + L.titleSize * 0.68, contentTop) : L.titleY - 11;
-  skinPillRect = { x: ex, y: ey, w: editionW, h: 22 };
-  const hovSkin = inRect(mouseX, lastMouseY, skinPillRect);
-  roundRect(ex, ey, editionW, 22, 11); ctx.fillStyle = mode.accent + (hovSkin ? '3d' : '24'); ctx.fill();
-  ctx.strokeStyle = mode.accent + (hovSkin ? 'ee' : '88'); ctx.stroke(); ctx.fillStyle = hovSkin ? '#ffffff' : mode.accent;
-  ctx.textAlign = 'center'; ctx.fillText(editionText, ex + editionW / 2, ey + 11.5);
-  if (hovSkin && !L.narrow) {
-    ctx.font = '700 7px Orbitron, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    const other = SKIN.id === 'pokemon' ? SKINS.aetherfall : SKINS.pokemon;
-    ctx.fillText('SWITCH TO ' + other.edition, ex + editionW / 2, ey + 32);
-  }
+  // one geometry for draw + hit-test by construction. A single-skin build
+  // (the AETHERFALL dist) has nothing to toggle: no pill, no rect.
+  if (skinToggleAvailable()) {
+    const editionText = SKIN.edition + '  ⇄';
+    ctx.font = '800 8px Orbitron, sans-serif';
+    const editionW = ctx.measureText(editionText).width + 20;
+    const ex = L.narrow ? W / 2 - editionW / 2 : L.pad + brandWidth + 14;
+    // clamp the narrow pill so it can never spill into the CONTINUE band /
+    // mode cards on short landscape phones (667×375) — keep its bottom above
+    // whatever starts the content zone
+    const contentTop = (L.resume ? L.resume.y : L.hero.y) - 24;
+    const ey = L.narrow ? Math.min(L.titleY + L.titleSize * 0.68, contentTop) : L.titleY - 11;
+    skinPillRect = { x: ex, y: ey, w: editionW, h: 22 };
+    const hovSkin = inRect(mouseX, lastMouseY, skinPillRect);
+    roundRect(ex, ey, editionW, 22, 11); ctx.fillStyle = mode.accent + (hovSkin ? '3d' : '24'); ctx.fill();
+    ctx.strokeStyle = mode.accent + (hovSkin ? 'ee' : '88'); ctx.stroke(); ctx.fillStyle = hovSkin ? '#ffffff' : mode.accent;
+    ctx.textAlign = 'center'; ctx.fillText(editionText, ex + editionW / 2, ey + 11.5);
+    if (hovSkin && !L.narrow) {
+      ctx.font = '700 7px Orbitron, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      const other = Object.values(SKINS).find(s => s !== SKIN);
+      if (other) ctx.fillText('SWITCH TO ' + other.edition, ex + editionW / 2, ey + 32);
+    }
+  } else skinPillRect = null;
   drawHomeUtility(L.dex, SKIN.strings.dexChar + ' ' + SKIN.strings.dexName + ' ' + DEX.size + '/' + dexTotal(), mode.accent);
   drawHomeUtility(L.adv, '⚙ SETTINGS', mode.accent);
 
@@ -5411,23 +5450,42 @@ function drawDifficultySetup(L, mode) {
   ctx.font = `800 ${L.short ? 7 : 8.5}px Orbitron, sans-serif`; ctx.fillStyle = hovEdit ? '#fff' : '#b0bec5';
   ctx.fillText(L.narrow ? 'CHANGE' : 'CHANGE PARTNER', eb.x + eb.w / 2, eb.y + eb.h / 2, eb.w - 8);
 
-  // AFFINITY (skins with SKIN.affinities): the LIGHT/DARK lean, chosen here
-  // beside difficulty. Tapping the selected side again returns to neutral.
+  // AFFINITY (skins with SKIN.affinities): the LIGHT/DARK path is a REQUIRED,
+  // ceremonial pick — two tall mirrored cards (radiant gold vs umbral violet)
+  // that pulse until a side is chosen; the launch button stays gated on it.
   if (L.affinity) {
     const affs = ['light', 'dark'];
+    const unchosen = !SETTINGS.affinity;
+    const beckon = unchosen ? 0.5 + 0.5 * Math.sin(G.time * 2.6) : 0;
     for (let i = 0; i < 2; i++) {
       const A = AFFINITIES[affs[i]], r = L.affinity(i);
       const sel = SETTINGS.affinity === affs[i], hovA = inRect(mouseX, lastMouseY, r);
+      // 'both' = a denied launch — both cards flash to say "pick one of US"
+      const flash = G.affinityFx && (G.affinityFx.key === affs[i] || G.affinityFx.key === 'both') && G.time < G.affinityFx.until;
       ctx.save();
-      if (sel) { ctx.shadowColor = A.color; ctx.shadowBlur = 12; }
-      roundRect(r.x, r.y, r.w, r.h, 10);
-      ctx.fillStyle = sel ? A.color + '30' : hovA ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'; ctx.fill();
-      ctx.strokeStyle = sel ? A.color : 'rgba(255,255,255,0.22)'; ctx.lineWidth = sel ? 2 : 1; ctx.stroke();
+      if (sel || flash) { ctx.shadowColor = A.color; ctx.shadowBlur = flash ? 26 : 14; }
+      else if (unchosen) { ctx.shadowColor = A.color; ctx.shadowBlur = 6 + beckon * 8; }
+      roundRect(r.x, r.y, r.w, r.h, 12);
+      ctx.fillStyle = sel ? A.color + '30' : hovA ? A.color + '1c' : 'rgba(255,255,255,0.05)'; ctx.fill();
+      ctx.strokeStyle = sel ? A.color : unchosen ? A.color + 'aa' : 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = sel ? 2 : 1.2; ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.font = `900 ${L.short ? 9 : 11}px Orbitron, sans-serif`;
-      ctx.fillStyle = sel ? '#ffffff' : A.color;
       ctx.textAlign = 'center';
-      ctx.fillText((sel ? '◆ ' : '◇ ') + A.name + ' — ' + A.tag, r.x + r.w / 2, r.y + r.h / 2 + 0.5, r.w - 14);
+      const glyph = affs[i] === 'light' ? '☀' : '☾';
+      ctx.font = `900 ${L.short ? 10 : 12.5}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel ? '#ffffff' : A.color;
+      ctx.fillText((sel ? '◆ ' : '') + glyph + ' ' + A.name + ' — ' + A.tag,
+        r.x + r.w / 2, r.y + r.h * (L.short ? 0.38 : 0.34), r.w - 14);
+      ctx.font = `600 ${L.short ? 7 : 8.5}px Orbitron, sans-serif`;
+      ctx.fillStyle = sel ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.55)';
+      ctx.fillText(A.desc, r.x + r.w / 2, r.y + r.h * (L.short ? 0.74 : 0.7), r.w - 16);
+      if (flash) { // the moment of commitment gets a visible ring
+        const p = 1 - (G.affinityFx.until - G.time) / 0.9;
+        ctx.globalAlpha = 1 - p;
+        ctx.strokeStyle = A.color; ctx.lineWidth = 3 - 2 * p;
+        roundRect(r.x - 8 * p, r.y - 8 * p, r.w + 16 * p, r.h + 16 * p, 14); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       ctx.restore();
     }
   }
@@ -5460,13 +5518,17 @@ function drawDifficultySetup(L, mode) {
   }
   {
     const b = L.start, hov = inRect(mouseX, lastMouseY, b);
-    ctx.save(); ctx.shadowColor = mode.accent; ctx.shadowBlur = hov ? 28 : 15;
+    // affinity skins gate the launch on a chosen path — the button says so
+    const needAff = SKIN.affinities && !SETTINGS.affinity;
+    ctx.save(); ctx.shadowColor = mode.accent; ctx.shadowBlur = needAff ? 6 : hov ? 28 : 15;
     roundRect(b.x, b.y, b.w, b.h, 14);
     const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
     g.addColorStop(0, hov ? mixHex(mode.accent, '#ffffff', 0.52) : mixHex(mode.accent, '#ffffff', 0.3));
     g.addColorStop(1, mixHex(mode.accent, '#05020a', 0.28)); ctx.fillStyle = g; ctx.fill(); ctx.shadowBlur = 0;
+    if (needAff) { ctx.globalAlpha = 0.55; }
     ctx.font = `900 ${L.short ? 13 : L.narrow ? 18 : 19}px Orbitron, sans-serif`; ctx.fillStyle = '#100417';
-    const label = mode.key === 'junkie' ? 'LAUNCH STARFIGHTER' : 'START ' + mode.label;
+    const label = needAff ? 'CHOOSE ☀ LIGHT OR ☾ DARK'
+      : mode.key === 'junkie' ? 'LAUNCH STARFIGHTER' : 'START ' + mode.label;
     ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1, b.w - 20); ctx.restore();
   }
   const tb = L.trial, hovTrial = inRect(mouseX, lastMouseY, tb);
@@ -5693,7 +5755,7 @@ function drawTrial() {
     const gsel = SKIN.gens[trialSel.region];
     const labels = ['FULL GAUNTLET', '★ ' + gsel.boss.n.toUpperCase(),
       gsel.gauntlet ? '✦ ' + (SKIN.names[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL',
-      '◆ MEW VMAX · SECRET'];
+      '◆ ' + SKIN.secret.name + ' · SECRET'];
     for (let i = 0; i < T.roundCount; i++) {
       const rr2 = T.round(i), sel2 = trialSel.round === i;
       const hov2 = inRect(mouseX, lastMouseY, rr2);
@@ -7213,7 +7275,7 @@ function drawOverlays() {
       W / 2, clearY + (draftShort ? 28 : 34));
     if (secretDraft && !draftShort) {
       ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
-      ctx.fillText('CHOOSE ONE FORBIDDEN UPGRADE · THE NORMAL KANTO DRAFT FOLLOWS', W / 2, clearY + 60, W * 0.92);
+      ctx.fillText('CHOOSE ONE FORBIDDEN UPGRADE · THE NORMAL ' + (SKIN.secret.homeRegion || 'KANTO') + ' DRAFT FOLLOWS', W / 2, clearY + 60, W * 0.92);
     } else if (stageIdx(G.level) === 0 && !draftShort) {
       ctx.font = '900 16px Orbitron, sans-serif';
       ctx.fillStyle = genFor(G.level).accent;
