@@ -3918,7 +3918,12 @@
   // Local same-origin files only — the no-remote-fetch rule stands.
   const OVERRIDE_LOADED = {};
   function applyOverride(cv, id, shiny) {
-    const src = (typeof AETHERFALL_ART_OVERRIDES !== 'undefined') && AETHERFALL_ART_OVERRIDES[id];
+    // RADIANT forms: the shiny bake prefers the pipeline's real prismatic art
+    // (AETHERFALL_ART_RADIANT); the hue-rotate filter below remains only the
+    // fallback for ids whose radiant file hasn't landed.
+    const radiantSrc = shiny && (typeof AETHERFALL_ART_RADIANT !== 'undefined') && AETHERFALL_ART_RADIANT[id];
+    const src = radiantSrc
+      || ((typeof AETHERFALL_ART_OVERRIDES !== 'undefined') && AETHERFALL_ART_OVERRIDES[id]);
     if (!src) return;
     const key = (shiny ? 's' : '') + id;
     if (OVERRIDE_LOADED[key]) return;
@@ -3940,10 +3945,11 @@
         g.addColorStop(1, 'rgba(0,0,0,0)');
         c.fillStyle = g; c.fillRect(0, 0, size, size);
       }
-      // letterbox-fit, centered; radiant variants hue-shift when supported
+      // letterbox-fit, centered. Real radiant art carries its own palette —
+      // the hue-rotate is ONLY the fallback when no radiant file exists.
       const scale = Math.min(size / img.width, size / img.height);
       const w = img.width * scale, h = img.height * scale;
-      if (shiny && 'filter' in c) c.filter = 'hue-rotate(150deg) saturate(1.15)';
+      if (shiny && !radiantSrc && 'filter' in c) c.filter = 'hue-rotate(150deg) saturate(1.15)';
       c.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
       c.filter = 'none';
       if (shiny) { // radiant sparkles ride above, same as procedural bakes

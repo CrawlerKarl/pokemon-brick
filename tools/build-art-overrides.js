@@ -29,12 +29,18 @@ try {
   console.log('build-art-overrides: no final/ directory yet — writing an empty map.');
 }
 
+// Two variants per id: the BASE sprite (af-<id>-<slug>.png) and the optional
+// RADIANT form (af-<id>-<slug>-radiant.png — the pipeline's prismatic
+// transform; the game's shiny-equivalent). Each goes in its own map — a
+// radiant file must never shadow the base look.
 const map = {};
+const radiant = {};
 const dupes = [];
 for (const f of files) {
   const id = parseInt(f.match(/^af-(\d+)/i)[1], 10);
-  if (map[id]) dupes.push(f);
-  else map[id] = webBase + f;
+  const target = /-radiant\.png$/i.test(f) ? radiant : map;
+  if (target[id]) dupes.push(f);
+  else target[id] = webBase + f;
 }
 if (dupes.length) {
   console.error('build-art-overrides: DUPLICATE ids skipped: ' + dupes.join(', '));
@@ -46,8 +52,12 @@ const body = [
   '// Maps aetherfall ids to production-art sprites in ' + webBase,
   '// The procedural renderer covers every id absent from this map.',
   'const AETHERFALL_ART_OVERRIDES = ' + JSON.stringify(map, null, 2) + ';',
+  '// RADIANT forms (the shiny-equivalent): real prismatic art per id.',
+  '// Ids absent here fall back to the base override + a hue-rotate filter.',
+  'const AETHERFALL_ART_RADIANT = ' + JSON.stringify(radiant, null, 2) + ';',
   '',
 ].join('\n');
 
 fs.writeFileSync(outPath, body);
-console.log('build-art-overrides: ' + Object.keys(map).length + ' override(s) → js/aetherfall-overrides.generated.js');
+console.log('build-art-overrides: ' + Object.keys(map).length + ' base + '
+  + Object.keys(radiant).length + ' radiant override(s) → js/aetherfall-overrides.generated.js');

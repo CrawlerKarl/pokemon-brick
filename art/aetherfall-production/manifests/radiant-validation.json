@@ -1,0 +1,6224 @@
+{
+  "generatedAt": "2026-07-20",
+  "method": "deterministic-prismatic-palette-transform-v1",
+  "total": 259,
+  "valid": 259,
+  "items": [
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-010-pyromancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        14,
+        114,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:10:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-010-pyromancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-011-infernomancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        7,
+        113,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:11:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-011-infernomancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-012-suncaller-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        6,
+        114,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:12:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-012-suncaller-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-013-fluxweaver-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        28,
+        13,
+        100,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:13:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-013-fluxweaver-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-014-tidebinder-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        8,
+        105,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:14:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-014-tidebinder-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-015-deepcaller-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        8,
+        110,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:15:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-015-deepcaller-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-016-druid-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        16,
+        108,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:16:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-016-druid-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-017-grovekeeper-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        8,
+        109,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:17:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-017-grovekeeper-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-018-wildspeaker-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        9,
+        115,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:18:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-018-wildspeaker-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-019-stormbinder-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        35,
+        14,
+        93,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:19:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-019-stormbinder-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-020-tempestbinder-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        30,
+        8,
+        97,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:20:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-020-tempestbinder-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-021-thundersovereign-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        7,
+        107,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:21:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-021-thundersovereign-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-022-drifter-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        13,
+        111,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:22:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-022-drifter-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-023-wayfinder-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        7,
+        113,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:23:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-023-wayfinder-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-024-paragon-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        6,
+        113,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:24:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-024-paragon-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-025-aeronaut-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        16,
+        12,
+        112,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:25:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-025-aeronaut-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-026-jetcorsair-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        7,
+        119,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:26:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-026-jetcorsair-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-027-skymarshal-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        6,
+        120,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:27:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-027-skymarshal-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-028-frostweaver-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        13,
+        110,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:28:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-028-frostweaver-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-029-glacimancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        7,
+        115,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:29:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-029-glacimancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-030-wintersage-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        6,
+        117,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:30:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-030-wintersage-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-031-vanguard-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        16,
+        105,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:31:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-031-vanguard-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-032-shocktrooper-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        9,
+        110,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:32:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-032-shocktrooper-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-033-warmaster-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        6,
+        110,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:33:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-033-warmaster-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-034-chemist-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        26,
+        15,
+        101,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:34:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-034-chemist-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-035-venomsmith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        9,
+        105,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:35:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-035-venomsmith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-036-toxin-baron-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        26,
+        10,
+        102,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:36:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-036-toxin-baron-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-037-terrashaper-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        9,
+        106,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:37:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-037-terrashaper-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-038-quakebinder-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        6,
+        110,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:38:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-038-quakebinder-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-039-worldcarver-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        7,
+        106,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:39:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-039-worldcarver-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-040-psion-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        27,
+        13,
+        101,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:40:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-040-psion-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-041-farseer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        26,
+        8,
+        102,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:41:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-041-farseer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-042-omnimind-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        25,
+        6,
+        102,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:42:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-042-omnimind-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-043-swarm-operator-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        26,
+        13,
+        101,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:43:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-043-swarm-operator-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-044-dronemaster-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        8,
+        104,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:44:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-044-dronemaster-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-045-hivemarshal-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        6,
+        105,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:45:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-045-hivemarshal-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-046-siegewright-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        30,
+        12,
+        98,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:46:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-046-siegewright-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-047-bulwarkwright-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        26,
+        6,
+        101,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:47:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-047-bulwarkwright-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-048-citadel-prime-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        27,
+        7,
+        101,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:48:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-048-citadel-prime-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-049-necromancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        35,
+        17,
+        93,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:49:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-049-necromancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-050-gravecaller-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        35,
+        7,
+        92,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:50:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-050-gravecaller-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-051-deathsinger-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        37,
+        7,
+        91,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:51:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-051-deathsinger-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-052-wyrmrider-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        12,
+        109,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:52:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-052-wyrmrider-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-053-drakeknight-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        9,
+        108,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:53:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-053-drakeknight-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-054-wyrmmarshal-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        8,
+        108,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:54:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-054-wyrmmarshal-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-055-shadowmancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        16,
+        111,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:55:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-055-shadowmancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-056-nightblade-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        6,
+        109,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:56:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-056-nightblade-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-057-voiddancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        6,
+        110,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:57:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-057-voiddancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-058-engineer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        27,
+        13,
+        101,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:58:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-058-engineer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-059-armorwright-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        9,
+        105,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:59:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-059-armorwright-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-060-bastionsmith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        7,
+        104,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:60:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-060-bastionsmith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-061-feywarden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        14,
+        108,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:61:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-061-feywarden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-062-feyknight-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        10,
+        105,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:62:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-062-feyknight-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-063-courtsovereign-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        24,
+        6,
+        104,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:63:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-063-courtsovereign-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-101-thistling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        31,
+        23,
+        94,
+        101
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:101:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-101-thistling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-102-briarkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        25,
+        117,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:102:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-102-briarkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-103-thornwarden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        21,
+        8,
+        111,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:103:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-103-thornwarden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-104-pipkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        17,
+        109,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:104:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-104-pipkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-105-glimmerkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        10,
+        102,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:105:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-105-glimmerkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-106-courtglimmer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        6,
+        102,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:106:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-106-courtglimmer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-107-flittern-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        24,
+        24,
+        103,
+        103
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:107:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-107-flittern-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-108-galefinch-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        13,
+        115,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:108:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-108-galefinch-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-109-stormplume-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        11,
+        120,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:109:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-109-stormplume-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-110-meadowkit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        27,
+        18,
+        97,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:110:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-110-meadowkit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-111-prancelet-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        24,
+        8,
+        100,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:111:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-111-prancelet-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-112-soverelk-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        6,
+        106,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:112:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-112-soverelk-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-113-mothling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        25,
+        110,
+        104
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:113:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-113-mothling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-114-duskwing-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        13,
+        121,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:114:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-114-duskwing-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-115-spellmoth-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        6,
+        119,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:115:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-115-spellmoth-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-116-rillet-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        24,
+        115,
+        108
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:116:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-116-rillet-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-117-brooksprite-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        15,
+        117,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:117:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-117-brooksprite-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-118-riverlord-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        11,
+        119,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:118:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-118-riverlord-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-190-the-frost-herald-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        10,
+        11,
+        181,
+        177
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:190:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-190-the-frost-herald-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-191-the-storm-herald-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        14,
+        16,
+        184,
+        174
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:191:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-191-the-storm-herald-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-192-the-ember-herald-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        11,
+        184,
+        182
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:192:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-192-the-ember-herald-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-180-velmora-the-first-oracle-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        6,
+        5,
+        185,
+        188
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:180:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-180-velmora-the-first-oracle-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-181-lumine-the-first-dream-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        9,
+        184,
+        182
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:181:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-181-lumine-the-first-dream-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-201-zephyrkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        16,
+        18,
+        112,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:201:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-201-zephyrkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-202-galemonk-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        10,
+        117,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:202:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-202-galemonk-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-203-windabbot-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        9,
+        119,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:203:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-203-windabbot-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-204-fistling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        24,
+        20,
+        108,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:204:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-204-fistling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-205-ironpalm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        14,
+        113,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:205:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-205-ironpalm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-206-skyfist-sage-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        8,
+        119,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:206:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-206-skyfist-sage-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-207-chimeling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        27,
+        14,
+        106,
+        110
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:207:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-207-chimeling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-208-bellsage-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        29,
+        9,
+        96,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:208:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-208-bellsage-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-209-resonarch-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        32,
+        8,
+        95,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:209:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-209-resonarch-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-210-vesperling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        20,
+        110,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:210:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-210-vesperling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-211-tollgeist-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        17,
+        110,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:211:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-211-tollgeist-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-212-knellwraith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        12,
+        120,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:212:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-212-knellwraith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-213-sprigling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        18,
+        113,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:213:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-213-sprigling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-214-teawarden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        13,
+        122,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:214:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-214-teawarden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-215-groveabbot-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        10,
+        122,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:215:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-215-groveabbot-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-216-bellkit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        16,
+        15,
+        112,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:216:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-216-bellkit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-217-chantling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        12,
+        113,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:217:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-217-chantling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-218-hymnkeeper-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        9,
+        120,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:218:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-218-hymnkeeper-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-290-the-storm-vow-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        16,
+        183,
+        178
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:290:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-290-the-storm-vow-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-291-the-ember-vow-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        17,
+        12,
+        177,
+        179
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:291:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-291-the-ember-vow-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-292-the-tide-vow-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        20,
+        13,
+        175,
+        177
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:292:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-292-the-tide-vow-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-280-zephyrion-warden-of-gales-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        8,
+        184,
+        179
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:280:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-280-zephyrion-warden-of-gales-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-281-verdandi-the-hourseed-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        12,
+        9,
+        184,
+        180
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:281:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-281-verdandi-the-hourseed-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-301-saltling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        11,
+        109,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:301:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-301-saltling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-302-brinekin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        14,
+        121,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:302:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-302-brinekin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-303-tidemarshal-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        9,
+        118,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:303:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-303-tidemarshal-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-304-floeling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        32,
+        109,
+        102
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:304:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-304-floeling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-305-glacikin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        17,
+        122,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:305:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-305-glacikin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-306-bergsovereign-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        9,
+        122,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:306:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-306-bergsovereign-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-307-dredgling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        22,
+        118,
+        108
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:307:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-307-dredgling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-308-gloomeel-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        29,
+        121,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:308:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-308-gloomeel-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-309-abysswarden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        22,
+        122,
+        108
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:309:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-309-abysswarden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-310-driftgeist-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        11,
+        105,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:310:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-310-driftgeist-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-311-wreckwraith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        27,
+        7,
+        101,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:311:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-311-wreckwraith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-312-drowned-king-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        25,
+        7,
+        104,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:312:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-312-drowned-king-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-313-finwyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        13,
+        109,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:313:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-313-finwyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-314-seawyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        8,
+        120,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:314:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-314-seawyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-315-maelstrom-wyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        6,
+        119,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:315:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-315-maelstrom-wyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-316-kelpling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        11,
+        112,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:316:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-316-kelpling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-317-wrackweed-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        10,
+        117,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:317:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-317-wrackweed-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-318-sargasso-shade-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        9,
+        121,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:318:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-318-sargasso-shade-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-390-the-tide-colossus-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        22,
+        184,
+        178
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:390:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-390-the-tide-colossus-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-391-the-frost-colossus-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        22,
+        184,
+        172
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:391:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-391-the-frost-colossus-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-392-the-hull-colossus-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        28,
+        184,
+        163
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:392:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-392-the-hull-colossus-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-380-thalassar-the-deep-current-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        13,
+        12,
+        175,
+        180
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:380:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-380-thalassar-the-deep-current-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-381-mirajin-the-wishing-star-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        13,
+        184,
+        179
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:381:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-381-mirajin-the-wishing-star-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-401-cogling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        26,
+        116,
+        98
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:401:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-401-cogling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-402-gearwright-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        25,
+        119,
+        100
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:402:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-402-gearwright-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-403-foundry-warden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        20,
+        121,
+        101
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:403:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-403-foundry-warden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-404-slagling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        23,
+        117,
+        108
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:404:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-404-slagling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-405-cindergolem-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        20,
+        118,
+        106
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:405:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-405-cindergolem-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-406-basalt-engine-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        20,
+        120,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:406:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-406-basalt-engine-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-407-forgeling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        27,
+        115,
+        106
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:407:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-407-forgeling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-408-cruciburn-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        24,
+        116,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:408:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-408-cruciburn-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-409-smeltlord-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        19,
+        122,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:409:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-409-smeltlord-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-410-drillkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        24,
+        114,
+        100
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:410:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-410-drillkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-411-boreback-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        24,
+        120,
+        102
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:411:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-411-boreback-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-412-quarry-titan-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        20,
+        122,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:412:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-412-quarry-titan-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-413-sparkrivet-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        18,
+        117,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:413:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-413-sparkrivet-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-414-voltwrench-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        12,
+        118,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:414:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-414-voltwrench-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-415-dynamo-sage-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        8,
+        117,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:415:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-415-dynamo-sage-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-416-fumeling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        24,
+        113,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:416:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-416-fumeling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-417-sootbelch-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        18,
+        112,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:417:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-417-sootbelch-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-418-smogreeve-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        12,
+        116,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:418:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-418-smogreeve-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-490-the-anvil-sibyl-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        20,
+        20,
+        176,
+        172
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:490:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-490-the-anvil-sibyl-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-491-the-piston-sibyl-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        16,
+        16,
+        183,
+        176
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:491:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-491-the-piston-sibyl-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-492-the-furnace-sibyl-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        12,
+        18,
+        184,
+        174
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:492:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-492-the-furnace-sibyl-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-480-the-clockwork-regent-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        9,
+        183,
+        182
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:480:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-480-the-clockwork-regent-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-481-nocthern-the-still-hour-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        10,
+        8,
+        184,
+        178
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:481:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-481-nocthern-the-still-hour-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-501-ampling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        24,
+        8,
+        109,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:501:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-501-ampling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-502-surgehound-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        9,
+        113,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:502:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-502-surgehound-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-503-gridalpha-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        6,
+        114,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:503:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-503-gridalpha-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-504-chromekit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        30,
+        9,
+        105,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:504:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-504-chromekit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-505-platedrone-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        6,
+        113,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:505:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-505-platedrone-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-506-skyrise-sentry-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        8,
+        119,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:506:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-506-skyrise-sentry-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-507-shadelurk-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        15,
+        113,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:507:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-507-shadelurk-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-508-neonprowler-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        14,
+        113,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:508:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-508-neonprowler-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-509-noir-baron-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        13,
+        118,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:509:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-509-noir-baron-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-510-adsprite-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        19,
+        120,
+        110
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:510:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-510-adsprite-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-511-mindcaster-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        14,
+        117,
+        110
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:511:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-511-mindcaster-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-512-broadcast-seer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        7,
+        119,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:512:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-512-broadcast-seer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-513-sludgeling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        33,
+        121,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:513:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-513-sludgeling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-514-ventcrawler-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        21,
+        120,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:514:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-514-ventcrawler-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-515-toxin-mogul-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        12,
+        122,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:515:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-515-toxin-mogul-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-516-straykit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        20,
+        115,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:516:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-516-straykit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-517-alleyrunner-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        11,
+        121,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:517:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-517-alleyrunner-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-518-metro-kingpin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        12,
+        120,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:518:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-518-metro-kingpin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-590-the-chrome-paladin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        9,
+        184,
+        176
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:590:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-590-the-chrome-paladin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-591-the-granite-paladin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        13,
+        8,
+        181,
+        182
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:591:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-591-the-granite-paladin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-592-the-verdant-paladin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        14,
+        10,
+        181,
+        181
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:592:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-592-the-verdant-paladin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-580-voltrex-the-grid-tyrant-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        13,
+        19,
+        184,
+        168
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:580:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-580-voltrex-the-grid-tyrant-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-581-ignivar-the-victory-flame-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        11,
+        8,
+        184,
+        181
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:581:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-581-ignivar-the-victory-flame-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-601-glassgeist-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        17,
+        115,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:601:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-601-glassgeist-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-602-panewraith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        10,
+        119,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:602:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-602-panewraith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-603-atrium-phantom-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        7,
+        122,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:603:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-603-atrium-phantom-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-604-umbreling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        18,
+        122,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:604:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-604-umbreling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-605-nightglass-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        13,
+        122,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:605:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-605-nightglass-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-606-eclipse-magnate-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        10,
+        122,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:606:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-606-eclipse-magnate-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-607-seepling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        31,
+        112,
+        106
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:607:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-607-seepling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-608-chemwraith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        25,
+        116,
+        104
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:608:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-608-chemwraith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-609-miasma-don-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        18,
+        119,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:609:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-609-miasma-don-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-610-prismkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        7,
+        102,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:610:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-610-prismkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-611-chandelia-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        6,
+        112,
+        122
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:611:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-611-chandelia-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-612-aurora-regent-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        16,
+        6,
+        112,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:612:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-612-aurora-regent-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-613-oracling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        32,
+        9,
+        99,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:613:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-613-oracling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-614-glassmind-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        8,
+        121,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:614:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-614-glassmind-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-615-spire-sage-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        6,
+        118,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:615:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-615-spire-sage-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-616-shardling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        16,
+        16,
+        115,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:616:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-616-shardling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-617-latticeknight-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        18,
+        120,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:617:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-617-latticeknight-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-618-facade-warden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        11,
+        120,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:618:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-618-facade-warden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-690-the-foundation-serpent-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        17,
+        8,
+        174,
+        184
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:690:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-690-the-foundation-serpent-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-680-nyxharrow-the-carrion-angel-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        11,
+        8,
+        184,
+        175
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:680:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-680-nyxharrow-the-carrion-angel-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-681-lucerna-the-glass-saint-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        19,
+        10,
+        180,
+        182
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:681:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-681-lucerna-the-glass-saint-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-701-leyling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        13,
+        107,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:701:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-701-leyling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-702-riftseer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        22,
+        10,
+        105,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:702:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-702-riftseer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-703-atoll-oracle-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        21,
+        9,
+        104,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:703:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-703-atoll-oracle-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-704-lagoonkit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        19,
+        113,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:704:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-704-lagoonkit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-705-reefdancer-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        17,
+        121,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:705:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-705-reefdancer-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-706-tsunami-caller-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        12,
+        117,
+        116
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:706:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-706-tsunami-caller-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-707-palmling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        17,
+        110,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:707:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-707-palmling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-708-frondweaver-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        13,
+        114,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:708:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-708-frondweaver-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-709-canopy-warden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        10,
+        120,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:709:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-709-canopy-warden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-710-statickit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        18,
+        120,
+        110
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:710:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-710-statickit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-711-ionray-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        13,
+        121,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:711:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-711-ionray-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-712-stormconduit-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        10,
+        117,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:712:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-712-stormconduit-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-713-mirageling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        13,
+        116,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:713:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-713-mirageling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-714-echowraith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        8,
+        117,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:714:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-714-echowraith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-715-rift-revenant-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        7,
+        121,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:715:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-715-rift-revenant-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-716-ripplewyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        13,
+        112,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:716:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-716-ripplewyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-717-leywyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        15,
+        10,
+        110,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:717:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-717-leywyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-718-horizon-wyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        6,
+        110,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:718:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-718-horizon-wyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-790-the-storm-totem-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        12,
+        184,
+        180
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:790:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-790-the-storm-totem-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-791-the-dream-totem-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        13,
+        183,
+        174
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:791:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-791-the-dream-totem-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-792-the-grove-totem-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        21,
+        184,
+        164
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:792:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-792-the-grove-totem-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-780-the-pale-eclipse-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        10,
+        16,
+        184,
+        170
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:780:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-780-the-pale-eclipse-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-781-umbrix-the-stolen-shadow-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        8,
+        184,
+        180
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:781:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-781-umbrix-the-stolen-shadow-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-801-sparrling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        19,
+        20,
+        108,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:801:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-801-sparrling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-802-pit-brawler-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        15,
+        118,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:802:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-802-pit-brawler-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-803-arena-warlord-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        6,
+        121,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:803:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-803-arena-warlord-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-804-rubblekin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        21,
+        119,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:804:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-804-rubblekin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-805-rampartgolem-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        7,
+        31,
+        122,
+        97
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:805:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-805-rampartgolem-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-806-siege-monolith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        20,
+        122,
+        103
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:806:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-806-siege-monolith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-807-torchkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        20,
+        11,
+        108,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:807:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-807-torchkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-808-pyrehound-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        10,
+        114,
+        117
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:808:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-808-pyrehound-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-809-inferno-champion-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        10,
+        113,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:809:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-809-inferno-champion-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-810-bladeling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        22,
+        121,
+        105
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:810:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-810-bladeling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-811-warframe-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        20,
+        121,
+        106
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:811:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-811-warframe-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-812-warforge-colossus-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        16,
+        122,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:812:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-812-warforge-colossus-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-813-jeerling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        17,
+        12,
+        111,
+        113
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:813:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-813-jeerling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-814-mobraiser-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        15,
+        119,
+        108
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:814:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-814-mobraiser-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-815-riot-baron-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        10,
+        117,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:815:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-815-riot-baron-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-816-scaleling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        23,
+        16,
+        112,
+        109
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:816:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-816-scaleling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-817-warwyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        13,
+        119,
+        110
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:817:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-817-warwyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-818-crucible-drake-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        15,
+        122,
+        115
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:818:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-818-crucible-drake-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-890-the-volt-engine-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        11,
+        18,
+        184,
+        165
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:890:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-890-the-volt-engine-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-891-the-drake-engine-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        17,
+        184,
+        168
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:891:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-891-the-drake-engine-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-892-the-frost-destrier-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        27,
+        9,
+        179,
+        181
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:892:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-892-the-frost-destrier-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-880-omega-seraph-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        8,
+        184,
+        181
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:880:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-880-omega-seraph-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-881-vyrakka-the-feral-law-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        11,
+        184,
+        183
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:881:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-881-vyrakka-the-feral-law-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-901-cradlewyrm-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        18,
+        116,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:901:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-901-cradlewyrm-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-902-riftdrake-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        13,
+        114,
+        114
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:902:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-902-riftdrake-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-903-sunder-sovereign-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        6,
+        119,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:903:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-903-sunder-sovereign-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-904-dawnmote-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        29,
+        119,
+        98
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:904:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-904-dawnmote-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-905-lumenkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        13,
+        117,
+        104
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:905:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-905-lumenkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-906-radiant-warden-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        8,
+        11,
+        119,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:906:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-906-radiant-warden-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-907-relicframe-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        13,
+        22,
+        115,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:907:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-907-relicframe-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-908-vaultkeeper-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        17,
+        117,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:908:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-908-vaultkeeper-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-909-epoch-engine-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        16,
+        113,
+        112
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:909:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-909-epoch-engine-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-910-dustkin-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        21,
+        9,
+        113,
+        120
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:910:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-910-dustkin-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-911-mesashaper-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        21,
+        9,
+        116,
+        119
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:911:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-911-mesashaper-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-912-cradle-titan-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        14,
+        6,
+        117,
+        121
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:912:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-912-cradle-titan-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-913-agewraith-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        10,
+        16,
+        119,
+        108
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:913:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-913-agewraith-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-914-eonshade-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        11,
+        12,
+        118,
+        111
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:914:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-914-eonshade-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-915-memory-king-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        12,
+        8,
+        119,
+        118
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:915:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-915-memory-king-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-916-pulseling-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        18,
+        25,
+        115,
+        107
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:916:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-916-pulseling-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-917-riftspark-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        9,
+        22,
+        115,
+        103
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:917:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-917-riftspark-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-918-genesis-coil-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        128,
+        128
+      ],
+      "bbox": [
+        6,
+        16,
+        117,
+        110
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:918:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-918-genesis-coil-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-990-the-vessel-of-moss-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        17,
+        183,
+        176
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:990:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-990-the-vessel-of-moss-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-991-the-vessel-of-snow-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        14,
+        15,
+        179,
+        170
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:991:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-991-the-vessel-of-snow-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-992-the-vessel-of-earth-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        9,
+        17,
+        184,
+        177
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:992:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-992-the-vessel-of-earth-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-980-aurelion-prime-the-first-fusion-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        8,
+        8,
+        184,
+        181
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:980:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-980-aurelion-prime-the-first-fusion-radiant-source.png"
+    },
+    {
+      "file": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/final/af-981-marionne-the-hollow-crown-radiant.png",
+      "mode": "RGBA",
+      "size": [
+        192,
+        192
+      ],
+      "bbox": [
+        20,
+        10,
+        182,
+        181
+      ],
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "edgeNonzero": 0,
+      "valid": true,
+      "stableKey": "aetherfall:981:radiant",
+      "sourceFile": "/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader/art/aetherfall-production/sprites/source/af-981-marionne-the-hollow-crown-radiant-source.png"
+    }
+  ]
+}

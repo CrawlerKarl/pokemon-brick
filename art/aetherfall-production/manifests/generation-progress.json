@@ -1318,5 +1318,2052 @@
     "generatedAt": "2026-07-20",
     "promptLog": "PRODUCTION_RUN.md#192--the-ember-herald",
     "alphaValidated": true
+  },
+  "aetherfall:290": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#290--the-storm-vow",
+    "alphaValidated": true
+  },
+  "aetherfall:291": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#291--the-ember-vow",
+    "alphaValidated": true
+  },
+  "aetherfall:292": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#292--the-tide-vow",
+    "alphaValidated": true
+  },
+  "aetherfall:390": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#390--the-tide-colossus",
+    "alphaValidated": true
+  },
+  "aetherfall:391": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#391--the-frost-colossus",
+    "alphaValidated": true
+  },
+  "aetherfall:392": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#392--the-hull-colossus",
+    "alphaValidated": true
+  },
+  "aetherfall:490": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#490--the-anvil-sibyl",
+    "alphaValidated": true
+  },
+  "aetherfall:491": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#491--the-piston-sibyl",
+    "alphaValidated": true
+  },
+  "aetherfall:492": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#492--the-furnace-sibyl",
+    "alphaValidated": true
+  },
+  "aetherfall:590": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#590--the-chrome-paladin",
+    "alphaValidated": true
+  },
+  "aetherfall:591": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#591--the-granite-paladin",
+    "alphaValidated": true
+  },
+  "aetherfall:592": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#592--the-verdant-paladin",
+    "alphaValidated": true
+  },
+  "aetherfall:690": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#690--the-foundation-serpent",
+    "alphaValidated": true
+  },
+  "aetherfall:790": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#790--the-storm-totem",
+    "alphaValidated": true
+  },
+  "aetherfall:791": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#791--the-dream-totem",
+    "alphaValidated": true
+  },
+  "aetherfall:792": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#792--the-grove-totem",
+    "alphaValidated": true
+  },
+  "aetherfall:890": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#890--the-volt-engine",
+    "alphaValidated": true
+  },
+  "aetherfall:891": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#891--the-drake-engine",
+    "alphaValidated": true
+  },
+  "aetherfall:892": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#892--the-frost-destrier",
+    "alphaValidated": true
+  },
+  "aetherfall:990": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#990--the-vessel-of-moss",
+    "alphaValidated": true
+  },
+  "aetherfall:991": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#991--the-vessel-of-snow",
+    "alphaValidated": true
+  },
+  "aetherfall:992": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#992--the-vessel-of-earth",
+    "alphaValidated": true
+  },
+  "aetherfall:280": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#280--zephyrion-warden-of-gales",
+    "alphaValidated": true
+  },
+  "aetherfall:380": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#380--thalassar-the-deep-current",
+    "alphaValidated": true
+  },
+  "aetherfall:480": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#480--the-clockwork-regent",
+    "alphaValidated": true
+  },
+  "aetherfall:580": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#580--voltrex-the-grid-tyrant",
+    "alphaValidated": true
+  },
+  "aetherfall:680": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#680--nyxharrow-the-carrion-angel",
+    "alphaValidated": true
+  },
+  "aetherfall:780": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#780--the-pale-eclipse",
+    "alphaValidated": true
+  },
+  "aetherfall:880": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#880--omega-seraph",
+    "alphaValidated": true
+  },
+  "aetherfall:980": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#980--aurelion-prime-the-first-fusion",
+    "alphaValidated": true
+  },
+  "aetherfall:181": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#181--lumine-the-first-dream",
+    "alphaValidated": true
+  },
+  "aetherfall:281": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#281--verdandi-the-hourseed",
+    "alphaValidated": true
+  },
+  "aetherfall:381": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#381--mirajin-the-wishing-star",
+    "alphaValidated": true
+  },
+  "aetherfall:481": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#481--nocthern-the-still-hour",
+    "alphaValidated": true
+  },
+  "aetherfall:581": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#581--ignivar-the-victory-flame",
+    "alphaValidated": true
+  },
+  "aetherfall:681": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#681--lucerna-the-glass-saint",
+    "alphaValidated": true
+  },
+  "aetherfall:781": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#781--umbrix-the-stolen-shadow",
+    "alphaValidated": true
+  },
+  "aetherfall:881": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#881--vyrakka-the-feral-law",
+    "alphaValidated": true
+  },
+  "aetherfall:981": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#981--marionne-the-hollow-crown",
+    "alphaValidated": true
+  },
+  "aetherfall:10:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:11:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:12:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:13:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:14:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:15:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:16:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:17:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:18:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:19:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:20:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:21:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:22:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:23:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:24:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:25:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:26:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:27:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:28:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:29:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:30:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:31:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:32:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:33:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:34:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:35:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:36:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:37:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:38:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:39:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:40:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:41:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:42:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:43:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:44:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:45:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:46:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:47:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:48:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:49:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:50:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:51:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:52:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:53:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:54:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:55:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:56:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:57:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:58:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:59:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:60:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:61:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:62:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:63:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:101:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:102:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:103:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:104:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:105:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:106:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:107:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:108:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:109:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:110:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:111:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:112:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:113:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:114:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:115:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:116:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:117:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:118:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:190:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:191:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:192:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:180:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:181:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:201:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:202:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:203:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:204:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:205:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:206:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:207:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:208:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:209:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:210:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:211:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:212:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:213:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:214:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:215:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:216:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:217:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:218:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:290:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:291:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:292:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:280:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:281:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:301:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:302:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:303:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:304:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:305:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:306:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:307:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:308:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:309:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:310:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:311:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:312:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:313:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:314:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:315:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:316:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:317:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:318:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:390:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:391:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:392:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:380:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:381:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:401:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:402:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:403:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:404:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:405:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:406:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:407:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:408:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:409:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:410:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:411:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:412:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:413:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:414:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:415:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:416:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:417:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:418:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:490:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:491:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:492:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:480:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:481:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:501:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:502:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:503:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:504:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:505:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:506:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:507:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:508:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:509:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:510:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:511:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:512:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:513:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:514:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:515:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:516:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:517:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:518:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:590:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:591:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:592:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:580:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:581:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:601:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:602:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:603:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:604:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:605:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:606:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:607:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:608:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:609:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:610:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:611:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:612:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:613:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:614:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:615:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:616:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:617:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:618:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:690:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:680:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:681:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:701:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:702:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:703:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:704:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:705:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:706:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:707:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:708:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:709:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:710:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:711:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:712:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:713:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:714:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:715:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:716:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:717:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:718:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:790:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:791:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:792:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:780:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:781:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:801:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:802:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:803:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:804:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:805:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:806:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:807:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:808:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:809:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:810:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:811:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:812:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:813:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:814:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:815:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:816:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:817:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:818:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:890:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:891:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:892:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:880:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:881:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:901:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:902:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:903:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:904:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:905:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:906:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:907:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:908:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:909:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:910:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:911:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:912:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:913:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:914:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:915:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:916:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:917:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:918:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:990:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:991:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:992:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:980:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
+  },
+  "aetherfall:981:radiant": {
+    "status": "generated-validated",
+    "generatedAt": "2026-07-20",
+    "promptLog": "PRODUCTION_RUN.md#radiant-variant-generation",
+    "alphaValidated": true,
+    "generationMethod": "deterministic-prismatic-palette-transform-v1"
   }
 }
