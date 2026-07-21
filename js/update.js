@@ -2932,7 +2932,11 @@ function update(dt) {
   }
   musicTick();
 
-  const target = Math.max(paddleW() / 2 + 8, Math.min(W - paddleW() / 2 - 8, mouseX));
+  // STARFIGHTER's pilot is a small mon — its edge clamp is the SHIP's half
+  // width, never paddleW(): Tailwind/WIDE inflate the paddle stat to ~300px,
+  // which walled off half a phone screen (owner-reported, 2026-07-21)
+  const clampHalf = G.mode === 'junkie' ? 26 : paddleW() / 2;
+  const target = Math.max(clampHalf + 8, Math.min(W - clampHalf - 8, mouseX));
   G.paddle.speed = (target - G.paddle.x) / Math.max(dt, 0.001);
   const follow = (IS_TOUCH ? SETTINGS.touchFollow : 1) * starterMod('follow', 1);
   G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18 * follow);
@@ -4112,7 +4116,7 @@ function update(dt) {
           // with brief contact i-frames so a surviving block isn't melted
           // frame-by-frame as the ball ghosts through it
           if (br.flash <= 0.5) {
-            damageBrick(br, G.fx_fire ? 99 : (upgN('megaX') ? 4.2 : 3), b.x, b.y, G.ballElement, { source: 'ball' });
+            damageBrick(br, G.fx_fire ? 99 : megaBallDmg(), b.x, b.y, G.ballElement, { source: 'ball' });
             if (G.fx_fire) fireballExplosion(b.x, b.y, G.fx_fire.tier);
             awardRally(b, b.x, b.y);
           }
@@ -4122,7 +4126,7 @@ function update(dt) {
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
           // Blaze embers from the last paddle return add burn damage
-          let dmg = pierce ? (upgN('megaX') ? 4.2 : 3) : 1;
+          let dmg = pierce ? megaBallDmg() : 1; // journey + SURGE-rank scaled overdrive
           if (b.ember > 0) {
             b.ember--;
             dmg += G.starterLvl >= 3 ? 2 : 1;
@@ -4299,7 +4303,9 @@ function update(dt) {
         if (L.pulse || L.charged) {
           L.lastHit = br;
           L.bhits = (L.bhits || 0) + 1;
-          if (L.bhits >= (L.charged ? L.pierce : 2)) L.dead = true;
+          // OVERDRIVE pierce: Mega basics punch through one extra target —
+          // late-region flocks are dense enough that this is the felt power
+          if (L.bhits >= (L.charged ? L.pierce : L.mega ? 3 : 2)) L.dead = true;
         } else {
           L.dead = true;
         }
@@ -4311,7 +4317,7 @@ function update(dt) {
         if (L.charged && br.isBoss) dmg *= 0.65; // charge clears crowds; bosses keep their phases
         if (L.prism && br.isBoss) dmg *= 0.5; // PRISMSTORM boss cap (≈1.25 volleys)
         if (L.lance && (br.armored || br.shellArmor)) dmg *= 2; // AEGIS LANCE breaks armor
-        if (L.mega) dmg *= upgN('megaX') ? 1.4 : 1.25;
+        if (L.mega) dmg *= megaBoltMul(); // journey + SURGE-rank scaled overdrive
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'),
           { source: L.charged ? 'charge' : L.basic ? 'bolt' : 'other' });

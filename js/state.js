@@ -6,6 +6,19 @@ const MEGA_DUR = 5;      // Mega Evolution duration in seconds
 // skill-tree-aware caps (capstones raise them)
 function shieldCap() { return 3 + 2 * upgN('bulwark'); }
 function megaDur() { return (upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR) + starterMod('megaDur', 0); }
+// ---- MEGA stays a button worth pressing (balance round 2026-07-21) ----
+// A flat ×1.25 was drowned out by late-region enemy HP (~×2.6 by the finale),
+// so the overdrive now scales on TWO axes: the JOURNEY (+12% bolt / +9% ball
+// per region, capped at the ninth so TIME SPIRAL loops don't run away) and
+// SURGE-path investment (+10% per rank — the path literally empowers the
+// button, capstone on top). Both modes' numbers track their enemy-HP curves.
+function megaRegions() { return Math.min(8, Math.floor((G.level - 1) / 3)); }
+function megaBoltMul() {
+  return ((upgN('megaX') ? 1.4 : 1.25) + 0.12 * megaRegions()) * (1 + 0.10 * pathLvl('surge'));
+}
+function megaBallDmg() {
+  return (upgN('megaX') ? 4.2 : 3) * (1 + 0.09 * megaRegions()) * (1 + 0.10 * pathLvl('surge'));
+}
 function starterTierValue(key, tier) {
   const value = SKIN.starterMon[G.starter]?.mods?.[key];
   if (value == null) return 0;

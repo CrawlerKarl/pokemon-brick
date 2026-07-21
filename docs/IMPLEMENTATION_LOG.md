@@ -5,6 +5,42 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-21b — STARFIGHTER edge-lock fix + MEGA stays worth pressing
+
+Owner (from a live phone session on the Alola gauntlet): (1) "when this
+animation gets too large on the screen it prevents me from being able to
+move my character all the way to the left or right"; (2) "the mega button
+becomes useless later in the game."
+
+Both trace to one root plus one curve:
+
+- **The paddleW() inflation bug.** The movement clamp (update.js) used
+  `paddleW()/2` in EVERY mode, and the MEGA READY halo/ring-ping (render.js
+  drawPaddle) sized itself from the same stat. Tailwind (flying partner) ×
+  the WIDE pickup push paddleW past 400px in STARFIGHTER — walling off
+  ~170px per screen edge AND drawing the halo as a screen-wide gold ellipse
+  over the pilot (the "animation" in the report). Fix: the junkie clamp is
+  the SHIP's half width (26px — same constant the beam-lane clip uses), and
+  the READY cue caps at 84px in junkie. Verified: with paddleW 409 the pilot
+  now reaches x∈[34, W−34] (was [212, W−212]); classic/blaster clamps
+  untouched (their paddle width is honest geometry).
+- **MEGA = scaled OVERDRIVE.** The flat ×1.25 bolt bonus was drowned by
+  late-region enemy HP (~×2.6 by the finale). Mega now scales on two axes
+  (megaBoltMul/megaBallDmg, state.js): +12% bolt / +9% ball damage per
+  region (capped at region 9 so TIME SPIRAL can't run away) and **+10% per
+  SURGE rank** — the path literally empowers the button (surge summary +
+  tempo synergy line say so). During the window, basics also PIERCE one
+  extra target, fire 20% faster, and build half heat (a timed burst on an
+  earned meter — the heat-fairness band is measured on sustained non-Mega
+  fire and is untouched). Region-7 numbers: ×2.36 baseline, ×2.97 with
+  capstone + full SURGE; classic overdrive ball 3→up to ~9 with the same
+  investment. Support lasers inherit the multiplier via the shared L.mega
+  path.
+- build-dist now preserves dist-aetherfall/.git across rebuilds (the output
+  directory doubles as the public repo checkout).
+
+---
+
 ## 2026-07-21 — AETHERFALL becomes a standalone game (the release-identity move)
 
 Owner: "Create the new version of the game absent any pokemon, fully to the

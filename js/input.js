@@ -1248,6 +1248,10 @@ function fireAction(auto = false) {
   // HYPERNOVA CYCLE: during Mega an unbroken stream spins through 3 cadence
   // stages (the stream breaks — see tickEffects — and the stages fall away)
   let cd = (upgN('hyper') ? 0.24 : 0.3) * starterMod('fireRate', 1);
+  // OVERDRIVE cadence: Mega fires 20% faster while it lasts — a timed burst
+  // on a meter you earned, not a fire-rate upgrade (the heat-fairness band
+  // is measured on sustained NON-Mega fire and is untouched)
+  if (G.megaT > 0) cd *= 0.8;
   if (upgN('hypernova') && G.megaT > 0) {
     cd *= [1, 0.94, 0.86, 0.77][G.novaStage] || 1;
     G.novaT = 0.7;
@@ -1275,7 +1279,10 @@ function fireAction(auto = false) {
   // but stage three cooks the barrel (the plan's declared limiter)
   const novaHeat = G.novaStage ? [1, 1.1, 1.25, 1.5][G.novaStage] : 1;
   const heatRate = G.mode === 'junkie' ? (preset().heatBuild || 0.42) : 0.4;
-  addWeaponHeat(heatRate * cd * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * masteryCool * novaHeat);
+  // OVERDRIVE runs the barrel half as hot — Mega is the one window where
+  // holding the trigger is the intended play
+  const megaCool = G.megaT > 0 ? 0.5 : 1;
+  addWeaponHeat(heatRate * cd * (1 - 0.25 * upgN('coolant')) * hyperCool * torrent * masteryCool * novaHeat * megaCool);
   // The shot IS the partner's attack in EVERY mode now — the SHAPE follows
   // the species, the color + type follow the current element. Classic's
   // armed blaster fires the same typed bolts the Starfighter pilot does.

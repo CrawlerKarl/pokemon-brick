@@ -196,8 +196,11 @@ function stripMarkedBlock(src, startMark, endMark, label) {
 }
 
 // ---- build ----
-rmrf(out);
-mkdirp(out);
+// dist-aetherfall/ doubles as the checkout of the public aetherfall repo:
+// clear everything EXCEPT .git so a rebuild is a clean commit, not a re-init
+if (fs.existsSync(out)) {
+  for (const e of fs.readdirSync(out)) if (e !== '.git') rmrf(path.join(out, e));
+} else mkdirp(out);
 
 // 1) js/ — every module, transformed
 const jsDir = path.join(root, 'js');

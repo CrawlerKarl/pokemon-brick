@@ -606,7 +606,7 @@ const PATHS = {
       visual: 'A ROTATING REGENERATOR MARK TRAVELS THE SHIELD CROWN' },
   ]},
   surge: { name: 'SURGE', role: 'MEGA TEMPO', family: 'tempo', color: '#ffd54f',
-    summary: 'CHARGE MEGA OFTEN · CASH IN A POWER WINDOW', tell: 'GOLD OVERDRIVE CORE', tiers: [
+    summary: 'CHARGE MEGA OFTEN · EVERY RANK: MEGA DAMAGE +10%', tell: 'GOLD OVERDRIVE CORE', tiers: [
     { key: 'momentum',  icon: 'mega', name: 'MOMENTUM',       desc: 'RETURNS +2% MEGA · BLASTER HITS +0.2%',
       sdesc: 'EVERY BLASTER HIT CHARGES +0.4% MEGA', visual: 'A GOLD POWER RING LIGHTS BENEATH THE PILOT' },
     { key: 'rally',     icon: 'star', name: 'RALLY MASTER',   desc: 'KILLS CHARGE MEGA · BARRIER +1 · RALLY SCORE +50%',
@@ -666,7 +666,7 @@ function tierSynergy(pathKey, tierIdx) {
   if (family === 'offense' && pathLvl('surge')) return 'SYNERGY: MORE HITS CHARGE MEGA FASTER';
   if (family === 'defense' && pathLvl('bond')) return 'SYNERGY: SAFER ITEM COLLECTION';
   if (family === 'element' && G.starter) return 'SYNERGY: AMPLIFIES YOUR PARTNER TYPE';
-  if (family === 'tempo' && PATH_KEYS.some(k => PATHS[k].family === 'offense' && pathLvl(k))) return 'SYNERGY: ATTACKS FILL THE MEGA RING';
+  if (family === 'tempo') return 'SYNERGY: EVERY SURGE RANK ADDS +10% MEGA DAMAGE';
   if (family === 'utility' && pathLvl('aegis')) return 'SYNERGY: SHIELDS PROTECT ITEM RUNS';
   return 'BUILDS TOWARD ' + PATHS[pathKey].tiers[Math.min(3, tierIdx + 1)].name;
 }

@@ -1908,8 +1908,12 @@ function drawPaddle() {
   // impossible to miss, yet gold + low-alpha + slow keeps it in the scenery
   const megaReady = !mega && G.mega >= 1 && (G.state === 'play' || G.state === 'serve');
   if (megaReady) {
+    // the cue hugs the CHARACTER, never the paddle STAT — Tailwind/WIDE push
+    // paddleW past 300px, which turned this halo into a screen-wide ellipse
+    // over the junkie pilot (owner-reported, 2026-07-21)
+    const cueW = G.mode === 'junkie' ? Math.min(pwv, 84) : pwv;
     const pulse = 0.5 + 0.5 * Math.sin(G.time * 3);
-    const hr = pwv * 0.7 + 16 + 8 * pulse;
+    const hr = cueW * 0.7 + 16 + 8 * pulse;
     const hg = ctx.createRadialGradient(x, py, 6, x, py, hr);
     hg.addColorStop(0, `rgba(255,213,79,${0.15 + 0.12 * pulse})`);
     hg.addColorStop(0.6, `rgba(255,213,79,${0.05 + 0.05 * pulse})`);
@@ -1917,7 +1921,7 @@ function drawPaddle() {
     ctx.fillStyle = hg;
     ctx.beginPath(); ctx.ellipse(x, py, hr, hr * 0.6, 0, 0, Math.PI * 2); ctx.fill();
     const tp = (G.time % 1.6) / 1.6; // one ping every 1.6s, grows and fades
-    const rr = pwv * 0.5 + tp * 48;
+    const rr = cueW * 0.5 + tp * 48;
     ctx.globalAlpha = (1 - tp) * 0.4;
     ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(x, py, rr, rr * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
