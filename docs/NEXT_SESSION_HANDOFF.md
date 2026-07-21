@@ -8,11 +8,36 @@
 > https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys from
 > `main`). Repo `CrawlerKarl/pokemon-brick`.
 >
-> **GATE: GREEN.** The full invariant suite (`/test.html`, 78 checks) was
-> run to completion at commit `45d7693` — **78/78 PASSED**. That run also
-> CAUGHT a live regression (a HUD crash for no-partner Starfighter runs,
-> introduced by the review's `attackElement`→null fix) which is now fixed
-> and re-verified green. The tree is clean and everything is deployed.
+> **NEWEST (2026-07-20b): the Rift is EARNED.** Kanto's shards are one-shot
+> skill tests now — shooter modes get a swift RIFT COURIER crosser you must
+> shoot down before it exits (escape = shard lost; `SKIN.secret.courier`),
+> BREAKER gets a fast swaying one-pass fall you must paddle-catch. And the
+> Mew VMAX reward is ONE bounty draft where you CHOOSE TWO from the same hand
+> (`G.bonusPicks` + `holdBonusPick`, input.js — replaced
+> `G.secret.bonusDrafts`/`chainBonusDraft`'s two chained drafts). See the
+> implementation log.
+>
+> **ALSO (2026-07-20): BREAKER (classic) is now a CALM ball-only game** —
+> the owner asked to remove enemy fire and the paddle gun from the "normal
+> brick breaker game." Classic now takes **zero enemy fire** (director skipped
+> + `spawnEnemyShot` no-op + columns cleared) and has **no paddle gun**
+> (`blasterArmed()` false in classic; `fireCharge` guarded). The only way to
+> lose a life is dropping the ball. Bosses still move/phase/summon guard bricks
+> but never shoot. The OFFENSE paths reskin to ball power in classic (TWIN ORB
+> multiball, WIDE ARRAY paddle, POWER/SHATTER CORE ball damage, LASER→MULTIBALL)
+> so no draft pick is dead; shooter modes keep the same tiers as guns via
+> `sdesc`. See the implementation log + the classic-mode bullet in CLAUDE.md.
+> The 'classic calm' + 'classic offense reskin' suite tests replaced the
+> obsolete 'classic deflector core' / 'classic guns' tests.
+>
+> **GATE: GREEN.** The full invariant suite (`/test.html`, 78 checks) ran to
+> completion after BOTH rounds (calm classic + earned rift/choose-2 bounty) —
+> **78/78 PASSED**, 0 fails, including the new 'classic calm', 'classic
+> offense reskin', extended 'Kanto Rift Key' (courier), and 'Mew VMAX bounty'
+> tests. Along the way the courier test exposed a REAL bug — `resetRun` never
+> cleared `G.dramaticT`/`G.freeze`, so a fresh run could open in ×0.3 slow-mo —
+> now fixed. Committed and deployed (owner-approved), together with the art
+> pipeline's realms 5–9 finals sweep (220 overrides live).
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -73,9 +98,11 @@ npm run art-overrides     # scans final/, regenerates js/aetherfall-overrides.ge
 `aetherart.js` blits each override PNG onto its cached procedural canvas
 on load (same object identity → every reference upgrades in place;
 procedural art covers any id with no override, and any load gap). As of
-2026-07-20 there are **130 overrides live** (all 18 vessels ×3 forms
-plus realms 1–5 creatures). **At session start: `git status` — if the
-user dropped new finals, run `npm run art-overrides`, commit, deploy.**
+2026-07-20 (evening sweep) there are **220 overrides live** — all 18
+vessels ×3 forms, ALL realms 1–9 creatures, and the heralds; the
+remaining gap is bosses/sentinels. **At session start: `git status` — if
+the user dropped new finals, run `npm run art-overrides`, commit,
+deploy.**
 
 - Local same-origin files only — the no-remote-fetch rule stands.
 - `art/` is ~253 MB / 265 PNGs (128px finals + 1024px source masters +

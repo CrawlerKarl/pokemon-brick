@@ -219,7 +219,6 @@ function freshSecretState() {
     shards: [false, false, false], offered: [false, false, false], pendingShard: null,
     vmax: false, rewardDraft: false, deferredChoices: null,
     completed: false, lastReward: null,
-    bonusDrafts: 0, // Mew VMAX victory grants this many EXTRA normal drafts
   };
 }
 function secretEligible() {
@@ -274,6 +273,7 @@ const G = {
   stacks: { orb: 0, ice: 0, bell: 0 }, // SPACE JUNKIE: infinitely-stacking held items
   attackAnim: 0,       // SPACE JUNKIE: pilot lunge/recoil timer on fire
   rerolled: false,     // one draft reroll per upgrade screen
+  bonusPicks: 0,       // Mew VMAX bounty: picks remaining in the CURRENT hand (choose 2)
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -465,13 +465,13 @@ const FLOOR = () => H - SAFE_B;
 const PADDLE_Y = () => FLOOR() - (IS_TOUCH ? 124 : 64);
 const DANGER_Y = () => PADDLE_Y() - 86;
 const ballSp = () => diff().ballSpeed * (G.mode === 'classic' && upgN('coolant') ? 0.92 : 1);
-// CLASSIC keeps the ball as THE weapon — the blaster is earned, never default.
-// It arms only at tier 3 of an offense path, from a short LASER pickup, or
-// during Mega. The shooter modes (blaster / junkie) are always armed.
+// CLASSIC is a pure, calm brick-breaker: the ball is the ONLY weapon and the
+// paddle never carries a gun (no LASER auto-fire, no Mega guns, no earned
+// blaster, no charge). Enemy fire is likewise removed in classic, so the only
+// way to lose a life is dropping the ball. The shooter modes (BLASTER /
+// STARFIGHTER) are always armed — firing IS their game.
 function blasterArmed() {
-  if (G.mode !== 'classic') return true;
-  if (G.fx_laser || G.megaT > 0) return true;
-  return PATH_KEYS.some(k => PATHS[k].family === 'offense' && pathLvl(k) >= 3);
+  return G.mode !== 'classic';
 }
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
@@ -1513,6 +1513,10 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.webSeen = {}; G.lastOfferKeys = [];
   G.lastDraftForm = 1; // re-baselined below once starterLvl is known
   G.secret = freshSecretState();
+  G.bonusPicks = 0; // no half-spent Mew VMAX bounty leaks into a fresh run
+  // a fresh run never inherits the previous one's kill slow-mo or hit-stop —
+  // lingering dramaticT slowed the first ~0.9s of a new run at ×0.3
+  G.dramaticT = 0; G.freeze = 0;
   G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;
   G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
   G.charge = 0; G.chargeCD = 0; G.chargeFullT = 0;

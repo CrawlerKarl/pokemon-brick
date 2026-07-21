@@ -2037,7 +2037,8 @@ function drawPaddle() {
   // silhouettes make the two weapon builds readable before either one fires.
   const volley = pathLvl('arsenal'), impact = pathLvl('impact');
   const barrelW = 7 + volley * 0.7 + impact * 1.1, barrelH = 12 + volley * 1.1 + impact * 1.6;
-  const barrels = upgN('twin') ? [-10, 10] : [0];
+  // weapon barrels draw only when the paddle actually fires — never in calm classic
+  const barrels = blasterArmed() ? (upgN('twin') ? [-10, 10] : [0]) : [];
   for (const off of barrels) {
     if (impact) { ctx.shadowColor = PATHS.impact.color; ctx.shadowBlur = 5 + impact * 1.5; }
     ctx.fillStyle = G.blasterCD > 0 ? '#546e7a' : (impact ? '#ffccbc' : '#cfd8dc');
@@ -6588,7 +6589,7 @@ function drawTreeDetail(T) {
     ctx.fillText((choice.tags || []).join('  +  '), d.x + pad, y, d.w - pad * 2);
     y += 15;
     ctx.fillStyle = '#90a4ae';
-    ctx.fillText(choice.synergy || P.summary, d.x + pad, y, d.w - pad * 2);
+    ctx.fillText(choice.synergy || pathSummary(pk), d.x + pad, y, d.w - pad * 2);
   }
 
   // ---- PATH PROGRESS: the roomy side panel's dead space now shows where
@@ -7232,7 +7233,11 @@ function drawOverlays() {
       const headerY = L.card(0).y - (L.stacked || L.short ? 16 : 22);
       const selC = draftSel != null && G.upgradeChoices[draftSel];
       if (!selC) {
-        ctx.fillText((secretDraft ? 'CHOOSE A SECRET UPGRADE' : G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE') +
+        // the Mew VMAX bounty is ONE hand, TWO picks — the header carries the count
+        const bounty = G.bonusPicks >= 2 ? 'RIFT BOUNTY — CHOOSE TWO'
+          : G.bonusPicks === 1 ? 'RIFT BOUNTY — ONE MORE PICK' : null;
+        if (bounty) { ctx.fillStyle = '#d780ff'; }
+        ctx.fillText((bounty || (secretDraft ? 'CHOOSE A SECRET UPGRADE' : G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE')) +
           (IS_TOUCH ? ' — TAP A CARD TO INSPECT' : ' — INSPECT, THEN CONFIRM'), W / 2, headerY, W * 0.94);
       } else if (selC.secret) {
         ctx.font = '800 11px Orbitron, sans-serif'; ctx.fillStyle = selC.secret.color;
@@ -7580,12 +7585,11 @@ function drawOverlays() {
     title('PAUSED', H * 0.38, 44, '#e3f2fd');
     ctx.font = '500 13px Orbitron, sans-serif';
     ctx.fillStyle = '#90a4ae';
-    // CLASSIC leads with the ball — the blaster is an earned extra, not a
-    // default control, so its help never promises a FIRE button
+    // CLASSIC is ball-only — no gun exists, so its help never mentions one
     (G.mode === 'classic'
       ? (IS_TOUCH
-        ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS']
-        : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA EVOLVE WHEN METER IS FULL', 'EARN A BLASTER FROM DROPS & DRAFTS', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
+        ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — BALL OVERDRIVE WHEN THE RING IS FULL', 'THE BALL IS YOUR ONLY WEAPON — KEEP IT ALIVE']
+        : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA BALL OVERDRIVE WHEN METER IS FULL', 'THE BALL IS YOUR ONLY WEAPON — KEEP IT ALIVE', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
       : (IS_TOUCH
         ? ['DRAG ANYWHERE — MOVE', SETTINGS.autoFire ? 'AUTO-FIRE — ON' : 'TAP FIRE — SHOOT', 'HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
         : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK OR SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])

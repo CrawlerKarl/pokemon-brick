@@ -517,6 +517,9 @@
     hint1: "A SECOND PIECE IS HIDDEN IN THE MARCHES' CHALLENGE",
     hint2: 'THE LAST PIECE RESTS BEYOND VELMORA',
     conquered: 'MARCHES RIFT · CONQUERED',
+    // shard courier (shooter modes): the bonus-flight species doubles as the
+    // rift's swift carrier — its sprite is guaranteed by the same painter
+    courier: { id: 107, t: 'psychic', name: 'RIFT COURIER' },
   };
 
   // ---- mode-card copy: config.js parses pre-skin, so patch at load

@@ -428,7 +428,7 @@ window.requestAnimationFrame = function () { return 0; };
       if (G.state === 'results') skipResults();
       if (G.state === 'upgrade') { reachedUpgrade = true; return false; }
       if (G.state === 'serve') fireAction();
-      if (mode === 'classic' && G.state === 'play') fireHeld = true; // classic = ball + free-firing blaster
+      // classic is ball-only now (no gun) — holding fire would be a no-op
       steerBallOrAim(mode);
     });
     fireHeld = false;
@@ -1366,110 +1366,87 @@ window.requestAnimationFrame = function () { return 0; };
     return 'neutral/light/dark trios gate correctly · pokemon ignores affinity · stacks seeded';
   });
 
-  // 2b-ii) CLASSIC DEFLECTOR CORE (balance round): enemy fire only damages a
-  // FIXED core at the paddle's center; width mods grow the visual paddle and
-  // its deflector wings, NEVER the kill zone. Wing hits are consumed with no
-  // life lost; wave fire can't stack past 8 live shots.
-  test('classic deflector core: width is armor, never a bigger target', async () => {
-    SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'flying';
-    resetRun(5, true, { seed: 'core-balance' });
-    G.state = 'play'; G.stateT = 9; G.invuln = 0; G.shieldCharges = 0;
-    // park a STUCK ball: classic loses a life at zero balls, so an empty
-    // array would blame ball loss on the wing — a stuck ball never drops
-    G.balls = [makeBall(W / 2, PADDLE_Y() - 24)];
-    G.balls[0].stuck = true;
-    const baseCore = classicCoreHalf();
-    G.fx_wide = { t: 999, tier: 3 };
-    G.upg.wide = 1;
-    assert(Math.abs(classicCoreHalf() - baseCore) < 0.001,
-      'width mods changed the damage core (' + classicCoreHalf() + ' vs ' + baseCore + ')');
-    assert(paddleW() / 2 > classicCoreHalf() + 40,
-      'stacked width should extend well past the core (wings exist)');
-    // 1) a shot on the WING deflects: consumed, zero damage, no i-frames
-    const py = PADDLE_Y(), lives0 = G.lives;
-    G.paddle.x = W / 2; mouseX = W / 2;
-    const wingX = W / 2 + classicCoreHalf() + 30;
-    spawnEnemyShot({ x: wingX, y: py - 6, vy: 200, type: 'fire', classKey: 'standard' });
-    for (let i = 0; i < 12; i++) { G.paddle.x = W / 2; update(1 / 60); }
-    assert(G.lives === lives0, 'a wing hit cost a life');
-    assert(G.invuln === 0, 'a wing deflect burned i-frames');
-    assert(!G.enemyShots.some(s => !s.dead && !s.boss), 'the wing shot was not consumed');
-    // 2) a shot on the CORE still lands (one life, the honest rule)
-    spawnEnemyShot({ x: W / 2, y: py - 6, vy: 200, type: 'fire', classKey: 'standard' });
-    for (let i = 0; i < 12; i++) { G.paddle.x = W / 2; update(1 / 60); }
-    assert(G.lives === lives0 - 1, 'a core hit did not cost exactly one life (' + (lives0 - G.lives) + ')');
-    // 3) column strikes clip the core, not the widened wings
-    G.invuln = 0;
-    G.columnStrikes.push({ x: W / 2 + classicCoreHalf() + 40, w: 20, warn: -1, strike: 0.3 });
-    for (let i = 0; i < 6; i++) { G.paddle.x = W / 2; update(1 / 60); }
-    assert(G.lives === lives0 - 1, 'a beam on the wings hit the player');
-    G.columnStrikes = [];
-    // 4) the classic wave-fire ceiling: 8+ live shots block new telegraphs
-    G.enemyShots = []; G.telegraphs = [];
-    for (let i = 0; i < 9; i++) spawnEnemyShot({ x: 60 + i * 40, y: 80, vy: 40, type: 'grass', classKey: 'standard' });
-    G.enemyShotCD = 0; G.invuln = 2; // stay safe while the wall exists
-    for (let i = 0; i < 30; i++) { G.paddle.x = W / 2; G.invuln = 2; update(1 / 60); }
-    assert(G.telegraphs.every(t => t.boss), 'wave telegraphs were scheduled past the 8-shot ceiling');
-    G.enemyShots = []; G.fx_wide = null; delete G.upg.wide;
+  // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
+  // enemy ever fires (the director schedules no wave fire, boss volleys,
+  // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so
+  // no LASER/Mega auto-fire and no charge). The only way to lose a life is
+  // dropping the ball. spawnEnemyShot is a hard no-op in classic — the belt
+  // that also neutralizes the phase-transition shockwave routed through it.
+  test('classic calm: no enemy fire, no paddle gun', async () => {
+    SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+    resetRun(5, true, { seed: 'calm-classic' });
+    G.state = 'play'; G.stateT = 9; G.invuln = 0;
+    G.balls = [makeBall(W / 2, PADDLE_Y() - 24)]; G.balls[0].stuck = true;
+    // 1) the paddle is NEVER armed in classic — not by an offense capstone,
+    //    not by a LASER pickup, not by Mega
+    assert(!blasterArmed(), 'classic paddle armed at rest (should never be)');
+    G.upg = {}; G.path = {};
+    advancePath('arsenal'); advancePath('arsenal'); advancePath('arsenal'); // old tier-3 gun unlock
+    G.fx_laser = { t: 9, tier: 3 }; G.mega = 1; G.megaT = 3;
+    assert(!blasterArmed(), 'an offense capstone / LASER / Mega armed the classic paddle');
+    // 2) Mega + manual fire + charge produce NO lasers and never charge
+    G.lasers = []; G.laserCD = 0; G.charge = 0;
+    for (let i = 0; i < 30; i++) update(1 / 60);
+    assert(G.lasers.length === 0, 'classic fired ' + G.lasers.length + ' lasers (it is a ball-only game)');
+    fireCharge(1, false);
+    assert(G.lasers.length === 0, 'a charge shot fired in gunless classic');
+    G.charge = 0; chargeHeld = true;
+    for (let i = 0; i < 40; i++) update(1 / 60);
+    assert(G.charge === 0, 'charge built in classic (there is no gun to charge)');
+    chargeHeld = false;
+    // 3) the enemy-fire DIRECTOR spawns nothing over a long window — no shots,
+    //    no fire telegraphs, no beam columns
+    G.enemyShots = []; G.telegraphs = []; G.columnStrikes = [];
+    G.enemyShotCD = 0; G.bossShotCD = 0;
+    for (let i = 0; i < 240; i++) { G.invuln = 0; update(1 / 60); }
+    assert(G.enemyShots.length === 0, 'classic spawned enemy shots (' + G.enemyShots.length + ')');
+    assert(G.telegraphs.length === 0, 'classic scheduled fire telegraphs (' + G.telegraphs.length + ')');
+    assert(G.columnStrikes.length === 0, 'classic spawned beam columns (' + G.columnStrikes.length + ')');
+    assert(G.lives > 0, 'the player lost a life with no enemy fire and a live ball');
+    // 4) spawnEnemyShot is a hard no-op in classic (covers boss fire + the
+    //    phase-transition shockwave, which route through it)
+    assert(spawnEnemyShot({ x: 100, y: 100, vy: 100, boss: true }) === null && G.enemyShots.length === 0,
+      'spawnEnemyShot leaked a shot in classic');
     SETTINGS.starter = 'none'; G.starter = null; // no partner mods leak forward
-    return 'fixed core under ×2.05 width · wing shots + beams deflect free · core costs 1 life · 8-shot ceiling holds';
+    return 'no arming source works · zero lasers/charge · director fires nothing over 240f · ball-only loss';
   });
 
-  // 2b-iii) CLASSIC GUNS (balance round): the armed blaster is the PARTNER's
-  // typed support arm — Starfighter's grammar (typed bolts, tier scaling,
-  // charge arc) at support power. Mega never fires free explosive bolts and
-  // auto support fire stays lazy + 0.7-power; the ball must out-clear it.
-  test('classic guns: partner-typed support fire, no Mega fireball carpet', async () => {
-    SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
-    resetRun(5, true, { seed: 'gun-balance' });
-    G.state = 'play'; G.stateT = 9; G.invuln = 2;
-    G.balls = [makeBall(W / 2, PADDLE_Y() - 24)]; G.balls[0].stuck = true;
-    // 1) Mega auto support fire: typed, 0.7 power, NOT explosive
-    G.mega = 1; G.megaT = 3; G.lasers = []; G.laserCD = 0;
-    for (let i = 0; i < 20 && !G.lasers.length; i++) { G.invuln = 2; update(1 / 60); }
-    assert(G.lasers.length >= 2, 'Mega support fire did not fire');
-    for (const L of G.lasers) {
-      assert(!L.explosive, 'a Mega bolt was explosive without FIREBALL (the old OP carpet)');
-      assert(L.element === 'fire' && L.shape === 'flame', 'support bolt is not partner-typed (' + L.element + '/' + L.shape + ')');
-      assert(L.powerMul === 0.7, 'support bolt power is ' + L.powerMul + ', want 0.7');
-      assert(L.tier === G.starterLvl, 'support bolt tier must ride the partner tier');
-    }
-    // cadence is the lazy support rate (tier-1 during plain Mega: 0.8s)
-    const cd0 = G.laserCD;
-    assert(cd0 > 0.7, 'Mega support cadence too fast: ' + cd0);
-    // 2) FIREBALL restores the splash — that power OWNS explosions
-    G.fx_fire = { t: 9, tier: 1 }; G.lasers = []; G.laserCD = 0;
-    for (let i = 0; i < 20 && !G.lasers.length; i++) { G.invuln = 2; update(1 / 60); }
-    assert(G.lasers.length && G.lasers.every(L => L.explosive), 'FIREBALL bolts must stay explosive');
-    G.fx_fire = null;
-    // 3) manual armed fire is typed too, and the charge arc works in classic
-    fireAction(true); // the first press LAUNCHES the parked ball (ball-first!)
-    G.lasers = []; G.blasterCD = 0; G.megaT = 3;
-    fireAction(true);
-    assert(G.lasers.length >= 1 && G.lasers[0].element === 'fire' && G.lasers[0].shape === 'flame',
-      'manual classic bolt is not the partner\'s typed attack');
-    assert(!G.lasers[0].explosive, 'manual Mega bolt still explosive');
-    G.lasers = [];
-    fireCharge(1, false);
-    const ch = G.lasers.find(L => L.charged);
-    assert(ch && ch.element === 'fire' && ch.power >= 5, 'classic charge shot missing or untyped');
-    // 4) charge ACCUMULATES in classic only while armed
-    G.lasers = []; G.charge = 0; G.chargeFullT = 0; G.megaT = 3; chargeHeld = true;
-    for (let i = 0; i < 30; i++) { G.invuln = 2; update(1 / 60); }
-    assert(G.charge > 0.3, 'holding charge while ARMED did not build (' + G.charge.toFixed(2) + ')');
-    chargeHeld = false;
-    for (let i = 0; i < 4; i++) { G.invuln = 2; update(1 / 60); } // release fires it
-    // the trial deep-start may have granted an offense capstone — clear the
-    // tree so UNARMED really means unarmed for the ball-first assertion
-    G.path = {}; G.upg = {};
-    G.megaT = 0; G.mega = 0; G.charge = 0; chargeHeld = true;
-    for (let i = 0; i < 30; i++) { G.invuln = 2; update(1 / 60); }
-    assert(G.charge === 0, 'charge built while UNARMED in classic (ball-first rule broken)');
-    chargeHeld = false;
-    G.lasers = [];
-    // leave no damage-modding partner behind — later tests do integer math
+  // 2b-iii) CLASSIC OFFENSE RESKIN: with no gun, the VOLLEY/IMPACT capstones
+  // become BALL power so no draft pick is dead — TWIN ORB serves a second ball,
+  // WIDE ARRAY widens the paddle, POWER/SHATTER CORE boost ball damage. (The
+  // shooter modes keep the same tiers as real guns via sdesc — unchanged.)
+  test('classic offense reskin: capstones buff the ball, not a gun', async () => {
+    SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    resetRun(5, true, { seed: 'reskin' });
+    G.upg = {}; G.path = {};
+    // TWIN ORB (arsenal tier 3): a launch serves TWO balls
+    advancePath('arsenal'); advancePath('arsenal'); advancePath('arsenal');
+    assert(upgN('twin'), 'twin not owned after 3 arsenal picks');
+    serve();
+    assert(G.balls.length === 1 && G.state === 'serve', 'serve should park a single stuck ball');
+    fireAction(); // launch → TWIN ORB splits
+    assert(G.balls.length === 2, 'TWIN ORB did not serve a second ball (got ' + G.balls.length + ')');
+    // WIDE ARRAY (arsenal tier 4): the paddle widens
+    const wBefore = paddleW();
+    advancePath('arsenal');
+    assert(upgN('hyper') && paddleW() > wBefore + 5,
+      'WIDE ARRAY did not widen the paddle (' + wBefore.toFixed(1) + ' → ' + paddleW().toFixed(1) + ')');
+    // POWER CORE / SHATTER CORE (impact tier 3/4): the classic ball-damage
+    // multiplier grows +30% each (mirrors update.js's ball-hit formula)
+    G.upg = {}; G.path = {};
+    const dmgMul = () => 1 + 0.15 * upgN('heavy') + 0.25 * upgN('demo') + 0.30 * upgN('pulse') + 0.30 * upgN('impactX');
+    advancePath('impact'); advancePath('impact'); advancePath('impact');
+    assert(upgN('pulse') && Math.abs(dmgMul() - 1.70) < 1e-6, 'POWER CORE ball damage wrong: ' + dmgMul());
+    advancePath('impact');
+    assert(upgN('impactX') && Math.abs(dmgMul() - 2.00) < 1e-6, 'SHATTER CORE ball damage wrong: ' + dmgMul());
+    // and the shooter modes STILL read these tiers as guns (sdesc preserved).
+    // tierDesc keys off G.mode, so set it (not just SETTINGS.mode)
+    G.mode = 'junkie';
+    assert(/BOLT|VOLLEY|PIERCE/.test(tierDesc('impact', 2)), 'shooter PULSE lost its gun text: ' + tierDesc('impact', 2));
+    G.mode = 'classic';
+    assert(/BALL/.test(tierDesc('impact', 2)), 'classic PULSE is not ball-worded: ' + tierDesc('impact', 2));
     SETTINGS.starter = 'none'; G.starter = null;
-    return 'typed support bolts (flame, tier-scaled, ×0.7) · no free Mega splash · FIREBALL owns AoE · charge arc armed-only';
+    return 'twin→2 balls · hyper→wider paddle · pulse/nova→+30/+30% ball dmg · shooter tiers still guns';
   });
 
   // 2a) AEGIS in the shooter modes: a shield charge absorbs a lethal hit at
@@ -1607,10 +1584,11 @@ window.requestAnimationFrame = function () { return 0; };
     return '27 unique tier entrances; 1/2/3 phase ladder; Trial launches Mew VMAX through MAX RIFT';
   });
 
-  // 2a-iii) Mode identity: Brick Breaker is bricks all the way through, while
-  // its permanent blaster arrives only at offense tier 3. LASER remains a
-  // short pickup. Space Junkie keeps its own charge-shot armor lessons.
-  test('brick-only classic + late permanent blaster + junkie armor', async () => {
+  // 2a-iii) Mode identity: Brick Breaker is bricks all the way through, and the
+  // paddle NEVER carries a gun (the 2026 calm redesign — no offense-capstone
+  // unlock, no LASER arm, no Mega guns). Space Junkie keeps its own charge-shot
+  // armor lessons.
+  test('brick-only classic + no paddle gun + junkie armor', async () => {
     SETTINGS.mode = 'classic';
     const brickLeaks = [];
     for (let lvl = 1; lvl <= 27; lvl++) {
@@ -1623,16 +1601,13 @@ window.requestAnimationFrame = function () { return 0; };
     }
     assert(brickLeaks.length === 0, brickLeaks.join(' ; '));
 
+    // the paddle stays gunless no matter what: an offense capstone, a LASER
+    // pickup, and an active Mega must ALL leave classic unarmed
     resetRun(1, true);
-    G.path = { arsenal: 2 };
-    G.fx_laser = null; G.megaT = 0;
-    assert(!blasterArmed(), 'offense tier 2 permanently armed the classic blaster');
-    G.path.arsenal = 3;
-    assert(blasterArmed(), 'offense tier 3 did not unlock the permanent blaster');
-    G.path = {};
-    applyPower(POWERS.laser);
-    assert(blasterArmed() && G.fx_laser && G.fx_laser.t <= 9,
-      'LASER should grant a short-duration classic blaster');
+    G.path = { arsenal: 3 }; G.fx_laser = { t: 9, tier: 3 }; G.mega = 1; G.megaT = 3;
+    assert(!blasterArmed(), 'classic armed a paddle gun (offense tier 3 / LASER / Mega)');
+    G.path = {}; G.fx_laser = null; G.megaT = 0;
+    assert(!blasterArmed(), 'classic paddle armed at rest');
 
     resetRun(3, true);
     const bossBrick = G.bricks.find(b => b.isBoss);
@@ -1660,7 +1635,7 @@ window.requestAnimationFrame = function () { return 0; };
     for (const b of G.bricks) if (!b.barrier) b.dead = true;
     await runFrames(300, () => { skipResults(); return G.state === 'upgrade' ? false : undefined; });
     assert(G.state === 'upgrade', 'wave did not clear with only barriers left (state ' + G.state + ')');
-    return '27 classic waves brick-only · permanent fire at tier 3 · LASER temporary · boss guard bricks · junkie armor intact';
+    return '27 classic waves brick-only · paddle stays gunless (capstone/LASER/Mega) · boss guard bricks · junkie armor intact';
   });
 
   // 2b) classic lose-a-life: park the paddle away and let the ball drain
@@ -2141,6 +2116,9 @@ window.requestAnimationFrame = function () { return 0; };
       const shard = spawnRiftShard(i, W / 2, 150);
       assert(shard && shard.secretShard && G.secret.pendingShard === i,
         'piece ' + (i + 1) + ' did not spawn as a guaranteed secret pickup');
+      // 2026-07-20: classic shards are a ONE-PASS catch — fast, swaying,
+      // never homing (the shard hunt is a skill test now)
+      assert(shard.swift && shard.vy >= 180, 'classic shard is not the fast one-pass fall');
       collectPickup(shard);
       assert(G.secret.shards[i] && G.secret.pendingShard == null,
         'piece ' + (i + 1) + ' did not join the Rift Key');
@@ -2160,10 +2138,39 @@ window.requestAnimationFrame = function () { return 0; };
     const normal = G.bricks.find(b => b.isBoss && !b.dead);
     assert(normal && !normal.secretBoss && normal.poke.id === 151,
       'incomplete key no longer preserves the normal Mew finale');
-    return '3 guaranteed pieces; complete key summons 18+ HP Mew VMAX; incomplete key keeps Mew';
+
+    // ---- SHOOTER modes: the shard rides a RIFT COURIER — shoot it down or
+    // lose the piece (2026-07-20: shards are earned, not homed to you)
+    SETTINGS.mode = 'junkie';
+    resetRun(1, true, { seed: 'rift-courier' });
+    G.trial = false; G.daily = false;
+    for (const b of G.bricks) b.dead = true; // clear the field for the fly-by
+    // 1) shoot-down: the courier dies → the shard pickup drops (generous catch)
+    const courier = spawnRiftShard(0, W / 2, 150);
+    assert(courier && courier.courier && courier.crosser && courier.bare && !courier.secretShard,
+      'shooter shard did not spawn as a courier crosser');
+    assert(G.secret.pendingShard === 0 && G.secret.offered[0], 'courier spawn skipped the shard bookkeeping');
+    damageBrick(courier, 99, courier.bx + G.fx, courier.by + G.fy, null, { source: 'bolt' });
+    const freed = G.powerups.find(p => p.secretShard && p.shardIndex === 0);
+    assert(courier.dead && freed && !freed.swift, 'a downed courier did not free a homing shard pickup');
+    collectPickup(freed);
+    assert(G.secret.shards[0] && G.secret.pendingShard == null, 'the freed shard did not join the key');
+    // 2) escape: a courier that makes the far edge takes the shard with it.
+    // Mark piece 0 offered so the level-clear logic can't legitimately spawn
+    // a NEW index-0 courier inside the same update and muddy the assertion.
+    G.secret = freshSecretState();
+    G.secret.offered[0] = true;
+    const runner = spawnRiftShard(1, W / 2, 150);
+    assert(runner && runner.courier, 'second courier did not spawn');
+    runner.crosser.vx = Math.abs(runner.crosser.vx); runner.bx = W + 200; // force the exit
+    paused = false; G.freeze = 0; G.state = 'play';
+    update(1 / 60);
+    assert(runner.dead && G.secret.pendingShard == null && G.secret.offered[1] && !G.secret.shards[1],
+      'an escaped courier did not close the rift (pending=' + G.secret.pendingShard + ')');
+    return 'classic: 3 one-pass catches → VMAX; incomplete key keeps Mew; courier shoot-down frees the shard, escape loses it';
   });
 
-  test('Mew VMAX victory grants two normal drafts, no superpower', async () => {
+  test('Mew VMAX bounty: ONE draft event, choose two from the same hand', async () => {
     const oldMode = SETTINGS.mode;
     try {
       SETTINGS.mode = 'junkie';
@@ -2171,23 +2178,27 @@ window.requestAnimationFrame = function () { return 0; };
       G.trial = false; G.daily = false; // exercise the true-journey reward in memory
       // reproduce the level-clear secret-victory setup (update.js)
       rollUpgradeChoices();
-      G.secret.completed = true; G.secret.bonusDrafts = 1; G.rerolled = false;
+      G.secret.completed = true; G.bonusPicks = 2; G.rerolled = false;
       G.state = 'upgrade'; G.stateT = 1;
-      assert(G.upgradeChoices && G.upgradeChoices.length && G.upgradeChoices.every(c => !c.secret),
-        'Mew VMAX offered superpower cards instead of a normal draft');
-      assert(G.secret.bonusDrafts === 1 && !G.secret.rewardDraft, 'bonus-draft reward was not armed');
-      // pick the FIRST → a second normal draft chains in, still on the draft
+      const hand0 = G.upgradeChoices.slice();
+      assert(hand0.length >= 2 && hand0.every(c => !c.secret),
+        'Mew VMAX offered superpower cards instead of a normal bounty hand');
+      // FIRST pick: the SAME hand stays open minus the installed card — a
+      // single choose-2 event, never a chained second draft
       pickUpgrade(0);
-      assert(G.state === 'upgrade' && G.upgradeChoices && G.upgradeChoices.every(c => !c.secret) && G.secret.bonusDrafts === 0,
-        'first pick did not chain the second normal draft');
-      // pick the SECOND → resumes play, no third choice, no superpower granted
+      assert(G.state === 'upgrade' && G.bonusPicks === 1,
+        'first bounty pick did not hold the draft open (state=' + G.state + ')');
+      assert(G.upgradeChoices && G.upgradeChoices.length === hand0.length - 1 &&
+        G.upgradeChoices.every(c => hand0.includes(c)),
+        'the second pick is not the SAME hand minus the installed card — that is two events again');
+      // SECOND pick: resumes play, bounty spent, no superpower granted
       pickUpgrade(0);
-      assert((G.state === 'play' || G.state === 'serve') && !G.upgradeChoices,
-        'second pick did not resume play — a third choice appeared');
+      assert((G.state === 'play' || G.state === 'serve') && !G.upgradeChoices && G.bonusPicks === 0,
+        'second bounty pick did not resume play');
       assert(!G.secretUpg.heart && !G.secretUpg.lens && !G.secretUpg.echo,
         'a superpower was granted despite the reward being removed');
-      return 'Mew VMAX → two normal constellation drafts → next region; no one-off superpower';
-    } finally { SETTINGS.mode = oldMode; }
+      return 'Mew VMAX → one bounty hand · two picks from the same cards → next region';
+    } finally { SETTINGS.mode = oldMode; G.bonusPicks = 0; }
   });
 
   test('M0 balance instrumentation records the combat ledger', async () => {

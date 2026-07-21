@@ -759,26 +759,33 @@ function beginUpgradeInstallFx(icon, color, name, pathKey = null, tierIdx = 0, b
   const dur = big ? 3.4 : 2.4;
   G.upgradeFx = { icon, color, name, pathKey, tierIdx, t: dur, max: dur, big };
 }
-// Mew VMAX victory owes an EXTRA normal draft: after installing a pick, if a
-// bonus draft is still owed, roll a fresh hand (reflecting the just-installed
-// node) and stay on the draft instead of resuming play. Returns true when it
-// kept the player in the draft.
-function chainBonusDraft() {
-  if (!(G.secret.bonusDrafts > 0)) return false;
-  G.secret.bonusDrafts--;
-  rollUpgradeChoices(); // reflects the node just installed
-  if (!G.upgradeChoices) return false; // nothing left to offer → resume play
+// Mew VMAX bounty: ONE draft, TWO picks. After the first install the SAME
+// hand stays open minus the picked card — a single choose-2 event, never two
+// chained drafts. Returns true when it kept the player in the draft.
+function holdBonusPick(remaining) {
+  if (!(G.bonusPicks > 1)) { G.bonusPicks = 0; return false; }
+  G.bonusPicks--;
+  // drop any leftover card the first install invalidated (slot caps, a path
+  // capping, an apex prereq shifting) — the survivors are the real hand
+  const still = (remaining || []).filter(c =>
+    c.stack ? true
+      : c.web ? (c.webKind === 'apex' ? apexEligible(c.web)
+        : c.webKind === 'fusion' ? fusionEligible(c.web) : bridgeEligible(c.web))
+        : (pathLvl(c.pathKey) < 4 && c.tierIdx === pathLvl(c.pathKey)));
+  G.upgradeChoices = still.length ? still : null;
+  if (!G.upgradeChoices) { rollUpgradeChoices(); } // hand emptied → deal fresh, still one event
+  if (!G.upgradeChoices) { G.bonusPicks = 0; return false; } // nothing left anywhere → resume play
   G.state = 'upgrade'; G.stateT = 0;
-  draftSel = null; G.rerolled = false;
+  draftSel = null;
   upgradeTreeOpen = G.mode === 'junkie' && G.upgradeChoices.every(x => x.pathKey || x.web || x.stack);
   if (upgradeTreeOpen) syncTreeSelectionToDraft();
-  setAnnounce('fairy', '#d780ff', 'RIFT BONUS DRAFT',
-    'MEW VMAX GRANTS ONE MORE CONSTELLATION PICK', 2.8);
   return true;
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
+  // the rest of the hand, for the Mew VMAX choose-2 bounty (holdBonusPick)
+  const remaining = G.upgradeChoices.filter((_, j) => j !== i);
   draftSel = null;
   if (c.secret) {
     statsUpgradePick('secret:' + (c.secret.key || c.secret.name)); // before buildLevel opens the next record
@@ -812,7 +819,7 @@ function pickUpgrade(i) {
     G.upgradeChoices = null;
     upgradeTreeOpen = false;
     SFX.power();
-    if (chainBonusDraft()) return;
+    if (holdBonusPick(remaining)) return;
     buildLevel(G.level);
     serve();
     if (G.justEvolved) { G.justEvolved = false; return; }
@@ -834,7 +841,7 @@ function pickUpgrade(i) {
     G.upgradeChoices = null;
     upgradeTreeOpen = false;
     SFX.power();
-    if (chainBonusDraft()) return;
+    if (holdBonusPick(remaining)) return;
     buildLevel(G.level);
     serve();
     setAnnounce(c.stack.icon, c.stack.color,
@@ -850,7 +857,7 @@ function pickUpgrade(i) {
   G.upgradeChoices = null;
   upgradeTreeOpen = false;
   SFX.power();
-  if (chainBonusDraft()) return;
+  if (holdBonusPick(remaining)) return;
   const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);
   serve();
@@ -1200,6 +1207,11 @@ function fireAction(auto = false) {
   if (paused) { paused = false; return; }
   if (G.state === 'serve') {
     G.balls.forEach(b => { if (b.stuck) { b.stuck = false; const a = serveAngle(); const sp = ballSp(); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; } });
+    // VOLLEY capstone (classic only): TWIN ORB serves a second ball on a diverging vector
+    if (G.mode === 'classic' && upgN('twin') && G.balls.length === 1) {
+      const b0 = G.balls[0];
+      G.balls.push(makeBall(b0.x, b0.y, Math.atan2(b0.vy, b0.vx) + 0.42));
+    }
     G.state = 'play';
     if (G.level === 1 && G.mode === 'classic') G.coachStep = 1;
     return;
@@ -1302,6 +1314,7 @@ function fireAction(auto = false) {
 // The timing reward, never a requirement: a plain full release stays strong.
 function fireCharge(c, resonant = false) {
   if (G.state !== 'play') return;
+  if (!blasterArmed()) return; // no paddle gun in classic — the charge can never fire
   G.chargedEver = true; // the charge tutor banner retires once you've done it
   statsShotFired(true);
   if (resonant) statsResonant();

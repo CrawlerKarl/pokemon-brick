@@ -574,22 +574,23 @@ const BRICK_BEHAVIOR_ORDER = ['treasure', 'bomb', 'shift', 'link', 'split', 'shi
 //  unless you are knocked out, which burns tree levels instead of ending the run.
 // ============================================================
 const PATHS = {
-  arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', crole: 'BALL CONTROL → BLASTER', family: 'offense', color: '#80d8ff',
-    summary: 'RATE OF FIRE · COVER MORE LANES', tell: 'CYAN MULTI-BARREL RIG', tiers: [
+  arsenal: { name: 'VOLLEY', role: 'VOLUME FIRE', crole: 'BALL CONTROL & MULTIBALL', family: 'offense', color: '#80d8ff',
+    summary: 'RATE OF FIRE · COVER MORE LANES', csummary: 'MORE BALLS · WIDER CONTROL', tell: 'CYAN MULTI-BARREL RIG', tiers: [
     { key: 'coolant',   icon: 'slow',   name: 'COOLANT', cname: 'CONTROL CORE',
       desc: 'BALL SPEED CAP −8% · EASIER RETURNS', sdesc: 'BLASTER HEAT PER SHOT −25%',
       visual: 'CYAN COOLANT HALO AROUND THE WEAPON CORE' },
     { key: 'intercept', icon: 'target', name: 'INTERCEPTOR', cname: 'RALLY GUARD',
       desc: 'RALLY BARRIER +1 CHARGE', sdesc: 'BOLTS DESTROY +1 ENEMY SHOT BEFORE FADING',
       visual: 'CYAN TARGETING PRONGS FRAME THE MUZZLE' },
-    { key: 'twin',      icon: 'laser',  name: 'TWIN CANNON',
-      desc: 'PERMANENT BLASTER UNLOCK · FIRE TWO BOLTS · 60% DAMAGE',
+    { key: 'twin',      icon: 'multi',  name: 'TWIN CANNON', cname: 'TWIN ORB',
+      desc: 'MULTIBALL — SERVE WITH A SECOND BALL',
       sdesc: 'FIRE TWO BOLTS · EACH DEALS 60% DAMAGE', visual: 'TWO SEPARATE CYAN FIRING POINTS' },
-    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', desc: 'FIRES 20% FASTER · HEAT PER SHOT −15%',
+    { key: 'hyper',     icon: 'swift',  name: 'HYPER CYCLE', cname: 'WIDE ARRAY',
+      desc: 'PADDLE 15% WIDER · COVER MORE LANES', sdesc: 'FIRES 20% FASTER · HEAT PER SHOT −15%',
       visual: 'CYCLER FINS OPEN BESIDE THE TWIN MUZZLES' },
   ]},
-  impact: { name: 'IMPACT', role: 'HEAVY & CHARGE', crole: 'BALL POWER → BLASTER', family: 'offense', color: '#ff8a65',
-    summary: 'FEWER, HEAVIER SHOTS · CHARGED HITS DETONATE', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
+  impact: { name: 'IMPACT', role: 'HEAVY & CHARGE', crole: 'BALL POWER', family: 'offense', color: '#ff8a65',
+    summary: 'FEWER, HEAVIER SHOTS · CHARGED HITS DETONATE', csummary: 'HEAVIER BALL · BIGGER HITS', tell: 'AMBER HEAVY-BOLT CORE', tiers: [
     { key: 'heavy',   icon: 'target', name: 'HEAVY BOLT', cname: 'HEAVY CORE',
       desc: 'BALL 18% LARGER · BRICK DAMAGE +15%',
       sdesc: 'BOLTS 30% WIDER · DAMAGE +15% · CHARGE BUILDS 35% FASTER',
@@ -597,10 +598,12 @@ const PATHS = {
     { key: 'demo',    icon: 'fire',   name: 'SPLASH CHARGE', cname: 'IMPACT CHARGE',
       desc: 'BALL BRICK DAMAGE +25%', sdesc: 'CHARGED SHOTS DETONATE — SPLASH DAMAGE AROUND THE HIT',
       visual: 'TWO AMBER CHARGE MOTES ORBIT THE HEAVY BORE' },
-    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND',
-      desc: 'PERMANENT BLASTER UNLOCK · EVERY 5TH VOLLEY PIERCES 2 TARGETS',
+    { key: 'pulse',   icon: 'laser',  name: 'PULSE ROUND', cname: 'POWER CORE',
+      desc: 'BALL BRICK DAMAGE +30%',
       sdesc: 'EVERY 5TH VOLLEY PIERCES 2 TARGETS', visual: 'FOUR AMBER PULSE NOTCHES MARK THE BARREL' },
-    { key: 'impactX', icon: 'star',   name: 'NOVA ROUND',    desc: 'PULSE EVERY 4TH VOLLEY · 2× DMG · BIGGER CHARGE BLAST',
+    { key: 'impactX', icon: 'star',   name: 'NOVA ROUND', cname: 'SHATTER CORE',
+      desc: 'BALL DAMAGE +30% · CRUSHES BRICKS & BOSSES',
+      sdesc: 'PULSE EVERY 4TH VOLLEY · 2× DMG · BIGGER CHARGE BLAST',
       visual: 'A LARGE AMBER NOVA CROWN SURROUNDS THE WEAPON' },
   ]},
   prism: { name: 'PRISM', role: 'TYPE MASTERY', family: 'element', color: '#26c6da',
@@ -677,11 +680,15 @@ function pathRole(pathKey) {
   const path = PATHS[pathKey];
   return G.mode === 'classic' && path.crole ? path.crole : path.role;
 }
+function pathSummary(pathKey) {
+  const path = PATHS[pathKey];
+  return G.mode === 'classic' && path.csummary ? path.csummary : path.summary;
+}
 function tierTags(pathKey, tierIdx) {
   const family = PATHS[pathKey].family;
   if (family === 'offense') {
     if (G.mode !== 'classic') return tierIdx === 0 ? ['BLASTER', 'CHARGE'] : ['BLASTER'];
-    return tierIdx >= 2 ? ['BALL', 'BLASTER'] : ['BALL'];
+    return ['BALL']; // classic offense is pure ball power now — no paddle gun
   }
   if (family === 'defense') return ['DEFENSE'];
   if (family === 'element') return ['TYPE'];
@@ -690,7 +697,6 @@ function tierTags(pathKey, tierIdx) {
 }
 function tierSynergy(pathKey, tierIdx) {
   const family = PATHS[pathKey].family;
-  if (family === 'offense' && G.mode === 'classic' && tierIdx === 2) return 'SYNERGY: YOUR BALL UNLOCKS SUPPORT FIRE';
   if (family === 'offense' && pathLvl('surge')) return 'SYNERGY: MORE HITS CHARGE MEGA FASTER';
   if (family === 'defense' && pathLvl('bond')) return 'SYNERGY: SAFER ITEM COLLECTION';
   if (family === 'element' && G.starter) return 'SYNERGY: AMPLIFIES YOUR PARTNER TYPE';
@@ -1878,7 +1884,11 @@ assembleSkins({
     announceSub: 'SECRET ROUND · 3 PHASES — THE NORMAL MEW FIGHT HAS BEEN REPLACED',
     replaced: 'THE NORMAL MEW ROUND HAS BEEN REPLACED',
     hint1: 'A SECOND PIECE IS HIDDEN IN KANTO\'S CHALLENGE',
-    hint2: 'THE LAST PIECE RESTS BEYOND MEWTWO' },
+    hint2: 'THE LAST PIECE RESTS BEYOND MEWTWO',
+    // the shard COURIER (shooter modes): a swift crosser that carries each
+    // piece across the field once — shoot it down or the shard is gone.
+    // Abra: it teleports away if it makes the far edge.
+    courier: { id: 63, t: 'psychic', name: 'ABRA' } },
 });
 // warm the first two regions — pokemon only (PNG loads); procedural skins
 // bake on demand and must never touch the network

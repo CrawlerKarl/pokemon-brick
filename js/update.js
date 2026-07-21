@@ -3,7 +3,9 @@
 //  UPDATE
 // ============================================================
 function paddleW() {
-  return G.paddle.w * (1 + 0.18 * upgN('wide')) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1)
+  // classic VOLLEY capstone (HYPER / WIDE ARRAY) widens the paddle to cover more lanes
+  const hyperWide = G.mode === 'classic' ? 0.15 * upgN('hyper') : 0;
+  return G.paddle.w * (1 + 0.18 * upgN('wide') + hyperWide) * (G.fx_wide ? (1 + 0.35 * G.fx_wide.tier) : 1)
     * starterMod('paddle', 1);
 }
 // CLASSIC's answer to the junkie "upgrades never widen the hurtbox" rule:
@@ -148,7 +150,10 @@ function tickEffects(dt) {
 // two hinted "CATCH!" drops made them near-guaranteed) — so the first region
 // swaps to a score star instead and draco waits for tankier waves.
 function modePower(p) {
-  if (G.mode === 'classic' || !p || !p.key) return p;
+  if (!p || !p.key) return p;
+  // classic no longer has a paddle gun, so a LASER drop would be dead — hand out
+  // a MULTIBALL instead (fun, calm, and on-theme for the ball-first game).
+  if (G.mode === 'classic') return p.key === 'laser' ? POWERS.multi : p;
   const swap = { multi: regionIdx(G.level) >= 1 ? 'draco' : 'star', magnet: 'shield', warp: 'star' };
   return swap[p.key] ? POWERS[swap[p.key]] : p;
 }
@@ -166,6 +171,7 @@ function nextEnemyVolley() {
 }
 function enemyShotClass(key) { return SHOT_CLASSES[key] || SHOT_CLASSES.standard; }
 function spawnEnemyShot(opts = {}) {
+  if (G.mode === 'classic') return null; // BREAKER is calm — no enemy fire ever
   if (G.enemyShots.length >= 140) return null; // mobile-safe hard ceiling
   const classKey = opts.classKey || (opts.heavy ? 'heavy' : 'standard');
   const C = enemyShotClass(classKey);
@@ -749,8 +755,18 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     haptic(br.isBoss ? 'boss' : 'break');
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
-    // BONUS FLOCK reward: chaining the harmless crossers pays score + Mega
-    if (br.crosser) {
+    // RIFT COURIER down: the earned shard drops — the falling pickup keeps the
+    // legacy generous homing (the skill test was the shoot-down, not the catch)
+    if (br.courier) {
+      G.powerups.push({
+        x: br.bx + G.fx, y: br.by + G.fy, vy: 72, p: RIFT_SHARD, rot: br.courier.shardIndex * 1.7,
+        secretShard: true, shardIndex: br.courier.shardIndex, secretT: 9.5, hint: true,
+      });
+      addFloater(br.bx + G.fx, br.by + G.fy - 24, 'COURIER DOWN — CATCH THE SHARD!', '#d780ff', 14);
+      burst(br.bx + G.fx, br.by + G.fy, '#d780ff', 26, 300, 0.7);
+      SFX.mega();
+    } else if (br.crosser) {
+      // BONUS FLOCK reward: chaining the harmless crossers pays score + Mega
       G.score += 150;
       addFloater(br.bx + G.fx, br.by + G.fy - 20, '+150 BONUS', '#80d8ff', 13);
       if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.03);
@@ -1138,26 +1154,59 @@ function awardRally(b, x, y) {
   }
 }
 
-// apply a falling pickup's payload — shared by paddle catches and blaster snags
+// The Rift shards are EARNED, not handed over (2026-07-20: the old homing
+// shard was nearly missable-proof, which cheapened Mew VMAX). Each piece is a
+// one-shot skill test with a real miss:
+//  - SHOOTER modes: a RIFT COURIER — a swift bare crosser carrying the piece —
+//    streaks across the cleared field ONCE. Shoot it down and the shard drops
+//    (that falling pickup keeps the old generous homing — the test was the
+//    shoot-down); let it reach the far edge and the rift closes.
+//  - CLASSIC (calm, brick-only — no gun, crossers forbidden): the shard itself
+//    falls FAST on a swaying line at a random column, one pass top-to-floor.
+//    Catch it with the paddle or it is gone.
+// Returns the courier brick (shooters) or the pickup (classic).
 function spawnRiftShard(index, x = W / 2, y = Math.max(105, H * 0.22)) {
   if (!secretEligible() || index < 0 || index > 2 || G.secret.shards[index] ||
       G.secret.offered[index] || G.secret.pendingShard != null) return null;
-  const pu = {
-    x, y, vy: 72, p: RIFT_SHARD, rot: index * 1.7,
-    secretShard: true, shardIndex: index, secretT: 9.5, hint: true,
-  };
   G.secret.offered[index] = true;
   G.secret.pendingShard = index;
-  G.powerups.push(pu);
-  // The collection beat is safe and deliberate: no leftover volley can steal
-  // a life while the player is reading the shard reveal.
+  // The chase beat is fair: no leftover volley steals a life mid-pursuit.
   G.enemyShots = []; G.telegraphs = []; G.columnStrikes = [];
   const found = secretShardCount();
-  setAnnounce('fairy', '#d780ff', 'A RIFT SHARD APPEARED',
-    'CATCH PIECE ' + (index + 1) + '/3 TO REWRITE KANTO\'S FINAL ROUND', 3,
-    found ? 'RIFT KEY · ' + found + '/3 PIECES HELD' : 'THE FIRST ARC IS HIDING SOMETHING');
   SFX.mega();
-  ringFx(x, y, '#d780ff', 10, 150, 4, 0.65);
+  if (G.mode !== 'classic') {
+    const cs = SKIN.secret.courier || { id: SKIN.bonusFlock.id, t: 'psychic', name: 'RIFT COURIER' };
+    const fromLeft = gameRand() < 0.5;
+    const cy = Math.max(120, H * (0.26 + gameRand() * 0.08));
+    const courier = {
+      bx: fromLeft ? -60 : W + 60, by: cy, hx: 0, hy: 0, row: 0, col: 0,
+      w: 42, h: 38, hp: 2, maxHp: 2,
+      poke: { id: cs.id, t: cs.t }, flash: 0, wobble: gameRand() * Math.PI * 2,
+      bare: true, shiny: true, // the rift glimmer — reuse the shiny sparkle tell
+      // ~4.2s on screen at any width: swift, but honest to track and hit
+      crosser: { vx: (fromLeft ? 1 : -1) * Math.max(210, W * 0.26), bobPh: gameRand() * 6 },
+      courier: { shardIndex: index },
+    };
+    G.bricks.push(courier);
+    getSprite(cs.id);
+    // strip, not a hero card — the player must SEE the courier to track it
+    setAnnounce('fairy', '#d780ff', 'A RIFT COURIER!',
+      'SHOOT IT DOWN — IT CARRIES PIECE ' + (index + 1) + '/3 · MISS IT AND THE RIFT CLOSES', 3,
+      found ? 'RIFT KEY · ' + found + '/3 PIECES HELD' : 'THE FIRST ARC IS HIDING SOMETHING');
+    ringFx(courier.bx + G.fx, cy + G.fy, '#d780ff', 10, 150, 4, 0.65);
+    return courier;
+  }
+  // classic: a fast, swaying, NON-homing fall at a random column — one pass
+  const cx = 70 + gameRand() * Math.max(120, W - 140);
+  const pu = {
+    x: cx, y: -24, vy: 205, p: RIFT_SHARD, rot: index * 1.7,
+    secretShard: true, swift: true, shardIndex: index, secretT: 9.5, hint: true,
+  };
+  G.powerups.push(pu);
+  setAnnounce('fairy', '#d780ff', 'A RIFT SHARD FALLS',
+    'CATCH PIECE ' + (index + 1) + '/3 BEFORE IT DROPS PAST — ONE CHANCE', 3,
+    found ? 'RIFT KEY · ' + found + '/3 PIECES HELD' : 'THE FIRST ARC IS HIDING SOMETHING');
+  ringFx(cx, 40, '#d780ff', 10, 150, 4, 0.65);
   return pu;
 }
 function collectPickup(pu) {
@@ -3180,7 +3229,17 @@ function update(dt) {
     if (br.dead || !br.crosser) continue;
     br.bx += br.crosser.vx * dt * ts;
     br.by += Math.sin(G.time * 4 + br.crosser.bobPh) * 22 * dt * ts;
-    if ((br.crosser.vx > 0 && br.bx > W + 80) || (br.crosser.vx < 0 && br.bx < -80)) br.dead = true;
+    if ((br.crosser.vx > 0 && br.bx > W + 80) || (br.crosser.vx < 0 && br.bx < -80)) {
+      br.dead = true;
+      // a RIFT COURIER that makes the far edge takes its shard with it
+      if (br.courier) {
+        if (G.secret.pendingShard === br.courier.shardIndex) G.secret.pendingShard = null;
+        setAnnounce('alert', '#78909c', 'THE COURIER ESCAPED',
+          'SHARD ' + (br.courier.shardIndex + 1) + '/3 IS GONE', 2.5,
+          'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
+        SFX.wall();
+      }
+    }
   }
   // PROTECT-objective FRIENDLY: its own gentle path beside the crosser fly-by —
   // never a formation slot, never the solver. 'cross' drifts bottom→top at
@@ -3724,7 +3783,8 @@ function update(dt) {
         default: // 'anchor' — the classic high, imperious patrol
           boss.bx = boss.hx + (mt >= 1 || bp >= 2
             ? Math.sin(t2 * sp2) * Math.min(90 + bp * 26, W * (0.07 + bp * 0.02))
-            : 0);
+            // classic drops boss fire/abilities, so keep an anchor boss alive with a calm phase-1 drift
+            : (G.mode === 'classic' ? Math.sin(t2 * 0.55) * Math.min(70, W * 0.05) : 0));
       }
     }
     for (const br of G.bricks) {
@@ -3748,7 +3808,7 @@ function update(dt) {
           br.bx = u * u * dv.tx + 2 * u * q * cxp + q * q * br.hx;
           br.by = u * u * lowY + 2 * u * q * cyp + q * q * br.hy;
         }
-        if (!dv.shot && p > 0.42) { // one aimed shot at the bottom of the swoop
+        if (!dv.shot && p > 0.42 && G.mode !== 'classic') { // one aimed shot at the bottom of the swoop (never in calm BREAKER)
           dv.shot = true;
           const sx2 = br.bx + G.fx, sy2 = br.by + G.fy + br.h / 2;
           const ang = Math.atan2(shipY() - sy2, G.paddle.x - sx2);
@@ -4069,7 +4129,8 @@ function update(dt) {
             burst(b.x, b.y, '#ffab66', 8, 160, 0.4);
           }
           if (G.mode === 'classic') {
-            dmg *= 1 + 0.15 * upgN('heavy') + 0.25 * upgN('demo');
+            // IMPACT path buffs the ball in classic: HEAVY +15 / SPLASH +25 / PULSE +30 / NOVA +30 (bricks & bosses)
+            dmg *= 1 + 0.15 * upgN('heavy') + 0.25 * upgN('demo') + 0.30 * upgN('pulse') + 0.30 * upgN('impactX');
             // CALIBRATED BARRAGE proc: the primed return lands white-hot
             if (upgN('calibrated') && G.calibShots > 0) {
               G.calibShots--;
@@ -4099,8 +4160,8 @@ function update(dt) {
   // no ball — you only lose to enemy fire, so losing "all balls" never applies
   if (G.mode === 'classic' && G.state === 'play' && G.balls.length === 0) { loseLife('MISSED BALL'); return; }
 
-  // ---- lasers ----
-  const laserActive = G.fx_laser || G.megaT > 0;
+  // ---- lasers ----  (support guns — shooter modes only; classic has no paddle gun)
+  const laserActive = (G.fx_laser || G.megaT > 0) && blasterArmed();
   if (laserActive && G.state === 'play') {
     G.laserCD -= dt;
     if (G.laserCD <= 0) {
@@ -4494,7 +4555,7 @@ function update(dt) {
           }
         }
       }
-      if (SKIN.bossAbilities[boss.poke.id] || boss.mythic || boss.secretBoss) {
+      if (G.mode !== 'classic' && (SKIN.bossAbilities[boss.poke.id] || boss.mythic || boss.secretBoss)) {
         boss.abilityCD -= dt * ts;
         if (boss.abilityCD <= 0 && !boss.channel && !(boss.staggerT > 0)) {
           const abilityBase = boss.secretBoss ? 5.4
@@ -4589,7 +4650,7 @@ function update(dt) {
       }
       boss.fireQuietT = Math.max(0, (boss.fireQuietT || 0) - dt);
       G.bossShotCD -= dt * ts;
-      if (G.bossShotCD <= 0 && boss.fireQuietT <= 0) {
+      if (G.mode !== 'classic' && G.bossShotCD <= 0 && boss.fireQuietT <= 0) {
         const bossBase = G.mode === 'junkie' ? d.starBossShotInt : d.bossShotInt;
         G.bossShotCD = bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
           * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1)
@@ -4603,7 +4664,7 @@ function update(dt) {
     // the shooter modes lean into the fantasy: enemies fire from the first
     // wave and roughly twice as often, with a bigger warning-line budget
     const blaster = G.mode !== 'classic';
-    if (G.level >= 2 || blaster) {
+    if (blaster) { // classic is calm: static bricks never fire — only the ball threatens them
       G.enemyShotCD -= dt * ts;
       if (G.enemyShotCD <= 0) {
         G.enemyShotCD = G.mode === 'junkie'
@@ -4677,6 +4738,7 @@ function update(dt) {
     }
   }
   G.telegraphs = G.telegraphs.filter(tg => tg.t > 0 && !tg.br.dead);
+  if (G.mode === 'classic') G.columnStrikes.length = 0; // no boss beams in calm BREAKER
   // column strikes (Zekrom / Eternatus): a warned zone, then the beam lands
   for (const cs of G.columnStrikes) {
     if (cs.warn > 0) {
@@ -5043,12 +5105,17 @@ function update(dt) {
     pu.y += pu.vy * ts * dt; pu.rot += dt * 3;
     if (pu.orb) pu.x += Math.sin(pu.rot * 0.9) * 26 * dt; // orbs waft down gently
     if (pu.secretShard) {
-      // The shard is generous but still optional: it bends toward the player
-      // for a long catch window, then the rift closes and the normal finale
-      // remains available if the player deliberately lets it pass.
       pu.secretT -= dt;
-      pu.x += (G.paddle.x - pu.x) * Math.min(1, dt * 2.6);
-      pu.vy = pu.y > shipY() - 120 ? 48 : 72;
+      if (pu.swift) {
+        // classic's ONE-PASS shard: fast, swaying, never homing — get the
+        // paddle under it or the rift closes when it drops past the floor
+        pu.x += Math.sin(pu.rot * 1.35) * 46 * dt;
+      } else {
+        // a shard freed from a downed courier is generous: the shoot-down was
+        // the test, so this catch bends toward the player on a long window
+        pu.x += (G.paddle.x - pu.x) * Math.min(1, dt * 2.6);
+        pu.vy = pu.y > shipY() - 120 ? 48 : 72;
+      }
     }
     if (upgN('magnetize')) { // Item Magnet: pickups drift toward the paddle
       const dx = G.paddle.x - pu.x;
@@ -5132,10 +5199,10 @@ function update(dt) {
       G.secret.completed = true;
       G.secret.vmax = false; // the fight is won — drop the rift background
       G.score += 3000;
-      // Mew VMAX victory grants TWO normal constellation drafts — this one,
-      // plus a second chained in after the first pick (chainBonusDraft,
-      // input.js) — then straight to Johto. No one-off superpower.
-      G.secret.bonusDrafts = 1;
+      // Mew VMAX victory: ONE bounty draft where you CHOOSE TWO of the hand —
+      // a single event, not two chained drafts (holdBonusPick, input.js) —
+      // then straight to Johto. No one-off superpower.
+      G.bonusPicks = 2;
     }
     // The constellation is the primary choice surface for every normal hand —
     // tiers, bridges, superskills, and satellites all live on the map now.

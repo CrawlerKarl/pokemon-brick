@@ -5,6 +5,93 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-20 — Rift shards are EARNED + the VMAX bounty is one choose-2 draft
+
+Owner: shards were too easy in region 1 ("perhaps you have to shoot down
+enemies that are only temporarily on the screen, and if you miss them, you
+miss the shard — this way getting to Mew VMAX feels special"), and the double
+upgrade after Mew VMAX read as 2 separated events instead of one event where
+you choose 2.
+
+- **RIFT COURIERS (shooter modes).** `spawnRiftShard` no longer drops a homing
+  pickup there: it spawns a swift, shiny bare crosser (`SKIN.secret.courier` —
+  Abra on pokemon, the bonus-flight species on aetherfall) that crosses the
+  cleared field ONCE (~4.2s, `vx = max(210, W·0.26)`, 2 HP). Shot down → the
+  shard drops with the legacy generous homing (the shoot-down was the test);
+  reaches the far edge → the rift closes (miss handling in the crosser fly-by
+  block; drop handling in damageBrick's kill path). Couriers inherit every
+  crosser exemption (no formation/solver/overlap/clear participation). The
+  spawn announce uses the strip, never a hero card — the player must SEE the
+  courier to track it.
+- **BREAKER shards (calm classic — no gun, crossers forbidden):** the shard
+  itself falls FAST (vy 205) on a swaying, NON-homing line at a random column
+  (`pu.swift`) — one pass, paddle-catch it or lose it.
+- **VMAX bounty = ONE draft, CHOOSE TWO.** `G.secret.bonusDrafts` +
+  `chainBonusDraft` (a second chained hand) are replaced by `G.bonusPicks = 2`
+  + `holdBonusPick` (input.js): after the first install the SAME hand stays
+  open minus the picked card (survivors re-validated against slot caps /
+  eligibility; hand emptied → one fresh deal, still the same event). The draft
+  header names the state (RIFT BOUNTY — CHOOSE TWO / ONE MORE PICK, rift
+  violet). `G.bonusPicks` lives on G (reset in resetRun), never checkpointed.
+- Also fixed in passing: the classic pause-help still said "EARN A BLASTER
+  FROM DROPS & DRAFTS" (stale after the calm rework) → ball-only copy.
+- **Real state-hygiene bug exposed by the new courier test:** `resetRun` never
+  cleared `G.dramaticT`/`G.freeze`, so a fresh run started right after a
+  dramatic kill began at ×0.3 slow-mo for ~0.9s (in the suite this leaked from
+  the courier shoot-down into the M0 ledger test — a planted charged laser
+  moved 4.5px instead of 15px, missed the y<40 cull, and 'wasted charge' went
+  undetected). resetRun now zeroes both.
+- **Verified** by console sim: courier spawn/flight/shoot-down/catch, courier
+  escape closes the rift, classic swift-fall miss (~3.7s), bounty first pick
+  holds the same hand (state 'upgrade', remaining ⊂ original), second pick
+  resumes play; screenshots of the courier mid-flight + the CHOOSE TWO header.
+- **Suite:** 'Kanto Rift Key' test extended (classic one-pass assertions +
+  courier shoot-down/escape sections); the two-drafts test rewritten as
+  'Mew VMAX bounty: ONE draft event, choose two from the same hand'.
+
+---
+
+## 2026-07-20 — BREAKER goes calm: no enemy fire, no paddle gun
+
+Owner request: "On the normal brick breaker game, take away enemy fire and
+the other things related to it (upgrades, weapon on the paddle, etc). It
+makes the game too tough. I want it to be a fun, challenging, calm game
+without enemy fire coming at you." Scoped to **classic only** (BLASTER /
+STARFIGHTER are shooters — untouched). Owner chose **reskin to ball power**
+so no draft pick is dead.
+
+Classic already had no flyers/divers, so classic fire came from only two
+places: static bricks shooting down, and bosses. Both removed:
+
+- **No enemy fire in classic.** The enemy-fire director skips boss abilities,
+  boss volleys, and wave fire in classic; `spawnEnemyShot` is a hard no-op
+  there (also neutralizes the phase-transition shockwave, which routes through
+  it); beam columns are cleared; the diver shot is guarded. The only loss
+  condition is now dropping the ball. Anchor-style bosses (Mewtwo) get a calm
+  phase-1 drift since their abilities are off; they still phase + summon guard
+  bricks. (update.js)
+- **No paddle gun.** `blasterArmed()` returns false in classic, always — no
+  LASER auto-fire, no Mega guns, no offense-tier-3 unlock, no charge. Gated the
+  auto-laser block, added a `blasterArmed()` guard to `fireCharge` (airtight),
+  and hid the paddle's weapon barrels in classic. (state.js / update.js /
+  input.js / render.js)
+- **Offense reskin (ball power, no dead picks).** VOLLEY: TWIN ORB (`twin`)
+  serves a 2nd ball on launch, WIDE ARRAY (`hyper`) widens the paddle +15%.
+  IMPACT: POWER CORE (`pulse`) / SHATTER CORE (`impactX`) each add +30% ball
+  damage. Mega is now a pure ball overdrive (the ball already pierces + 3–4.2×
+  under `megaT`). A LASER pickup remaps to MULTIBALL (`modePower`). New
+  classic-facing `cname`/`desc`/`crole`/`csummary` + a `pathSummary` helper;
+  shooter modes keep the SAME tiers as real guns via each tier's `sdesc`
+  (unchanged). (data.js / input.js / update.js / render.js)
+- **Verified** by console sim (both skins: armed=false, 0 shots/lasers/charge/
+  columns under all arming sources; reskin: twin→2 balls, hyper 130→149.5px,
+  pulse ×1.3, nova ×1.6, laser→multi) + a clean showcase screenshot.
+- **Suite:** replaced the now-obsolete 'classic deflector core' and 'classic
+  guns' tests with 'classic calm' + 'classic offense reskin'; updated
+  'brick-only classic' + mode-smoke. Docs (CLAUDE.md / README) updated.
+
+---
+
 ## 2026-07-20 — Continuity pass + a caught regression (78/78 green)
 
 Housekeeping to make the folder self-contained, plus a real bug the

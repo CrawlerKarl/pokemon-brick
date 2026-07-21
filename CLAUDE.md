@@ -28,19 +28,26 @@ gotchas worth not rediscovering.
 UI labels are presentation-only (BREAKER / BLASTER / STARFIGHTER); the internal
 keys below are storage-stable — saves, checkpoints and tests reference them, so
 NEVER rename a key:
-- **classic** (UI: BREAKER) — ball-first brick-breaker (the original). The ball is THE
-  weapon; there is NO free blaster. The blaster is EARNED and gated by
-  `blasterArmed()` (state.js) — it arms only with a LASER power-up, Mega, or
-  tier 3 of an offense path (VOLLEY/IMPACT). While unarmed, `fireAction` no-ops, the
-  touch FIRE pad is hidden, the shoot hint is suppressed, and the charge
-  arc never accumulates. WHEN ARMED, the guns are the PARTNER's typed
-  support arm (balance round 2026-07-20): bolts carry `pilotInfo().shape` /
-  `attackElement()` / partner tier exactly like Starfighter, the full
-  charge arc works (resonance/overcharge/shell-crack), and SUPPORT stays
-  support — auto lasers fire at 0.8/0.6/0.45s (t1/2/3) with 0.7-power
-  bolts, and `explosive` splash comes ONLY from FIREBALL (`fx_fire`),
-  never free with Mega. The ball must always out-clear the guns
-  (suite: 'classic guns' test).
+- **classic** (UI: BREAKER) — a **calm, pure brick-breaker** (redesigned
+  2026-07-20 per the owner: "a fun, challenging, calm game without enemy fire
+  coming at you"). The ball is the ONLY weapon and the paddle carries NO gun:
+  `blasterArmed()` (state.js) returns **false in classic, always** — no LASER
+  auto-fire, no Mega guns, no earned blaster, no charge arc (the touch FIRE pad
+  is hidden and `fireAction`/`fireCharge` no-op). **No enemy ever fires in
+  classic** either: the enemy-fire director skips boss abilities, boss volleys,
+  and wave fire, `spawnEnemyShot` is a hard no-op (this also neutralizes the
+  phase-transition shockwave, which routes through it), and any beam column is
+  cleared. **The only way to lose a life is dropping the ball.** Bosses still
+  patrol (anchor-style bosses get a calm phase-1 drift since their abilities are
+  off), change phase (visual shockwave only), and summon orbiting guard bricks —
+  you break them with the ball. Mega is now purely a **ball overdrive** (the
+  ball already pierces + deals 3–4.2× while `megaT>0`). The two OFFENSE paths are
+  reskinned to ball power in classic so no draft pick is dead: VOLLEY's TWIN ORB
+  (`twin`) serves a 2nd ball on launch and WIDE ARRAY (`hyper`) widens the
+  paddle; IMPACT's POWER/SHATTER CORE (`pulse`/`impactX`) each add +30% ball
+  damage. A dropped LASER pickup remaps to MULTIBALL (`modePower`). The shooter
+  modes keep these SAME tiers as real guns via each tier's `sdesc`/`role`/
+  `summary` (unchanged). Suite: 'classic calm' + 'classic offense reskin'.
 - **blaster** (UI: BLASTER) — same waves, NO ball; you clear everything by shooting. Charge
   a fat piercing shot with right-click / Shift, or on touch **hold the FIRE
   pad** (a quick tap fires one normal shot; no separate CHARGE pad). Wiring:
@@ -172,16 +179,15 @@ phone — flag anything only verifiable there.
   render-only multipliers in `ENEMY_SHOT_DRAW_SCALE`. Caterpie-family `stinger`
   and electric `needle` silhouettes must retain their white spine and outline.
   Never grow `hitR` merely to match visibility art.
-- **CLASSIC's paddle has a FIXED damage core; width is armor, never a bigger
-  target.** Enemy shots and column beams only damage `classicCoreHalf()`
-  (0.42 × BASE width — WIDE power / wide tier / Tailwind grow the visual
-  paddle and its catch/ball reach, never the kill zone; the junkie
-  "upgrades never widen the hurtbox" rule, translated). Paddle wings
-  beyond the core DEFLECT shots free (no life, no i-frames — sparks +
-  throttled floater + a once-per-run announce; render shows the warm core
-  / pale wing sheen from level 2 on). Classic wave fire also has a hard
-  ceiling: 8 live non-boss shots block new telegraphs. Suite-tested
-  ('classic deflector core') — never re-couple the hurtbox to `paddleW()`.
+- **CLASSIC takes no enemy fire at all (2026-07-20 calm redesign).** The
+  paddle is never shot at — the whole enemy-fire director is skipped in classic
+  and `spawnEnemyShot` no-ops (see the classic-mode bullet up top for the full
+  list of guards). So the deflector-core / wing-armor system, the 8-shot wave
+  ceiling, and `absorbHit`-vs-fire are all DORMANT in classic (the code remains
+  for the shooter modes; `classicCoreHalf()` still exists but nothing reaches
+  it). If you ever reintroduce a classic threat, it must be OPT-IN and loud —
+  the owner's rule is "calm, no fire coming at you." Suite: 'classic calm'
+  proves zero director fire + zero gun over a long window incl. a boss.
 - **Upgrade-web luminance means installability.** Only nodes in the current
   three-choice draft use a lit badge, white halo, and literal `OPTION N` tag.
   Owned nodes are steady, reachable nodes muted, locked nodes very dim; tapping

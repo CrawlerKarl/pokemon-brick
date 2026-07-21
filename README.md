@@ -30,8 +30,8 @@ variety, and Legendary Pokémon appear only inside dedicated boss bricks.
 and owns the full Space-Invaders/Galaga flight-pattern fantasy. Journey through 9 regions
 (3 stages each — Arrival, Challenge, and a Legendary boss), draft a permanent skill tree, pick a
 one of 18 typed starter partners whose ability evolves, and catch Pokémon for a
-persistent Pokédex. Three modes — **BREAKER** (`classic`, ball +
-earned blaster), **BLASTER** (ball-less pure firepower on the same walls),
+persistent Pokédex. Three modes — **BREAKER** (`classic`, a calm ball-only
+brick-breaker — no gun, no enemy fire), **BLASTER** (ball-less pure firepower on the same walls),
 and **STARFIGHTER** (`junkie` — pilot your Pokémon through all-flying
 waves). Runs auto-save at each
 region — pick up with CONTINUE. The journey is a three-act play (gens 1–3 /
@@ -40,11 +40,14 @@ a full evolution ceremony (Pikachu's special Raichu jump comes in region 5),
 and Space Junkie's wave choreography develops one
 movement verb per act — ASSEMBLE, TRANSFORM, COMBINE. Every region's finale
 is THE GAUNTLET: a three-round title fight (sub-legendary sentinels → the
-legendary → the mythical). Kanto also reveals one guaranteed **Rift Shard** in
-each of its three stages. Catch all three during their generous rift windows
-and the ordinary Mew round is
-replaced by a neon-rift **Mew VMAX** secret fight; victory grants two
-back-to-back normal constellation drafts before the journey moves on.
+legendary → the mythical). Kanto also reveals one guaranteed **Rift Shard** chance in
+each of its three stages — but every piece is a one-shot skill test now: in
+the shooter modes a swift **Rift Courier** carries it across the field once
+(shoot it down or the shard is gone), and in BREAKER the shard itself falls
+fast on a swaying one-pass line you must catch. Land all three and the
+ordinary Mew round is replaced by a neon-rift **Mew VMAX** secret fight;
+victory opens ONE **Rift Bounty draft where you choose TWO upgrades from the
+same hand** before the journey moves on.
 
 **Live:** https://crawlerkarl.github.io/pokemon-brick/ (GitHub Pages, deploys
 from `main` on every push — repo `CrawlerKarl/pokemon-brick`).
@@ -151,17 +154,20 @@ recaps the choice and presents four reworded intensity options before launch.
 Back/Escape moves one decision backward. Trial Mode lives on the Challenge
 screen. Quitting or game over returns to the featured title screen. New players
 default to STARFIGHTER; existing saved mode preferences remain respected.
-- **BREAKER** (`classic`) — the ball-first brick-breaker described
-  below. Every target stays a framed brick: no free flyers, dives, or attack
-  reinforcements. Legendary encounters use moving, multi-phase **boss bricks**
-  with authored patrols, attacks, armor changes, and orbiting brick guards.
-  The ball is THE weapon; there is **no free blaster**. Manual fire is gated by
-  `blasterArmed()` (state.js) and unlocks only with a 9-second LASER power-up,
-  an active Mega, or tier 3 of an offense path (VOLLEY/IMPACT). The first two
-  offense tiers improve the ball; tier 3 is the permanent late-game sidearm.
-  Until then
-  `fireAction` no-ops, the touch FIRE pad is hidden, and the shoot hint is
-  suppressed — you serve/launch the ball by tapping the playfield.
+- **BREAKER** (`classic`) — a **calm, pure brick-breaker** (redesigned
+  2026-07-20 at the owner's request: fun and challenging, but *no enemy fire
+  coming at you*). Every target stays a framed brick: no free flyers, dives, or
+  attack reinforcements. Legendary encounters use moving, multi-phase **boss
+  bricks** with authored patrols, armor changes, and orbiting brick guards — but
+  they never shoot; you break them with the ball. **The ball is the ONLY weapon
+  and the paddle has no gun** (`blasterArmed()` is always false in classic — no
+  LASER auto-fire, no Mega guns, no earned blaster, no charge; the FIRE pad is
+  hidden and `fireAction`/`fireCharge` no-op). **No enemy fires**, so the only
+  way to lose a life is dropping the ball. Mega becomes a pure ball overdrive
+  (the ball pierces + hits hard while it's up), and the OFFENSE upgrade paths are
+  reskinned to ball power: TWIN ORB serves a second ball, WIDE ARRAY widens the
+  paddle, POWER/SHATTER CORE add ball damage, and a LASER pickup becomes
+  MULTIBALL. You serve/launch the ball by tapping the playfield.
 - **BLASTER** — a ball-less pure shooter (Space-Junkies flavour). `serve()`
   spawns no ball and drops you straight into play; you clear the wall and the
   flyers by shooting. You only lose to enemy fire (the "0 balls → loseLife"
@@ -402,14 +408,23 @@ unevolved = straight bolt; evolved elites (`br.elite ≥ 2`) = AIMED heavy
 splash; sentinels = aimed 3-shot fans.
 
 **Kanto Rift override:** Arrival and Challenge each pause their stage clear
-for a generous, homing shard catch window; Mewtwo reveals the third between
-Rounds 2 and 3. Let a shard pass and the journey continues toward the normal
-Mew finale. A complete key makes `gauntletSummonMythic()` spawn Mew VMAX instead
+for a one-shot shard chance; Mewtwo reveals the third between Rounds 2 and 3.
+**Every piece is EARNED** (2026-07-20 — the old homing catch was nearly
+missable-proof, which cheapened the secret): in the shooter modes
+`spawnRiftShard` spawns a **RIFT COURIER** — a swift, shiny bare crosser
+(`SKIN.secret.courier`; Abra on pokemon) that crosses the cleared field once
+in ~4s. Shoot it down (2 HP) and the shard drops with the old generous homing
+(the shoot-down was the test); let it reach the far edge and the rift closes.
+In BREAKER (calm, brick-only — no gun, no crossers) the shard itself falls
+FAST on a swaying, non-homing line at a random column: one pass, catch it or
+lose it. Miss any piece and the journey continues toward the normal Mew
+finale. A complete key makes `gauntletSummonMythic()` spawn Mew VMAX instead
 of Mew (minimum 18 HP, custom Rift arena and sprite, readable seven-shot MAX
-MIRAGE pattern). Defeating it awards +3000 and **TWO back-to-back normal
-constellation drafts** (`G.secret.bonusDrafts`; the second chains in via
-`chainBonusDraft` after the first pick) before the journey moves on to Johto —
-a generous but not run-warping payoff. (The old one-off superpowers —
+MIRAGE pattern). Defeating it awards +3000 and **ONE Rift Bounty draft —
+CHOOSE TWO from the same hand** (`G.bonusPicks`; after the first install
+`holdBonusPick` keeps the SAME hand open minus the picked card — a single
+choose-2 event, never two chained drafts; the header names it) before the
+journey moves on to Johto — a generous but not run-warping payoff. (The old one-off superpowers —
 Paradox Heart / Rift Lens / Echo Relay — are retired for new runs;
 `SECRET_UPGRADES`/`applySecretUpgrade` stay only to honour saves that already
 earned one.) The completed Rift state is carried by checkpoint v2; v1 saves
@@ -815,8 +830,9 @@ save best score or Pokédex catches (`G.trial` flag).
   **charged shot dumps a big slug of heat** (~0.6 of the bar at full charge, in
   `fireCharge`) — chaining big shots overheats you.
 - **Difficulty:** `BRICK_HP_MUL` in `buildLevel` (state.js) — the single knob
-  to make waves tankier/snappier (currently `1.35`). Note CLASSIC has no free
-  blaster (see `blasterArmed`), so the ball carries early waves.
+  to make waves tankier/snappier (currently `1.35`). Note CLASSIC has NO paddle
+  gun at all (`blasterArmed()` is always false there) and takes no enemy fire —
+  the ball carries every wave, and brick HP is the whole challenge curve.
 - **Enemy warnings:** ordinary telegraphs are capped by both count and active
   threat (`starThreatCap`); aimed/heavy attacks draw a line and massive attacks
   get a long warning plus an oversized muzzle tell in `drawTelegraphs`
