@@ -3840,7 +3840,10 @@
       "finalFile": "sprites/final/af-501-ampling.png",
       "previewFile": "sprites/previews/af-501-ampling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#501--ampling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:502",
@@ -3863,7 +3866,10 @@
       "finalFile": "sprites/final/af-502-surgehound.png",
       "previewFile": "sprites/previews/af-502-surgehound-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#502--surgehound",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:503",
@@ -3886,7 +3892,10 @@
       "finalFile": "sprites/final/af-503-gridalpha.png",
       "previewFile": "sprites/previews/af-503-gridalpha-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#503--gridalpha",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:504",
@@ -3909,7 +3918,10 @@
       "finalFile": "sprites/final/af-504-chromekit.png",
       "previewFile": "sprites/previews/af-504-chromekit-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#504--chromekit",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:505",
@@ -3932,7 +3944,10 @@
       "finalFile": "sprites/final/af-505-platedrone.png",
       "previewFile": "sprites/previews/af-505-platedrone-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#505--platedrone",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:506",
@@ -3955,7 +3970,10 @@
       "finalFile": "sprites/final/af-506-skyrise-sentry.png",
       "previewFile": "sprites/previews/af-506-skyrise-sentry-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#506--skyrise-sentry",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:507",
@@ -3978,7 +3996,10 @@
       "finalFile": "sprites/final/af-507-shadelurk.png",
       "previewFile": "sprites/previews/af-507-shadelurk-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#507--shadelurk",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:508",
@@ -4001,7 +4022,10 @@
       "finalFile": "sprites/final/af-508-neonprowler.png",
       "previewFile": "sprites/previews/af-508-neonprowler-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#508--neonprowler",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:509",
@@ -4024,7 +4048,10 @@
       "finalFile": "sprites/final/af-509-noir-baron.png",
       "previewFile": "sprites/previews/af-509-noir-baron-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#509--noir-baron",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:510",
@@ -4047,7 +4074,10 @@
       "finalFile": "sprites/final/af-510-adsprite.png",
       "previewFile": "sprites/previews/af-510-adsprite-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#510--adsprite",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:511",
@@ -4070,7 +4100,10 @@
       "finalFile": "sprites/final/af-511-mindcaster.png",
       "previewFile": "sprites/previews/af-511-mindcaster-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#511--mindcaster",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:512",
@@ -4093,7 +4126,10 @@
       "finalFile": "sprites/final/af-512-broadcast-seer.png",
       "previewFile": "sprites/previews/af-512-broadcast-seer-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#512--broadcast-seer",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:513",
@@ -4116,7 +4152,10 @@
       "finalFile": "sprites/final/af-513-sludgeling.png",
       "previewFile": "sprites/previews/af-513-sludgeling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#513--sludgeling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:514",
@@ -4139,7 +4178,10 @@
       "finalFile": "sprites/final/af-514-ventcrawler.png",
       "previewFile": "sprites/previews/af-514-ventcrawler-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#514--ventcrawler",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:515",
@@ -4162,7 +4204,10 @@
       "finalFile": "sprites/final/af-515-toxin-mogul.png",
       "previewFile": "sprites/previews/af-515-toxin-mogul-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#515--toxin-mogul",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:516",
@@ -4185,7 +4230,10 @@
       "finalFile": "sprites/final/af-516-straykit.png",
       "previewFile": "sprites/previews/af-516-straykit-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#516--straykit",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:517",
@@ -4208,7 +4256,10 @@
       "finalFile": "sprites/final/af-517-alleyrunner.png",
       "previewFile": "sprites/previews/af-517-alleyrunner-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#517--alleyrunner",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:518",
@@ -4231,7 +4282,10 @@
       "finalFile": "sprites/final/af-518-metro-kingpin.png",
       "previewFile": "sprites/previews/af-518-metro-kingpin-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#518--metro-kingpin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:590",
@@ -4369,7 +4423,10 @@
       "finalFile": "sprites/final/af-601-glassgeist.png",
       "previewFile": "sprites/previews/af-601-glassgeist-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#601--glassgeist",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:602",
@@ -4392,7 +4449,10 @@
       "finalFile": "sprites/final/af-602-panewraith.png",
       "previewFile": "sprites/previews/af-602-panewraith-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#602--panewraith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:603",
@@ -4415,7 +4475,10 @@
       "finalFile": "sprites/final/af-603-atrium-phantom.png",
       "previewFile": "sprites/previews/af-603-atrium-phantom-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#603--atrium-phantom",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:604",
@@ -4438,7 +4501,10 @@
       "finalFile": "sprites/final/af-604-umbreling.png",
       "previewFile": "sprites/previews/af-604-umbreling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#604--umbreling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:605",
@@ -4461,7 +4527,10 @@
       "finalFile": "sprites/final/af-605-nightglass.png",
       "previewFile": "sprites/previews/af-605-nightglass-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#605--nightglass",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:606",
@@ -4484,7 +4553,10 @@
       "finalFile": "sprites/final/af-606-eclipse-magnate.png",
       "previewFile": "sprites/previews/af-606-eclipse-magnate-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#606--eclipse-magnate",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:607",
@@ -4507,7 +4579,10 @@
       "finalFile": "sprites/final/af-607-seepling.png",
       "previewFile": "sprites/previews/af-607-seepling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#607--seepling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:608",
@@ -4530,7 +4605,10 @@
       "finalFile": "sprites/final/af-608-chemwraith.png",
       "previewFile": "sprites/previews/af-608-chemwraith-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#608--chemwraith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:609",
@@ -4553,7 +4631,10 @@
       "finalFile": "sprites/final/af-609-miasma-don.png",
       "previewFile": "sprites/previews/af-609-miasma-don-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#609--miasma-don",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:610",
@@ -4576,7 +4657,10 @@
       "finalFile": "sprites/final/af-610-prismkin.png",
       "previewFile": "sprites/previews/af-610-prismkin-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#610--prismkin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:611",
@@ -4599,7 +4683,10 @@
       "finalFile": "sprites/final/af-611-chandelia.png",
       "previewFile": "sprites/previews/af-611-chandelia-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#611--chandelia",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:612",
@@ -4622,7 +4709,10 @@
       "finalFile": "sprites/final/af-612-aurora-regent.png",
       "previewFile": "sprites/previews/af-612-aurora-regent-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#612--aurora-regent",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:613",
@@ -4645,7 +4735,10 @@
       "finalFile": "sprites/final/af-613-oracling.png",
       "previewFile": "sprites/previews/af-613-oracling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#613--oracling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:614",
@@ -4668,7 +4761,10 @@
       "finalFile": "sprites/final/af-614-glassmind.png",
       "previewFile": "sprites/previews/af-614-glassmind-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#614--glassmind",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:615",
@@ -4691,7 +4787,10 @@
       "finalFile": "sprites/final/af-615-spire-sage.png",
       "previewFile": "sprites/previews/af-615-spire-sage-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#615--spire-sage",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:616",
@@ -4714,7 +4813,10 @@
       "finalFile": "sprites/final/af-616-shardling.png",
       "previewFile": "sprites/previews/af-616-shardling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#616--shardling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:617",
@@ -4737,7 +4839,10 @@
       "finalFile": "sprites/final/af-617-latticeknight.png",
       "previewFile": "sprites/previews/af-617-latticeknight-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#617--latticeknight",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:618",
@@ -4760,7 +4865,10 @@
       "finalFile": "sprites/final/af-618-facade-warden.png",
       "previewFile": "sprites/previews/af-618-facade-warden-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#618--facade-warden",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:690",
@@ -4852,7 +4960,10 @@
       "finalFile": "sprites/final/af-701-leyling.png",
       "previewFile": "sprites/previews/af-701-leyling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#701--leyling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:702",
@@ -4875,7 +4986,10 @@
       "finalFile": "sprites/final/af-702-riftseer.png",
       "previewFile": "sprites/previews/af-702-riftseer-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#702--riftseer",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:703",
@@ -4898,7 +5012,10 @@
       "finalFile": "sprites/final/af-703-atoll-oracle.png",
       "previewFile": "sprites/previews/af-703-atoll-oracle-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#703--atoll-oracle",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:704",
@@ -4921,7 +5038,10 @@
       "finalFile": "sprites/final/af-704-lagoonkit.png",
       "previewFile": "sprites/previews/af-704-lagoonkit-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#704--lagoonkit",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:705",
@@ -4944,7 +5064,10 @@
       "finalFile": "sprites/final/af-705-reefdancer.png",
       "previewFile": "sprites/previews/af-705-reefdancer-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#705--reefdancer",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:706",
@@ -4967,7 +5090,10 @@
       "finalFile": "sprites/final/af-706-tsunami-caller.png",
       "previewFile": "sprites/previews/af-706-tsunami-caller-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#706--tsunami-caller",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:707",
@@ -4990,7 +5116,10 @@
       "finalFile": "sprites/final/af-707-palmling.png",
       "previewFile": "sprites/previews/af-707-palmling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#707--palmling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:708",
@@ -5013,7 +5142,10 @@
       "finalFile": "sprites/final/af-708-frondweaver.png",
       "previewFile": "sprites/previews/af-708-frondweaver-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#708--frondweaver",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:709",
@@ -5036,7 +5168,10 @@
       "finalFile": "sprites/final/af-709-canopy-warden.png",
       "previewFile": "sprites/previews/af-709-canopy-warden-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#709--canopy-warden",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:710",
@@ -5059,7 +5194,10 @@
       "finalFile": "sprites/final/af-710-statickit.png",
       "previewFile": "sprites/previews/af-710-statickit-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#710--statickit",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:711",
@@ -5082,7 +5220,10 @@
       "finalFile": "sprites/final/af-711-ionray.png",
       "previewFile": "sprites/previews/af-711-ionray-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#711--ionray",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:712",
@@ -5105,7 +5246,10 @@
       "finalFile": "sprites/final/af-712-stormconduit.png",
       "previewFile": "sprites/previews/af-712-stormconduit-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#712--stormconduit",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:713",
@@ -5128,7 +5272,10 @@
       "finalFile": "sprites/final/af-713-mirageling.png",
       "previewFile": "sprites/previews/af-713-mirageling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#713--mirageling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:714",
@@ -5151,7 +5298,10 @@
       "finalFile": "sprites/final/af-714-echowraith.png",
       "previewFile": "sprites/previews/af-714-echowraith-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#714--echowraith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:715",
@@ -5174,7 +5324,10 @@
       "finalFile": "sprites/final/af-715-rift-revenant.png",
       "previewFile": "sprites/previews/af-715-rift-revenant-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#715--rift-revenant",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:716",
@@ -5197,7 +5350,10 @@
       "finalFile": "sprites/final/af-716-ripplewyrm.png",
       "previewFile": "sprites/previews/af-716-ripplewyrm-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#716--ripplewyrm",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:717",
@@ -5220,7 +5376,10 @@
       "finalFile": "sprites/final/af-717-leywyrm.png",
       "previewFile": "sprites/previews/af-717-leywyrm-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#717--leywyrm",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:718",
@@ -5243,7 +5402,10 @@
       "finalFile": "sprites/final/af-718-horizon-wyrm.png",
       "previewFile": "sprites/previews/af-718-horizon-wyrm-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#718--horizon-wyrm",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:790",
@@ -5381,7 +5543,10 @@
       "finalFile": "sprites/final/af-801-sparrling.png",
       "previewFile": "sprites/previews/af-801-sparrling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#801--sparrling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:802",
@@ -5404,7 +5569,10 @@
       "finalFile": "sprites/final/af-802-pit-brawler.png",
       "previewFile": "sprites/previews/af-802-pit-brawler-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#802--pit-brawler",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:803",
@@ -5427,7 +5595,10 @@
       "finalFile": "sprites/final/af-803-arena-warlord.png",
       "previewFile": "sprites/previews/af-803-arena-warlord-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#803--arena-warlord",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:804",
@@ -5450,7 +5621,10 @@
       "finalFile": "sprites/final/af-804-rubblekin.png",
       "previewFile": "sprites/previews/af-804-rubblekin-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#804--rubblekin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:805",
@@ -5473,7 +5647,10 @@
       "finalFile": "sprites/final/af-805-rampartgolem.png",
       "previewFile": "sprites/previews/af-805-rampartgolem-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#805--rampartgolem",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:806",
@@ -5496,7 +5673,10 @@
       "finalFile": "sprites/final/af-806-siege-monolith.png",
       "previewFile": "sprites/previews/af-806-siege-monolith-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#806--siege-monolith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:807",
@@ -5519,7 +5699,10 @@
       "finalFile": "sprites/final/af-807-torchkin.png",
       "previewFile": "sprites/previews/af-807-torchkin-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#807--torchkin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:808",
@@ -5542,7 +5725,10 @@
       "finalFile": "sprites/final/af-808-pyrehound.png",
       "previewFile": "sprites/previews/af-808-pyrehound-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#808--pyrehound",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:809",
@@ -5565,7 +5751,10 @@
       "finalFile": "sprites/final/af-809-inferno-champion.png",
       "previewFile": "sprites/previews/af-809-inferno-champion-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#809--inferno-champion",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:810",
@@ -5588,7 +5777,10 @@
       "finalFile": "sprites/final/af-810-bladeling.png",
       "previewFile": "sprites/previews/af-810-bladeling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#810--bladeling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:811",
@@ -5611,7 +5803,10 @@
       "finalFile": "sprites/final/af-811-warframe.png",
       "previewFile": "sprites/previews/af-811-warframe-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#811--warframe",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:812",
@@ -5634,7 +5829,10 @@
       "finalFile": "sprites/final/af-812-warforge-colossus.png",
       "previewFile": "sprites/previews/af-812-warforge-colossus-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#812--warforge-colossus",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:813",
@@ -5657,7 +5855,10 @@
       "finalFile": "sprites/final/af-813-jeerling.png",
       "previewFile": "sprites/previews/af-813-jeerling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#813--jeerling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:814",
@@ -5680,7 +5881,10 @@
       "finalFile": "sprites/final/af-814-mobraiser.png",
       "previewFile": "sprites/previews/af-814-mobraiser-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#814--mobraiser",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:815",
@@ -5703,7 +5907,10 @@
       "finalFile": "sprites/final/af-815-riot-baron.png",
       "previewFile": "sprites/previews/af-815-riot-baron-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#815--riot-baron",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:816",
@@ -5726,7 +5933,10 @@
       "finalFile": "sprites/final/af-816-scaleling.png",
       "previewFile": "sprites/previews/af-816-scaleling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#816--scaleling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:817",
@@ -5749,7 +5959,10 @@
       "finalFile": "sprites/final/af-817-warwyrm.png",
       "previewFile": "sprites/previews/af-817-warwyrm-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#817--warwyrm",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:818",
@@ -5772,7 +5985,10 @@
       "finalFile": "sprites/final/af-818-crucible-drake.png",
       "previewFile": "sprites/previews/af-818-crucible-drake-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#818--crucible-drake",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:890",
@@ -5910,7 +6126,10 @@
       "finalFile": "sprites/final/af-901-cradlewyrm.png",
       "previewFile": "sprites/previews/af-901-cradlewyrm-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#901--cradlewyrm",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:902",
@@ -5933,7 +6152,10 @@
       "finalFile": "sprites/final/af-902-riftdrake.png",
       "previewFile": "sprites/previews/af-902-riftdrake-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#902--riftdrake",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:903",
@@ -5956,7 +6178,10 @@
       "finalFile": "sprites/final/af-903-sunder-sovereign.png",
       "previewFile": "sprites/previews/af-903-sunder-sovereign-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#903--sunder-sovereign",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:904",
@@ -5979,7 +6204,10 @@
       "finalFile": "sprites/final/af-904-dawnmote.png",
       "previewFile": "sprites/previews/af-904-dawnmote-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#904--dawnmote",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:905",
@@ -6002,7 +6230,10 @@
       "finalFile": "sprites/final/af-905-lumenkin.png",
       "previewFile": "sprites/previews/af-905-lumenkin-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#905--lumenkin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:906",
@@ -6025,7 +6256,10 @@
       "finalFile": "sprites/final/af-906-radiant-warden.png",
       "previewFile": "sprites/previews/af-906-radiant-warden-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#906--radiant-warden",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:907",
@@ -6048,7 +6282,10 @@
       "finalFile": "sprites/final/af-907-relicframe.png",
       "previewFile": "sprites/previews/af-907-relicframe-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#907--relicframe",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:908",
@@ -6071,7 +6308,10 @@
       "finalFile": "sprites/final/af-908-vaultkeeper.png",
       "previewFile": "sprites/previews/af-908-vaultkeeper-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#908--vaultkeeper",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:909",
@@ -6094,7 +6334,10 @@
       "finalFile": "sprites/final/af-909-epoch-engine.png",
       "previewFile": "sprites/previews/af-909-epoch-engine-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#909--epoch-engine",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:910",
@@ -6117,7 +6360,10 @@
       "finalFile": "sprites/final/af-910-dustkin.png",
       "previewFile": "sprites/previews/af-910-dustkin-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#910--dustkin",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:911",
@@ -6140,7 +6386,10 @@
       "finalFile": "sprites/final/af-911-mesashaper.png",
       "previewFile": "sprites/previews/af-911-mesashaper-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#911--mesashaper",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:912",
@@ -6163,7 +6412,10 @@
       "finalFile": "sprites/final/af-912-cradle-titan.png",
       "previewFile": "sprites/previews/af-912-cradle-titan-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#912--cradle-titan",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:913",
@@ -6186,7 +6438,10 @@
       "finalFile": "sprites/final/af-913-agewraith.png",
       "previewFile": "sprites/previews/af-913-agewraith-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#913--agewraith",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:914",
@@ -6209,7 +6464,10 @@
       "finalFile": "sprites/final/af-914-eonshade.png",
       "previewFile": "sprites/previews/af-914-eonshade-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#914--eonshade",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:915",
@@ -6232,7 +6490,10 @@
       "finalFile": "sprites/final/af-915-memory-king.png",
       "previewFile": "sprites/previews/af-915-memory-king-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#915--memory-king",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:916",
@@ -6255,7 +6516,10 @@
       "finalFile": "sprites/final/af-916-pulseling.png",
       "previewFile": "sprites/previews/af-916-pulseling-preview.png",
       "promptRecipe": "creature:common",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#916--pulseling",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:917",
@@ -6278,7 +6542,10 @@
       "finalFile": "sprites/final/af-917-riftspark.png",
       "previewFile": "sprites/previews/af-917-riftspark-preview.png",
       "promptRecipe": "creature:evolved",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#917--riftspark",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:918",
@@ -6301,7 +6568,10 @@
       "finalFile": "sprites/final/af-918-genesis-coil.png",
       "previewFile": "sprites/previews/af-918-genesis-coil-preview.png",
       "promptRecipe": "creature:elite",
-      "status": "planned"
+      "status": "generated-validated",
+      "generatedAt": "2026-07-20",
+      "promptLog": "PRODUCTION_RUN.md#918--genesis-coil",
+      "alphaValidated": true
     },
     {
       "stableKey": "aetherfall:990",
