@@ -1332,6 +1332,26 @@ function encounterObjective(lvl) { return SKIN.encounterObjectives[regionIdx(lvl
 // ---- discipline lexicon (Round S2): a skin may voice the six path names
 // per class discipline (SKIN.treeLexicon). Node keys/effects never change —
 // this is presentation only; skins without a lexicon read PATHS[k].name.
+// The 18 type KEYS are engine vocabulary (storage-stable, shared). What the
+// player READS is skin voice: a skin may rename every type (SKIN.typeNames —
+// aetherfall's aspect lexicon: EMBER/TIDE/GROVE/…) and the word "TYPE" itself
+// (SKIN.strings.typeWord — "ASPECT" on aetherfall). No table → the raw
+// uppercased key, which IS the pokemon presentation (bit-identity preserved).
+function typeLabel(t) {
+  if (!t) return 'NEUTRAL';
+  return (SKIN.typeNames && SKIN.typeNames[t]) || t.toUpperCase();
+}
+function typeWord() { return (SKIN.strings && SKIN.strings.typeWord) || 'TYPE'; }
+// codex gallery: locate a recorded unit's home region, type and tier
+function dexEntryInfo(id) {
+  for (const g of SKIN.gens) {
+    for (const tier of [1, 2, 3]) {
+      const hit = (g.tiers[tier] || []).find(([tid]) => tid === id);
+      if (hit) return { gen: g, t: hit[1], tier };
+    }
+  }
+  return null;
+}
 function skinPathName(k) {
   const lex = SKIN.treeLexicon && SKIN.treeLexicon[k];
   if (!lex) return (PATHS[k] || {}).name || k.toUpperCase();

@@ -504,6 +504,8 @@
     quickHint: 'AETHERKIN FLIGHT SHOOTER · 27-STAGE CAMPAIGN',
     healName: 'MENDING DRAUGHT',
     megaBang: 'AETHER SURGE!', // the Mega bang in this world's voice
+    typeWord: 'ASPECT', // "EMBER ASPECT", never "FIRE TYPE"
+    orbWord: 'ATTUNEMENT', // element pickups: "EMBER ATTUNEMENT"
     riftDesc: "ONE OF THREE PIECES THAT REWRITES THE MARCHES' FINAL ROUND",
     partnerWord: 'VESSEL',
     regionWord: 'REALM',
@@ -542,8 +544,21 @@
       lines: ['SHOOT THE BLOCK WALL DIRECTLY', 'TAP TO FIRE · HOLD FOR PIERCING CHARGE'] },
   };
 
+  // ---------- the ASPECT lexicon ----------
+  // The 18 engine type keys, spoken in this world's voice. Each name matches
+  // its class fantasy: the PYROMANCER wields EMBER, the NECROMANCER wields
+  // GRAVE, the ENGINEER wields FORGE. Keys never change — labels only.
+  const typeNames = {
+    fire: 'EMBER', water: 'TIDE', grass: 'GROVE', electric: 'STORM',
+    ice: 'FROST', fighting: 'MIGHT', poison: 'TOXIN', ground: 'TERRA',
+    flying: 'GALE', psychic: 'PSI', bug: 'SWARM', rock: 'STONE',
+    ghost: 'GRAVE', dragon: 'WYRM', dark: 'SHADOW', steel: 'FORGE',
+    fairy: 'FEY', normal: 'OMNI',
+  };
+
   // ---------- assembly ----------
   Object.assign(AF, {
+    typeNames,
     edition: 'AETHERFALL EDITION',
     affinities: true, // unlocks the LIGHT/DARK setup pick (Round S6)
     rosterGroups: [

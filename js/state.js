@@ -583,9 +583,9 @@ function applyPower(p, srcType) {
   if (srcType) {
     G.ballElement = srcType;
     G.ballElementT = 20; // elements wear off — a stale bad matchup shouldn't last forever
-    const strong = (EFFECTIVE[srcType] || []).slice(0, 3).join(', ').toUpperCase();
-    const weak = (RESIST[srcType] || []).slice(0, 2).join(', ').toUpperCase();
-    sub = srcType.toUpperCase() + ' BALL' + (strong ? ' — 2× vs ' + strong : '') + (weak ? ' · ¼× vs ' + weak : '');
+    const strong = (EFFECTIVE[srcType] || []).slice(0, 3).map(typeLabel).join(', ');
+    const weak = (RESIST[srcType] || []).slice(0, 2).map(typeLabel).join(', ');
+    sub = typeLabel(srcType) + ' ' + ((SKIN.strings && SKIN.strings.orbWord) || 'BALL') + (strong ? ' — 2× vs ' + strong : '') + (weak ? ' · ¼× vs ' + weak : '');
   }
   // shooter modes read the paddle-free label (`sname`/`sdesc`) when a power
   // has one — a Starfighter pilot never hears about a paddle it doesn't have.

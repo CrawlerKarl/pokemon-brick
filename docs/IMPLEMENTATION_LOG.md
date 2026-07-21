@@ -5,6 +5,33 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-21c — The ASPECT lexicon + the CODEX GALLERY
+
+Owner: AETHERFALL still spoke in pokemon type words; and the art is too
+small in combat to appreciate — "create a library, or something else."
+
+- **The ASPECT lexicon.** The 18 engine type KEYS are untouched (storage-
+  stable); what the player READS is now skin voice via `typeLabel(t)` +
+  `typeWord()` (data.js). Aetherfall names every type for its class fantasy
+  (SKIN.typeNames): EMBER/TIDE/GROVE/STORM/FROST/MIGHT/TOXIN/TERRA/GALE/
+  PSI/SWARM/STONE/GRAVE/WYRM/SHADOW/FORGE/FEY/OMNI, the word TYPE becomes
+  ASPECT, and element pickups are ATTUNEMENTS (orbWord). Swept surfaces:
+  HUD element line, orb pickup announce + matchup list (both sites),
+  element-worn-off floater, life-loss cause, class-select hero card.
+  Pokemon skin: no tables → raw uppercased keys = bit-identical.
+- **The CODEX GALLERY.** Tap any recorded entry in the codex for a
+  full-size portrait: the art at up to 384px with an aspect-colored glow,
+  name + ASPECT + realm + form (I/II/III), a gold **RADIANT FORM toggle**
+  (gated on having recorded the radiant — the discovery stays a reward),
+  and ‹ › browsing across everything recorded. Render writes
+  dexCellRects/dexDetailRects, input hit-tests the same geometry; ESC/
+  outside-tap closes (desktop's click-anywhere-exits now excludes cells).
+- **Class-select hero pops**: the vessel sprite grew to ~132px (may
+  overhang the card frame — intentional) and the identity line reads
+  ability · ASPECT · DISCIPLINE (e.g. KINDLE · EMBER ASPECT · MAGIC).
+
+---
+
 ## 2026-07-21b — STARFIGHTER edge-lock fix + MEGA stays worth pressing
 
 Owner (from a live phone session on the Alola gauntlet): (1) "when this

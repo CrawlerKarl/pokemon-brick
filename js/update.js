@@ -66,7 +66,7 @@ function tickEffects(dt) {
       G.ballElement = null;
       // SPACE JUNKIE: a temporary type change reverts to the pilot's base type
       if (G.mode === 'junkie' && G.state === 'play') {
-        addFloater(G.paddle.x, shipY() - 52, 'BACK TO ' + pilotInfo().t.toUpperCase() + ' TYPE', TYPE_COLORS[pilotInfo().t], 12);
+        addFloater(G.paddle.x, shipY() - 52, 'BACK TO ' + typeLabel(pilotInfo().t) + ' ' + typeWord(), TYPE_COLORS[pilotInfo().t], 12);
         tone(340, 0.14, 'sine', 0.04, -80);
       }
     }
@@ -1253,8 +1253,8 @@ function collectPickup(pu) {
     if (upgN('attune')) addFloater(pu.x, pu.y - 22, 'ATTUNED · +50% DURATION', '#4dd0e1', 11);
     chorusRecord(pu.p.t);   // BESTIARY CHORUS learns the orb's type
     celestialSector('t');   // CELESTIAL GUARDIAN: a type event
-    const strong = (EFFECTIVE[pu.p.t] || []).slice(0, 3).join(', ').toUpperCase();
-    setAnnounce(pu.p.t, TYPE_COLORS[pu.p.t], pu.p.t.toUpperCase() + ' BALL',
+    const strong = (EFFECTIVE[pu.p.t] || []).slice(0, 3).map(typeLabel).join(', ');
+    setAnnounce(pu.p.t, TYPE_COLORS[pu.p.t], typeLabel(pu.p.t) + ' ' + ((SKIN.strings && SKIN.strings.orbWord) || 'BALL'),
       strong ? '2× vs ' + strong : 'ELEMENT CHANGED', 1.8);
   } else if (pu.p.key === 'pokeball') {
     // trial runs are a sandbox — catches don't touch the real Pokédex
@@ -5099,7 +5099,7 @@ function update(dt) {
       // double-life spikes. Super-effective fire is louder, never two hits.
       addFloater(G.paddle.x, py - 50, weak ? 'WEAK!' : 'HIT!', weak ? '#ffab40' : '#ff5252', weak ? 24 : 22);
       burst(G.paddle.x, py, weak ? '#ffab40' : '#ff5252', weak ? 40 : 30, weak ? 380 : 320);
-      loseLife((s.type || 'ENEMY').toUpperCase() + (s.heavy ? ' HEAVY ATTACK' : ' ATTACK'), s);
+      loseLife((s.type ? typeLabel(s.type) : 'ENEMY') + (s.heavy ? ' HEAVY ATTACK' : ' ATTACK'), s);
       return;
     }
     if (s.y > H + 80 || s.y < -120 || s.x < -120 || s.x > W + 120 || s.age > 9) s.dead = true;

@@ -3929,14 +3929,14 @@ function drawHUD() {
     // attackElement() is null for a NO-PARTNER (neutral/typeless) pilot — the
     // element readout renders that as NEUTRAL rather than a type.
     const el = hudElem ? attackElement() : G.ballElement;
-    const elLabel = el ? el.toUpperCase() : 'NEUTRAL';
+    const elLabel = typeLabel(el);
     ctx.fillStyle = el ? TYPE_COLORS[el] : '#b0bec5';
     ctx.font = '700 11px Orbitron, sans-serif';
     const basePartner = G.ballElementT > 1000 && G.starter && el === G.starter;
     const tag = hudElem
       ? (G.ballElement
-        ? elLabel + ' TYPE · ITEM · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
-        : elLabel + (el ? ' TYPE · PILOT' : ' · PILOT'))
+        ? elLabel + ' ' + typeWord() + ' · ITEM · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
+        : elLabel + (el ? ' ' + typeWord() + ' · PILOT' : ' · PILOT'))
       : elLabel + (G.mode === 'classic' ? ' BALL' : ' WEAPON') + (basePartner
         ? ' · PARTNER'
         : ' · POWER-UP · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's');
@@ -5326,7 +5326,9 @@ function drawPilotSetup(L, mode) {
     ctx.fillStyle = 'rgba(7,11,27,0.9)'; ctx.fill(); ctx.restore();
     roundRect(hv.x, hv.y, hv.w, hv.h, 16);
     ctx.strokeStyle = col + '88'; ctx.lineWidth = 1.4; ctx.stroke();
-    const sp = Math.min(hv.h - 12, L.short ? 46 : 96);
+    // the hero sprite POPS — it may overhang the card frame (2026-07-21:
+    // the art deserves the space; the text column starts after it either way)
+    const sp = L.short ? 52 : Math.min(hv.h + 30, 132);
     const sx2 = hv.x + (L.short ? 8 : 16);
     if (mon) {
       const img = getSprite(mon.ids[0]);
@@ -5341,7 +5343,9 @@ function drawPilotSetup(L, mode) {
       ctx.fillStyle = '#ffffff';
       ctx.fillText(mon.names[0], tx2, hv.y + hv.h * (L.short ? 0.3 : 0.24), tw2);
       ctx.font = `800 ${L.short ? 8 : 10}px Orbitron, sans-serif`; ctx.fillStyle = col;
-      ctx.fillText(copy.ability + '  ·  ' + (SETTINGS.starter || '').toUpperCase() + ' TYPE',
+      const disc = mon.discipline && SKIN.disciplines && SKIN.disciplines[mon.discipline];
+      ctx.fillText(copy.ability + '  ·  ' + typeLabel(SETTINGS.starter) + ' ' + typeWord()
+        + (disc ? '  ·  ' + disc.name : ''),
         tx2, hv.y + hv.h * (L.short ? 0.58 : 0.47), tw2);
       if (!L.short) {
         ctx.font = bodyFont(L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#c5cedd';
@@ -5876,6 +5880,7 @@ function drawAdvanced() {
 
 function drawDex() {
   dim(0.85);
+  dexCellRects = []; // rebuilt each frame — input hit-tests the same geometry
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   // ---- scrolling region-by-region body ----
   const cellW = Math.max(72, Math.min(92, W / 5)), cellH = cellW + 16;
@@ -5912,6 +5917,7 @@ function drawDex() {
         if (cy + cellH / 2 < 132 || cy - cellH / 2 > H) return;
         const has = DEX.has(id), shiny = DEXS.has(id);
         const half = cellW / 2 - 4;
+        if (has) dexCellRects.push({ id, x: cx - half, y: cy - half - 6, w: half * 2, h: half * 2 + 12 });
         roundRect(cx - half, cy - half - 6, half * 2, half * 2 + 12, 10);
         ctx.fillStyle = shiny ? 'rgba(255,215,0,0.1)' : has ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)';
         ctx.fill();
@@ -5977,6 +5983,73 @@ function drawDex() {
   ctx.font = '700 13px Orbitron, sans-serif';
   ctx.fillStyle = '#cfd8dc';
   ctx.fillText('◀ BACK', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
+  drawDexDetail();
+}
+
+// ---- THE CODEX GALLERY (2026-07-21): tap a recorded entry for a full-size
+// portrait — the art at 3×, a RADIANT toggle, aspect + realm identity, and
+// ‹ › browsing across everything recorded. Render writes dexDetailRects;
+// input hit-tests the same geometry.
+function drawDexDetail() {
+  if (!dexDetail) { dexDetailRects = null; return; }
+  const id = dexDetail.id;
+  const info = dexEntryInfo(id);
+  const t = info ? info.t : 'normal';
+  const col = TYPE_COLORS[t] || '#90a4ae';
+  const radiantOK = DEXS.has(id);
+  const shiny = dexDetail.radiant && radiantOK;
+  dim(0.72);
+  const cw = Math.min(W * 0.92, 520), chh = Math.min(H * 0.9, 620);
+  const cx0 = W / 2 - cw / 2, cy0 = H / 2 - chh / 2;
+  ctx.save(); ctx.shadowColor = shiny ? 'rgba(255,215,0,0.5)' : col + '66'; ctx.shadowBlur = 26;
+  roundRect(cx0, cy0, cw, chh, 20);
+  ctx.fillStyle = 'rgba(6,9,24,0.97)'; ctx.fill(); ctx.restore();
+  roundRect(cx0, cy0, cw, chh, 20);
+  ctx.strokeStyle = shiny ? '#ffd700' : col; ctx.lineWidth = 1.6; ctx.stroke();
+  // the portrait — as big as the card allows (the whole point of the gallery)
+  const sp = Math.min(cw - 70, chh - 220, 384);
+  const px = W / 2, py = cy0 + 34 + sp / 2;
+  const pg = ctx.createRadialGradient(px, py, 8, px, py, sp * 0.62);
+  pg.addColorStop(0, (shiny ? '#ffd700' : col) + '30');
+  pg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = pg;
+  ctx.beginPath(); ctx.arc(px, py, sp * 0.62, 0, Math.PI * 2); ctx.fill();
+  const img = getSprite(id, shiny);
+  if (img.complete && img.naturalWidth) ctx.drawImage(img, px - sp / 2, py - sp / 2, sp, sp);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let ty = py + sp / 2 + 26;
+  ctx.font = `900 ${Math.min(24, cw / 14)}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(((SKIN.names[id] || '#' + id) + '').toUpperCase(), W / 2, ty, cw - 40);
+  ty += 28;
+  ctx.font = '800 11px Orbitron, sans-serif';
+  ctx.fillStyle = col;
+  ctx.fillText(typeLabel(t) + ' ' + typeWord() + (info ? '  ·  ' + info.gen.name : '')
+    + (info ? '  ·  FORM ' + ['I', 'II', 'III'][info.tier - 1] : ''), W / 2, ty, cw - 40);
+  ty += 26;
+  // RADIANT toggle — the discovery reward: preview only once recorded
+  const rw = 190, rh = 30;
+  const rr = { x: W / 2 - rw / 2, y: ty, w: rw, h: rh };
+  roundRect(rr.x, rr.y, rw, rh, 15);
+  ctx.fillStyle = shiny ? 'rgba(255,215,0,0.22)' : radiantOK ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.04)';
+  ctx.fill();
+  ctx.strokeStyle = radiantOK ? '#ffd700' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.font = '800 10px Orbitron, sans-serif';
+  ctx.fillStyle = radiantOK ? (shiny ? '#ffffff' : '#ffd700') : '#546e7a';
+  ctx.fillText(radiantOK ? (shiny ? '◆ ' + SKIN.strings.shinyTag + ' FORM' : '◇ VIEW ' + SKIN.strings.shinyTag + ' FORM')
+    : SKIN.strings.shinyTag + ' · NOT YET RECORDED', W / 2, rr.y + rh / 2 + 0.5, rw - 12);
+  // ‹ › browse arrows riding the card's flanks
+  const aw = 44, ay = cy0 + chh / 2 - aw / 2;
+  const prev = { x: cx0 + 6, y: ay, w: aw, h: aw }, next = { x: cx0 + cw - aw - 6, y: ay, w: aw, h: aw };
+  for (const [r, ch] of [[prev, '‹'], [next, '›']]) {
+    roundRect(r.x, r.y, r.w, r.h, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
+    ctx.font = '900 24px Orbitron, sans-serif'; ctx.fillStyle = '#cfd8dc';
+    ctx.fillText(ch, r.x + r.w / 2, r.y + r.h / 2);
+  }
+  ctx.font = '700 9px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+  ctx.fillText(IS_TOUCH ? 'TAP OUTSIDE TO CLOSE' : 'CLICK OUTSIDE OR ESC TO CLOSE', W / 2, cy0 + chh - 16, cw - 30);
+  dexDetailRects = { card: { x: cx0, y: cy0, w: cw, h: chh }, radiant: rr, prev, next };
 }
 
 function constellationHex(x, y, r, rot = Math.PI / 6) {

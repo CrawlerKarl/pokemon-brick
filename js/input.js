@@ -197,6 +197,24 @@ window.addEventListener('touchstart', e => {
   }
 }, { passive: false });
 let onPressDexTapPending = null;
+// ---- CODEX DETAIL (the gallery): tap a recorded entry to open a full-size
+// portrait with a RADIANT toggle. Render writes the rects, input reads them.
+let dexDetail = null;      // { id, radiant } or null
+let dexCellRects = [];     // written by drawDex each frame (visible cells)
+let dexDetailRects = null; // written by the detail overlay each frame
+function dexRecordedOrder() {
+  const out = [];
+  for (const g of SKIN.gens) for (const id of regionRoster(g)) if (DEX.has(id)) out.push(id);
+  return out;
+}
+function stepDexDetail(dir) {
+  const order = dexRecordedOrder();
+  if (!order.length || !dexDetail) return;
+  const i = Math.max(0, order.indexOf(dexDetail.id));
+  const id = order[(i + dir + order.length) % order.length];
+  dexDetail = { id, radiant: dexDetail.radiant && DEXS.has(id) };
+  SFX.wall();
+}
 window.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
     const p = treeTouches.get(t.identifier);
@@ -322,7 +340,7 @@ window.addEventListener('keydown', e => {
     else if (G.state === 'upgrade') return;
     else if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); }
     else if (G.state === 'results') advanceResults();
-    else if (G.state === 'dex') { G.state = 'menu'; dexScroll = 0; }
+    else if (G.state === 'dex') { if (dexDetail) dexDetail = null; else { G.state = 'menu'; dexScroll = 0; } }
     else if (trialOpen) trialOpen = false;
     else if (advOpen) { advOpen = false; saveSettings(); }
     else if (cheatOpen) cheatOpen = false;
@@ -969,8 +987,22 @@ function onPress(x, y) {
     return;
   }
   if (G.state === 'dex') {
-    if (inRect(x, y, dexCloseGeom())) { G.state = 'menu'; dexScroll = 0; }
-    else if (!IS_TOUCH) { G.state = 'menu'; dexScroll = 0; } // desktop: click anywhere returns
+    if (dexDetail) { // the gallery overlay owns every tap while open
+      const R = dexDetailRects || {};
+      if (R.radiant && inRect(x, y, R.radiant)) {
+        if (DEXS.has(dexDetail.id)) { dexDetail.radiant = !dexDetail.radiant; SFX.power(); }
+        else SFX.wall();
+        return;
+      }
+      if (R.prev && inRect(x, y, R.prev)) { stepDexDetail(-1); return; }
+      if (R.next && inRect(x, y, R.next)) { stepDexDetail(1); return; }
+      if (R.card && inRect(x, y, R.card)) return; // the card itself is inert
+      dexDetail = null; SFX.wall(); return;       // outside → close
+    }
+    const cell = dexCellRects.find(c => inRect(x, y, c));
+    if (cell && DEX.has(cell.id)) { dexDetail = { id: cell.id, radiant: false }; SFX.power(); return; }
+    if (inRect(x, y, dexCloseGeom())) { G.state = 'menu'; dexScroll = 0; dexDetail = null; }
+    else if (!IS_TOUCH && !cell) { G.state = 'menu'; dexScroll = 0; } // desktop: click empty space returns
     return;
   }
   if (G.state === 'results') { advanceResults(); return; }
