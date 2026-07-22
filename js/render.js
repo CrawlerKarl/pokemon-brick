@@ -346,6 +346,110 @@ function shotSprite(color, r, spikes) {
   return c;
 }
 
+// AETHERFALL's authored Relicforge sprites. Images and their restrained
+// aspect-color overlays are cached once; gameplay falls back to the existing
+// vector language while a PNG is still loading or in the legacy skin.
+const aetherWeaponImages = {};
+const aetherWeaponTints = {};
+const AETHER_RELIC_SIZE = Object.freeze({
+  pixel: 36, star: 38, gear: 40, gale: 40, claw: 42,
+  fist: 44, quake: 44, venom: 44,
+});
+function aetherWeaponImage(path) {
+  if (SKIN.id !== 'aetherfall' || !path) return null;
+  if (!aetherWeaponImages[path]) {
+    const img = new Image();
+    img.src = path;
+    aetherWeaponImages[path] = img;
+  }
+  return aetherWeaponImages[path];
+}
+function aetherRelicImage(shape) {
+  return aetherWeaponImage(SKIN.weaponArt && SKIN.weaponArt.shapes && SKIN.weaponArt.shapes[shape]);
+}
+function aetherAuxImage(key) {
+  return aetherWeaponImage(SKIN.weaponArt && SKIN.weaponArt.aux && SKIN.weaponArt.aux[key]);
+}
+function aetherRelicForKind(kind) {
+  const wa = SKIN.weaponArt;
+  const shape = wa && wa.kindShape && (wa.kindShape[kind] || wa.kindShape.pellet);
+  return shape ? aetherRelicImage(shape) : null;
+}
+function aetherWeaponTint(img, color) {
+  if (!img || !img.complete || !img.naturalWidth) return null;
+  const key = img.src + '|' + color;
+  if (aetherWeaponTints[key]) return aetherWeaponTints[key];
+  try {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const q = c.getContext('2d');
+    q.drawImage(img, 0, 0);
+    q.globalCompositeOperation = 'source-in';
+    q.fillStyle = color; q.fillRect(0, 0, c.width, c.height);
+    aetherWeaponTints[key] = c;
+    return c;
+  } catch (e) { return null; }
+}
+function drawAetherRelic(img, x, y, size, color, tier = 1) {
+  if (!img || !img.complete || !img.naturalWidth) return false;
+  const tint = aetherWeaponTint(img, color);
+  ctx.save();
+  ctx.translate(x, y);
+  // Evolved attacks retain the same authored object; subtle paired echoes
+  // communicate tier without replacing its material construction.
+  if (tier >= 3) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.16;
+    if (tint) {
+      ctx.drawImage(tint, -size / 2 - size * 0.16, -size / 2 + size * 0.12, size, size);
+      ctx.drawImage(tint, -size / 2 + size * 0.16, -size / 2 + size * 0.12, size, size);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = color; ctx.shadowBlur = Math.max(8, size * 0.25);
+  ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  ctx.shadowBlur = 0;
+  if (tint) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = tier >= 2 ? 0.25 : 0.18;
+    ctx.drawImage(tint, -size / 2, -size / 2, size, size);
+  }
+  ctx.restore();
+  return true;
+}
+
+// Resolve and draw the chosen vessel treatment. LIGHT uses the existing true
+// radiant repaint plus a sun-forged fitting; DARK shifts the base materials
+// into an umbral shade and adds a visibly different crescent fitting.
+function affinityVesselImage(id) {
+  if (id > 0) return getSprite(id, !!(SKIN.affinities && SETTINGS.affinity === 'light'));
+  return aetherAuxImage('trainingDrone');
+}
+function drawAffinityVessel(id, x, y, size) {
+  const img = affinityVesselImage(id);
+  if (!img || !img.complete || !img.naturalWidth) return false;
+  ctx.save();
+  const frameKey = SKIN.affinities && SETTINGS.affinity
+    ? (SETTINGS.affinity === 'light' ? 'lightFrame' : 'darkFrame') : null;
+  const frame = frameKey ? aetherAuxImage(frameKey) : null;
+  if (frame && frame.complete && frame.naturalWidth) {
+    const fs = size * 1.5;
+    ctx.shadowColor = affinityColor() || '#ffffff'; ctx.shadowBlur = size * 0.16;
+    ctx.drawImage(frame, x - fs / 2, y - fs / 2 + size * 0.03, fs, fs);
+    ctx.shadowBlur = 0;
+  }
+  if (SKIN.affinities && SETTINGS.affinity === 'dark') {
+    ctx.filter = 'brightness(0.58) saturate(0.74) hue-rotate(16deg) contrast(1.2)';
+  } else if (SKIN.affinities && SETTINGS.affinity === 'light') {
+    ctx.filter = 'brightness(1.06) saturate(1.08)';
+  }
+  ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+  ctx.filter = 'none';
+  ctx.restore();
+  return true;
+}
+
 // Typed/species projectile silhouettes. Everything expensive is baked once
 // per (kind, colour, size bucket); the hot loop below remains one drawImage per
 // shot. Shapes, not colour alone, make boss fire readable and accessible.
@@ -1669,11 +1773,11 @@ function drawPilotRig(x, py, preview = false) {
   const atk = Math.min(1, G.attackAnim);           // 1 at the shot, decays fast
   const lungeY = -9 * atk;                          // lunge upward into the shot
   const sclX = 1 - 0.09 * atk, sclY = 1 + 0.14 * atk; // stretch into the attack
-  const img = pil.id > 0 ? getSprite(pil.id) : null;
+  const img = affinityVesselImage(pil.id);
   const ok = !!(img && img.complete && img.naturalWidth);
-  const shadow = ok ? getSilhouette(pil.id, '#060a18') : null;
-  const rim = ok ? getSilhouette(pil.id, col) : null;
-  const flash = ok ? getSilhouette(pil.id, '#ffffff') : null;
+  const shadow = ok && pil.id > 0 ? getSilhouette(pil.id, '#060a18') : null;
+  const rim = ok && pil.id > 0 ? getSilhouette(pil.id, col) : null;
+  const flash = ok && pil.id > 0 ? getSilhouette(pil.id, '#ffffff') : null;
   ctx.save();
   ctx.translate(x, y + lungeY);
   ctx.rotate(tilt - 0.09 * atk);
@@ -1693,10 +1797,9 @@ function drawPilotRig(x, py, preview = false) {
   }
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
   ctx.shadowBlur = mega ? 26 : 12 + 14 * atk;
-  if (ok) ctx.drawImage(img, -s / 2, -s / 2, s, s);
+  if (ok) drawAffinityVessel(pil.id, 0, 0, s);
   else {
-    // Neutral training drone: a compact vector craft, never an implicit
-    // Pokémon. Picking Pikachu is now an explicit, high-power choice.
+    // Safe loading fallback for the authored neutral training drone.
     ctx.fillStyle = '#cfd8dc';
     ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(22, 12); ctx.lineTo(8, 8); ctx.lineTo(0, 17);
     ctx.lineTo(-8, 8); ctx.lineTo(-22, 12); ctx.closePath(); ctx.fill();
@@ -2397,6 +2500,11 @@ function drawTypedBolt(L) {
   // per tier (geometry only — hitboxes are unchanged, generosity stays)
   const sz = 1 + (tier - 1) * 0.16;
   if (sz !== 1) { ctx.translate(L.x, L.y); ctx.scale(sz, sz); ctx.translate(-L.x, -L.y); }
+  const relic = aetherRelicImage(L.shape);
+  if (drawAetherRelic(relic, L.x, L.y, AETHER_RELIC_SIZE[L.shape] || 46, col, tier)) {
+    ctx.restore();
+    return;
+  }
   if (L.shape === 'flame') {
     // a living flame tongue — layered outer flame, inner tongue, white core
     const flick = 1 + 0.22 * Math.sin(t * 31 + L.x * 0.7);
@@ -2834,7 +2942,10 @@ function drawProjectiles() {
       const g = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, r);
       g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, ccol); g.addColorStop(1, ccol + '1f');
       ctx.fillStyle = g;
+      if (aetherRelicImage(L.shape)) ctx.globalAlpha = 0.42;
       ctx.beginPath(); ctx.ellipse(L.x, L.y, r * 0.62, r, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      drawAetherRelic(aetherRelicImage(L.shape), L.x, L.y, Math.max(48, r * 2.25), ccol, L.tier || 1);
       // leading spark
       ctx.fillStyle = '#e0ffff';
       ctx.beginPath(); ctx.arc(L.x, L.y - r * 0.7, r * 0.24, 0, Math.PI * 2); ctx.fill();
@@ -3242,12 +3353,7 @@ function drawAnnounce() {
   // compact strip tucked under the HUD, sliding in from the top. The centre
   // card remains for serve/menu/draft states and boss drama.
   const compact = G.state === 'play' && !a.hero;
-  if (compact) {
-    // the FIRST ENCOUNTER splash owns the low band while visible — the strip
-    // yields (transient flavor may expire unseen; the splash IS the news)
-    if (G.speciesIntro && G.speciesIntro.delay <= 0) return;
-    drawAnnounceStrip(a); return;
-  }
+  if (compact) { drawAnnounceStrip(a); return; }
   const fadeOut = a.max - a.t < 0.3 ? (a.max - a.t) / 0.3 : 1;
   const alpha = Math.min(fadeOut, a.t < 0.5 ? a.t / 0.5 : 1);
   ctx.save();
@@ -3445,8 +3551,6 @@ function drawShootHint() {
   if (G.state !== 'play' || G.playT > (autoTutor ? 9 : 20) || (!autoTutor && G.shotsFired >= 3)) return;
   // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
   if (G.mode === 'classic' && !blasterArmed()) return;
-  // the FIRST ENCOUNTER splash owns the low band while it plays
-  if (G.speciesIntro && G.speciesIntro.delay <= 0) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
     ? (IS_TOUCH ? (SETTINGS.autoFire ? 'DRAG TO FLY · AUTO-FIRE ON · HOLD = BIG ATTACK' : 'DRAG TO FLY · TAP ATTACK · HOLD = BIG ATTACK') : 'MOVE TO FLY · CLICK TO ATTACK · RIGHT-CLICK/SHIFT CHARGES')
@@ -4013,7 +4117,6 @@ function drawHUD() {
   ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
   drawBrickBehaviorLegend();
   drawCombatNotice();
-  drawSpeciesIntro();
   drawObjectiveBanner();
   // ---- active power-up chips: capped slots so phones stay readable ----
   const active = [];
@@ -4152,52 +4255,6 @@ function drawObjectiveBanner() {
   ctx.fillText('◎ ' + label + (readout ? '  ·  ' + readout : ''), W / 2, y + (short ? 13.5 : 15.5), w - 20);
   ctx.restore();
 }
-// ---- FIRST ENCOUNTER splash (2026-07-21): a never-recorded species makes
-// its entrance BIG — portrait + name + aspect in the low band as the wave
-// cues. One per wave (buildLevel picks the highest-ranked newcomer); the
-// announce strip yields while it plays. Purely presentational.
-function drawSpeciesIntro() {
-  const S = G.speciesIntro;
-  if (!S || S.delay > 0 || (G.state !== 'play' && G.state !== 'serve')) return;
-  if (G.bossIntro > 0 || (G.announce && G.announce.hero)) return;
-  const img = getSprite(S.id);
-  if (!img.complete || !img.naturalWidth) return;
-  const enter = Math.min(1, (S.max - S.life) / 0.35);
-  const exit = S.life < 0.45 ? S.life / 0.45 : 1;
-  const alpha = Math.min(enter, exit);
-  const col = TYPE_COLORS[S.t] || '#90a4ae';
-  // the low band: below the formation floor, above the ship's lane
-  const baseY = (G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y()) - 96;
-  const sp = Math.min(170, W * 0.3, H * 0.26);
-  const rise = SETTINGS.reduceFlash ? 0 : 16 * (1 - enter) * (1 - enter);
-  const cy = baseY - sp / 2 - 34 + rise;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  // aspect-colored stage glow behind the portrait
-  const g = ctx.createRadialGradient(W / 2, cy, 10, W / 2, cy, sp * 0.72);
-  g.addColorStop(0, col + '3a'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(W / 2, cy, sp * 0.72, 0, Math.PI * 2); ctx.fill();
-  const sc = SETTINGS.reduceFlash ? 1 : 0.92 + 0.08 * (1 - Math.pow(1 - enter, 3));
-  ctx.translate(W / 2, cy); ctx.scale(sc, sc);
-  ctx.drawImage(img, -sp / 2, -sp / 2, sp, sp);
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.globalAlpha = alpha;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = '800 8.5px Orbitron, sans-serif';
-  ctx.fillStyle = col;
-  ctx.fillText('— FIRST ENCOUNTER —', W / 2, baseY - 10);
-  ctx.font = `900 ${Math.min(20, W / 22)}px Orbitron, sans-serif`;
-  ctx.fillStyle = '#ffffff';
-  ctx.shadowColor = col; ctx.shadowBlur = 10;
-  ctx.fillText(((SKIN.names[S.id] || '#' + S.id) + '').toUpperCase(), W / 2, baseY + 10, W * 0.8);
-  ctx.shadowBlur = 0;
-  ctx.font = '800 9px Orbitron, sans-serif';
-  ctx.fillStyle = col;
-  ctx.fillText(typeLabel(S.t) + ' ' + typeWord(), W / 2, baseY + 28);
-  ctx.restore();
-}
-
 function drawCombatNotice() {
   const n = G.combatNotice;
   if (!n || (G.state !== 'play' && G.state !== 'serve')) return;

@@ -17,14 +17,16 @@ creatures deserve a big named intro to make each level feel epic.
   formation floor and the ship's lane (strip at shipTop−78, notice at
   shipTop−42; blaster keys off PADDLE_Y). Classic keeps its under-HUD strip
   (its wall starts lower). Boss nameplates/health stay anchored to the boss.
-- **FIRST ENCOUNTER splash** (`G.speciesIntro`, buildLevel → update clock →
-  drawSpeciesIntro): when a non-boss wave contains a species the codex has
-  never recorded, the highest-ranked newcomer headlines the wave — a ~170px
-  portrait with an aspect-colored stage glow, "— FIRST ENCOUNTER —", the
-  name, and its ASPECT, playing ~2.7s after a 1.15s cue delay (shorter and
-  static under reduceFlash). One per wave; boss waves keep their entrance
-  ceremonies; the announce strip and the shoot-hint yield while it plays.
-  Purely presentational — no gameplay fields touched, no gameRand.
+- **FIRST ENCOUNTER splash — SHIPPED, THEN ROLLED BACK SAME DAY.** A big
+  named portrait of a never-recorded species headlined each wave. The owner
+  played it and cut it: "it's distracting and happens mid-level." Fully
+  reverted (`G.speciesIntro`, its buildLevel pick, update clock,
+  drawSpeciesIntro, and the strip/shoot-hint yield guards are all gone).
+  **The lesson for future rounds: mid-level celebration interrupts the
+  shooter's flow — the CODEX GALLERY is where the art gets appreciated, on
+  the player's terms.** Any future "show off the art" idea belongs in a
+  between-waves surface (results screen, region intro) or the codex, not
+  over live combat.
 
 ---
 

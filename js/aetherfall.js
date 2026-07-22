@@ -556,6 +556,56 @@
     fairy: 'FEY', normal: 'OMNI',
   };
 
+  // ---------- RELICFORGE WEAPON ART ----------
+  // The 259-vessel bestiary established AETHERFALL's miniature-like material
+  // language. These isolated relics carry that same brass / steel / ceramic /
+  // crystal construction into every projectile family. The renderer tints a
+  // restrained highlight with the live aspect color, but the authored material
+  // and silhouette remain visible (and therefore readable without color).
+  const weaponBase = 'art/aetherfall-production/weapons/final/';
+  const weaponArt = Object.freeze({
+    shapes: Object.freeze({
+      volt: weaponBase + 'afw-volt.png',
+      flame: weaponBase + 'afw-flame.png',
+      aqua: weaponBase + 'afw-aqua.png',
+      leaf: weaponBase + 'afw-leaf.png',
+      shard: weaponBase + 'afw-shard.png',
+      draco: weaponBase + 'afw-draco.png',
+      fist: weaponBase + 'afw-fist.png',
+      gear: weaponBase + 'afw-gear.png',
+      sting: weaponBase + 'afw-sting.png',
+      venom: weaponBase + 'afw-venom.png',
+      quake: weaponBase + 'afw-quake.png',
+      gale: weaponBase + 'afw-gale.png',
+      pixel: weaponBase + 'afw-pixel.png',
+      psy: weaponBase + 'afw-psy.png',
+      star: weaponBase + 'afw-star.png',
+      wisp: weaponBase + 'afw-wisp.png',
+      claw: weaponBase + 'afw-claw.png',
+    }),
+    // Boss-specific shot names collapse onto the closest authored relic. This
+    // keeps all encounters in one art family while retaining their distinct
+    // movement, scale, trails, and gameplay hitboxes.
+    kindShape: Object.freeze({
+      pellet: 'pixel', hex: 'pixel', time: 'pixel', plasma: 'volt', shock: 'volt',
+      needle: 'volt', ember: 'flame', droplet: 'aqua', bubble: 'aqua',
+      leaf: 'leaf', seed: 'leaf', vine: 'leaf', tablet: 'pixel',
+      crystal: 'shard', snowball: 'shard', comet: 'draco',
+      fist: 'fist', lance: 'gear', cannon: 'gear',
+      stinger: 'sting', toxic: 'venom', mochi: 'venom',
+      boulder: 'quake', feather: 'gale', aeroring: 'gale',
+      prism: 'psy', mirage: 'psy', ring: 'psy', ribbon: 'psy',
+      star: 'star', sunwheel: 'star', wisp: 'wisp',
+      crescent: 'claw', eclipse: 'claw',
+    }),
+    aux: Object.freeze({
+      trainingDrone: weaponBase + 'afw-training-drone.png',
+      homingMissile: weaponBase + 'afw-homing-missile.png',
+      lightFrame: weaponBase + 'afw-affinity-light.png',
+      darkFrame: weaponBase + 'afw-affinity-dark.png',
+    }),
+  });
+
   // ---------- assembly ----------
   Object.assign(AF, {
     typeNames,
@@ -576,7 +626,7 @@
     bossAbilities, bossChannels, bossStyle, bossProjectileKind,
     mythicAbilities, mythicEntranceStyles, mythicBattleStyles, legendaryEntranceStyles,
     motionById, encounterObjectives, stageObjectiveSets, bonusFlock,
-    strings, secret,
+    strings, secret, weaponArt,
   });
   // derived sets refresh from the REAL gens (assembly ran on the stub)
   AF.bossOnlyIds = new Set(AF.gens.flatMap(g => [
