@@ -150,7 +150,9 @@ phone — flag anything only verifiable there.
   Type keys, mode/preset keys, path/stack/web keys, scene keys,
   BOSS_CHANNELS `.pattern/.params`, BOSS_STYLE strings: engine, shared.
   A skin owns names/strings/rosters/boss identities/art via `SKIN.*`
-  (assembled in data.js's tail; aetherfall.js replaces its tables).
+  (assembled at pokeworld.js's tail; aetherfall.js replaces its tables).
+  `data.js` is ENGINE-ONLY — shared tables, `STARTER_KIT` balance numbers,
+  and the lexicon helpers. Never put world/roster data back into it.
   The pokemon skin must stay BIT-IDENTICAL (the suite is the guard) and
   keeps LEGACY bare storage keys; per-skin state goes through
   `storeKey()` (never call it for settings/music/v — those are global).
@@ -166,6 +168,28 @@ phone — flag anything only verifiable there.
   draft offers (`activeSatellites()`); web topology and the MAX-2-FUSION
   / MAX-1-APEX caps are untouched. The edition pill on the home screen
   is the toggle (render writes `skinPillRect`, input reads it).
+- **No shared UI may hardcode a type WORD.** Type keys stay engine keys, but
+  every player-facing rendering goes through `typeLabel(t)` and `typeWord()`
+  (data.js) so a skin can rename the whole lexicon — AETHERFALL's 18 ASPECTS
+  (EMBER/TIDE/GROVE/STORM…) come from `SKIN.typeNames`, and the category noun
+  from `SKIN.strings.typeWord`. Same rule for the partner noun
+  (`SKIN.strings.partnerWord`) and the orb/attunement noun. Dropped items are
+  skin-styled too: `SKIN.relicDrops` swaps the pickup art to relic plates +
+  binding sigils (`drawRelicPlate`/`drawBindingSigil`) so no Pokémon-shaped
+  symbol reaches an AETHERFALL screen. **A player-facing string that only
+  reads right in one skin is a bug.**
+- **The LIGHT/DARK oath is an EVOLUTION ARC, not a costume.** Affinity
+  treatment scales with the vessel's FORM (`vesselForm()` → grade), so Form I
+  is a restrained mark and Form III is unmistakable — never apply the full
+  radiant casting at selection. On the **vessel-select screen the hull is
+  always NEUTRAL** (`drawAffinityVessel(..., neutral)`): a returning player
+  with a saved affinity must not see the oath on a hull they have not yet
+  chosen. The oath appears only once sworn. LIGHT/DARK changes the treatment,
+  never which vessel the player picked — class/family recognition survives at
+  every affinity.
+- **Tint a sprite with `source-atop`, NEVER `'lighter'`.** `lighter` paints
+  transparent pixels too, so an affinity wash lights the sprite's whole
+  bounding box as a glowing square. (Cost a real bug; the fix is one line.)
 - **Modes share one wave generator.** `buildLevel` (state.js) branches on
   `G.mode`. When touching fire / serve / the loss condition, keep all three
   working: the shooter modes (`!== 'classic'`) spawn NO ball, skip the
@@ -498,3 +522,21 @@ phone — flag anything only verifiable there.
   engine vocabulary, never user-visible; renaming would fork the runtime.
 - The pokemon skin must stay playable IN THIS REPO — never delete or
   degrade it; the suite's bit-identity guard still rules every refactor.
+- **The art pipeline is two tools, run in this order:** `npm run
+  art-overrides` (scans `final/` + `preview/`, emits the four override maps —
+  259 base + 259 radiant + 54 preview + 54 radiant-preview today) and
+  `python3 tools/build-aetherfall-previews.py` (re-keys the 1254px masters
+  into 320px setup portraits + matching radiants). The dist ships 518 final +
+  108 preview + 21 weapon PNGs. Overrides are OPTIONAL everywhere —
+  procedural art covers any id with no PNG, so a partial run is always safe.
+- **Never assume the chroma colour — read it off the frame.** The production
+  run uses TWO screens: green for most subjects, **magenta** for green-heavy
+  art (water/grass/ice/bug lines). `detect_chroma()` medians a 6px border and
+  the despill is channel-matched. Assuming green silently left 12 vessels
+  sitting on a solid backdrop block that shipped to the player.
+- **Previews must match the finals' framing** — subject at ~79% of the canvas
+  (`pad = side * 0.134`). Any other ratio makes a hull visibly jump size when
+  the game swaps between a preview and its fallback final.
+- `art/` is ~1.1 GB but **1.0 GB is `sprites/source/`** (the user's editable
+  masters, not referenced at runtime). Pruning it is the size lever — **ASK
+  FIRST.**

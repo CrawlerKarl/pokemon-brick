@@ -120,15 +120,35 @@ sometimes doesn't fire — trigger manually with
 | `dev.js` | **Dev tooling (local-only, inert in normal play):** deterministic URL/console launches (`?dev&level=&seed=&upg=…`, `window.DEV`), build grants, the balance report + F9 dashboard overlay (see Verifying) |
 | `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop; a bootstrap guard retries until the viewport + vignette exist) |
 
-`index.html` is the shell (canvas + the 11 script tags + local font). Also in
+`index.html` is the shell (canvas + the 16 script tags + local font). Also in
 the repo: `test.html` (headless invariant suite), `gallery.html` (dev
 projectile-readability gallery — every shot class/type/boss silhouette over
 bright AND dark backdrops with honest hitR overlays, drawn by the game's own
-renderer), `package.json` (`check`/`verify-assets`/`serve` scripts), `tools/`
-(`fetch-sprites.js`, `verify-assets.js`), `assets/fonts/` (vendored Orbitron),
-`docs/` (`FULL_GAME_ROADMAP.md` + `IMPLEMENTATION_LOG.md` — the campaign
-roadmap and per-round log — plus `NEXT_SESSION_HANDOFF.md`, the start-here
-brief for resuming work).
+renderer), and `assets/fonts/` (vendored Orbitron).
+
+**`package.json` scripts** — `serve`, `check` (syntax all modules),
+`verify-assets`, `art-overrides`, `build-dist`.
+
+**`tools/`**
+| Tool | Role |
+|---|---|
+| `verify-assets.js` | Every roster id is named + has a local sprite |
+| `fetch-sprites.js` | Re-fetch pokemon PNGs after adding ids to `GENS` |
+| `build-art-overrides.js` | Scans the AETHERFALL art folders → the four override maps in `js/aetherfall-overrides.generated.js` (base / radiant / preview / radiant-preview) |
+| `build-aetherfall-previews.py` | Re-keys the 1254px masters into 320px setup portraits + matching radiants (edge-sampled chroma detection — the run uses green AND magenta screens) |
+| `build-aetherfall-radiant-variants.py` | The shipped radiant transform (`transform_final`, stable per-id key) |
+| `build-aetherfall-art-manifest.js` | Derives the art manifest (the id/slug contract for image generation) straight from `aetherfall.js` — no DOM, no game load |
+| `build-aetherfall-dist.js` | Generates the pokemon-free standalone into `dist-aetherfall/`; prints a franchise-term RESIDUE report (a release requires **none**) |
+
+**`art/aetherfall-production/`** — the production art. `sprites/final/` (128px
+runtime sprites) and `sprites/preview/` (320px portraits) and `weapons/final/`
+(21 Relicforge sprites) are referenced at runtime; `sprites/source/` holds the
+1254px editable masters (~1 GB, not shipped — **ask before pruning**).
+
+**`docs/`** — `AETHERFALL_IMPROVEMENT_BACKLOG.md` (**the current product
+backlog; supersedes unchecked roadmap items**), `NEXT_SESSION_HANDOFF.md` (the
+start-here brief for resuming work), `FULL_GAME_ROADMAP.md` +
+`IMPLEMENTATION_LOG.md` (campaign roadmap and per-round log), and `archive/`.
 
 ---
 

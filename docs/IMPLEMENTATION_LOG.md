@@ -5,6 +5,37 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22e — Documentation close-out (session boundary)
+
+No gameplay change. The docs were carrying stale numbers from before the
+standalone split, so a fresh session would have started from a wrong map.
+
+- **`NEXT_SESSION_HANDOFF.md` rewritten.** It now headlines the two-repo
+  reality (workshop `06b1714` / dist `ad9e906`, both live, suite 78/78) and
+  points at **`AETHERFALL_IMPROVEMENT_BACKLOG.md` as the start-here doc** —
+  that backlog was authored against today's code and supersedes unchecked
+  `FULL_GAME_ROADMAP.md` items. Corrected: 14 → **16 modules** (the
+  `pokeworld.js` split), 220 → **259 base + 259 radiant + 54 preview + 54
+  radiant-preview** overrides, and the dead "Read these first" pointers to
+  the deleted classic-deflector-core / classic-guns invariants.
+- **Two backlog items are partly done — recorded so they aren't redone.**
+  AFT-003's TYPE half shipped (ASPECT lexicon); what remains is the MEGA →
+  AETHER SURGE vocabulary, measured at **56 player-facing `MEGA` strings
+  still in the dist**. AFT-017's form-graded curve + neutral-until-sworn
+  shipped; the backlog refines it further (quieter start, independently
+  scaled fitting/aura/rim).
+- **CLAUDE.md gained four invariants** earned by this session's bugs: no
+  shared UI hardcodes a type word (`typeLabel`/`typeWord`/`relicDrops`); the
+  oath is an evolution arc and the vessel screen stays neutral; tint with
+  `source-atop`, never `'lighter'` (it paints transparent pixels, lighting
+  the whole bounding box); and the art-pipeline rules — never assume the
+  chroma colour, match the finals' 79% preview framing.
+- **README** file map: the 16 script tags, a full `tools/` table (six tools,
+  four of them new), the `art/` layout with the ask-before-pruning note on
+  the 1 GB masters, and the `docs/` set including the backlog.
+
+---
+
 ## 2026-07-22d — Two preview bugs: the magenta screen, and swearing too early
 
 - **THE PRODUCTION RUN USES TWO CHROMA COLOURS.** My preview keyer assumed a
