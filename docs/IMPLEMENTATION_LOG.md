@@ -5,6 +5,35 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22c — The oath deepens by arc + high-res vessel previews
+
+Owner: the LIGHT/DARK tint should start subtle and grow as the vessel ascends;
+and the chosen-ship preview looks fuzzy.
+
+- **THE OATH DEEPENS.** `affinityVesselSprite` now grades its wash by the
+  vessel's FORM (`vesselForm(id)` — resolved from the active roster's id
+  triplets, falling back to `G.starterLvl`): ×0.42 at Form I, ×0.72 at II,
+  ×1.0 at III, applied to the colour wash, the hull deepen/highlight AND the
+  aura blur. Measured on the fairy line under DARK, violet lean climbs
+  −28.3 → −9.3 → +3.3. Form I now reads as "faintly sworn" while a Form III
+  hull is unmistakable — and the setup screens (which always preview Form I)
+  are correspondingly restrained. The cache key includes the form.
+- **HIGH-RES PREVIEWS.** The setup portraits draw a vessel at up to ~190px
+  from a 128px gameplay sprite — visibly soft. `tools/build-aetherfall-previews.py`
+  re-keys the 1254px chroma MASTERS (green screen: key + despill + crop) into
+  320px RGBA previews for the 54 pilot forms, then runs the SHIPPED radiant
+  transform (imported from build-aetherfall-radiant-variants.py with the same
+  `aetherfall:<id>:radiant` stable key) so the LIGHT casting's palette matches
+  its 128px counterpart exactly. **Framing is pinned to the finals' 79%
+  subject ratio (pad = 13.4% of the subject side) — otherwise the hull visibly
+  jumps size whenever the game swaps a preview for its fallback final.**
+  108 files / 9.1 MB, published as `AETHERFALL_ART_PREVIEW(_RADIANT)` by
+  build-art-overrides and copied by the dist tool. `drawAffinityVessel`
+  requests the preview only for draws ≥96px, so gameplay keeps the small
+  sprite; any missing preview silently falls back to the final.
+
+---
+
 ## 2026-07-22b — RELICFORGE drops (the last obviously-borrowed symbol)
 
 The weapon relics (21 PNGs: 17 attack shapes + homing missile, training drone,

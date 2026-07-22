@@ -423,8 +423,37 @@ function drawAetherRelic(img, x, y, size, color, tier = 1) {
 // Resolve and draw the chosen vessel treatment. LIGHT uses the existing true
 // radiant repaint plus a sun-forged fitting; DARK shifts the base materials
 // into an umbral shade and adds a visibly different crescent fitting.
-function affinityVesselImage(id) {
-  if (id > 0) return getSprite(id, !!(SKIN.affinities && SETTINGS.affinity === 'light'));
+// Which FORM (1-3) a vessel id represents in the active roster. The affinity
+// tint grows across the three arcs, so a Form I hull is only faintly sworn and
+// a Form III hull is unmistakably radiant or umbral.
+function vesselForm(id) {
+  const roster = SKIN.starterMon;
+  if (roster) {
+    for (const k of Object.keys(roster)) {
+      const ids = roster[k] && roster[k].ids;
+      if (ids) { const i = ids.indexOf(id); if (i >= 0) return i + 1; }
+    }
+  }
+  return Math.max(1, Math.min(3, G.starterLvl || 1));
+}
+// Large portraits (setup heroes) draw a vessel far bigger than its 128px
+// gameplay sprite. When a high-res preview exists, big draws use it; gameplay
+// keeps the small sprite. Absent previews fall through to the final.
+const aetherPreviewImages = {};
+function aetherPreviewImage(id, light) {
+  const table = light ? (typeof AETHERFALL_ART_PREVIEW_RADIANT !== 'undefined' && AETHERFALL_ART_PREVIEW_RADIANT)
+    : (typeof AETHERFALL_ART_PREVIEW !== 'undefined' && AETHERFALL_ART_PREVIEW);
+  const src = table && table[id];
+  if (!src) return null;
+  if (!aetherPreviewImages[src]) { const im = new Image(); im.src = src; aetherPreviewImages[src] = im; }
+  const img = aetherPreviewImages[src];
+  return (img.complete && img.naturalWidth) ? img : null;
+}
+function affinityVesselImage(id, big) {
+  if (id > 0) {
+    const light = !!(SKIN.affinities && SETTINGS.affinity === 'light');
+    return (big && aetherPreviewImage(id, light)) || getSprite(id, light);
+  }
   return aetherAuxImage('trainingDrone');
 }
 // The vessel wears its sworn path. LIGHT flies the RADIANT casting, DARK the
@@ -432,12 +461,16 @@ function affinityVesselImage(id) {
 // colour is BAKED into the sprite (source-atop wash + rim) instead of leaning
 // on ctx.filter, which some mobile browsers quietly ignore. Baked once per
 // (id, affinity) like every other repeated art surface.
-function affinityVesselSprite(id) {
+function affinityVesselSprite(id, big) {
   const aff = (SKIN.affinities && SETTINGS.affinity) || null;
-  const img = affinityVesselImage(id);
+  const img = affinityVesselImage(id, big);
   if (!img || !img.complete || !img.naturalWidth) return null;
   if (!aff) return img;
-  const key = 'vessel_' + id + '_' + aff + '_' + img.naturalWidth;
+  // THE OATH DEEPENS BY ARC (2026-07-22): Form I wears its path lightly;
+  // each ascension makes the radiant gold / umbral violet unmistakable.
+  const form = vesselForm(id);
+  const grade = [0.42, 0.72, 1][form - 1] || 1;
+  const key = 'vessel_' + id + '_' + aff + '_' + form + '_' + img.naturalWidth;
   if (fxCache[key]) return fxCache[key];
   const s = Math.max(8, img.naturalWidth);
   const c = document.createElement('canvas');
@@ -446,17 +479,18 @@ function affinityVesselSprite(id) {
   g.drawImage(img, 0, 0, s, s);
   // tint ONLY the vessel's own pixels
   g.globalCompositeOperation = 'source-atop';
-  g.fillStyle = aff === 'light' ? 'rgba(255,214,110,0.30)' : 'rgba(150,96,255,0.34)';
+  g.fillStyle = aff === 'light' ? 'rgba(255,214,110,' + (0.30 * grade).toFixed(3) + ')'
+    : 'rgba(150,96,255,' + (0.34 * grade).toFixed(3) + ')';
   g.fillRect(0, 0, s, s);
   if (aff === 'light') { // radiant: a warm highlight ON THE HULL ONLY —
     // NEVER 'lighter' here: additive paints the transparent pixels too and
     // the sprite's bounding box shows up as a lit square
     g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = 'rgba(255,240,190,0.14)';
+    g.fillStyle = 'rgba(255,240,190,' + (0.14 * grade).toFixed(3) + ')';
     g.fillRect(0, 0, s, s);
   } else { // umbral: deepen the hull so the violet reads as shadow, not paint
     g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = 'rgba(18,6,42,0.24)';
+    g.fillStyle = 'rgba(18,6,42,' + (0.24 * grade).toFixed(3) + ')';
     g.fillRect(0, 0, s, s);
   }
   g.globalCompositeOperation = 'source-over';
@@ -464,7 +498,8 @@ function affinityVesselSprite(id) {
   return c;
 }
 function drawAffinityVessel(id, x, y, size) {
-  const img = affinityVesselSprite(id);
+  const big = size >= 96; // portrait-scale draws earn the high-res casting
+  const img = affinityVesselSprite(id, big);
   if (!img) return false;
   ctx.save();
   const frameKey = SKIN.affinities && SETTINGS.affinity
@@ -479,7 +514,8 @@ function drawAffinityVessel(id, x, y, size) {
   // an affinity-coloured aura reads at any size (the tint itself is baked in)
   const aCol = affinityColor();
   if (aCol) {
-    ctx.shadowColor = aCol; ctx.shadowBlur = size * 0.22;
+    ctx.shadowColor = aCol;
+    ctx.shadowBlur = size * 0.22 * ([0.42, 0.72, 1][vesselForm(id) - 1] || 1);
     ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
     ctx.shadowBlur = 0;
   }

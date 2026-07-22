@@ -105,7 +105,8 @@ The user generates production sprites in a separate workflow into
 **To wire new art into the game:**
 
 ```
-npm run art-overrides     # scans final/, regenerates js/aetherfall-overrides.generated.js
+npm run art-overrides     # scans final/ + preview/, regenerates the override maps
+python3 tools/build-aetherfall-previews.py   # 320px setup portraits from the masters
 ```
 
 `aetherart.js` blits each override PNG onto its cached procedural canvas

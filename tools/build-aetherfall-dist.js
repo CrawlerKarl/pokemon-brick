@@ -9,6 +9,7 @@
 //      registry entry ([POKEMON-SKIN-START/END] markers)
 //    - zero pokemon assets (assets/fonts ships, assets/sprites does not)
 //    - art/aetherfall-production/sprites/final (base + radiant PNGs)
+//    - art/aetherfall-production/sprites/preview (high-res setup portraits)
 //    - art/aetherfall-production/weapons/final (relics + ship fittings)
 //    - pokemon-termed COMMENT lines dropped; pokemon-flavored DATA strings
 //      in audio.js/config.js mapped to AETHERFALL equivalents
@@ -240,6 +241,15 @@ for (const f of fs.readdirSync(finalDir).filter(f => f.endsWith('.png'))) {
   copy(path.join(finalDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'final', f));
   artN++;
 }
+// high-res vessel previews (optional — the finals cover any gap)
+const previewDir = path.join(root, 'art', 'aetherfall-production', 'sprites', 'preview');
+let previewN = 0;
+try {
+  for (const f of fs.readdirSync(previewDir).filter(f => f.endsWith('.png'))) {
+    copy(path.join(previewDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'preview', f));
+    previewN++;
+  }
+} catch (e) { /* no preview pass in this checkout */ }
 const weaponDir = path.join(root, 'art', 'aetherfall-production', 'weapons', 'final');
 let weaponN = 0;
 for (const f of fs.readdirSync(weaponDir).filter(f => f.endsWith('.png'))) {
@@ -299,7 +309,8 @@ for (const f of fs.readdirSync(path.join(out, 'js')).filter(f => f.endsWith('.js
   lines.forEach((l, i) => { if (STRONG.test(l) && !OK.test(l)) residue.push(f + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); });
 }
 console.log('build-aetherfall-dist: ' + checked + ' js modules (all node --check clean), '
-  + artN + ' vessel PNGs, ' + weaponN + ' weapon/fitting PNGs, fonts, index.html, serve.js → dist-aetherfall/');
+  + artN + ' vessel PNGs, ' + previewN + ' preview PNGs, ' + weaponN
+  + ' weapon/fitting PNGs, fonts, index.html, serve.js → dist-aetherfall/');
 console.log(residue.length
   ? 'RESIDUE (' + residue.length + ' lines carry pokemon terms — review):\n  ' + residue.join('\n  ')
   : 'RESIDUE: none — no pokemon terms in any shipped js.');
