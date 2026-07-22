@@ -244,7 +244,7 @@ function setupLayout() {
     // small identity tiles (sprite + name only). Tap a tile → the hero
     // explains it. The skin names the shelves (disciplines on AETHERFALL).
     const heroW = Math.min(contentW, 860);
-    const hero = { x: cx - heroW / 2, y: sectionY + (short ? 2 : 8), w: heroW, h: short ? 56 : narrow ? 102 : 122 };
+    const heroY = sectionY + (short ? 2 : 8);
     const nextH = short ? 38 : narrow ? 52 : 54;
     const nextW = narrow ? contentW : Math.min(420, contentW * 0.46);
     const nextY = H - bottomPad - nextH;
@@ -253,6 +253,18 @@ function setupLayout() {
     const gap = short ? 4 : narrow ? 6 : 8;
     const labelH = short ? 11 : 16;
     const vgap = short ? 4 : 8;
+    // THE VESSEL SHOWCASE (2026-07-22): the shelves cap their tile size, so a
+    // tall phone used to leave a dead band under the hero. Reserve what the
+    // three shelves actually want, then hand the leftover to the HERO card —
+    // the detail portrait grows instead of the emptiness.
+    const tileW0h = (contentW - gap * 5) / 6;
+    const tileWant = Math.max(short ? 34 : 44,
+      Math.min(narrow ? 84 : 96, tileW0h * 1.35 + 14));
+    const shelvesWant = 3 * (labelH + tileWant) + 2 * vgap;
+    const heroRoom = noneY - (short ? 4 : 10) - heroY - (short ? 4 : 10) - shelvesWant;
+    const heroH = Math.max(short ? 56 : narrow ? 102 : 122,
+      Math.min(short ? 62 : narrow ? 208 : 190, heroRoom));
+    const hero = { x: cx - heroW / 2, y: heroY, w: heroW, h: heroH };
     const shelfRoom = noneY - (short ? 4 : 10) - (hero.y + hero.h + (short ? 4 : 10));
     const rowH = (shelfRoom - 3 * labelH - 2 * vgap) / 3;
     const tileW0 = (contentW - gap * 5) / 6;
@@ -284,7 +296,6 @@ function setupLayout() {
   const startW = narrow ? contentW : Math.min(430, contentW * 0.48);
   const startY = trialY - startH - (short ? 5 : 9);
   const summaryY = sectionY + (short ? 10 : 20);
-  const summaryH = short ? 54 : narrow ? 84 : 96;
   const summaryW = Math.min(contentW, narrow ? contentW : 760);
   const editW = short ? 64 : narrow ? 78 : 118;
   // a skin with affinities (AETHERFALL) adds the LIGHT/DARK pick between
@@ -293,19 +304,35 @@ function setupLayout() {
   // the LIGHT/DARK choice is a REQUIRED, ceremonial pick on affinity skins —
   // two tall mirrored cards, not a slim optional toggle (2026-07-21)
   const affH = hasAff ? (short ? 40 : 58) : 0;
-  const affY = summaryY + summaryH + (short ? 6 : 10);
   const affW = Math.min(summaryW, 560);
-  const diffLabelY = summaryY + summaryH + (hasAff ? affH + (short ? 12 : 18) : 0) + (short ? 14 : 25);
-  const chipY = diffLabelY + (short ? 10 : 20);
   const cols = narrow ? 2 : 4, rows = Math.ceil(Object.keys(PRESETS).length / cols);
   const gap = short ? 7 : 12;
   const chipW = (contentW - gap * (cols - 1)) / cols;
+  // THE VESSEL SHOWCASE (2026-07-22): the summary card absorbs the screen's
+  // leftover height instead of leaving a dead gap above the launch button —
+  // a tall card means a BIG portrait of the thing you're choosing. Space is
+  // budgeted bottom-up: reserve what the affinity cards, labels and chips
+  // need at a comfortable size, then hand the remainder to the card (clamped).
+  const chipWant = short ? 34 : narrow ? 96 : 108;
+  const gapAff = short ? 6 : 10, gapLabel = short ? 14 : 25, gapChips = short ? 10 : 20;
+  const reserved = (hasAff ? affH + gapAff : 0) + gapLabel + gapChips
+    + rows * chipWant + gap * (rows - 1) + (short ? 8 : 18);
+  const summaryH = Math.max(short ? 54 : narrow ? 84 : 96,
+    Math.min(short ? 74 : narrow ? 230 : 210, startY - summaryY - reserved));
+  const affY = summaryY + summaryH + gapAff;
+  const diffLabelY = summaryY + summaryH + (hasAff ? affH + (short ? 12 : 18) : 0) + gapLabel;
+  const chipY = diffLabelY + gapChips;
   const chipRoom = startY - (short ? 8 : 18) - chipY;
   const chipH = Math.max(short ? 34 : 58, Math.min(narrow ? 92 : 108, (chipRoom - gap * (rows - 1)) / rows));
   return {
     step: 'difficulty', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
     summary: { x: cx - summaryW / 2, y: summaryY, w: summaryW, h: summaryH },
-    editPilot: { x: cx + summaryW / 2 - editW - 10, y: summaryY + summaryH / 2 - (short ? 13 : 17), w: editW, h: short ? 26 : 34 },
+    // on a SHOWCASE card the change button drops to the bottom-right corner so
+    // the identity text can use the card's full width beside the big portrait
+    editPilot: { x: cx + summaryW / 2 - editW - 10,
+      y: summaryH >= 130 ? summaryY + summaryH - (short ? 26 : 34) - 12
+        : summaryY + summaryH / 2 - (short ? 13 : 17),
+      w: editW, h: short ? 26 : 34 },
     affinity: hasAff ? i => ({ x: cx - affW / 2 + i * (affW / 2 + 5), y: affY, w: affW / 2 - 5, h: affH }) : null,
     chipsLabelY: diffLabelY,
     chip: i => { const c = i % cols, r = Math.floor(i / cols);

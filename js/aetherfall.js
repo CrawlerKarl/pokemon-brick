@@ -611,6 +611,9 @@
     typeNames,
     edition: 'AETHERFALL EDITION',
     affinities: true, // unlocks the LIGHT/DARK setup pick (Round S6)
+    // drops are forged RELICS here, not capsules/balls — brass plate, weathered
+    // steel, an engraved rune in the power's colour (drawPowerups, render.js)
+    relicDrops: true,
     rosterGroups: [
       { n: 'MAGIC · THE OLD WAYS', color: '#c879ff' },
       { n: 'TECH · THE ASCENDANCY', color: '#4de0f2' },

@@ -25,6 +25,9 @@ The definitive visual reference is
 | Pilot form I | 88% | 12% | Compact, extremely readable vessel |
 | Pilot form II | 76% | 24% | Added hardpoints and clearer class ornament |
 | Pilot form III | 60% | 40% | Ceremony-grade silhouette without boss density |
+| Signature weapon relic | 72% | 28% | One iconic material-built silhouette; no baked trail |
+| Missile / training craft | 76% | 24% | Compact vessel construction with clear travel direction |
+| Affinity ship fitting | 55% | 45% | Distinct Light/Dark silhouette behind the unchanged vessel class |
 | Sentinel | 55% | 45% | Boss-adjacent armor and one signature effect |
 | Legendary boss | 25% | 75% | Dense authored materials and dramatic hierarchy |
 | Mythic boss | 20% | 80% | Highest detail, stranger materials, unique energy grammar |
@@ -35,6 +38,10 @@ The definitive visual reference is
 - Top-left key light and cool opposing rim light.
 - Deep navy value check; silhouettes must remain readable without their glow.
 - Controlled bloom only around cores, eyes, runes, and thrusters.
+- Weapon relics are solid authored objects. Motion trails, aspect tint, charge
+  bloom, and threat-scale echoes are applied by the renderer, never baked in.
+- Light vessels use their true radiant repaint and a sun-forged rear fitting;
+  Dark vessels use an umbral material grade and a crescent rear fitting.
 - Ordinary enemies use three to five major color/value blocks.
 - Bosses may use eight to thirteen material zones, but the outer silhouette
   still carries the first read.
@@ -63,6 +70,8 @@ silhouette variety, personality, material separation, and instant type read.
 - Keep a full-resolution source before any background removal or downscaling.
 - Ordinary units and pilots target a 1024–1536 square source and a 128 square
   gameplay export.
+- Weapon relics, missiles, drones, and affinity fittings target a 1024 square
+  source and a 128 square gameplay export.
 - Sentinels and bosses target a 1536–2048 square source and a 192 square
   gameplay export.
 - Verify every asset at its real 36–64 px combat footprint as well as its

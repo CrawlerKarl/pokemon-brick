@@ -5,6 +5,69 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22b — RELICFORGE drops (the last obviously-borrowed symbol)
+
+The weapon relics (21 PNGs: 17 attack shapes + homing missile, training drone,
+and the two affinity fittings) were already wired by the parallel art round —
+`SKIN.weaponArt` + `aetherRelicImage`/`aetherRelicForKind`/`drawAetherRelic`,
+with the dist tool copying `weapons/final`. Verified live: **all 17 shapes and
+all 4 aux images load, and all 34 enemy/boss shot kinds resolve to a relic.**
+
+What was still borrowed was the DROPS — chief among them a literal red-and-white
+Poké Ball, hand-drawn in `drawPowerups` and bypassing the `drawGlyph` skin
+choke point entirely. On skins with the new `relicDrops` flag (aetherfall):
+
+- **Relic plate** replaces the glossy capsule: an antique-brass octagon over
+  weathered steel, the power's rune engraved in ITS OWN colour (colour still
+  carries the gameplay read — only the material language changed), a top-left
+  key-light arc per the style lock, and four brass rivets. Flat fills/strokes
+  only — it allocates FEWER per-frame gradients than the capsule it replaced.
+- **Binding sigil** replaces the Poké Ball: a brass hex ring with binding runes
+  and a crystal eye that turns gold for a radiant quarry.
+- **Mending phial** replaces the clinical medical capsule: a brass-collared
+  glass phial of rose aether that fills as it pulses.
+- **Attunement collar**: the element orb gains brass arcs.
+
+The pokemon skin has no `relicDrops` flag, so every original branch still runs
+verbatim (bit-identity preserved).
+
+---
+
+## 2026-07-22 — The VESSEL SHOWCASE: setup uses its space, wears its path
+
+Owner (phone screenshot of the challenge screen): a big dead band above the
+launch button, the ship too small to judge, "call it something else, not a
+partner on this screen", and the LIGHT/DARK pick didn't recolour the preview.
+
+- **Both setup steps absorb their own slack (config.js).** The layouts capped
+  their chips/tiles and dumped the remainder into empty space (~250px on the
+  challenge step, ~140px on the vessel step). Now space is budgeted bottom-up:
+  reserve what the affinity cards, labels and chips/shelves actually want,
+  then hand the leftover to the HERO CARD (clamped 84→230 / 102→208). On a
+  403×790 phone the challenge summary went 84px → 222px with an 18px gap above
+  LAUNCH (was ~250px), and the vessel hero 102 → 208 with a 24px shelf gap.
+- **The portrait is the hero.** Cards ≥130px switch to SHOWCASE: a ~150px
+  vessel over an aspect-coloured stage glow, with name / ability · ASPECT ·
+  DISCIPLINE / effect / form-line on a fixed line rhythm (percentage rows
+  drift into lonely lines on a tall card). CHANGE drops to the card's
+  bottom-right so the text keeps full width. Narrow screens cap the portrait
+  at 38% of card width so the text column survives.
+- **The vessel wears its sworn path.** `affinityVesselSprite()` BAKES the
+  affinity into the sprite (source-atop wash + hull deepen/highlight, cached
+  per id+affinity) instead of relying on `ctx.filter`, which some mobile
+  browsers ignore — LIGHT averages warm gold, DARK violet, measurably
+  different pixels. An affinity-coloured aura rides both. **Trap for the
+  future: never use the 'lighter' composite for the highlight — additive
+  paints TRANSPARENT pixels too and the sprite's bounding box shows up as a
+  lit square (caught in review).** Applied to the challenge summary AND the
+  vessel-select hero.
+- **"PARTNER" is skin voice now.** Every setup/HUD/pause surface routes
+  through `SKIN.strings.partnerWord` — aetherfall reads VESSEL (1 · VESSEL,
+  CHOOSE YOUR VESSEL, CHANGE VESSEL, ‹ VESSELS, PICK A VESSEL, NO VESSEL);
+  pokemon still reads PARTNER verbatim.
+
+---
+
 ## 2026-07-21d — Text leaves the flock zone + FIRST ENCOUNTER splashes
 
 Owner: entrance-time text boxes land on top of the characters; and new

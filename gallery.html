@@ -56,13 +56,23 @@ window.requestAnimationFrame = function () { return 0; };
 
 <script>
 'use strict';
-(function () {
+(async function () {
   // the game canvas stays parked off-screen at a real size so render code that
   // reads W/H behaves; each gallery strip is its OWN canvas we composite into.
   const BRIGHT = ['#aee2ff', '#8fc9f0'];   // route-sky band
   const DARK = ['#05060f', '#101a33'];     // night-arena band
   const CELL = 92, LABEL = 34;
   G.time = 1.234; // fixed clock: deterministic sprites, no animation needed
+  // The live game redraws continuously while authored PNGs load; the static
+  // audit sheet renders only once, so wait for the Relicforge family here.
+  const wa = SKIN.weaponArt;
+  const weaponPaths = wa ? [...Object.values(wa.shapes), ...Object.values(wa.aux)] : [];
+  await Promise.all(weaponPaths.map(path => new Promise(resolve => {
+    const img = aetherWeaponImage(path);
+    if (!img || (img.complete && img.naturalWidth)) { resolve(); return; }
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  })));
 
   // every (id → type) the game can fire with, straight from the data tables
   const bossTypes = {};

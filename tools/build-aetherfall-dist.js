@@ -9,6 +9,7 @@
 //      registry entry ([POKEMON-SKIN-START/END] markers)
 //    - zero pokemon assets (assets/fonts ships, assets/sprites does not)
 //    - art/aetherfall-production/sprites/final (base + radiant PNGs)
+//    - art/aetherfall-production/weapons/final (relics + ship fittings)
 //    - pokemon-termed COMMENT lines dropped; pokemon-flavored DATA strings
 //      in audio.js/config.js mapped to AETHERFALL equivalents
 //  Internal identifiers and storage keys (br.poke, pkbrk-*, mewVmax flag)
@@ -232,12 +233,18 @@ for (const f of fs.readdirSync(jsDir).filter(f => f.endsWith('.js'))) {
 copy(path.join(root, 'assets', 'fonts', 'orbitron.woff2'),
   path.join(out, 'assets', 'fonts', 'orbitron.woff2'));
 
-// 4) the production art (base + radiant finals)
+// 4) the production art (base + radiant vessels, relics, and fittings)
 const finalDir = path.join(root, 'art', 'aetherfall-production', 'sprites', 'final');
 let artN = 0;
 for (const f of fs.readdirSync(finalDir).filter(f => f.endsWith('.png'))) {
   copy(path.join(finalDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'final', f));
   artN++;
+}
+const weaponDir = path.join(root, 'art', 'aetherfall-production', 'weapons', 'final');
+let weaponN = 0;
+for (const f of fs.readdirSync(weaponDir).filter(f => f.endsWith('.png'))) {
+  copy(path.join(weaponDir, f), path.join(out, 'art', 'aetherfall-production', 'weapons', 'final', f));
+  weaponN++;
 }
 
 // 5) server + repo scaffolding
@@ -262,8 +269,9 @@ engine:
 - **BREAKER** — a calm, pure brick-breaker. The ball is the only weapon.
 - **BLASTER** — ball-less wall clearing with a piercing charge shot.
 
-Every creature, vessel, sentinel, and sovereign ships hand-finished art with
-a true prismatic RADIANT form. 100% vanilla JS + Canvas — no build step, no
+Every creature, vessel, sentinel, sovereign, weapon relic, missile, and ship
+fitting ships hand-finished art in the same Relicforge style, with true
+prismatic RADIANT vessel forms. 100% vanilla JS + Canvas — no build step, no
 dependencies, no network calls.
 
 ## Running locally
@@ -291,7 +299,7 @@ for (const f of fs.readdirSync(path.join(out, 'js')).filter(f => f.endsWith('.js
   lines.forEach((l, i) => { if (STRONG.test(l) && !OK.test(l)) residue.push(f + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); });
 }
 console.log('build-aetherfall-dist: ' + checked + ' js modules (all node --check clean), '
-  + artN + ' art PNGs, fonts, index.html, serve.js → dist-aetherfall/');
+  + artN + ' vessel PNGs, ' + weaponN + ' weapon/fitting PNGs, fonts, index.html, serve.js → dist-aetherfall/');
 console.log(residue.length
   ? 'RESIDUE (' + residue.length + ' lines carry pokemon terms — review):\n  ' + residue.join('\n  ')
   : 'RESIDUE: none — no pokemon terms in any shipped js.');

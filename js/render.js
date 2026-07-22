@@ -393,26 +393,27 @@ function aetherWeaponTint(img, color) {
 function drawAetherRelic(img, x, y, size, color, tier = 1) {
   if (!img || !img.complete || !img.naturalWidth) return false;
   const tint = aetherWeaponTint(img, color);
+  const inheritedAlpha = ctx.globalAlpha;
   ctx.save();
   ctx.translate(x, y);
   // Evolved attacks retain the same authored object; subtle paired echoes
   // communicate tier without replacing its material construction.
   if (tier >= 3) {
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = inheritedAlpha * 0.16;
     if (tint) {
       ctx.drawImage(tint, -size / 2 - size * 0.16, -size / 2 + size * 0.12, size, size);
       ctx.drawImage(tint, -size / 2 + size * 0.16, -size / 2 + size * 0.12, size, size);
     }
     ctx.globalCompositeOperation = 'source-over';
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = inheritedAlpha;
   ctx.shadowColor = color; ctx.shadowBlur = Math.max(8, size * 0.25);
   ctx.drawImage(img, -size / 2, -size / 2, size, size);
   ctx.shadowBlur = 0;
   if (tint) {
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = tier >= 2 ? 0.25 : 0.18;
+    ctx.globalAlpha = inheritedAlpha * (tier >= 2 ? 0.25 : 0.18);
     ctx.drawImage(tint, -size / 2, -size / 2, size, size);
   }
   ctx.restore();
@@ -426,9 +427,45 @@ function affinityVesselImage(id) {
   if (id > 0) return getSprite(id, !!(SKIN.affinities && SETTINGS.affinity === 'light'));
   return aetherAuxImage('trainingDrone');
 }
-function drawAffinityVessel(id, x, y, size) {
+// The vessel wears its sworn path. LIGHT flies the RADIANT casting, DARK the
+// base hull — but the tell has to survive a phone glance, so the affinity
+// colour is BAKED into the sprite (source-atop wash + rim) instead of leaning
+// on ctx.filter, which some mobile browsers quietly ignore. Baked once per
+// (id, affinity) like every other repeated art surface.
+function affinityVesselSprite(id) {
+  const aff = (SKIN.affinities && SETTINGS.affinity) || null;
   const img = affinityVesselImage(id);
-  if (!img || !img.complete || !img.naturalWidth) return false;
+  if (!img || !img.complete || !img.naturalWidth) return null;
+  if (!aff) return img;
+  const key = 'vessel_' + id + '_' + aff + '_' + img.naturalWidth;
+  if (fxCache[key]) return fxCache[key];
+  const s = Math.max(8, img.naturalWidth);
+  const c = document.createElement('canvas');
+  c.width = s; c.height = s;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0, s, s);
+  // tint ONLY the vessel's own pixels
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = aff === 'light' ? 'rgba(255,214,110,0.30)' : 'rgba(150,96,255,0.34)';
+  g.fillRect(0, 0, s, s);
+  if (aff === 'light') { // radiant: a warm highlight ON THE HULL ONLY —
+    // NEVER 'lighter' here: additive paints the transparent pixels too and
+    // the sprite's bounding box shows up as a lit square
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = 'rgba(255,240,190,0.14)';
+    g.fillRect(0, 0, s, s);
+  } else { // umbral: deepen the hull so the violet reads as shadow, not paint
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = 'rgba(18,6,42,0.24)';
+    g.fillRect(0, 0, s, s);
+  }
+  g.globalCompositeOperation = 'source-over';
+  fxCache[key] = c;
+  return c;
+}
+function drawAffinityVessel(id, x, y, size) {
+  const img = affinityVesselSprite(id);
+  if (!img) return false;
   ctx.save();
   const frameKey = SKIN.affinities && SETTINGS.affinity
     ? (SETTINGS.affinity === 'light' ? 'lightFrame' : 'darkFrame') : null;
@@ -439,13 +476,14 @@ function drawAffinityVessel(id, x, y, size) {
     ctx.drawImage(frame, x - fs / 2, y - fs / 2 + size * 0.03, fs, fs);
     ctx.shadowBlur = 0;
   }
-  if (SKIN.affinities && SETTINGS.affinity === 'dark') {
-    ctx.filter = 'brightness(0.58) saturate(0.74) hue-rotate(16deg) contrast(1.2)';
-  } else if (SKIN.affinities && SETTINGS.affinity === 'light') {
-    ctx.filter = 'brightness(1.06) saturate(1.08)';
+  // an affinity-coloured aura reads at any size (the tint itself is baked in)
+  const aCol = affinityColor();
+  if (aCol) {
+    ctx.shadowColor = aCol; ctx.shadowBlur = size * 0.22;
+    ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+    ctx.shadowBlur = 0;
   }
   ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
-  ctx.filter = 'none';
   ctx.restore();
   return true;
 }
@@ -2942,10 +2980,12 @@ function drawProjectiles() {
       const g = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, r);
       g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, ccol); g.addColorStop(1, ccol + '1f');
       ctx.fillStyle = g;
-      if (aetherRelicImage(L.shape)) ctx.globalAlpha = 0.42;
+      const chargedRelic = aetherRelicImage(L.shape);
+      const chargedRelicReady = !!(chargedRelic && chargedRelic.complete && chargedRelic.naturalWidth);
+      if (chargedRelicReady) ctx.globalAlpha = 0.42;
       ctx.beginPath(); ctx.ellipse(L.x, L.y, r * 0.62, r, 0, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
-      drawAetherRelic(aetherRelicImage(L.shape), L.x, L.y, Math.max(48, r * 2.25), ccol, L.tier || 1);
+      if (chargedRelicReady) drawAetherRelic(chargedRelic, L.x, L.y, Math.max(48, r * 2.25), ccol, L.tier || 1);
       // leading spark
       ctx.fillStyle = '#e0ffff';
       ctx.beginPath(); ctx.arc(L.x, L.y - r * 0.7, r * 0.24, 0, Math.PI * 2); ctx.fill();
@@ -3037,13 +3077,17 @@ function drawProjectiles() {
     ctx.save();
     ctx.translate(m.x, m.y);
     ctx.rotate(Math.atan2(m.vy, m.vx) + Math.PI / 2);
-    ctx.shadowColor = '#7986cb'; ctx.shadowBlur = 14;
-    ctx.fillStyle = '#c5cae9';
-    ctx.beginPath();
-    ctx.moveTo(0, -15); ctx.lineTo(-7, 11); ctx.lineTo(7, 11);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#ff8a65';
-    ctx.beginPath(); ctx.arc(0, 14, 5, 0, Math.PI * 2); ctx.fill();
+    const missile = aetherAuxImage('homingMissile');
+    const missileCol = TYPE_COLORS[m.element] || '#7986cb';
+    if (!drawAetherRelic(missile, 0, 0, m.comet ? 46 : 40, missileCol, m.tier || 1)) {
+      ctx.shadowColor = '#7986cb'; ctx.shadowBlur = 14;
+      ctx.fillStyle = '#c5cae9';
+      ctx.beginPath();
+      ctx.moveTo(0, -15); ctx.lineTo(-7, 11); ctx.lineTo(7, 11);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ff8a65';
+      ctx.beginPath(); ctx.arc(0, 14, 5, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   }
   // Enemy fire: cached type/species silhouettes. Size communicates threat,
@@ -3097,15 +3141,95 @@ function drawProjectiles() {
     ctx.translate(s.x, s.y);
     const heading = Math.atan2(s.vy || 1, s.vx || 0) + Math.PI / 2;
     ctx.rotate(SPINNING_ENEMY_SHOT[kind] ? spin : heading + Math.sin(spin) * 0.05);
-    const img = enemyShotSprite(kind, col, r);
     const drawScale = ENEMY_SHOT_DRAW_SCALE[kind] || 1;
     if (s.ghost) ctx.globalAlpha = s.ghost; // AFTERIMAGE (Koraidon): low-alpha ghost render (no gradient)
-    ctx.drawImage(img, -img.width * drawScale / 2, -img.height * drawScale / 2,
-      img.width * drawScale, img.height * drawScale);
+    const relic = aetherRelicForKind(kind);
+    if (!drawAetherRelic(relic, 0, 0, r * 3.7 * drawScale, col, s.classKey === 'massive' ? 3 : s.classKey === 'heavy' ? 2 : 1)) {
+      const img = enemyShotSprite(kind, col, r);
+      ctx.drawImage(img, -img.width * drawScale / 2, -img.height * drawScale / 2,
+        img.width * drawScale, img.height * drawScale);
+    }
     ctx.restore();
   }
 }
 
+// ---- RELICFORGE DROPS (2026-07-22) ----
+// On skins with `relicDrops` (AETHERFALL) a pickup is a forged RELIC, not a
+// glossy capsule: an antique-brass octagon plate over weathered steel with the
+// power's rune engraved in its own colour and a restrained core glow. Colour
+// still carries the gameplay read — only the material language changed.
+// Flat fills + strokes only (no per-drop gradient allocation).
+function drawRelicPlate(col, glyphKey, pulse) {
+  const R = 17;
+  ctx.shadowColor = col; ctx.shadowBlur = 10 + 6 * pulse;
+  // brass octagon frame
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4 + Math.PI / 8;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * R, Math.sin(a) * R);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#3a2f1c'; ctx.fill();          // recessed brass shadow
+  ctx.lineWidth = 2.4; ctx.strokeStyle = '#c9a44c'; ctx.stroke();  // antique brass
+  ctx.shadowBlur = 0;
+  // weathered steel core
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4 + Math.PI / 8;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * R * 0.74, Math.sin(a) * R * 0.74);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#141a26'; ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = '#6b7687'; ctx.stroke();
+  // top-left key light on the brass (the style-lock signature)
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 1.6; ctx.strokeStyle = '#f0dfa8';
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.9, Math.PI * 1.06, Math.PI * 1.5); ctx.stroke();
+  ctx.globalAlpha = 1;
+  // the rune core: the power's colour, glowing from within the plate
+  ctx.shadowColor = col; ctx.shadowBlur = 8 + 5 * pulse;
+  drawGlyph(ctx, glyphKey, 0, 0, 9, col);
+  ctx.shadowBlur = 0;
+  // four brass rivets
+  ctx.fillStyle = '#c9a44c';
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * R * 0.86, Math.sin(a) * R * 0.86, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+// the catch item as a BINDING SIGIL relic: brass hex ring, dark core, a
+// crystal eye that turns gold when the quarry is radiant
+function drawBindingSigil(shiny, pulse) {
+  const core = shiny ? '#ffd700' : '#8fd6ff';
+  const R = 15;
+  ctx.shadowColor = core; ctx.shadowBlur = 12 + 8 * pulse;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3 - Math.PI / 2;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * R, Math.sin(a) * R);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#181322'; ctx.fill();
+  ctx.lineWidth = 2.4; ctx.strokeStyle = '#c9a44c'; ctx.stroke();
+  ctx.shadowBlur = 0;
+  // binding runes on three alternating faces
+  ctx.lineWidth = 1.3; ctx.strokeStyle = '#e6cf8e'; ctx.globalAlpha = 0.85;
+  for (let i = 0; i < 3; i++) {
+    const a = i * (Math.PI * 2 / 3) - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * R * 0.62, Math.sin(a) * R * 0.62);
+    ctx.lineTo(Math.cos(a) * R * 0.9, Math.sin(a) * R * 0.9);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // the crystal eye
+  ctx.shadowColor = core; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(0, 0, 5.2 + pulse * 0.8, 0, Math.PI * 2);
+  ctx.fillStyle = core; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(-1.4, -1.6, 1.7, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+}
 function drawPowerups() {
   for (const pu of G.powerups) {
     ctx.save();
@@ -3135,7 +3259,14 @@ function drawPowerups() {
       ctx.fillStyle = 'rgba(8,12,30,0.85)'; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
       ctx.shadowBlur = 0;
+      if (SKIN.relicDrops) { // an ATTUNEMENT: the orb sits in a brass collar
+        ctx.lineWidth = 1.6; ctx.strokeStyle = '#c9a44c';
+        ctx.beginPath(); ctx.arc(0, 0, 15.5, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 15.5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+      }
       drawGlyph(ctx, pu.p.t, 0, 0, 7.5, col);
+    } else if (pu.p.key === 'pokeball' && SKIN.relicDrops) {
+      drawBindingSigil(!!pu.shiny, 0.5 + 0.5 * Math.sin(G.time * 5 + pu.rot));
     } else if (pu.p.key === 'pokeball') {
       ctx.shadowColor = pu.shiny ? '#ffd700' : '#ef5350'; ctx.shadowBlur = pu.shiny ? 20 : 14;
       ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
@@ -3146,6 +3277,35 @@ function drawPowerups() {
       ctx.strokeStyle = '#263238'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(14, 0); ctx.stroke();
+    } else if (pu.p.key === 'heal' && SKIN.relicDrops) {
+      // MENDING DRAUGHT: a brass-collared phial of rose aether — the same
+      // urgent pulse as the clinical capsule, in this world's materials
+      const col = pu.p.color, pulse = 0.5 + 0.5 * Math.sin(G.time * 7 + pu.rot);
+      ctx.shadowColor = col; ctx.shadowBlur = 16 + pulse * 10;
+      ctx.beginPath(); ctx.arc(0, 0, 20 + pulse * 2, 0, Math.PI * 2);
+      ctx.fillStyle = col + '18'; ctx.fill();
+      ctx.shadowBlur = 0;
+      // glass body
+      roundRect(-9, -6, 18, 22, 7);
+      ctx.fillStyle = '#1a1020'; ctx.fill();
+      ctx.lineWidth = 1.6; ctx.strokeStyle = '#9fb0c6'; ctx.stroke();
+      // the draught inside, filling from the base
+      ctx.save();
+      ctx.beginPath(); roundRect(-9, -6, 18, 22, 7); ctx.clip();
+      ctx.fillStyle = col;
+      ctx.fillRect(-9, 2 - pulse * 1.5, 18, 16);
+      ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffd7e2';
+      ctx.fillRect(-9, 2 - pulse * 1.5, 18, 2.5);
+      ctx.restore();
+      // brass collar + stopper
+      ctx.fillStyle = '#c9a44c';
+      roundRect(-7.5, -11, 15, 6, 2.5); ctx.fill();
+      ctx.fillStyle = '#3a2f1c';
+      roundRect(-3.5, -15, 7, 5, 2); ctx.fill();
+      // engraved rune on the glass
+      ctx.shadowColor = col; ctx.shadowBlur = 7;
+      drawGlyph(ctx, 'heart', 0, 6, 5.5, '#fff3f7');
+      ctx.shadowBlur = 0;
     } else if (pu.p.key === 'heal') {
       // Recovery item: a medical capsule with a heart core, rotating cross
       // reticle, and a stronger pulse than ordinary drops so it reads as HP.
@@ -3172,6 +3332,10 @@ function drawPowerups() {
       drawGlyph(ctx, 'heart', 0, 1, 9, '#fff');
       ctx.fillStyle = '#fff';
       ctx.fillRect(8, -12, 7, 2.5); ctx.fillRect(10.25, -14.25, 2.5, 7);
+    } else if (SKIN.relicDrops) {
+      const col = pu.p.color;
+      const pulse = 0.5 + 0.5 * Math.sin(G.time * 4 + pu.rot);
+      drawRelicPlate(col, pu.p.icon, pulse);
     } else {
       // Power-up capsule: layered halo, gradient body, glass highlight, white
       // glyph, and orbiting sparks. The icon now feels like an active device
@@ -4055,7 +4219,7 @@ function drawHUD() {
         ? elLabel + ' ' + typeWord() + ' · ITEM · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's'
         : elLabel + (el ? ' ' + typeWord() + ' · PILOT' : ' · PILOT'))
       : elLabel + (G.mode === 'classic' ? ' BALL' : ' WEAPON') + (basePartner
-        ? ' · PARTNER'
+        ? ' · ' + SKIN.strings.partnerWord
         : ' · POWER-UP · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's');
     ctx.fillText('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72);
     // AFFINITY chip rides the same line (light/dark skins): the path is
@@ -5059,11 +5223,11 @@ function drawMenuStarfighterRig(cx, cy, size, t, accent, hov) {
   ctx.fillStyle = cg; ctx.beginPath();
   ctx.moveTo(-size * 0.055, size * 0.18); ctx.lineTo(0, size * (0.58 + thrust * 0.08));
   ctx.lineTo(size * 0.055, size * 0.18); ctx.closePath(); ctx.fill();
-  const img = getSprite(pilot.id), ps = size * 0.64;
+  const img = affinityVesselImage(pilot.id), ps = size * 0.64;
   if (img.complete && img.naturalWidth) {
     const sil = getSilhouette(pilot.id, '#02040b');
     if (sil) { ctx.globalAlpha = 0.55; ctx.drawImage(sil, -ps / 2 + 4, -ps / 2 + 7, ps, ps); ctx.globalAlpha = 1; }
-    ctx.drawImage(img, -ps / 2, -ps / 2, ps, ps);
+    drawAffinityVessel(pilot.id, 0, 0, ps);
   } else drawGlyph(ctx, 'star', 0, 0, ps * 0.22, '#ffffff');
   // Cockpit reticle says this character is the controlled player avatar.
   ctx.strokeStyle = '#ffffffbb'; ctx.lineWidth = Math.max(1, size * 0.009);
@@ -5416,7 +5580,7 @@ function drawSetupHeader(L, mode) {
   ctx.textAlign = 'left'; ctx.font = `800 ${L.short ? 10 : 12}px Orbitron, sans-serif`;
   ctx.fillStyle = hovBack ? '#fff' : '#90a4ae';
   ctx.font = `800 ${L.narrow ? 18 : L.short ? 10 : 12}px Orbitron, sans-serif`;
-  ctx.fillText(L.narrow ? '‹' : L.step === 'pilot' ? '‹ MODES' : '‹ PILOTS', bb.x + 6, bb.y + bb.h / 2);
+  ctx.fillText(L.narrow ? '‹' : L.step === 'pilot' ? '‹ MODES' : '‹ ' + SKIN.strings.partnerWord + 'S', bb.x + 6, bb.y + bb.h / 2);
   ctx.textAlign = 'center';
   const pillW = L.short ? 76 : 92, gap = 8, py = L.subY;
   for (let i = 1; i <= 2; i++) {
@@ -5426,7 +5590,7 @@ function drawSetupHeader(L, mode) {
     ctx.strokeStyle = i <= step ? mode.accent : 'rgba(255,255,255,0.18)'; ctx.lineWidth = i === step ? 1.7 : 1; ctx.stroke();
     ctx.font = `800 ${L.short ? 7 : 8}px Orbitron, sans-serif`;
     ctx.fillStyle = i <= step ? '#f7eaff' : '#78909c';
-    ctx.fillText(i + ' · ' + (i === 1 ? 'PARTNER' : 'CHALLENGE'), x, py + 0.5, pillW - 8);
+    ctx.fillText(i + ' · ' + (i === 1 ? SKIN.strings.partnerWord : 'CHALLENGE'), x, py + 0.5, pillW - 8);
   }
 }
 
@@ -5435,7 +5599,7 @@ function drawPilotSetup(L, mode) {
   // are small identity tiles (sprite + name) on three labeled shelves.
   ctx.font = `900 ${L.narrow ? 14 : 16}px Orbitron, sans-serif`;
   ctx.fillStyle = '#f1e7f8';
-  ctx.fillText(SETTINGS.mode === 'junkie' ? 'CHOOSE YOUR FLIGHT PARTNER' : 'CHOOSE YOUR PARTNER', W / 2, L.sectionY);
+  ctx.fillText('CHOOSE YOUR ' + SKIN.strings.partnerWord, W / 2, L.sectionY);
   // ---- the DETAIL HERO ----
   {
     const hv = L.hero;
@@ -5448,38 +5612,54 @@ function drawPilotSetup(L, mode) {
     ctx.strokeStyle = col + '88'; ctx.lineWidth = 1.4; ctx.stroke();
     // the hero sprite POPS — it may overhang the card frame (2026-07-21:
     // the art deserves the space; the text column starts after it either way)
-    const sp = L.short ? 52 : Math.min(hv.h + 30, 132);
+    // the portrait scales with the card (which now absorbs the page's slack)
+    // and wears the sworn affinity, so LIGHT/DARK is visible before launch
+    const sp = L.short ? 52 : Math.min(Math.max(132, hv.h * 0.88), hv.w * 0.42, 200);
     const sx2 = hv.x + (L.short ? 8 : 16);
-    if (mon) {
-      const img = getSprite(mon.ids[0]);
-      if (img.complete && img.naturalWidth) ctx.drawImage(img, sx2, hv.y + hv.h / 2 - sp / 2, sp, sp);
-      else drawGlyph(ctx, SETTINGS.starter, sx2 + sp / 2, hv.y + hv.h / 2, sp * 0.3, col);
-    } else drawGlyph(ctx, 'normal', sx2 + sp / 2, hv.y + hv.h / 2, sp * 0.3, col);
+    const scy = hv.y + hv.h / 2;
+    if (mon && !L.short) { // aspect-coloured stage behind the hull
+      const bg = ctx.createRadialGradient(sx2 + sp / 2, scy, 6, sx2 + sp / 2, scy, sp * 0.6);
+      bg.addColorStop(0, col + '2a'); bg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(sx2 + sp / 2, scy, sp * 0.6, 0, Math.PI * 2); ctx.fill();
+    }
+    if (!mon || !drawAffinityVessel(mon.ids[0], sx2 + sp / 2, scy, sp * 0.94)) {
+      drawGlyph(ctx, mon ? SETTINGS.starter : 'normal', sx2 + sp / 2, scy, sp * 0.3, col);
+    }
     const tx2 = sx2 + sp + (L.short ? 10 : 18), tw2 = hv.x + hv.w - tx2 - 14;
     ctx.textAlign = 'left';
     if (mon) {
       const copy = starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1);
-      ctx.font = `900 ${L.short ? 11 : L.narrow ? 14 : 17}px Orbitron, sans-serif`;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(mon.names[0], tx2, hv.y + hv.h * (L.short ? 0.3 : 0.24), tw2);
-      ctx.font = `800 ${L.short ? 8 : 10}px Orbitron, sans-serif`; ctx.fillStyle = col;
       const disc = mon.discipline && SKIN.disciplines && SKIN.disciplines[mon.discipline];
-      ctx.fillText(copy.ability + '  ·  ' + typeLabel(SETTINGS.starter) + ' ' + typeWord()
-        + (disc ? '  ·  ' + disc.name : ''),
-        tx2, hv.y + hv.h * (L.short ? 0.58 : 0.47), tw2);
       if (!L.short) {
+        // a TALL card keeps a tight reading rhythm — percentage rows would
+        // drift into four lonely lines spread across 200px
+        const lead = L.narrow ? 21 : 25;
+        let ty = hv.y + hv.h / 2 - lead * 1.5;
+        ctx.font = `900 ${L.narrow ? 15 : 18}px Orbitron, sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(mon.names[0], tx2, ty, tw2); ty += lead;
+        ctx.font = `800 ${L.narrow ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = col;
+        ctx.fillText(copy.ability + '  ·  ' + typeLabel(SETTINGS.starter) + ' ' + typeWord()
+          + (disc ? '  ·  ' + disc.name : ''), tx2, ty, tw2); ty += lead;
         ctx.font = bodyFont(L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#c5cedd';
-        ctx.fillText(copy.tier, tx2, hv.y + hv.h * 0.67, tw2);
+        ctx.fillText(copy.tier, tx2, ty, tw2); ty += lead;
         ctx.font = bodyFont(L.narrow ? 8.5 : 9.5, 550); ctx.fillStyle = '#8494ac';
-        ctx.fillText(mon.names.join(' → ') + '  ·  ' + SKIN.strings.evolvesIn, tx2, hv.y + hv.h * 0.85, tw2);
+        ctx.fillText(mon.names.join(' → ') + '  ·  ' + SKIN.strings.evolvesIn, tx2, ty, tw2);
       } else {
+        ctx.font = `900 11px Orbitron, sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(mon.names[0], tx2, hv.y + hv.h * 0.3, tw2);
+        ctx.font = `800 8px Orbitron, sans-serif`; ctx.fillStyle = col;
+        ctx.fillText(copy.ability + '  ·  ' + typeLabel(SETTINGS.starter) + ' ' + typeWord(),
+          tx2, hv.y + hv.h * 0.58, tw2);
         ctx.font = bodyFont(8.5, 550); ctx.fillStyle = '#8494ac';
         ctx.fillText(copy.tier, tx2, hv.y + hv.h * 0.84, tw2);
       }
     } else {
       ctx.font = `900 ${L.short ? 11 : L.narrow ? 14 : 17}px Orbitron, sans-serif`;
       ctx.fillStyle = '#e2e8f2';
-      ctx.fillText('PICK A PARTNER', tx2, hv.y + hv.h * (L.short ? 0.36 : 0.32), tw2);
+      ctx.fillText('PICK A ' + SKIN.strings.partnerWord, tx2, hv.y + hv.h * (L.short ? 0.36 : 0.32), tw2);
       ctx.font = bodyFont(L.short ? 8.5 : L.narrow ? 9.5 : 11, 600); ctx.fillStyle = '#8494ac';
       ctx.fillText('EACH ONE CHANGES YOUR ATTACK TYPE AND PASSIVE' + (L.short ? '' : ' — OR FLY SOLO BELOW'),
         tx2, hv.y + hv.h * (L.short ? 0.72 : 0.62), tw2);
@@ -5534,7 +5714,7 @@ function drawPilotSetup(L, mode) {
     ctx.fillStyle = sel ? 'rgba(144,164,174,0.24)' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.045)'; ctx.fill();
     ctx.strokeStyle = sel ? '#cfd8dc' : 'rgba(255,255,255,0.18)'; ctx.lineWidth = sel ? 2 : 1; ctx.stroke();
     ctx.font = `800 ${L.short ? 7.5 : 8.5}px Orbitron, sans-serif`; ctx.fillStyle = sel ? '#fff' : '#90a4ae';
-    ctx.fillText(SETTINGS.mode === 'junkie' ? 'FLY SOLO · TRAINING DRONE' : 'NO PARTNER · NEUTRAL START',
+    ctx.fillText(SETTINGS.mode === 'junkie' ? 'FLY SOLO · TRAINING DRONE' : 'NO ' + SKIN.strings.partnerWord + ' · NEUTRAL START',
       pg.x + pg.w / 2, pg.y + pg.h / 2, pg.w - 8);
   }
   {
@@ -5557,26 +5737,60 @@ function drawDifficultySetup(L, mode) {
   const col = mon ? TYPE_COLORS[SETTINGS.starter] : '#90a4ae';
   roundRect(S.x, S.y, S.w, S.h, 15); ctx.fillStyle = 'rgba(7,11,27,0.78)'; ctx.fill();
   ctx.strokeStyle = col + '88'; ctx.lineWidth = 1.5; ctx.stroke();
-  const iconS = Math.min(S.h - 14, L.short ? 38 : 68), iconX = S.x + 10;
-  if (mon) {
-    const img = getSprite(mon.ids[0]);
-    if (img.complete && img.naturalWidth) ctx.drawImage(img, iconX, S.y + S.h / 2 - iconS / 2, iconS, iconS);
-    else drawGlyph(ctx, SETTINGS.starter, iconX + iconS / 2, S.y + S.h / 2, iconS * 0.3, col);
-  } else drawGlyph(ctx, 'normal', iconX + iconS / 2, S.y + S.h / 2, iconS * 0.3, col);
-  const textX = iconX + iconS + 12, textW = Math.max(80, L.editPilot.x - textX - 8);
+  const summaryVesselId = mon ? mon.ids[0] : 0;
+  // THE VESSEL SHOWCASE: on a roomy card the portrait becomes the hero —
+  // big enough to actually judge what you're taking into the campaign. It may
+  // ride slightly proud of the card's top edge; that's the point.
+  const showcase = S.h >= 130;
+  const iconS = showcase ? Math.min(S.h * 0.92, S.w * (L.narrow ? 0.38 : 0.44), 190)
+    : Math.min(S.h - 14, L.short ? 38 : 68);
+  const iconX = S.x + (showcase ? 14 : 10);
+  const iconCY = S.y + S.h / 2 - (showcase ? S.h * 0.04 : 0);
+  const glowR = iconS * 0.62;
+  if (mon && showcase) { // an aspect-coloured stage behind the hull
+    const bg = ctx.createRadialGradient(iconX + iconS / 2, iconCY, 6, iconX + iconS / 2, iconCY, glowR);
+    bg.addColorStop(0, col + '2e'); bg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.arc(iconX + iconS / 2, iconCY, glowR, 0, Math.PI * 2); ctx.fill();
+  }
+  if (!drawAffinityVessel(summaryVesselId, iconX + iconS / 2, iconCY, iconS * (showcase ? 0.96 : 0.76))) {
+    drawGlyph(ctx, mon ? SETTINGS.starter : 'normal', iconX + iconS / 2, iconCY, iconS * 0.3, col);
+  }
+  const textX = iconX + iconS + (showcase ? 16 : 12);
+  const textW = Math.max(80, (showcase ? S.x + S.w - 16 : L.editPilot.x) - textX - 8);
   ctx.textAlign = 'left';
-  ctx.font = `900 ${L.short ? 10 : L.narrow ? 12 : 14}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
-  ctx.fillText(mon ? mon.names[0] : 'TRAINING DRONE', textX, S.y + S.h * (L.short ? 0.42 : 0.36), textW);
-  ctx.font = bodyFont(L.short ? 8.5 : 10.5, 700); ctx.fillStyle = col;
   const copy = mon ? starterModeCopy(SETTINGS.starter, SETTINGS.mode, 1) : null;
-  ctx.fillText(copy ? (L.narrow ? copy.ability : copy.ability + ' · ' + copy.blurb) : 'NEUTRAL · NO PASSIVE',
-    textX, S.y + S.h * (L.short ? 0.68 : 0.66), textW);
+  if (showcase) {
+    // roomy card: name, ability + aspect + discipline, effect, and the form line
+    let ty = S.y + S.h * 0.26;
+    ctx.font = `900 ${L.narrow ? 18 : 22}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+    ctx.fillText(mon ? mon.names[0] : 'TRAINING DRONE', textX, ty, textW);
+    ty += L.narrow ? 22 : 26;
+    const disc = mon && mon.discipline && SKIN.disciplines && SKIN.disciplines[mon.discipline];
+    ctx.font = `800 ${L.narrow ? 9 : 10.5}px Orbitron, sans-serif`; ctx.fillStyle = col;
+    ctx.fillText(copy ? copy.ability + '  ·  ' + typeLabel(SETTINGS.starter) + ' ' + typeWord()
+      + (disc ? '  ·  ' + disc.name : '') : 'NEUTRAL · NO PASSIVE', textX, ty, textW);
+    ty += L.narrow ? 20 : 24;
+    ctx.font = bodyFont(L.narrow ? 10 : 11.5, 650); ctx.fillStyle = '#c5cedd';
+    ctx.fillText(copy ? copy.blurb : 'NO PASSIVE ABILITY', textX, ty, textW);
+    if (mon && S.h >= 168) {
+      ty += L.narrow ? 19 : 22;
+      ctx.font = bodyFont(L.narrow ? 8.5 : 9.5, 550); ctx.fillStyle = '#8494ac';
+      ctx.fillText(mon.names.join(' → '), textX, ty, Math.max(60, L.editPilot.x - textX - 10));
+    }
+  } else {
+    ctx.font = `900 ${L.short ? 10 : L.narrow ? 12 : 14}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+    ctx.fillText(mon ? mon.names[0] : 'TRAINING DRONE', textX, S.y + S.h * (L.short ? 0.42 : 0.36), textW);
+    ctx.font = bodyFont(L.short ? 8.5 : 10.5, 700); ctx.fillStyle = col;
+    ctx.fillText(copy ? (L.narrow ? copy.ability : copy.ability + ' · ' + copy.blurb) : 'NEUTRAL · NO PASSIVE',
+      textX, S.y + S.h * (L.short ? 0.68 : 0.66), textW);
+  }
   ctx.textAlign = 'center';
   const eb = L.editPilot, hovEdit = inRect(mouseX, lastMouseY, eb);
   roundRect(eb.x, eb.y, eb.w, eb.h, 9); ctx.fillStyle = hovEdit ? col + '30' : 'rgba(255,255,255,0.06)'; ctx.fill();
   ctx.strokeStyle = hovEdit ? col : 'rgba(255,255,255,0.24)'; ctx.lineWidth = 1; ctx.stroke();
   ctx.font = `800 ${L.short ? 7 : 8.5}px Orbitron, sans-serif`; ctx.fillStyle = hovEdit ? '#fff' : '#b0bec5';
-  ctx.fillText(L.narrow ? 'CHANGE' : 'CHANGE PARTNER', eb.x + eb.w / 2, eb.y + eb.h / 2, eb.w - 8);
+  ctx.fillText(L.narrow ? 'CHANGE' : 'CHANGE ' + SKIN.strings.partnerWord, eb.x + eb.w / 2, eb.y + eb.h / 2, eb.w - 8);
 
   // AFFINITY (skins with SKIN.affinities): the LIGHT/DARK path is a REQUIRED,
   // ceremonial pick — two tall mirrored cards (radiant gold vs umbral violet)
@@ -7187,7 +7401,7 @@ function drawEnding() {
     const modeLabel = (MODES.find(m => m.key === G.mode) || MODES[0]).label;
     const lines = [
       (s.score || G.score).toLocaleString() + ' PTS · ' + modeLabel + ' · ' + preset().label,
-      'PARTNER ' + (pilotInfo().id > 0 ? (SKIN.names[pilotInfo().id] || 'PARTNER').toUpperCase() : 'TRAINING DRONE')
+      SKIN.strings.partnerWord + ' ' + (pilotInfo().id > 0 ? (SKIN.names[pilotInfo().id] || SKIN.strings.partnerWord).toUpperCase() : 'TRAINING DRONE')
         + ' · ' + (s.catches || G.caughtRun) + ' CATCHES · ' + ((G.runStats && G.runStats.bossesDefeated) || 0) + ' BOSSES',
       s.path && s.path !== 'NO PATH YET' ? 'FAVOURITE PATH · ' + s.path : null,
       G.secret && G.secret.completed ? (SKIN.secret.conquered || 'KANTO RIFT · CONQUERED') : null,
@@ -7234,10 +7448,10 @@ function drawEndingPartner(x, y, a) {
   gg.addColorStop(0, col + '66'); gg.addColorStop(1, col + '00');
   ctx.fillStyle = gg;
   ctx.beginPath(); ctx.arc(x, y + bob, 54, 0, Math.PI * 2); ctx.fill();
-  const img = pil.id > 0 ? getSprite(pil.id) : null;
+  const img = affinityVesselImage(pil.id);
   if (img && img.complete && img.naturalWidth) {
     ctx.shadowColor = col; ctx.shadowBlur = 14;
-    ctx.drawImage(img, x - 30, y - 30 + bob, 60, 60);
+    drawAffinityVessel(pil.id, x, y + bob, 60);
     ctx.shadowBlur = 0;
   } else {
     ctx.fillStyle = '#e3f2fd';
