@@ -3242,7 +3242,12 @@ function drawAnnounce() {
   // compact strip tucked under the HUD, sliding in from the top. The centre
   // card remains for serve/menu/draft states and boss drama.
   const compact = G.state === 'play' && !a.hero;
-  if (compact) { drawAnnounceStrip(a); return; }
+  if (compact) {
+    // the FIRST ENCOUNTER splash owns the low band while visible — the strip
+    // yields (transient flavor may expire unseen; the splash IS the news)
+    if (G.speciesIntro && G.speciesIntro.delay <= 0) return;
+    drawAnnounceStrip(a); return;
+  }
   const fadeOut = a.max - a.t < 0.3 ? (a.max - a.t) / 0.3 : 1;
   const alpha = Math.min(fadeOut, a.t < 0.5 ? a.t / 0.5 : 1);
   ctx.save();
@@ -3336,7 +3341,13 @@ function drawAnnounceStrip(a) {
   // SHORT viewports (landscape phones) have no free band under the HUD —
   // the flocks fly there — so the strip uses the mid-screen gap between
   // the flock band and the ship's lane instead
-  const y = H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 150 : 88);
+  // SHOOTER modes (2026-07-21): the top band is where squads ENTER and
+  // bosses live — the strip was landing on the characters. It now rides the
+  // LOW BAND between the formation floor and the ship's lane. Classic keeps
+  // the under-HUD strip (its wall starts lower and the paddle owns the floor).
+  const y = G.mode !== 'classic'
+    ? (G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y()) - 78
+    : H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 150 : 88);
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.translate(0, -14 * (1 - enter) * (1 - enter));
@@ -3434,6 +3445,8 @@ function drawShootHint() {
   if (G.state !== 'play' || G.playT > (autoTutor ? 9 : 20) || (!autoTutor && G.shotsFired >= 3)) return;
   // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
   if (G.mode === 'classic' && !blasterArmed()) return;
+  // the FIRST ENCOUNTER splash owns the low band while it plays
+  if (G.speciesIntro && G.speciesIntro.delay <= 0) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
     ? (IS_TOUCH ? (SETTINGS.autoFire ? 'DRAG TO FLY · AUTO-FIRE ON · HOLD = BIG ATTACK' : 'DRAG TO FLY · TAP ATTACK · HOLD = BIG ATTACK') : 'MOVE TO FLY · CLICK TO ATTACK · RIGHT-CLICK/SHIFT CHARGES')
@@ -4000,6 +4013,7 @@ function drawHUD() {
   ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
   drawBrickBehaviorLegend();
   drawCombatNotice();
+  drawSpeciesIntro();
   drawObjectiveBanner();
   // ---- active power-up chips: capped slots so phones stay readable ----
   const active = [];
@@ -4138,12 +4152,61 @@ function drawObjectiveBanner() {
   ctx.fillText('◎ ' + label + (readout ? '  ·  ' + readout : ''), W / 2, y + (short ? 13.5 : 15.5), w - 20);
   ctx.restore();
 }
+// ---- FIRST ENCOUNTER splash (2026-07-21): a never-recorded species makes
+// its entrance BIG — portrait + name + aspect in the low band as the wave
+// cues. One per wave (buildLevel picks the highest-ranked newcomer); the
+// announce strip yields while it plays. Purely presentational.
+function drawSpeciesIntro() {
+  const S = G.speciesIntro;
+  if (!S || S.delay > 0 || (G.state !== 'play' && G.state !== 'serve')) return;
+  if (G.bossIntro > 0 || (G.announce && G.announce.hero)) return;
+  const img = getSprite(S.id);
+  if (!img.complete || !img.naturalWidth) return;
+  const enter = Math.min(1, (S.max - S.life) / 0.35);
+  const exit = S.life < 0.45 ? S.life / 0.45 : 1;
+  const alpha = Math.min(enter, exit);
+  const col = TYPE_COLORS[S.t] || '#90a4ae';
+  // the low band: below the formation floor, above the ship's lane
+  const baseY = (G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y()) - 96;
+  const sp = Math.min(170, W * 0.3, H * 0.26);
+  const rise = SETTINGS.reduceFlash ? 0 : 16 * (1 - enter) * (1 - enter);
+  const cy = baseY - sp / 2 - 34 + rise;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // aspect-colored stage glow behind the portrait
+  const g = ctx.createRadialGradient(W / 2, cy, 10, W / 2, cy, sp * 0.72);
+  g.addColorStop(0, col + '3a'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(W / 2, cy, sp * 0.72, 0, Math.PI * 2); ctx.fill();
+  const sc = SETTINGS.reduceFlash ? 1 : 0.92 + 0.08 * (1 - Math.pow(1 - enter, 3));
+  ctx.translate(W / 2, cy); ctx.scale(sc, sc);
+  ctx.drawImage(img, -sp / 2, -sp / 2, sp, sp);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '800 8.5px Orbitron, sans-serif';
+  ctx.fillStyle = col;
+  ctx.fillText('— FIRST ENCOUNTER —', W / 2, baseY - 10);
+  ctx.font = `900 ${Math.min(20, W / 22)}px Orbitron, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = col; ctx.shadowBlur = 10;
+  ctx.fillText(((SKIN.names[S.id] || '#' + S.id) + '').toUpperCase(), W / 2, baseY + 10, W * 0.8);
+  ctx.shadowBlur = 0;
+  ctx.font = '800 9px Orbitron, sans-serif';
+  ctx.fillStyle = col;
+  ctx.fillText(typeLabel(S.t) + ' ' + typeWord(), W / 2, baseY + 28);
+  ctx.restore();
+}
+
 function drawCombatNotice() {
   const n = G.combatNotice;
   if (!n || (G.state !== 'play' && G.state !== 'serve')) return;
   const hasRule = G.mode === 'classic' && stageIdx(G.level) !== 2;
   const elemRows = G.ballElement || G.mode === 'junkie';
-  const y = hasRule ? (elemRows ? (G.combo > 1 ? 160 : 126) : (G.combo > 1 ? 142 : 104)) : 70;
+  // shooters: ride the LOW BAND under the announce strip, never the flock zone
+  const y = G.mode !== 'classic'
+    ? (G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y()) - 42
+    : hasRule ? (elemRows ? (G.combo > 1 ? 160 : 126) : (G.combo > 1 ? 142 : 104)) : 70;
   const alpha = Math.min(1, n.t / Math.min(0.25, n.max));
   ctx.save();
   ctx.globalAlpha = alpha;

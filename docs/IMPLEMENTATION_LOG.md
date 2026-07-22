@@ -5,6 +5,29 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-21d — Text leaves the flock zone + FIRST ENCOUNTER splashes
+
+Owner: entrance-time text boxes land on top of the characters; and new
+creatures deserve a big named intro to make each level feel epic.
+
+- **The LOW BAND owns transient text in the shooter modes.** The announce
+  strip (top, under-HUD) and the combat notice (y≈70) were exactly where
+  squads enter and bosses live — the Marshadow report showed the channel
+  notice + enrage strip stacked on the boss. Both now anchor between the
+  formation floor and the ship's lane (strip at shipTop−78, notice at
+  shipTop−42; blaster keys off PADDLE_Y). Classic keeps its under-HUD strip
+  (its wall starts lower). Boss nameplates/health stay anchored to the boss.
+- **FIRST ENCOUNTER splash** (`G.speciesIntro`, buildLevel → update clock →
+  drawSpeciesIntro): when a non-boss wave contains a species the codex has
+  never recorded, the highest-ranked newcomer headlines the wave — a ~170px
+  portrait with an aspect-colored stage glow, "— FIRST ENCOUNTER —", the
+  name, and its ASPECT, playing ~2.7s after a 1.15s cue delay (shorter and
+  static under reduceFlash). One per wave; boss waves keep their entrance
+  ceremonies; the announce strip and the shoot-hint yield while it plays.
+  Purely presentational — no gameplay fields touched, no gameRand.
+
+---
+
 ## 2026-07-21c — The ASPECT lexicon + the CODEX GALLERY
 
 Owner: AETHERFALL still spoke in pokemon type words; and the art is too

@@ -2930,6 +2930,12 @@ function update(dt) {
     G.announce.t -= dt;
     if (G.announce.t <= 0) G.announce = G.announceQueue.length ? G.announceQueue.shift() : null;
   }
+  // FIRST ENCOUNTER splash clock — waits out its cue delay, plays once
+  if (G.speciesIntro && (G.state === 'play' || G.state === 'serve')) {
+    const S = G.speciesIntro;
+    if (S.delay > 0) S.delay -= dt;
+    else { S.life -= dt; if (S.life <= 0) G.speciesIntro = null; }
+  }
   musicTick();
 
   // STARFIGHTER's pilot is a small mon — its edge clamp is the SHIP's half

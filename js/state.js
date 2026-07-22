@@ -1436,6 +1436,25 @@ function buildLevel(lvl) {
     }
   }
   if (junkie && pilotInfo().id > 0) getSprite(pilotInfo().id); // the pilot rig needs its sprite ready
+  // ---- FIRST ENCOUNTER splash (2026-07-21): one never-recorded species
+  // headlines the wave — a big low-band portrait + name as the level cues.
+  // The most impressive newcomer (highest rank) wins; boss waves keep their
+  // own entrance ceremonies; purely cosmetic (never touches gameplay).
+  G.speciesIntro = null;
+  if (!hasBoss) {
+    let pick = null;
+    for (const b of G.bricks) {
+      if (b.dead || !b.poke || b.isBoss || b.subBoss || b.dormant || b.crosser || b.friendly || b.barrier) continue;
+      if (DEX.has(b.poke.id)) continue;
+      const rank = Math.max(b.elite || 0, 1);
+      if (!pick || rank > pick.rank) pick = { id: b.poke.id, t: b.poke.t, rank };
+    }
+    if (pick) {
+      G.speciesIntro = { id: pick.id, t: pick.t, delay: 1.15,
+        life: SETTINGS.reduceFlash ? 1.9 : 2.7, max: SETTINGS.reduceFlash ? 1.9 : 2.7 };
+      getSprite(pick.id); // warm the portrait before it flashes on
+    }
+  }
   // per-wave web state: the reactor re-arms, lingering wells + rains clear,
   // the guardian and chorus get their one proc back, the squadron stands down
   G.reactorUsed = false; G.vortexes = []; G.meteorRain = null;
