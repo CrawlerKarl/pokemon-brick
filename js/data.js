@@ -657,16 +657,16 @@ function tierTags(pathKey, tierIdx) {
     return ['BALL']; // classic offense is pure ball power now — no paddle gun
   }
   if (family === 'defense') return ['DEFENSE'];
-  if (family === 'element') return ['TYPE'];
-  if (family === 'tempo') return ['MEGA'];
+  if (family === 'element') return [typeWord()];
+  if (family === 'tempo') return [lex('MEGA')];
   return ['ITEM', 'SCORE'];
 }
 function tierSynergy(pathKey, tierIdx) {
   const family = PATHS[pathKey].family;
-  if (family === 'offense' && pathLvl('surge')) return 'SYNERGY: MORE HITS CHARGE MEGA FASTER';
+  if (family === 'offense' && pathLvl('surge')) return lex('SYNERGY: MORE HITS CHARGE MEGA FASTER');
   if (family === 'defense' && pathLvl('bond')) return 'SYNERGY: SAFER ITEM COLLECTION';
-  if (family === 'element' && G.starter) return 'SYNERGY: AMPLIFIES YOUR PARTNER TYPE';
-  if (family === 'tempo') return 'SYNERGY: EVERY SURGE RANK ADDS +10% MEGA DAMAGE';
+  if (family === 'element' && G.starter) return 'SYNERGY: AMPLIFIES YOUR ' + SKIN.strings.partnerWord + ' ' + typeWord();
+  if (family === 'tempo') return lex('SYNERGY: EVERY ' + PATHS.surge.name + ' RANK ADDS +10% MEGA DAMAGE');
   if (family === 'utility' && pathLvl('aegis')) return 'SYNERGY: SHIELDS PROTECT ITEM RUNS';
   return 'BUILDS TOWARD ' + PATHS[pathKey].tiers[Math.min(3, tierIdx + 1)].name;
 }
@@ -1342,6 +1342,52 @@ function typeLabel(t) {
   return (SKIN.typeNames && SKIN.typeNames[t]) || t.toUpperCase();
 }
 function typeWord() { return (SKIN.strings && SKIN.strings.typeWord) || 'TYPE'; }
+
+// ── THE COPY LEXICON ───────────────────────────────────────────────────────
+// Same contract as typeLabel, one level up: a skin may rename a whole PHRASE
+// of shared copy. `SKIN.lexicon` is an ORDERED [regex, replacement] list —
+// order is load-bearing, because the long authored phrases must fire before
+// the bare word (so "KILLS CHARGE MEGA" becomes "KILLS BUILD SURGE", not the
+// ungrammatical "KILLS CHARGE SURGE").
+//
+// TWO TRAPS, both real, both why this is a phrase table and not a replace():
+//   1. CHARGE is a DIFFERENT SYSTEM (the held weapon shot). Only the rules
+//      that also match MEGA may touch the word — "A FULL CHARGE MAY CONSUME
+//      50% BANKED MEGA" must keep its CHARGE and lose only its MEGA.
+//   2. Substrings. Every rule is \b-anchored so the OMEGA SERAPH (an
+//      aetherfall boss) and Meganium never get rewritten mid-word.
+// No lexicon → identity, which IS the pokemon presentation (bit-identity).
+function lex(s) {
+  const rules = SKIN.lexicon;
+  if (!rules || typeof s !== 'string') return s;
+  for (const [re, to] of rules) s = s.replace(re, to);
+  return s;
+}
+// Shared copy lives in frozen-at-load engine tables, so the skin rewrites them
+// ONCE at boot rather than every consumer remembering to call lex(). Only
+// COPY keys are walked — never `key`/`k`/`icon`/`family`, which are engine
+// identifiers that must survive verbatim (renaming one forks the runtime).
+const LEX_COPY_KEYS = ['name', 'desc', 'sdesc', 'summary', 'role', 'visual',
+  'ready', 'limit', 'label', 'tell'];
+function applyLexicon(roots) {
+  if (!SKIN.lexicon) return;
+  const seen = new Set();
+  const walk = (o) => {
+    if (!o || typeof o !== 'object' || seen.has(o)) return;
+    seen.add(o);
+    if (Array.isArray(o)) { for (const v of o) walk(v); return; }
+    for (const k of Object.keys(o)) {
+      const v = o[k];
+      if (typeof v === 'string') {
+        if (LEX_COPY_KEYS.includes(k)) { const n = lex(v); if (n !== v) o[k] = n; }
+      } else if (Array.isArray(v) && v.every(x => typeof x === 'string')) {
+        // string arrays are always copy (starter-kit tier lines)
+        for (let i = 0; i < v.length; i++) v[i] = lex(v[i]);
+      } else walk(v);
+    }
+  };
+  for (const r of roots) walk(r);
+}
 // codex gallery: locate a recorded unit's home region, type and tier
 function dexEntryInfo(id) {
   for (const g of SKIN.gens) {

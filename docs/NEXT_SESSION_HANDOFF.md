@@ -162,21 +162,24 @@ band so copy never covers the flock or the pilot.)
 **The backlog's P0 sequence is the recommended path:**
 
 ```
-AFT-001 mobile safe zones  →  AFT-002 boss reveal  →  AFT-003 terminology
-   →  AFT-017 oath evolution  →  AFT-004 trial sequencing
-   →  AFT-005 release gate    →  AFT-006 save safety
+AFT-001 mobile safe zones  →  AFT-002 boss reveal  →  AFT-017 oath evolution
+   →  AFT-004 trial sequencing  →  AFT-005 release gate  →  AFT-006 save safety
 ```
+(AFT-003 is done bar an optional internal rename — see below.)
 
 Two notes so you don't redo finished work:
 
-- **AFT-003 is half-done.** The TYPE half shipped (ASPECT lexicon,
-  `typeLabel`/`typeWord`, `SKIN.strings.typeWord`). What remains is the
-  **MEGA → AETHER SURGE** vocabulary: **56 player-facing `MEGA` strings still
-  ship in the dist** (`grep -o "'[^']*MEGA[^']*'" dist-aetherfall/js/*.js`).
-  Do the skin-aware vocabulary helper first so shared UI can't emit the old
-  term; migrate internals (`G.mega`, `megaT`, `tryMega`) after, with a
-  backward-compatible checkpoint migration. **`CHARGE` is a different system
-  — never conflate it with SURGE.**
+- **AFT-003 player-facing migration SHIPPED (2026-07-22f).** Both halves of
+  the presentation leak are gone: the TYPE half (ASPECT lexicon) landed 07-21c,
+  and the **MEGA → AETHER SURGE** half landed now via `SKIN.lexicon` + `lex()`
+  + `applyLexicon()` (data.js) — no player-facing MEGA string reaches an
+  AETHERFALL screen, guarded by suite test `skin S7`. The AETHERFALL tempo path
+  is renamed CRESCENDO (engine key stays `surge`). **`CHARGE` is the held
+  weapon shot — a different system — and stays CHARGE.** The one thing left is
+  OPTIONAL: renaming the internal `G.mega`/`megaT`/`tryMega` identifiers to
+  Surge. It's **user-invisible** (so zero AFT-003 value) and CLAUDE.md's
+  release rule says engine identifiers ship unchanged — skip it unless a future
+  round specifically wants it, and only with a checkpoint migration.
 - **AFT-017 builds on what just shipped.** The form-graded curve
   (`[0.42, 0.72, 1]`) and neutral-until-sworn are live; the backlog asks for
   a much quieter start (~`0.10 / 0.48 / 1.00`), independently scaled fitting

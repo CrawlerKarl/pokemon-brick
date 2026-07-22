@@ -4373,7 +4373,7 @@ function drawHUD() {
       const ready = G.mega >= 1 && G.megaT <= 0;
       ctx.fillStyle = ready ? `hsl(${(G.time * 200) % 360},90%,65%)` : '#90a4ae';
       const megaPct = Math.round(Math.min(1, G.mega) * 100) + '%';
-      ctx.fillText(G.megaT > 0 ? 'MEGA ACTIVE' : ready ? 'MEGA READY — E' : 'MEGA · HITS CHARGE', mx, my - 12);
+      ctx.fillText(lex(G.megaT > 0 ? 'MEGA ACTIVE' : ready ? 'MEGA READY — E' : 'MEGA · HITS CHARGE'), mx, my - 12);
       ctx.textAlign = 'right';
       ctx.fillStyle = ready ? '#ffd54f' : '#c5b3e6';
       ctx.fillText(G.megaT > 0 ? Math.ceil(G.megaT) + 's' : megaPct, mx + mw, my - 12);
@@ -4618,7 +4618,7 @@ function drawTouchControls() {
   ctx.fillText(G.megaT > 0 ? Math.ceil(G.megaT) + 's' : ready ? 'READY' : Math.round(Math.min(1, G.mega) * 100) + '%', m.x, m.y + 8);
   ctx.font = '800 6.5px Orbitron, sans-serif';
   ctx.fillStyle = ready ? '#ffe082' : '#90a4ae';
-  ctx.fillText(G.megaT > 0 ? 'MEGA' : ready ? 'TAP MEGA' : 'HITS CHARGE', m.x, m.y + 19, m.r * 1.55);
+  ctx.fillText(lex(G.megaT > 0 ? 'MEGA' : ready ? 'TAP MEGA' : 'HITS CHARGE'), m.x, m.y + 19, m.r * 1.55);
   // (charge now lives on the FIRE pad — hold; no separate pad)
   // pause + sound, top-right under the lives
   for (const [b, icon, on] of [[B.pause, 'pause', true], [B.sound, 'sound', MUSIC.on]]) {
@@ -4638,7 +4638,7 @@ function drawTouchControls() {
     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.stroke();
     if (p.label) {
       ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = '#ffffff';
-      ctx.fillText('✓ ' + p.label, p.x, p.y - 28 - q * 12);
+      ctx.fillText('✓ ' + lex(p.label), p.x, p.y - 28 - q * 12);
     }
   }
   ctx.restore();
@@ -7703,7 +7703,7 @@ function drawOverlays() {
       jc.step === 2 ? (IS_TOUCH ? 'TAP FIRE TO ATTACK' : 'CLICK OR SPACE — FIRE') :
       jc.step === 3 ? (IS_TOUCH ? 'HOLD FIRE TO CHARGE A BIG SHOT' : 'HOLD SHIFT OR RIGHT-CLICK — CHARGE A BIG SHOT') :
       jc.step === 4 ? ((orbFalling || hit) ? 'GRAB THE FALLING ORB — IT CHANGES YOUR ATTACK TYPE' : null) :
-      jc.step === 5 ? ((megaReady || hit) ? (IS_TOUCH ? 'MEGA IS FULL — TAP THE GLOWING RING' : 'MEGA IS FULL — PRESS E') : null) : null;
+      jc.step === 5 ? ((megaReady || hit) ? lex(IS_TOUCH ? 'MEGA IS FULL — TAP THE GLOWING RING' : 'MEGA IS FULL — PRESS E') : null) : null;
     // same safe band as the compact announcements (only one shows at a time):
     // under the HUD column on portrait, mid-screen gap on short landscape
     const coachY = H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 156 : 124);
@@ -8105,7 +8105,7 @@ function drawOverlays() {
       : (IS_TOUCH
         ? ['DRAG ANYWHERE — MOVE', SETTINGS.autoFire ? 'AUTO-FIRE — ON' : 'TAP FIRE — SHOOT', 'HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
         : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK OR SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC · P / ESC — PAUSE · Q — QUIT'])
-    ).forEach((l, i) => ctx.fillText(l, W / 2, H * 0.47 + i * 22, W * 0.92));
+    ).forEach((l, i) => ctx.fillText(lex(l), W / 2, H * 0.47 + i * 22, W * 0.92));
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);
     // Mid-run settings remove the old dead end where changing touch controls
     // required abandoning the journey. Quit remains visually destructive.

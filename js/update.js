@@ -1150,7 +1150,7 @@ function awardRally(b, x, y) {
   }
   if (!G.rallyHintDone) { // teach the mechanic the first time it triggers
     G.rallyHintDone = true;
-    setAnnounce('star', '#ffd54f', 'RALLY x3!', 'ESCALATING POINTS · EVERY RALLY HIT CHARGES YOUR MEGA METER', 3);
+    setAnnounce('star', '#ffd54f', 'RALLY x3!', lex('ESCALATING POINTS · EVERY RALLY HIT CHARGES YOUR MEGA METER'), 3);
   }
 }
 
@@ -2004,7 +2004,7 @@ function absorbHit(x, y, shotType = null, volleyId = null) {
   if (upgN('reactive') && G.megaT <= 0) {
     G.mega = Math.min(1, G.mega + 0.15);
     G.surgeFlash = 1;
-    addFloater(G.paddle.x, y - 64, '+15% MEGA', '#dce775', 12);
+    addFloater(G.paddle.x, y - 64, lex('+15% MEGA'), '#dce775', 12);
   }
   webGuardianCharge(); // GUARDIAN ANGEL counts shield saves
   return true;
@@ -3124,7 +3124,7 @@ function update(dt) {
   // one-time callout the first time the mega meter fills
   if (G.mega >= 1 && G.megaT <= 0 && !G.megaCalloutDone && G.state === 'play') {
     G.megaCalloutDone = true;
-    setAnnounce('mega', '#ffd54f', 'MEGA READY!', IS_TOUCH ? 'TAP THE GLOWING MEGA BUTTON TO UNLEASH' : 'PRESS E TO UNLEASH', 2.6);
+    setAnnounce('mega', '#ffd54f', lex('MEGA READY!'), lex(IS_TOUCH ? 'TAP THE GLOWING MEGA BUTTON TO UNLEASH' : 'PRESS E TO UNLEASH'), 2.6);
   }
   // EVERY time the meter fills: a distinct haptic + a ring pulse on the MEGA
   // button itself, so readiness registers without reading the corner meter

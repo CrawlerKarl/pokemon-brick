@@ -5,6 +5,60 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22f — AFT-003: the SURGE lexicon (MEGA leaves the AETHERFALL screen)
+
+The backlog's largest remaining presentation leak: the overdrive still read
+MEGA / MEGA EVOLUTION everywhere in the AETHERFALL build. This is the
+PLAYER-FACING half of AFT-003 (the ASPECT/type half shipped 07-21c).
+
+- **`SKIN.lexicon` + `lex(s)` (data.js).** A skin can now reskin whole PHRASES
+  of shared copy, one level up from `typeLabel`. The lexicon is an ORDERED
+  `[regex, replacement]` list; `lex()` applies it in sequence. AETHERFALL's
+  eight rules turn MEGA EVOLUTION → AETHER SURGE and bare MEGA → SURGE, and
+  fix the verb ("HITS CHARGE MEGA" → "HITS BUILD SURGE") without disturbing
+  the two traps below.
+- **`applyLexicon(roots)`** walks the shared engine copy tables ONCE at boot
+  (in the `if (SKIN === AF)` tail of aetherfall.js) — PATHS, STARTER_KIT,
+  STACK_ITEMS, the four webs, CHEAT_ITEMS, MODES — rewriting only COPY keys
+  (`name/desc/sdesc/summary/role/visual/ready/limit/label/tell`) and leaving
+  engine identifiers (`key/icon/family`) untouched. Dynamic strings that
+  aren't in a table (the SURGE button label, the pause-help list, the
+  READY/ACTIVE meter text, the announce cards, the +15% floater, the touch
+  pulse label) wrap `lex()` at their render/emit site — 8 call sites across
+  render/update/input.
+- **The two traps, both real, both why this is a phrase table not a blind
+  replace:** (1) CHARGE is the HELD WEAPON SHOT, a different system — only a
+  rule that ALSO matches MEGA may touch the word, so "A FULL CHARGE MAY
+  CONSUME 50% BANKED MEGA" keeps its CHARGE and loses only its MEGA; (2) every
+  rule is `\b`-anchored, so the OMEGA SERAPH (an aetherfall boss) and Meganium
+  are never rewritten mid-word.
+- **The tempo PATH was already named SURGE**, which made "EVERY SURGE RANK
+  ADDS +10% SURGE DAMAGE" circular. It becomes **CRESCENDO** (building to a
+  peak — what the path does; the one tempo word with no existing use, since
+  CADENCE is weapon-rhythm copy and CATALYST/KINDLE/IGNITION are class
+  abilities / a boss entrance). Its engine key stays `surge`.
+- **Two pre-existing lexicon leaks fixed in passing** (both in `tierTags`/
+  `tierSynergy`): a hardcoded `'TYPE'` tag → `typeWord()`, and "AMPLIFIES YOUR
+  PARTNER TYPE" → `SKIN.strings.partnerWord + typeWord()`.
+- **pokemon stays BIT-IDENTICAL.** No lexicon → `lex()` is identity and
+  `applyLexicon` never runs, so every MEGA literal renders verbatim. New suite
+  test **`skin S7`** proves the transform, the two traps, AND that
+  `applyLexicon` (which mutates in place) leaves the shared tables pristine
+  when run on a clone under the pokemon gate.
+- **The dist inherits this at runtime** — it ships `data.js` verbatim and the
+  AETHERFALL skin transforms at boot, so no player-facing MEGA string is ever
+  displayed. The RESIDUE scanner intentionally does NOT flag MEGA: it's engine
+  vocabulary the pokemon skin legitimately keeps, not a franchise term.
+
+**Scope — deliberately NOT done: the internal `G.mega`/`megaT`/`tryMega`
+rename.** The backlog sequences that as a separate "then" step, and CLAUDE.md's
+release section rules that internal identifiers "ship unchanged by design …
+never user-visible; renaming would fork the runtime." It's user-invisible, so
+it delivers none of AFT-003's P0 value (which is entirely in the copy) at real
+checkpoint-migration risk. Left for a dedicated round if ever wanted.
+
+---
+
 ## 2026-07-22e — Documentation close-out (session boundary)
 
 No gameplay change. The docs were carrying stale numbers from before the

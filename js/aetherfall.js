@@ -511,6 +511,28 @@
     regionWord: 'REALM',
   };
 
+  // ── THE SURGE LEXICON (AFT-003) ──────────────────────────────────────────
+  // The overdrive is the AETHER SURGE here, short form SURGE. Rules are
+  // ORDERED and \b-anchored; data.js:lex() applies them in sequence, so the
+  // authored phrases below must stay ABOVE the bare-word rule.
+  //
+  // CHARGE is the HELD WEAPON SHOT and a different system — it is only ever
+  // rewritten by a rule that ALSO matches MEGA, which is why the verb rules
+  // carry their own MEGA anchor and allow at most one token between (the
+  // "+1.5%" / "YOUR" in "HITS CHARGE +1.5% MEGA", "CHARGES YOUR MEGA METER").
+  // "A FULL CHARGE MAY CONSUME 50% BANKED MEGA" therefore keeps its CHARGE
+  // and loses only its MEGA — exactly as intended.
+  const lexicon = [
+    [/\bMEGA EVOLUTION\b/g, 'AETHER SURGE'],
+    [/\bMEGA EVOLVE\b/g, 'AETHER SURGE'],
+    [/\bCHARGES\b(\s+(?:[\w+.%]+\s+)?)\bMEGA\b/g, 'BUILDS$1SURGE'],
+    [/\bCHARGE\b(\s+(?:[\w+.%]+\s+)?)\bMEGA\b/g, 'BUILD$1SURGE'],
+    [/\bHITS CHARGE\b/g, 'HITS BUILD'], // the meter blurb with MEGA leading
+    [/\bBUTTON — EVOLVE\b/g, 'BUTTON — UNLEASH'], // vessels ASCEND, they don't evolve
+    [/\bMEGA\b/g, 'SURGE'],             // \b keeps the OMEGA SERAPH intact
+    [/\bPARTNER\b/g, 'VESSEL'],         // the last partnerWord leak in shared copy
+  ];
+
   // the rift-secret encounter (engine flow; species + copy are skin data)
   const secret = {
     // ASCENDANT, not "VMAX" — that suffix is Pokémon TCG language and has no
@@ -629,7 +651,7 @@
     bossAbilities, bossChannels, bossStyle, bossProjectileKind,
     mythicAbilities, mythicEntranceStyles, mythicBattleStyles, legendaryEntranceStyles,
     motionById, encounterObjectives, stageObjectiveSets, bonusFlock,
-    strings, secret, weaponArt,
+    strings, secret, weaponArt, lexicon,
   });
   // derived sets refresh from the REAL gens (assembly ran on the stub)
   AF.bossOnlyIds = new Set(AF.gens.flatMap(g => [
@@ -645,6 +667,17 @@
     Object.assign(PATHS.bond.tiers[1], { name: "KEEPER'S PACT",
       visual: 'A BINDING SIGIL CREST LOCKS TO THE REAR RIG' });
     Object.assign(PATHS.bond.tiers[3], { name: 'AETHER REVIVE' });
+    // AFT-003: the overdrive is the SURGE here, but the TEMPO PATH was already
+    // called SURGE — "EVERY SURGE RANK ADDS +10% SURGE DAMAGE" reads as a
+    // circular sentence. The path becomes CRESCENDO (building to a peak — what
+    // the path literally does) so the two systems stay tellable apart. It is
+    // the one tempo word with NO existing use: CADENCE is already weapon-rhythm
+    // copy, CATALYST/KINDLE are class abilities, IGNITION a boss entrance.
+    // Internal key stays `surge` — engine identifier, never renamed.
+    PATHS.surge.name = 'CRESCENDO';
+    // rewrite the shared copy tables ONCE, after every name patch above
+    applyLexicon([PATHS, STARTER_KIT, STACK_ITEMS, AFFINITIES, SECRET_UPGRADES,
+      WEB_BRIDGES, WEB_FUSIONS, WEB_APEXES, WEB_SATELLITES, CHEAT_ITEMS, MODES]);
     document.title = 'AETHERFALL'; // the world is the brand (2026-07-21)
   }
 })();

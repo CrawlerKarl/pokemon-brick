@@ -1367,6 +1367,73 @@ window.requestAnimationFrame = function () { return 0; };
     return 'neutral/light/dark trios gate correctly · pokemon ignores affinity · stacks seeded';
   });
 
+  // 2s-vii) THE SURGE LEXICON (AFT-003): the overdrive is MEGA in engine
+  // copy but AETHER SURGE / SURGE to an aetherfall player. `lex()` must
+  // rewrite every shared string the skin ships WITHOUT touching CHARGE (the
+  // held weapon shot — a different system) or any word that merely CONTAINS
+  // "mega" (OMEGA SERAPH, Meganium). And it must be pure identity under
+  // pokemon, or the bit-identity gate breaks. applyLexicon mutates in place,
+  // so this test runs it ONLY on a deep clone — the shared PATHS the rest of
+  // the suite reads must stay pristine MEGA.
+  test('skin S7: the SURGE lexicon reskins MEGA, spares CHARGE, keeps pokemon identical', async () => {
+    const realSkin = SKIN;
+    const clone = o => JSON.parse(JSON.stringify(o));
+    const hasMega = s => /\bMEGA\b/.test(s);
+    try {
+      // pokemon: lex is a no-op (no lexicon) → identity → bit-identity safe
+      SKIN = SKINS.pokemon;
+      assert(!SKIN.lexicon, 'pokemon skin must carry NO lexicon');
+      const pkSample = 'MEGA READY! · HITS CHARGE MEGA · APEX MEGA';
+      assert(lex(pkSample) === pkSample, 'lex must be identity under pokemon');
+      assert(PATHS.surge.name === 'SURGE' && hasMega(PATHS.surge.tiers[3].desc),
+        'the shared PATHS table must stay pristine MEGA for the pokemon gate');
+
+      // aetherfall: the transform
+      SKIN = SKINS.aetherfall;
+      assert(Array.isArray(SKIN.lexicon) && SKIN.lexicon.length, 'aetherfall must carry a lexicon');
+      assert(lex('MEGA EVOLUTION!') === 'AETHER SURGE!', 'MEGA EVOLUTION → AETHER SURGE');
+      assert(lex('MEGA READY!') === 'SURGE READY!', 'bare MEGA → SURGE');
+      assert(lex('KILLS CHARGE MEGA') === 'KILLS BUILD SURGE', 'CHARGE that precedes MEGA → BUILD');
+      assert(lex('EVERY RALLY HIT CHARGES YOUR MEGA METER') === 'EVERY RALLY HIT BUILDS YOUR SURGE METER',
+        'CHARGES … MEGA → BUILDS … SURGE');
+      // the TRAPS: CHARGE-the-weapon and substring "mega" must survive
+      assert(lex('HOLD FIRE — CHARGE A BIG SHOT') === 'HOLD FIRE — CHARGE A BIG SHOT',
+        'the held CHARGE shot must NOT be reworded');
+      assert(lex('A FULL CHARGE MAY CONSUME 50% BANKED MEGA') === 'A FULL CHARGE MAY CONSUME 50% BANKED SURGE',
+        'a mixed line keeps CHARGE, loses only MEGA');
+      assert(lex('THE OMEGA SERAPH FOLDED ITS BLADES') === 'THE OMEGA SERAPH FOLDED ITS BLADES',
+        'OMEGA (a boss) must not be rewritten mid-word');
+
+      // applyLexicon on a CLONE — proves the walk clears every copy key and
+      // proves it does NOT mutate the shared table (checked right after)
+      const paths2 = clone(PATHS), kit2 = clone(STARTER_KIT);
+      applyLexicon([paths2, kit2]);
+      const leftover = [];
+      const walk = (o, p) => {
+        if (!o || typeof o !== 'object') return;
+        for (const k of Object.keys(o)) {
+          const v = o[k];
+          if (typeof v === 'string') { if (hasMega(v)) leftover.push(p + '.' + k); }
+          else if (Array.isArray(v) && v.every(x => typeof x === 'string')) v.forEach((s, i) => { if (hasMega(s)) leftover.push(p + '.' + k + '[' + i + ']'); });
+          else walk(v, p + '.' + k);
+        }
+      };
+      walk(paths2, 'PATHS'); walk(kit2, 'STARTER_KIT');
+      assert(leftover.length === 0, 'MEGA survived in aetherfall copy: ' + leftover.join(', '));
+      // applyLexicon runs the COPY rules only — it does not rename the path
+      // (bare SURGE matches no rule), so the name is untouched here. The
+      // CRESCENDO rename is a separate boot-hook line (verified live); what
+      // matters for the lexicon is that it clears MEGA from the descs.
+      assert(paths2.surge.name === 'SURGE', 'lexicon must not touch the bare path name');
+      assert(!hasMega(paths2.surge.summary) && paths2.surge.summary.includes('SURGE'),
+        'the SURGE summary must lose MEGA');
+      // the shared PATHS the suite reads must be UNCHANGED by the clone run
+      assert(PATHS.surge.name === 'SURGE' && hasMega(PATHS.surge.tiers[3].desc),
+        'applyLexicon leaked into the shared PATHS table');
+    } finally { SKIN = realSkin; }
+    return 'MEGA→SURGE across copy · CHARGE + OMEGA spared · pokemon identical · shared tables pristine';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so

@@ -178,6 +178,23 @@ phone — flag anything only verifiable there.
   binding sigils (`drawRelicPlate`/`drawBindingSigil`) so no Pokémon-shaped
   symbol reaches an AETHERFALL screen. **A player-facing string that only
   reads right in one skin is a bug.**
+- **A skin may reskin whole PHRASES of shared copy via `SKIN.lexicon` +
+  `lex(s)` (data.js).** The overdrive is MEGA in engine copy but AETHER SURGE /
+  SURGE to an AETHERFALL player. `SKIN.lexicon` is an ORDERED `[regex,
+  replacement]` list (order matters — authored phrases before the bare word);
+  `applyLexicon(roots)` rewrites the shared copy tables (PATHS/STARTER_KIT/
+  STACK_ITEMS/webs/CHEAT_ITEMS/MODES) ONCE at boot, walking only COPY keys
+  (`name/desc/sdesc/summary/role/visual/ready/limit/label/tell`), never engine
+  identifiers (`key/icon/family`). Dynamic strings not in a table wrap `lex()`
+  at their render site. **Two traps that make this a phrase table, not a
+  `replace()`:** (1) CHARGE is the HELD WEAPON SHOT — a different system — so
+  only a rule that ALSO matches MEGA may touch it; (2) every rule is
+  `\b`-anchored so OMEGA SERAPH and Meganium survive. No lexicon → identity,
+  which IS the pokemon presentation (bit-identity preserved; the suite's
+  `skin S7` test is the guard, and it runs `applyLexicon` only on a CLONE so
+  the shared tables stay pristine MEGA under the pokemon skin). The AETHERFALL
+  tempo PATH is renamed `CRESCENDO` (its engine key stays `surge`) so "EVERY
+  SURGE RANK ADDS +10% SURGE DAMAGE" isn't circular.
 - **The LIGHT/DARK oath is an EVOLUTION ARC, not a costume.** Affinity
   treatment scales with the vessel's FORM (`vesselForm()` → grade), so Form I
   is a restrained mark and Form III is unmistakable — never apply the full
