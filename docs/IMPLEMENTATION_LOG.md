@@ -5,6 +5,28 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22d — Two preview bugs: the magenta screen, and swearing too early
+
+- **THE PRODUCTION RUN USES TWO CHROMA COLOURS.** My preview keyer assumed a
+  green screen; twelve vessels (the WATER 13-15, GRASS 16-18, ICE 28-30 and
+  BUG 43-45 lines) were shot against **MAGENTA** precisely because their art
+  is green/cyan and a green key would eat it. Those twelve shipped with the
+  full backdrop still behind them. `key_chroma` now DETECTS the backdrop from
+  the frame edge (median of a 6px border) and distance-keys against it, with
+  the despill following whichever channels the detected key is made of
+  (green → G; magenta → R+B). Verified by contact sheet: all 54 clean, zero
+  opaque corners. **Never assume the chroma colour — read it off the frame.**
+  (The 128px finals were always correct; only my preview pass was wrong.)
+- **The oath is sworn on the CHALLENGE screen, so it must not show on the
+  VESSEL screen.** A returning player with a saved affinity saw their gold
+  radiant casting + sun fitting while still picking a hull. `drawAffinityVessel`
+  takes a `neutral` flag now (no fitting, no tint, no aura, and the BASE
+  casting rather than the radiant swap); the vessel-select hero passes it.
+  The roster tiles were already neutral. Step 2 is unchanged — pick LIGHT or
+  DARK there and the hull answers immediately.
+
+---
+
 ## 2026-07-22c — The oath deepens by arc + high-res vessel previews
 
 Owner: the LIGHT/DARK tint should start subtle and grow as the vessel ascends;

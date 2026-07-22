@@ -40,19 +40,39 @@ OUT = ROOT / "art" / "aetherfall-production" / "sprites" / "preview"
 VESSEL_IDS = range(10, 64)
 
 
+def detect_chroma(rgb: np.ndarray) -> np.ndarray:
+    """Sample the border for the backdrop colour.
+
+    The production run does NOT use one screen colour: green-heavy subjects
+    (water/grass/ice/bug vessels) were shot against MAGENTA so the key would
+    not eat the art. Assuming green silently leaves those on a solid block,
+    so always read the actual backdrop off the frame edge.
+    """
+    h, w = rgb.shape[:2]
+    edge = np.concatenate([
+        rgb[:6, :, :].reshape(-1, 3), rgb[-6:, :, :].reshape(-1, 3),
+        rgb[:, :6, :].reshape(-1, 3), rgb[:, -6:, :].reshape(-1, 3),
+    ])
+    return np.median(edge, axis=0)
+
+
 def key_chroma(im: Image.Image) -> Image.Image:
-    """Green-screen key + despill, matching the production look."""
-    rgb = np.asarray(im.convert("RGB")).astype(np.int16)
-    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
-    # a chroma pixel is one where green dominates BOTH other channels
-    dom = g - np.maximum(r, b)
-    alpha = np.clip((dom - 24) / 46.0, 0.0, 1.0)  # soft edge, not a hard cut
-    alpha = 1.0 - alpha
-    # despill: pull green back to the neighbours' level on fringe pixels
-    spill = np.clip(g - np.maximum(r, b), 0, None)
-    g2 = np.where(spill > 0, np.maximum(r, b) + np.clip(g - np.maximum(r, b) - 18, 0, None), g)
-    out = np.dstack([r, g2, b, (alpha * 255)]).astype(np.uint8)
-    return Image.fromarray(out).convert("RGBA")
+    """Distance key against the detected backdrop, plus a matched despill."""
+    rgb = np.asarray(im.convert("RGB")).astype(np.float32)
+    key = detect_chroma(rgb)
+    dist = np.sqrt(((rgb - key) ** 2).sum(axis=2))
+    alpha = np.clip((dist - 58.0) / 52.0, 0.0, 1.0)  # soft edge, not a hard cut
+    # despill: pull back whichever channels the backdrop is made of, so the
+    # fringe stops glowing in the key colour (green screen -> G; magenta -> R+B)
+    out = rgb.copy()
+    hot = key >= (key.max() * 0.55)
+    cool = ~hot
+    if cool.any():
+        ceiling = out[..., cool].max(axis=2) + 16.0
+        for c in np.nonzero(hot)[0]:
+            out[..., c] = np.minimum(out[..., c], ceiling)
+    arr = np.dstack([out, alpha * 255.0]).clip(0, 255).astype(np.uint8)
+    return Image.fromarray(arr).convert("RGBA")
 
 
 def crop_pad_resize(im: Image.Image, size: int) -> Image.Image:

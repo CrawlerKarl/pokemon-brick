@@ -449,9 +449,9 @@ function aetherPreviewImage(id, light) {
   const img = aetherPreviewImages[src];
   return (img.complete && img.naturalWidth) ? img : null;
 }
-function affinityVesselImage(id, big) {
+function affinityVesselImage(id, big, forceBase) {
   if (id > 0) {
-    const light = !!(SKIN.affinities && SETTINGS.affinity === 'light');
+    const light = !forceBase && !!(SKIN.affinities && SETTINGS.affinity === 'light');
     return (big && aetherPreviewImage(id, light)) || getSprite(id, light);
   }
   return aetherAuxImage('trainingDrone');
@@ -461,9 +461,9 @@ function affinityVesselImage(id, big) {
 // colour is BAKED into the sprite (source-atop wash + rim) instead of leaning
 // on ctx.filter, which some mobile browsers quietly ignore. Baked once per
 // (id, affinity) like every other repeated art surface.
-function affinityVesselSprite(id, big) {
-  const aff = (SKIN.affinities && SETTINGS.affinity) || null;
-  const img = affinityVesselImage(id, big);
+function affinityVesselSprite(id, big, neutral) {
+  const aff = !neutral && ((SKIN.affinities && SETTINGS.affinity) || null);
+  const img = affinityVesselImage(id, big, neutral);
   if (!img || !img.complete || !img.naturalWidth) return null;
   if (!aff) return img;
   // THE OATH DEEPENS BY ARC (2026-07-22): Form I wears its path lightly;
@@ -497,12 +497,15 @@ function affinityVesselSprite(id, big) {
   fxCache[key] = c;
   return c;
 }
-function drawAffinityVessel(id, x, y, size) {
+// `neutral` draws the hull as it comes out of the forge — no fitting, no
+// tint, no aura. The VESSEL screen uses it: you are choosing a ship there,
+// not a path, and the oath only shows once you actually swear it.
+function drawAffinityVessel(id, x, y, size, neutral) {
   const big = size >= 96; // portrait-scale draws earn the high-res casting
-  const img = affinityVesselSprite(id, big);
+  const img = affinityVesselSprite(id, big, neutral);
   if (!img) return false;
   ctx.save();
-  const frameKey = SKIN.affinities && SETTINGS.affinity
+  const frameKey = !neutral && SKIN.affinities && SETTINGS.affinity
     ? (SETTINGS.affinity === 'light' ? 'lightFrame' : 'darkFrame') : null;
   const frame = frameKey ? aetherAuxImage(frameKey) : null;
   if (frame && frame.complete && frame.naturalWidth) {
@@ -512,7 +515,7 @@ function drawAffinityVessel(id, x, y, size) {
     ctx.shadowBlur = 0;
   }
   // an affinity-coloured aura reads at any size (the tint itself is baked in)
-  const aCol = affinityColor();
+  const aCol = !neutral && affinityColor();
   if (aCol) {
     ctx.shadowColor = aCol;
     ctx.shadowBlur = size * 0.22 * ([0.42, 0.72, 1][vesselForm(id) - 1] || 1);
@@ -5659,7 +5662,7 @@ function drawPilotSetup(L, mode) {
       ctx.fillStyle = bg;
       ctx.beginPath(); ctx.arc(sx2 + sp / 2, scy, sp * 0.6, 0, Math.PI * 2); ctx.fill();
     }
-    if (!mon || !drawAffinityVessel(mon.ids[0], sx2 + sp / 2, scy, sp * 0.94)) {
+    if (!mon || !drawAffinityVessel(mon.ids[0], sx2 + sp / 2, scy, sp * 0.94, true)) {
       drawGlyph(ctx, mon ? SETTINGS.starter : 'normal', sx2 + sp / 2, scy, sp * 0.3, col);
     }
     const tx2 = sx2 + sp + (L.short ? 10 : 18), tw2 = hv.x + hv.w - tx2 - 14;
