@@ -40,6 +40,30 @@ const STORAGE_HEALTH = { writable: true, durable: null, noticed: false };
     }
   } catch (e) { /* unsupported — durable stays unknown */ }
 })();
+
+// AFT-018: the frame profiler — a fixed ring of the last 120 frames' update
+// and render times, written by main.js, read by the adaptive effects budget
+// and the F9 dev panel. Typed arrays + in-place writes: profiling must never
+// itself allocate in the hot path.
+const PERF = {
+  u: new Float32Array(120), r: new Float32Array(120), i: 0, n: 0,
+  push(u, r) {
+    this.u[this.i] = u; this.r[this.i] = r;
+    this.i = (this.i + 1) % 120; if (this.n < 120) this.n++;
+  },
+  avg() { // moving total-frame average (ms) across the window
+    let s = 0;
+    for (let k = 0; k < this.n; k++) s += this.u[k] + this.r[k];
+    return this.n ? s / this.n : 0;
+  },
+  p95() { // dev/tests only — allocates a scratch copy, never call per frame
+    if (!this.n) return 0;
+    const t = [];
+    for (let k = 0; k < this.n; k++) t.push(this.u[k] + this.r[k]);
+    t.sort((a, b) => a - b);
+    return t[Math.floor(t.length * 0.95)];
+  },
+};
 try { if (!localStorage.getItem('pkbrk-v')) localStorage.setItem('pkbrk-v', '1'); } catch (e) { /* ok */ }
 // canvas-only text doesn't reliably trigger @font-face loading — kick the
 // local Orbitron variable font explicitly so the first frame isn't fallback

@@ -23,8 +23,11 @@ function frame(now) {
     requestAnimationFrame(frame);
     return;
   }
+  const tU = performance.now();
   update(rdt);
+  const tR = performance.now();
   render();
+  PERF.push(tR - tU, performance.now() - tR); // AFT-018 frame profiler
   requestAnimationFrame(frame);
 }
 resize(); // every module is parsed by now — the real init

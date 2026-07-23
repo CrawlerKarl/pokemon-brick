@@ -268,6 +268,12 @@ window.DEV = {
   },
   download: devDownloadReport,
   panel: devTogglePanel,
+  perf() { // AFT-018: the profiler at a glance
+    return { avgMs: +PERF.avg().toFixed(2), p95Ms: +PERF.p95().toFixed(2),
+      level: effectsLevel(), load: +fxLoad().toFixed(3),
+      counts: { particles: G.particles.length, rings: G.rings.length, fragments: G.fragments.length,
+        ghosts: G.ghosts.length, floaters: G.floaters.length, shots: G.enemyShots.length, lasers: G.lasers.length } };
+  },
   seed(s) { setRunSeed(s); return s; },
   levels() { return (G.runStats && G.runStats.levels) || []; },
   help() {

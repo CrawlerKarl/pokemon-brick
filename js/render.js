@@ -269,6 +269,7 @@ function glintSprite() {
 let bloomA = null, bloomB = null, bloomW = 0;
 function drawBloom() {
   if (SETTINGS.reduceFlash || !W || !H) return;
+  if (effectsLevel() >= 1) return; // AFT-018 rung 1: full-frame bloom goes first
   const bw = Math.max(2, Math.round(W / 2)), bh = Math.max(2, Math.round(H / 2));
   if (!bloomA || bloomW !== bw) {
     bloomA = document.createElement('canvas'); bloomA.width = bw; bloomA.height = bh;
@@ -6712,6 +6713,16 @@ function drawAdvanced() {
   // accessibility toggles
   for (let i = 0; i < A.toggles.length; i++) {
     const t = A.toggles[i], r = A.toggle(i);
+    if (t.cycle) { // AFT-018: a 3-way cycle row (EFFECTS QUALITY)
+      ctx.textAlign = 'left';
+      ctx.font = '700 12px Orbitron, sans-serif';
+      ctx.fillStyle = '#e3f2fd';
+      ctx.fillText(t.label, r.x + 44, r.y + r.h / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = SETTINGS[t.key] === 'full' ? '#ffd54f' : SETTINGS[t.key] === 'reduced' ? '#80cbc4' : '#66bb6a';
+      ctx.fillText(String(SETTINGS[t.key]).toUpperCase() + ' ▸', r.x + r.w - 6, r.y + r.h / 2);
+      continue;
+    }
     const on = !!SETTINGS[t.key];
     ctx.textAlign = 'left';
     ctx.font = '700 12px Orbitron, sans-serif';

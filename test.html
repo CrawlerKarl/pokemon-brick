@@ -1719,6 +1719,59 @@ window.requestAnimationFrame = function () { return 0; };
     return 'bundle round-trips · preview summary · 4 refusal classes · autosave via checkpoint · pre-import backup · health surfaced';
   });
 
+  // AFT-018: the adaptive effects budget — SIMULATION IS IDENTICAL at every
+  // effects level (only decorative spawn counts change, and those ride
+  // Math.random), hostile fire is never culled, and the ladder's rungs
+  // respond to the overrides.
+  test('AFT-018: effects levels — sim identical, hostiles never culled, ladder sane', async () => {
+    const realFx = SETTINGS.fx, realMode = SETTINGS.mode;
+    try {
+      SETTINGS.mode = 'junkie'; // classic takes no enemy fire BY DESIGN — the
+      // hostile-never-culled guarantee only means anything in a shooter mode
+      // the profiler exists and records without allocating surprises
+      PERF.push(2, 3); PERF.push(4, 5);
+      assert(PERF.avg() > 0 && PERF.p95() >= PERF.avg() * 0.5, 'profiler math broken');
+      assert(Number.isFinite(fxLoad()) && fxLoad() >= 0, 'fxLoad not finite');
+      // overrides pin the ladder
+      SETTINGS.fx = 'full'; assert(effectsLevel() === 0, 'FULL must never degrade');
+      SETTINGS.fx = 'reduced'; assert(effectsLevel() === 2, 'REDUCED must run lean');
+      // SIM IDENTITY: the same seeded wave, run at FULL and at REDUCED,
+      // must land on bit-identical gameplay state (cosmetics excluded)
+      const simHash = () => {
+        let h = 0;
+        for (const b2 of G.bricks) if (!b2.dead) h += Math.round(b2.hx * 8) + Math.round(b2.hy * 8) + b2.hp * 13;
+        for (const s2 of G.enemyShots) h += Math.round(s2.x * 8) + Math.round(s2.y * 8);
+        for (const b2 of G.balls) if (!b2.dead) h += Math.round(b2.x * 8) + Math.round(b2.y * 8);
+        return h + G.enemyShots.length * 1e7 + G.lives * 1e9;
+      };
+      const runSeeded = fx => {
+        SETTINGS.fx = fx;
+        resetRun(8, true, { seed: 'FXTEST' });
+        paused = false;
+        for (let i = 0; i < 240; i++) { G.freeze = 0; update(1 / 60); }
+        return simHash();
+      };
+      const hFull = runSeeded('full');
+      const hLean = runSeeded('reduced');
+      assert(hFull === hLean, 'REDUCED changed the simulation: ' + hFull + ' vs ' + hLean);
+      // hostile fire spawns identically under REDUCED (never culled)
+      SETTINGS.fx = 'reduced';
+      resetRun(8, true, { seed: 'FXTEST' });
+      const before = G.enemyShots.length;
+      const shot = spawnEnemyShot({ x: W / 2, y: 120, vy: 240, type: 'fire' });
+      assert(shot && G.enemyShots.length === before + 1, 'hostile fire culled under REDUCED');
+      // decorative emission DOES scale down (the whole point)
+      G.particles.length = 0;
+      burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
+      const lean = G.particles.length;
+      SETTINGS.fx = 'full';
+      G.particles.length = 0;
+      burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
+      assert(lean < G.particles.length, 'REDUCED did not thin decorative emission (' + lean + ' vs ' + G.particles.length + ')');
+    } finally { SETTINGS.fx = realFx; SETTINGS.mode = realMode; }
+    return 'profiler live · overrides pin rungs · 240-frame seeded sim BIT-IDENTICAL full vs reduced · hostiles spawn · cosmetics thin';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so

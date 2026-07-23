@@ -468,7 +468,10 @@ function handleAdvancedPress(x, y) {
   }
   for (let i = 0; i < A.toggles.length; i++) {
     if (inRect(x, y, A.toggle(i))) {
-      SETTINGS[A.toggles[i].key] = !SETTINGS[A.toggles[i].key];
+      const t = A.toggles[i];
+      if (t.cycle) { // AFT-018: 3-way cycle
+        SETTINGS[t.key] = t.cycle[(t.cycle.indexOf(SETTINGS[t.key]) + 1) % t.cycle.length];
+      } else SETTINGS[t.key] = !SETTINGS[t.key];
       saveSettings(); SFX.wall(); return;
     }
   }

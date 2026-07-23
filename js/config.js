@@ -22,6 +22,7 @@ const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
     reduceShake: PREFERS_REDUCED_MOTION, reduceFlash: PREFERS_REDUCED_MOTION,
     hcBall: false, autoFire: false, mode: 'junkie', skin: 'pokemon', affinity: null,
+    fx: 'auto', // AFT-018 effects quality: auto (phone default) | full | reduced
     buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
     leftHanded: false, haptics: true },
   STORED_SETTINGS);
@@ -129,6 +130,11 @@ const SLIDERS = [
     fmt: v => v <= 0.01 ? 'OFF' : Math.round(v * 100) + '%' },
 ];
 const TOGGLES = [
+  // AFT-018: a 3-way cycle, not a boolean — AUTO degrades decorative work
+  // when the moving frame average exceeds budget; FULL never degrades;
+  // REDUCED always runs lean. Reduce-flashes below stays an ACCESSIBILITY
+  // choice, never a disguised performance toggle.
+  { key: 'fx', label: 'EFFECTS QUALITY', cycle: ['auto', 'full', 'reduced'] },
   { key: 'reduceShake', label: 'REDUCE SCREEN SHAKE' },
   { key: 'reduceFlash', label: 'REDUCE FLASHES' },
   { key: 'hcBall', label: 'HIGH-CONTRAST BALL' },
@@ -346,10 +352,13 @@ function advLayout() {
   const sliders = activeSliders(), toggles = activeToggles();
   const pw = Math.min(440, W * 0.92);
   const compact = H < 560;
-  const rowH = compact ? 34 : 52, togH = compact ? 26 : 40;
+  // AFT-018 added a fifth toggle row (EFFECTS QUALITY) — compact metrics
+  // tightened so the panel still fits a 375-tall landscape phone (the
+  // viewport-fit suite test guards this exact geometry).
+  const rowH = compact ? 32 : 52, togH = compact ? 22 : 40;
   // Leave a real text row between the tabs and the first slider. Previously
   // POWER-UP DROPS visibly collided with the active tab on phone viewports.
-  const top = compact ? 116 : 132, bottom = compact ? 12 : 36;
+  const top = compact ? 106 : 132, bottom = compact ? 8 : 36;
   const ph = top + sliders.length * rowH + toggles.length * togH + bottom;
   const px = W / 2 - pw / 2, py = Math.max(compact ? 8 : 20, H / 2 - ph / 2);
   return {

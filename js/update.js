@@ -2765,6 +2765,30 @@ function spawnBonusFlock() {
   setAnnounce('swift', '#80d8ff', bf.name, bf.sub, 2.4);
   SFX.power();
 }
+// ---- AFT-018: THE ADAPTIVE EFFECTS BUDGET ------------------------------
+// One WEIGHTED visual load number replaces judging by raw counts — a large
+// blurred ring costs far more than a cached spark. The ladder degrades
+// DECORATIVE work only, in the criteria's order (bloom → emission/lifetime →
+// deeper culls); hostile projectiles, telegraphs, hit feedback, objective
+// state, the vessel, boss health, and touch controls are NEVER culled, and
+// simulation/hitboxes/timers are identical at every level (only cosmetic
+// spawn counts change, and cosmetics ride Math.random — seeds unaffected).
+function fxLoad() {
+  return (G.particles.length * 1 + G.rings.length * 8 + G.fragments.length * 3
+    + G.ghosts.length * 4 + G.floaters.length * 2 + G.enemyShots.length * 2
+    + G.lasers.length * 2) / 900; // 1.0 ≈ the tuned full-load budget
+}
+function effectsLevel() {
+  if (SETTINGS.fx === 'full') return 0;
+  if (SETTINGS.fx === 'reduced') return 2;
+  // AUTO: the moving frame average is the truth; weighted load is the
+  // early-warning signal so degradation starts BEFORE the drop is felt
+  const avg = PERF.avg();
+  if (avg > 22 || fxLoad() > 1.6) return 2; // rung 2: cut emission + lifetimes
+  if (avg > 15 || fxLoad() > 1.15) return 1; // rung 1: drop full-frame bloom first
+  return 0;
+}
+
 // ---- AFT-002: THE BOSS REVEAL — a separate scene, not a combat layer ----
 // Freeze combat, show the full-resolution portrait with a dedicated info
 // panel (name/round/realm/phases/one counterplay cue), hold skippably, then

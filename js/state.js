@@ -1725,7 +1725,12 @@ function serve() {
 // ============================================================
 //  PARTICLES, FLOATERS, FRAGMENTS, GHOSTS
 // ============================================================
+// AFT-018: decorative spawns scale with the effects level — never hostile
+// fire, never telegraphs, never hit feedback (floaters are information).
+function fxEmitScale() { return effectsLevel() >= 2 ? 0.45 : 1; }
+function fxLifeScale() { return effectsLevel() >= 2 ? 0.7 : 1; }
 function burst(x, y, color, n = 18, speed = 260, life = 0.7) {
+  n = Math.max(1, Math.round(n * fxEmitScale())); life *= fxLifeScale();
   for (let i = 0; i < n; i++) {
     if (G.particles.length > 450) break;
     const a = Math.random() * Math.PI * 2, s = speed * (0.3 + Math.random() * 0.7);
@@ -1763,12 +1768,14 @@ function addFloater(x, y, text, color, size = 16) {
 }
 // expanding shockwave ring — the modern "kill pop". Additive, cheap, capped.
 function ringFx(x, y, color, r0 = 6, r1 = 40, lw = 3, life = 0.38) {
+  if (effectsLevel() >= 2 && G.rings.length > 10) return; // lean mode: fewer blurred rings
   if (G.rings.length > 24) return;
   G.rings.push({ x, y, color, r0, r1, lw, life, maxLife: life });
 }
 // bright 4-point sparkle glints — the premium "twinkle" on kills / catches /
 // shinies. Flagged particles, drawn additively as a cached glint sprite.
 function sparkle(x, y, n = 4, gold = false) {
+  n = Math.max(1, Math.round(n * fxEmitScale()));
   for (let i = 0; i < n; i++) {
     if (G.particles.length > 450) break;
     const a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 120;

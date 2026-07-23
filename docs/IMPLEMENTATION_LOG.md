@@ -5,6 +5,48 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22o — AFT-018: frame stability (the last P0)
+
+Two halves, one contract: **frame rate is combat correctness.**
+
+**The mechanical half** (delegated, audit-driven, merged after a green gate):
+every per-entity per-frame allocation/GPU-state violation in the combat hot
+path is gone — the per-brick top-face gradient (dozens per frame, the worst)
+bakes into bucketed sprites; ball bodies/halos, typed-bolt glows and shape
+gradients, charged slugs, laser bolts, and powerup gradients bake or cache;
+floater shadowBlur hoists; the HUD backdrop caches per SAFE_T. All 13
+per-frame full-array `filter()` rebuilds became one shared `compactInPlace`
+(zero allocation when nothing died); ball trails reuse the evicted tail
+object; `addFloater` counts instead of filtering. Storm p95: 2.8 → 1.8ms.
+
+**The adaptive half**:
+- **`PERF`** (setup.js): a 120-frame typed-array ring of update/render times,
+  written by main.js — profiling itself never allocates. `DEV.perf()` reads
+  it (avg/p95/level/load/counts).
+- **`fxLoad()`** (update.js): ONE weighted visual load number (a blurred ring
+  costs 8, a cached spark 1) replacing raw-count judgment.
+- **`effectsLevel()`**: the ladder's brain. AUTO (the default) degrades when
+  the moving frame average exceeds budget — rung 1 drops full-frame bloom,
+  rung 2 thins decorative emission (×0.45) and lifetimes (×0.7) and caps
+  rings. FULL never degrades; REDUCED always runs lean. **Never culled**:
+  hostile projectiles, telegraphs, hit feedback, objective state, the
+  vessel, boss health, touch controls. Reduce-flashes stays a separate
+  accessibility choice (the criteria's explicit line).
+- **EFFECTS QUALITY** is a 3-way cycle row in settings (AUTO/FULL/REDUCED) —
+  which grew the panel a row and broke 375-tall viewports; the existing
+  viewport-fit test caught it, compact metrics tightened.
+- Suite test 'AFT-018' (85th): the hard guarantee — a 240-frame SEEDED sim
+  hashed at FULL vs REDUCED is **bit-identical** (only Math.random cosmetics
+  differ); hostile fire spawns identically under REDUCED (asserted in junkie —
+  classic's no-fire is its own design); decorative emission measurably thins;
+  the overrides pin the rungs. The storm benchmark records the regression
+  ledger every gate run.
+
+With this, **all eight P0s from the second-pass backlog are implemented**:
+005A, 001, 003, 004, 002, 017, 018, 005B, 006 (003 shipped earlier today).
+
+---
+
 ## 2026-07-22n — Gate trim: same coverage, 31s (owner: "trim what's safely trimmable")
 
 Measured where the 37s went before cutting anything. **Zero of the 84
