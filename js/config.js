@@ -376,37 +376,50 @@ function advLayout() {
 let trialOpen = false;
 const trialSel = { region: 0, stage: 0, round: 0, phase: 1 };
 function trialLayout() {
-  const pw = Math.min(470, W * 0.94);
-  const chipW = (pw - 60 - 20) / 3, chipH = 48, stageH = 38;
-  const gridY = 96;
-  // picking a LEGENDARY stage reveals a round row: jump straight to the
-  // sentinels, the legendary, or the mythical of that region's gauntlet.
-  // Kanto adds a fourth direct-entry tile for the Mew VMAX secret encounter.
+  // AFT-001 follow-up (2026-07-23, user report): the panel overflowed short
+  // landscape phones once rounds+phases expanded, and it never scaled. The
+  // vertical metrics now SQUEEZE by one factor k so the fully-open picker
+  // always fits the viewport; short screens also widen the panel so the
+  // chips get broader while rows compress (labels stay readable — and they
+  // are all fitted now, never overlapping).
+  const short = H < 560;
+  const pw = Math.min(short ? 640 : 470, W * 0.94);
+  const chipW = (pw - 60 - 20) / 3;
+  // picking a LEGENDARY stage reveals a round row; Kanto junkie adds the
+  // secret fourth tile. Picking a boss round reveals the PHASE row.
   const rounds = trialSel.stage === 2;
   const secretRound = rounds && trialSel.region === 0 && SETTINGS.mode === 'junkie';
   const roundCount = secretRound ? 4 : 3;
-  const roundH = 34, roundRows = secretRound ? 2 : 1;
-  const roundGap = rounds ? roundRows * (roundH + 8) + 6 : 0;
-  // Picking a BOSS round (>=1) reveals a PHASE chip row so any phase can be
-  // practiced: 2 chips for the legendary (round 1), 3 for a mythic/secret.
+  const roundRows = secretRound ? 2 : 1;
   const phases = rounds && trialSel.round >= 1;
   const phaseCount = trialSel.round >= 2 ? 3 : 2;
-  const phaseH = 30, phaseGap = phases ? phaseH + 16 : 0;
-  const ph = gridY + 3 * (chipH + 10) + 30 + stageH + roundGap + phaseGap + 84;
-  const px = W / 2 - pw / 2, py = Math.max(16, H / 2 - ph / 2);
-  const stageY = py + gridY + 3 * (chipH + 10) + 24;
-  const phaseY = stageY + stageH + 12 + roundRows * (roundH + 8) + 4;
+  const gridY = short ? 74 : 96, tail = short ? 56 : 84;
+  // base row metrics -> one squeeze factor fits the busiest state on-screen
+  const baseRows = 3 * (48 + 10) + 30 + 38
+    + (rounds ? roundRows * (34 + 8) + 6 : 0)
+    + (phases ? 30 + 16 : 0);
+  const k = Math.max(0.58, Math.min(1, (H - 20 - gridY - tail) / baseRows));
+  const chipH = Math.round(48 * k), stageH = Math.round(38 * k);
+  const roundH = Math.round(34 * k), phaseH = Math.round(30 * k);
+  const g1 = Math.max(5, Math.round(10 * k)), g2 = Math.max(4, Math.round(8 * k));
+  const mid = Math.round(30 * k), pgap = Math.round(16 * k);
+  const roundGap = rounds ? roundRows * (roundH + g2) + 6 : 0;
+  const phaseGap = phases ? phaseH + pgap : 0;
+  const ph = gridY + 3 * (chipH + g1) + mid + stageH + roundGap + phaseGap + tail;
+  const px = W / 2 - pw / 2, py = Math.max(8, H / 2 - ph / 2);
+  const stageY = py + gridY + 3 * (chipH + g1) + Math.round(24 * k);
+  const phaseY = stageY + stageH + 12 + roundRows * (roundH + g2) + 4;
   const phaseW = (pw - 60 - 10 * (phaseCount - 1)) / phaseCount;
   return {
     px, py, pw, ph, rounds, secretRound, roundCount, phases, phaseCount,
-    region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + 10), w: chipW, h: chipH }),
+    region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + g1), w: chipW, h: chipH }),
     stage: i => ({ x: px + 30 + i * (chipW + 10), y: stageY, w: chipW, h: stageH }),
     round: i => secretRound
       ? ({ x: px + 30 + (i % 2) * ((pw - 70) / 2 + 10),
-          y: stageY + stageH + 12 + Math.floor(i / 2) * (roundH + 8), w: (pw - 70) / 2, h: roundH })
+          y: stageY + stageH + 12 + Math.floor(i / 2) * (roundH + g2), w: (pw - 70) / 2, h: roundH })
       : ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
     phase: i => ({ x: px + 30 + i * (phaseW + 10), y: phaseY, w: phaseW, h: phaseH }),
-    start: { x: px + pw / 2 - 110, y: py + ph - 60, w: 220, h: 44 },
+    start: { x: px + pw / 2 - 110, y: py + ph - (short ? 46 : 60), w: 220, h: short ? 34 : 44 },
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };
 }

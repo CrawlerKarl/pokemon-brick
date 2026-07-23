@@ -2277,6 +2277,22 @@ window.requestAnimationFrame = function () { return 0; };
           constellationFit: T.fit, constellationFocus: T.focus,
           constellationReroll: T.reroll, constellationInstall: T.confirm };
         if (L.progress) rects.progress = L.progress;
+        // the TRIAL picker (2026-07-23 user report: it overflowed short
+        // landscape) — asserted in its busiest state: legendary stage +
+        // secret round row + phase row, junkie mode
+        {
+          const m0 = SETTINGS.mode, r0 = { ...trialSel };
+          SETTINGS.mode = 'junkie';
+          trialSel.region = 0; trialSel.stage = 2; trialSel.round = 2; trialSel.phase = 1;
+          const TR = trialLayout();
+          rects.trialPanel = { x: TR.px, y: TR.py, w: TR.pw, h: TR.ph };
+          rects.trialStart = TR.start;
+          for (let i = 0; i < SKIN.gens.length; i++) rects['trialRegion(' + i + ')'] = TR.region(i);
+          for (let i = 0; i < 3; i++) rects['trialStage(' + i + ')'] = TR.stage(i);
+          for (let i = 0; i < TR.roundCount; i++) rects['trialRound(' + i + ')'] = TR.round(i);
+          for (let i = 0; i < TR.phaseCount; i++) rects['trialPhase(' + i + ')'] = TR.phase(i);
+          SETTINGS.mode = m0; Object.assign(trialSel, r0);
+        }
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < skinStarters().length; i++) rects['starter(' + i + ')'] = P.starter(i);
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);

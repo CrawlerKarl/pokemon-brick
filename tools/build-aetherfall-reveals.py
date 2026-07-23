@@ -30,6 +30,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "art" / "aetherfall-production" / "sprites" / "source"
 OUT = ROOT / "art" / "aetherfall-production" / "sprites" / "reveal"
+FINAL = ROOT / "art" / "aetherfall-production" / "sprites" / "final"
 
 # boss-class ids only: legendary (base+80), mythic (base+81), and sentinels
 # (base+90..base+90+n-1, n = REALM_BOSSES[realm].sents.length) for each of the
@@ -88,19 +89,29 @@ def key_chroma(im: Image.Image) -> Image.Image:
     return Image.fromarray(arr).convert("RGBA")
 
 
-def crop_pad_resize(im: Image.Image, size: int) -> Image.Image:
-    """Trim to the subject, then centre it in a square with even padding."""
+def crop_pad_resize(im: Image.Image, size: int, ratio: float = 0.785) -> Image.Image:
+    """Trim to the subject, then pad so the subject fills `ratio` of the canvas
+    (the id's OWN final's measured ratio — see build-aetherfall-previews.py)."""
     bbox = im.split()[3].point(lambda a: 255 if a > 8 else 0).getbbox()
     if bbox:
         im = im.crop(bbox)
     side = max(im.size)
-    # the shipped 128px finals frame their subject at ~79% of the canvas —
-    # match it exactly, or the hull visibly jumps size when the game swaps
-    # between a reveal portrait and its fallback final
-    pad = int(round(side * 0.134))
-    canvas = Image.new("RGBA", (side + pad * 2, side + pad * 2), (0, 0, 0, 0))
+    canvas_side = int(round(side / ratio))
+    canvas = Image.new("RGBA", (canvas_side, canvas_side), (0, 0, 0, 0))
     canvas.paste(im, ((canvas.width - im.width) // 2, (canvas.height - im.height) // 2))
     return canvas.resize((size, size), Image.LANCZOS)
+
+
+def final_subject_ratio(final_dir: Path, vid: int, default: float = 0.785) -> float:
+    hits = sorted(final_dir.glob(f"af-{vid:03d}-*.png"))
+    if not hits:
+        return default
+    im = Image.open(hits[0]).convert("RGBA")
+    bbox = im.split()[3].point(lambda a: 255 if a > 24 else 0).getbbox()
+    if not bbox:
+        return default
+    subj = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
+    return max(0.5, min(0.95, subj / max(im.size)))
 
 
 def main() -> None:
@@ -128,7 +139,7 @@ def main() -> None:
             missing.append(bid)
             continue
         slug = re.sub(r"^af-\d+-|-source\.png$", "", src.name)
-        im = crop_pad_resize(key_chroma(Image.open(src)), args.size)
+        im = crop_pad_resize(key_chroma(Image.open(src)), args.size, final_subject_ratio(FINAL, bid))
         dst = OUT / f"af-{bid:03d}-{slug}.png"
         im.save(dst, optimize=True)
         made += 1

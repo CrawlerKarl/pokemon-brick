@@ -75,19 +75,41 @@ def key_chroma(im: Image.Image) -> Image.Image:
     return Image.fromarray(arr).convert("RGBA")
 
 
-def crop_pad_resize(im: Image.Image, size: int) -> Image.Image:
-    """Trim to the subject, then centre it in a square with even padding."""
+def crop_pad_resize(im: Image.Image, size: int, ratio: float = 0.785) -> Image.Image:
+    """Trim to the subject, then pad so the subject fills `ratio` of the canvas.
+
+    `ratio` comes from the id's OWN final (final_subject_ratio) — the finals'
+    framing varies per id, so only a per-id match keeps the art from jumping
+    size when the game swaps between surfaces.
+    """
     bbox = im.split()[3].point(lambda a: 255 if a > 8 else 0).getbbox()
     if bbox:
         im = im.crop(bbox)
     side = max(im.size)
-    # the shipped 128px finals frame their subject at ~79% of the canvas —
-    # match it exactly, or the hull visibly jumps size when the game swaps
-    # between a preview and its fallback final
-    pad = int(round(side * 0.134))
-    canvas = Image.new("RGBA", (side + pad * 2, side + pad * 2), (0, 0, 0, 0))
+    canvas_side = int(round(side / ratio))
+    canvas = Image.new("RGBA", (canvas_side, canvas_side), (0, 0, 0, 0))
     canvas.paste(im, ((canvas.width - im.width) // 2, (canvas.height - im.height) // 2))
     return canvas.resize((size, size), Image.LANCZOS)
+
+def final_subject_ratio(final_dir: Path, vid: int, default: float = 0.785) -> float:
+    """Measure THE FINAL's own subject-to-canvas ratio for this id.
+
+    The finals' framing VARIES per id (0.72-0.79 across the production run) —
+    a single global pad cannot match them all, and any mismatch makes the art
+    visibly change size the moment the high-res version finishes loading
+    (2026-07-23 user report: "the ship starts slightly smaller than it
+    finishes"). Matching each id to its own final makes the swap invisible.
+    """
+    hits = sorted(final_dir.glob(f"af-{vid:03d}-*.png"))
+    if not hits:
+        return default
+    im = Image.open(hits[0]).convert("RGBA")
+    bbox = im.split()[3].point(lambda a: 255 if a > 24 else 0).getbbox()
+    if not bbox:
+        return default
+    subj = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
+    return max(0.5, min(0.95, subj / max(im.size)))
+
 
 
 def main() -> None:
@@ -113,7 +135,7 @@ def main() -> None:
         if not src:
             continue
         slug = re.sub(r"^af-\d+-|-source\.png$", "", src.name)
-        im = crop_pad_resize(key_chroma(Image.open(src)), args.size)
+        im = crop_pad_resize(key_chroma(Image.open(src)), args.size, final_subject_ratio(FINAL, vid))
         dst = OUT / f"af-{vid:03d}-{slug}.png"
         im.save(dst, optimize=True)
         made += 1

@@ -607,9 +607,11 @@ phone — flag anything only verifiable there.
   art (water/grass/ice/bug lines). `detect_chroma()` medians a 6px border and
   the despill is channel-matched. Assuming green silently left 12 vessels
   sitting on a solid backdrop block that shipped to the player.
-- **Previews must match the finals' framing** — subject at ~79% of the canvas
-  (`pad = side * 0.134`). Any other ratio makes a hull visibly jump size when
-  the game swaps between a preview and its fallback final.
+- **Previews/reveals must match THE ID'S OWN final's framing** — the finals'
+  subject ratios VARY per id (0.725–0.785), so both tools measure each id's
+  final (`final_subject_ratio`) and pad to match it exactly. A fixed global
+  ratio made hulls visibly grow when the high-res art finished loading
+  (2026-07-23 user report).
 - `art/` is ~1.1 GB but **1.0 GB is `sprites/source/`** (the user's editable
   masters, not referenced at runtime). Pruning it is the size lever — **ASK
   FIRST.**

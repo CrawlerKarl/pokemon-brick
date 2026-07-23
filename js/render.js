@@ -6604,12 +6604,12 @@ function drawTrial() {
     ctx.strokeStyle = sel ? g.accent : 'rgba(255,255,255,0.22)';
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.font = `900 ${Math.min(13, r.w / 8)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? '#fff' : '#cfd8dc';
-    ctx.fillText(g.name, r.x + r.w / 2, r.y + r.h / 2 - 8);
-    ctx.font = '500 9px Orbitron, sans-serif';
-    ctx.fillStyle = sel ? g.accent : '#78909c';
-    ctx.fillText(g.boss.n.toUpperCase(), r.x + r.w / 2, r.y + r.h / 2 + 10, r.w - 10);
+    // fitted, never overlapping (2026-07-23 user report: long realm names
+    // ran across three chips) — shrink to a readable floor, then ellipsize
+    fitLabel(g.name, r.x + r.w / 2, r.y + r.h / 2 - r.h * 0.18,
+      { size: Math.min(13, r.w / 8), min: 7.5, weight: 900, color: sel ? '#fff' : '#cfd8dc', maxW: r.w - 12 });
+    fitLabel(g.boss.n.toUpperCase(), r.x + r.w / 2, r.y + r.h / 2 + r.h * 0.22,
+      { size: 9, min: 7, weight: 500, color: sel ? g.accent : '#78909c', maxW: r.w - 10 });
     ctx.restore();
   }
   // stage picker
@@ -6622,9 +6622,8 @@ function drawTrial() {
     ctx.lineWidth = sel ? 2 : 1;
     ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.22)';
     ctx.stroke();
-    ctx.font = `900 ${Math.min(11, r.w / 10)}px Orbitron, sans-serif`;
-    ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
-    ctx.fillText((i + 1) + '/3 ' + SKIN.stageNames[i], r.x + r.w / 2, r.y + r.h / 2 + 1, r.w - 8);
+    fitLabel((i + 1) + '/3 ' + SKIN.stageNames[i], r.x + r.w / 2, r.y + r.h / 2 + 1,
+      { size: Math.min(11, r.w / 10), min: 7.5, weight: 900, color: sel ? '#ffd54f' : '#cfd8dc', maxW: r.w - 8 });
   }
   // LEGENDARY stage → pick a gauntlet round. STARFIGHTER Kanto also exposes
   // the secret replacement fight directly so it can be practiced on demand.
@@ -6644,9 +6643,8 @@ function drawTrial() {
       ctx.lineWidth = sel2 ? 2 : 1;
       ctx.strokeStyle = sel2 ? (secret ? '#80d8ff' : '#ff80ab') : 'rgba(255,255,255,0.22)';
       ctx.stroke();
-      ctx.font = `900 ${Math.min(10, rr2.w / 11)}px Orbitron, sans-serif`;
-      ctx.fillStyle = sel2 ? (secret ? '#80d8ff' : '#ff80ab') : '#cfd8dc';
-      ctx.fillText(labels[i], rr2.x + rr2.w / 2, rr2.y + rr2.h / 2 + 1, rr2.w - 8);
+      fitLabel(labels[i], rr2.x + rr2.w / 2, rr2.y + rr2.h / 2 + 1,
+        { size: Math.min(10, rr2.w / 11), min: 7.5, weight: 900, color: sel2 ? (secret ? '#80d8ff' : '#ff80ab') : '#cfd8dc', maxW: rr2.w - 8 });
     }
   }
   // PHASE picker — practice a boss round from any phase (mid-band HP).

@@ -5,6 +5,33 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-23b — Trial picker overflow + the ship-size "pop" (user reports)
+
+Two more real-device reports, both fixed with permanent guards:
+
+- **The TRIAL picker overlapped and overflowed.** Region names drew with NO
+  containment (raw fillText at 13px — "GREENSPELL MARCHES" ran across three
+  chips), and the panel's fixed vertical metrics overflowed a 375-tall
+  landscape phone the moment rounds + phases expanded (START was off-screen).
+  `trialLayout` now computes ONE squeeze factor from the busiest state's
+  height so the fully-open picker always fits (short screens also widen the
+  panel to 640 so chips get broader as rows compress), and every chip label
+  (region/boss/stage/round) goes through `fitLabel`. **Guards**: the trial
+  picker joined the 'menu fit across viewports' suite test in its busiest
+  state (secret row + phase row, junkie), and a 'trial-picker' scene joined
+  the gate's label-containment sweep — it can never regress silently again.
+- **The chosen ship visibly grew a beat after selection.** Measured it: the
+  previews were all padded to a FIXED 0.785 subject ratio but the finals'
+  framing VARIES per id (0.725–0.785) — so the hull appeared at the final's
+  size and "enlarged" when the 320px preview finished loading. Both art
+  tools (`build-aetherfall-previews.py`, `build-aetherfall-reveals.py`) now
+  measure EACH id's own final and pad to match it (`final_subject_ratio`);
+  all 108 previews + 43 reveals regenerated and verified within 1.5% of
+  their finals — the swap is now pixel-invisible. The CLAUDE.md framing rule
+  updates from "match 79%" to "match THE ID'S OWN final".
+
+---
+
 ## 2026-07-23 — The region-1 boss frame drop (real-device report → AFT-018b)
 
 The owner hit a hard frame drop on the region-1 finale on a real phone —

@@ -204,7 +204,8 @@ const SCENES = [
   { name: 'draft', js: `G.state='upgrade'; G.stateT=1; if(!G.upgradeChoices) rollUpgradeChoices();` },
   { name: 'web', js: `upgradeTreeOpen=true;` },
   { name: 'results', js: `upgradeTreeOpen=false; DEV.launch({level:2,mode:'classic',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(const b of G.bricks){b.dead=true;} for(let i=0;i<80;i++)update(1/60);` },
-  { name: 'codex', js: `G.state='dex';` },
+  { name: 'trial-picker', js: `G.state='menu'; trialOpen=true; trialSel.region=0; trialSel.stage=2; trialSel.round=1; trialSel.phase=1;` },
+  { name: 'codex', js: `G.state='dex'; trialOpen=false;` },
   { name: 'ending', js: `beginEnding(); paused=false; G.freeze=0; for(let i=0;i<60;i++)update(1/60);` },
   { name: 'gameover', js: `G.state='gameover'; G.stateT=1;` },
 ];
