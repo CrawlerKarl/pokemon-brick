@@ -5,7 +5,7 @@
     "serve": "node serve.js",
     "check": "for f in js/*.js; do node --check \"$f\" || exit 1; done",
     "verify-assets": "node tools/verify-assets.js",
-    "test": "echo 'Start: npm run serve, then open http://localhost:8741/test.html'",
+    "test": "node tools/run-suite.js",
     "art-overrides": "node tools/build-art-overrides.js",
     "build-dist": "node tools/build-aetherfall-dist.js"
   }

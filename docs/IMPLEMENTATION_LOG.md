@@ -5,6 +5,36 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22g — AFT-005A: the headless release gate (npm test for real, GATE GREEN in 40s)
+
+The 20-minute fronted-tab suite constraint is DEAD. `npm test` now runs the
+complete release gate headless in ~40 seconds:
+
+- **`tools/run-suite.js`** — zero dependencies: raw CDP over Node's built-in
+  WebSocket (Node 21+) driving system Chrome `--headless=new` with background
+  throttling disabled. The suite already drives its own sim clock (test.html
+  swallows rAF), so headless runs it at raw CPU speed — the fronted tab was
+  being timer-throttled ~100-800× harder than anyone realized (blaster L8
+  flyer test: 105s fronted → 132ms headless; the 27-level density sweep:
+  180s → 25ms; full 79-test suite: ~20 min → **15.2s**).
+- One command, in order: `npm run check` → `npm run verify-assets` → the 79
+  invariants → both-skin workshop boot smoke (zero uncaught errors, worlds
+  assembled) → the **runtime vocabulary scan** (walks the aetherfall shared
+  copy tables in the booted page for player-facing `\bMEGA\b` — a static grep
+  can't do this because the engine tables legitimately carry MEGA and the
+  lexicon rewrites them at boot; this is AFT-003's permanent enforcement) →
+  `npm run build-dist` requiring `RESIDUE: none` → dist boot smoke + the same
+  vocabulary scan on the standalone.
+- Any uncaught page error or console.error fails the gate. `--fast` skips the
+  dist steps; `--suite` runs the invariants alone. `.gate-report.json`
+  (gitignored) records per-step timings.
+- Consequence for the workflow: **every commit in this session and after
+  ships against the full gate**, not just releases. The "keep the tab
+  FRONTED" instruction in the docs is obsolete for verification (the fronted
+  path still works for interactive debugging).
+
+---
+
 ## 2026-07-22f — AFT-003: the SURGE lexicon (MEGA leaves the AETHERFALL screen)
 
 The backlog's largest remaining presentation leak: the overdrive still read
