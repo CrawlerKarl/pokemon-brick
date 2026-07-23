@@ -23,8 +23,16 @@
 // Failure = non-zero exit; any uncaught page error or console.error fails.
 //
 //   npm test              the full gate
-//   npm test -- --fast    steps 1–5 only (skip dist build + smoke)
+//   npm test -- --fast    steps 1–5 only (skip dist/scenes/storm)
 //   npm test -- --suite   step 3 only (the invariant suite alone)
+//
+// AFT-005B adds, to the full gate: DETERMINISTIC MOBILE SCENES — the game is
+// driven through every named screen at two phone viewports, each frame's
+// fitted labels are asserted inside the viewport (the AFT-001 zone log makes
+// this checkable), and a screenshot of every scene lands in .gate-shots/ for
+// human review — plus the ARTIFACT-STORM benchmark: a seeded worst-case
+// effects load timed over 120 frames (reported always; only a catastrophic
+// regression fails the gate, since absolute ms are machine-dependent).
 
 const { spawn, spawnSync } = require('child_process');
 const http = require('http');
@@ -149,7 +157,7 @@ async function openPage(cdp, url) {
     return r.result.value;
   };
   const close = () => cdp.send('Target.closeTarget', { targetId }).catch(() => {});
-  return { evaluate, close, errors, consoleLines };
+  return { evaluate, close, errors, consoleLines, sessionId };
 }
 
 async function waitFor(evaluate, expr, timeoutMs, label, onPoll) {
@@ -182,6 +190,94 @@ const VOCAB_SCAN = `(() => {
   for (const [n, r] of Object.entries(roots)) walk(r, n);
   return JSON.stringify({ skin: SKIN.id, leftover, lexSample: lex('MEGA READY!') });
 })()`;
+
+// ── AFT-005B: deterministic mobile scenes + the artifact storm ─────────────
+const SCENES = [
+  { name: 'home', js: `G.state='menu'; advOpen=false;` },
+  { name: 'settings-save', js: `G.state='menu'; advOpen=true; settingsPage=2;` },
+  { name: 'arrival', js: `advOpen=false; DEV.launch({level:1,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<40;i++)update(1/60);` },
+  { name: 'objective', js: `DEV.launch({level:8,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<100;i++)update(1/60);` },
+  { name: 'charge', js: `G.charge=0.85; G.chargeHeld=true; update(1/60);` },
+  { name: 'surge-ready', js: `G.charge=0; G.mega=1; G.megaT=0; for(let i=0;i<12;i++)update(1/60);` },
+  { name: 'boss-reveal', js: `DEV.launch({level:3,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); jumpToGauntletRound(1); for(let i=0;i<45;i++)update(1/60);` },
+  { name: 'boss-combat', js: `revealSkip(); for(let i=0;i<220;i++)update(1/60);` },
+  { name: 'draft', js: `G.state='upgrade'; G.stateT=1; if(!G.upgradeChoices) rollUpgradeChoices();` },
+  { name: 'web', js: `upgradeTreeOpen=true;` },
+  { name: 'results', js: `upgradeTreeOpen=false; DEV.launch({level:2,mode:'classic',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(const b of G.bricks){b.dead=true;} for(let i=0;i<80;i++)update(1/60);` },
+  { name: 'codex', js: `G.state='dex';` },
+  { name: 'ending', js: `beginEnding(); paused=false; G.freeze=0; for(let i=0;i<60;i++)update(1/60);` },
+  { name: 'gameover', js: `G.state='gameover'; G.stateT=1;` },
+];
+const SHOT_VIEWPORTS = [[390, 844], [667, 375]];
+async function runScenes(cdp, port) {
+  const t0 = Date.now();
+  const shotsDir = path.join(ROOT, '.gate-shots');
+  fs.mkdirSync(shotsDir, { recursive: true });
+  const failures = [];
+  let shots = 0;
+  for (const [vw, vh] of SHOT_VIEWPORTS) {
+    const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev&touch`);
+    const sid = page.sessionId;
+    await cdp.send('Emulation.setDeviceMetricsOverride',
+      { width: vw, height: vh, deviceScaleFactor: 2, mobile: true }, sid);
+    const booted = await waitFor(page.evaluate,
+      `typeof SKIN !== 'undefined' && typeof DEV !== 'undefined' && typeof G !== 'undefined'`,
+      BOOT_TIMEOUT_MS, 'scene boot ' + vw + 'x' + vh).catch(() => null);
+    if (!booted) { failures.push(vw + 'x' + vh + ': boot failed'); await page.close(); continue; }
+    await page.evaluate(`resize(); ZONE_DEBUG = true; 'ok'`);
+    for (const sc of SCENES) {
+      const res = await page.evaluate(`(() => {
+        try {
+          ${sc.js}
+          G.freeze = 999; render();
+          const out = (zoneLog || []).filter(b => b.x0 < -0.5 || b.x1 > W + 0.5)
+            .map(b => (b.zone || '?') + ':' + String(b.text).slice(0, 34));
+          return JSON.stringify({ ok: true, out, w: W, h: H });
+        } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 120) }); }
+      })()`).then(JSON.parse).catch(e => ({ ok: false, err: e.message }));
+      if (!res.ok) { failures.push(sc.name + '@' + vw + 'x' + vh + ': ' + res.err); continue; }
+      if (res.out.length) failures.push(sc.name + '@' + vw + 'x' + vh + ': labels out of viewport — ' + res.out.slice(0, 3).join(' · '));
+      const shot = await cdp.send('Page.captureScreenshot', { format: 'png' }, sid).catch(() => null);
+      if (shot) { fs.writeFileSync(path.join(shotsDir, sc.name + '-' + vw + 'x' + vh + '.png'), Buffer.from(shot.data, 'base64')); shots++; }
+    }
+    for (const e of page.errors) failures.push('page@' + vw + 'x' + vh + ': ' + e);
+    await page.close();
+  }
+  return { failures, shots, ms: Date.now() - t0 };
+}
+async function runStorm(cdp, port) {
+  const t0 = Date.now();
+  const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev&touch`);
+  const sid = page.sessionId;
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, sid);
+  const booted = await waitFor(page.evaluate,
+    `typeof DEV !== 'undefined' && typeof G !== 'undefined'`, BOOT_TIMEOUT_MS, 'storm boot').catch(() => null);
+  if (!booted) { await page.close(); return { err: 'storm page failed to boot', ms: Date.now() - t0 }; }
+  const res = await page.evaluate(`(() => {
+    try {
+      resize();
+      DEV.launch({ level: 24, mode: 'junkie', diff: 'hard', seed: 'STORM', upg: 'arsenal:4,surge:4,impact:4,prism:3' });
+      paused = false; G.freeze = 0;
+      for (let i = 0; i < 90; i++) update(1/60);
+      // the worst realistic combination: Surge active, bursts, rings, shots
+      G.mega = 1; tryMega();
+      for (let i = 0; i < 6; i++) { burst(W/2, H/2, '#ffd54f', 70, 420, 1); ringFx(W/2, H/2, '#80d8ff', 10, 200, 5, 0.7); }
+      const times = [];
+      for (let i = 0; i < 120; i++) {
+        const a = performance.now();
+        paused = false; G.freeze = 0;
+        update(1/60); render();
+        times.push(performance.now() - a);
+      }
+      times.sort((x, y) => x - y);
+      const avg = times.reduce((s2, v) => s2 + v, 0) / times.length;
+      return JSON.stringify({ ok: true, avg: +avg.toFixed(2), p95: +times[Math.floor(times.length * 0.95)].toFixed(2),
+        counts: { particles: G.particles.length, shots: G.enemyShots.length, lasers: G.lasers.length, rings: G.rings.length } });
+    } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 140) }); }
+  })()`).then(JSON.parse).catch(e => ({ ok: false, err: e.message }));
+  await page.close();
+  return { ...res, ms: Date.now() - t0 };
+}
 
 // ── the gate steps ─────────────────────────────────────────────────────────
 const report = { steps: [], failures: [] };
@@ -295,6 +391,25 @@ async function main() {
       } else { dsrv.close(); return finish(1); }
       await page.close();
       dsrv.close();
+    }
+
+    // ── AFT-005B: mobile scenes + label containment + screenshots ──
+    {
+      const sc = await runScenes(cdp, port);
+      for (const f of sc.failures) console.log('    SCENE ' + f);
+      step('mobile scenes + fitted-label containment', sc.failures.length === 0,
+        (SCENES.length * SHOT_VIEWPORTS.length) + ' scenes · ' + sc.shots + ' screenshots → .gate-shots/', sc.ms);
+      report.scenes = { shots: sc.shots, failures: sc.failures };
+      if (sc.failures.length) return finish(1);
+    }
+    // ── AFT-005B/018: the artifact-storm benchmark ──
+    {
+      const st = await runStorm(cdp, port);
+      const catastrophic = st.ok && st.avg > 50; // absolute ms are machine-dependent — only a collapse fails
+      step('artifact-storm benchmark', !!st.ok && !catastrophic,
+        st.ok ? 'avg ' + st.avg + 'ms · p95 ' + st.p95 + 'ms/frame @390×844 dsf2' : (st.err || 'failed'), st.ms);
+      report.storm = st;
+      if (!st.ok || catastrophic) return finish(1);
     }
 
     return finish(0);

@@ -3,3 +3,4 @@ serve.js
 .DS_Store
 dist-aetherfall/
 .gate-report.json
+.gate-shots/

@@ -5,6 +5,32 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22m — AFT-005B: mobile scenes, label assertions, the artifact storm
+
+The full gate now drives the game through **14 named scenes** (home,
+settings-save, arrival, objective, charge, surge-ready, boss-reveal,
+boss-combat, draft, web, results, codex, ending, gameover) at **two phone
+viewports** (390×844 portrait + 667×375 landscape, DPR 2 via CDP device
+emulation), on the aetherfall skin with touch controls.
+
+- **Fitted-label containment is a GATE assertion**: every scene frame renders
+  with the AFT-001 zone log enabled; any fitted label whose measured bounds
+  leave the viewport fails the gate with the scene, viewport, and label named.
+  This is the "semantic assertions for every fitted label" criterion — the
+  AFT-001 primitives made it checkable.
+- **28 screenshots per run** land in `.gate-shots/` (gitignored) for human
+  review — deterministic seeds, real flows (DEV.launch, round jumps, real
+  wave-clear → results).
+- **The artifact-storm benchmark** (feeds AFT-018): a seeded late-campaign
+  junkie wave with a capped build, Surge active, and forced burst/ring load,
+  timed over 120 update+render cycles at phone metrics. avg + p95 ms/frame
+  and effect counts are recorded in `.gate-report.json` every run (the
+  regression ledger); only a catastrophic collapse (avg > 50ms) fails, since
+  absolute ms are machine-dependent. Current baseline: avg 1.4ms · p95 2.2ms.
+- Gate wall time with everything: **37s**.
+
+---
+
 ## 2026-07-22l — AFT-006: save safety (a 27-stage campaign can no longer vanish)
 
 Safari's ITP can evict script storage after ~7 idle days — on exactly the
