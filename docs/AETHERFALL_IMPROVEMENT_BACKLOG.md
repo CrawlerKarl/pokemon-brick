@@ -1,6 +1,26 @@
 # Aetherfall improvement backlog
 
-Last reviewed: 2026-07-22
+> ## ⚠ STATUS UPDATE (2026-07-23) — READ THIS FIRST
+>
+> **Every P0 in this document has since been implemented, tested, and
+> deployed.** The analysis below is preserved as written (it is still the
+> authority on SCOPE and acceptance criteria, and its P1/P2 ranking is the
+> live plan), but several of its *status* statements are now stale:
+>
+> | This doc says | Reality as of 2026-07-23 |
+> |---|---|
+> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~31s**, 85 invariants, both-skin + dist boots, vocabulary scan, 30 mobile scenes with label assertions, wave + boss storm ledgers |
+> | AFT-001/002/003/004/005A/005B/006/017/018 pending | **all shipped** — see `IMPLEMENTATION_LOG.md` rounds 2026-07-22f … 2026-07-23b |
+> | "boss exports are 192×192; high-res not packaged" | 43 × **512px** boss reveal portraits ship and drive the reveal scene |
+> | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
+>
+> **The live plan is the P1 track**: AFT-007 (ORBITAL RELIC) → AFT-008
+> (balance matrix) → AFT-009 (constellation) → AFT-019 → AFT-010 → AFT-011
+> → AFT-012. Its acceptance criteria below are unchanged and authoritative.
+
+
+Last reviewed: 2026-07-22 (second pass — re-sequenced and re-scoped against the
+code as shipped through commit `fa6c9cc`)
 
 This is the current product backlog for the standalone Aetherfall build. It
 supersedes unchecked items in `FULL_GAME_ROADMAP.md` when the two disagree.
@@ -20,25 +40,36 @@ items have since shipped.
   adding more raw content.
 - Keep combat readable. New art and spectacle must never cover live threats,
   the player vessel, touch controls, or objective state.
+- **The engine is shared.** Skins differ in words and art, never in rules.
+  Internal identifiers (`G.mega`, the `bond` path key, `pkbrk-*` storage keys)
+  ship unchanged by design; every player-facing rename rides a skin-aware
+  vocabulary helper. A mechanic that must behave differently per skin is a
+  design smell to escalate, not implement.
 
 ## Current baseline
 
 - The complete nine-realm campaign, bosses, ending, Time Spiral, daily run,
   trial launcher, stage medals, codex, upgrade web, and LIGHT/DARK vessel
   treatments are present.
-- Production art covers 259 base sprites and 259 radiant variants, plus 21
-  Relicforge weapon/utility sprites. Boss gameplay exports are currently
-  192×192; high-resolution source art exists but is not packaged as boss
+- Production art covers 259 base sprites and 259 radiant variants, plus 54
+  high-resolution vessel previews (base + radiant) and 21 Relicforge
+  weapon/utility sprites. Boss gameplay exports are currently 192×192;
+  high-resolution source art exists for every id but is not packaged as boss
   reveal art. Velmora's source, for example, is 1254×1254.
+- Shipped 2026-07-22 and assumed by this backlog: the ASPECT lexicon (the type
+  half of the vocabulary migration), the codex full-size sprite gallery, the
+  form-graded oath treatment on a `[0.42, 0.72, 1]` curve, and
+  neutral-until-sworn on the vessel-select screen.
 - The invariant suite currently passes 78/78, syntax checks pass, and asset
-  verification passes. The suite is still launched manually in a browser.
+  verification passes. **`npm test` is a placeholder echo**; the suite is
+  launched manually in a fronted browser tab and takes ~20 minutes.
 - The standalone runtime payload is about 29 MB excluding its nested Git
   metadata, with about 28 MB of PNG art.
 - The constellation has six paths and only two direct weapon identities:
-  VOLLEY and IMPACT. BOND is the least active path: most of its value is
-  passive pickup, score, drop-rate, and life economy that overlaps settings,
-  codex rewards, and AEGIS. Its removal is preferable to crowding the mobile
-  constellation with a seventh spoke.
+  VOLLEY and IMPACT. BOND (engine key `bond`) is the least active path: most
+  of its value is passive pickup, score, drop-rate, and life economy that
+  overlaps settings, codex rewards, and AEGIS. Redesigning it in place is
+  preferable to crowding the mobile constellation with a seventh spoke.
 
 ## Evidence from the review
 
@@ -53,12 +84,20 @@ items have since shipped.
   visually settled.
 - A deep trial launch can announce earlier gauntlet rounds instead of showing
   only the selected round and phase.
-- Aetherfall displays some correct `SURGE` language, but shared HUD, upgrade,
-  tutorial, and system copy still exposes the old `MEGA` vocabulary.
+- Aetherfall displays some correct `SURGE` language, but **exactly 56
+  player-facing `MEGA` strings still ship in the dist**
+  (`grep -o "'[^']*MEGA[^']*'" dist-aetherfall/js/*.js`). Much of that copy
+  lives in shared engine tables — the SURGE path's own role string is
+  `'MEGA TEMPO'` — so the fix must be a vocabulary helper, not per-file edits.
 - LIGHT currently selects the full radiant casting in every form, and both
   affinities receive the same full-size rear fitting from Form I. The wash and
   aura are graded by form, but those two stronger signals make the oath read
   too loudly before the vessel evolves.
+- Combat effects have independent ceilings—currently as high as 450 particles,
+  140 enemy shots, 80 fragments, 24 rings, 14 ghosts, and 40 player lasers—
+  but no shared frame-cost budget. Group destruction, trails, telegraphs,
+  affinity effects, boss attacks, and full-frame bloom can therefore peak at
+  the same time and cause the artifact-heavy frame drops reported on phones.
 - The canvas-only interface exposes essentially no menu or game state to the
   browser accessibility tree.
 
@@ -69,30 +108,70 @@ items have since shipped.
 - **P2** — meaningful follow-up; should not delay the P0/P1 work.
 - Effort is a relative estimate: **S** (small), **M** (medium), **L** (large),
   **XL** (multi-system).
+- IDs are stable references — never renumbered. AFT-005 is split into two
+  stages (A/B) because its halves have opposite scheduling needs.
 
 ## Ranked backlog
 
 | ID | Priority | Improvement | Player value | Effort | Depends on |
 |---|---|---|---|---:|---|
+| AFT-005A | P0 | Headless automated release gate (`npm test` for real) | Every later change ships against a gate instead of a 20-minute manual suite run | M | — |
 | AFT-001 | P0 | Mobile safe-zone and text-containment system | Stops clipped/overlapping copy in every screen | M | — |
-| AFT-002 | P0 | Full-resolution boss reveal that shrinks into combat position | Shows the boss art and creates a clean, memorable entrance | L | AFT-001 |
-| AFT-003 | P0 | Replace the complete Aetherfall `MEGA` vocabulary with `AETHER SURGE` / `SURGE` | Removes the largest remaining Pokémon-era presentation leak | M | — |
+| AFT-003 | P0 | Finish the SURGE vocabulary (the MEGA half; ASPECT half shipped) | Removes the largest remaining Pokémon-era presentation leak | S–M | — |
+| AFT-004 | P0 | Clean trial/boss launch state and single-owner announcement queue | Practice starts at the selected fight without stale banners | S–M | AFT-001 |
+| AFT-002 | P0 | Full-resolution boss reveal that shrinks into combat position | Shows the boss art and creates a clean, memorable entrance | L | AFT-001, AFT-004 |
 | AFT-017 | P0 | Progressive LIGHT/DARK vessel evolution | Preserves the original early hull and makes final evolution feel dramatic | M | — |
-| AFT-004 | P0 | Clean trial/boss launch state and announcement sequencing | Practice starts at the selected fight without stale banners | S–M | AFT-001 |
-| AFT-005 | P0 | Automated tests plus mobile visual-regression scenes | Makes layout, terminology, save, and combat regressions catchable before release | L | AFT-001–004 |
-| AFT-006 | P0 | Save export/import, versioned backup, and recovery UI | Protects a long 27-stage run and permanent unlocks | M | — |
-| AFT-007 | P1 | Replace BOND with the integrated ORBITAL RELIC weapon path | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-001, AFT-003 |
-| AFT-008 | P1 | Full-campaign balance matrix and regression budgets | Finds difficulty spikes, dead builds, and unfair mobile encounters | L | AFT-005, AFT-007 |
+| AFT-018 | P0 | Artifact-storm frame stability and adaptive effects budget | Prevents effect-heavy combat from becoming slow or unresponsive on phones | L | AFT-005A for the permanent gate |
+| AFT-005B | P0 | Mobile visual-regression scenes and fitted-label assertions | Makes layout, terminology, and presentation regressions catchable before release | M–L | AFT-001–004, AFT-005A |
+| AFT-006 | P0 | Save export/import, versioned backup, and storage persistence | Protects a long 27-stage run against Safari storage eviction and corruption | M | — (parallel-safe, schedule early) |
+| AFT-007 | P1 | ORBITAL RELIC redesign of the `bond` path (same keys, new identity) | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-003, AFT-005A |
+| AFT-008 | P1 | Full-campaign balance matrix and regression budgets | Finds difficulty spikes, dead builds, and unfair mobile encounters | L | AFT-005A/B, AFT-007 |
 | AFT-009 | P1 | Mobile-first constellation redesign and build identity | Makes the updated web understandable and touch-friendly | L | AFT-007 |
-| AFT-010 | P1 | Mobile accessibility and input alternatives | Broadens who can comfortably finish the campaign | L | AFT-001 |
-| AFT-011 | P1 | Mobile performance, asset streaming, and WebP packaging | Faster load, lower memory, steadier combat on ordinary phones | L | AFT-005 |
+| AFT-019 | P1 | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
+| AFT-010 | P1 | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
+| AFT-011 | P1 | Mobile loading, asset streaming, and WebP packaging | Faster startup and lower decoded-memory use on ordinary phones | L | AFT-005A |
 | AFT-012 | P1 | Whole-game visual integration pass | Carries the locked sprite style into scale, shadows, VFX, HUD, and scenery | L | AFT-001–003, AFT-017 |
-| AFT-013 | P2 | Codex combat dossiers and permanent boss gallery | Lets players revisit full boss art and learn counterplay | M | AFT-002 |
+| AFT-013 | P2 | Codex boss combat dossiers (the sprite gallery already shipped) | Lets players revisit full boss art and learn counterplay | M | AFT-002 |
 | AFT-014 | P2 | Run history, boss rush, endless route, and custom modifiers | Converts campaign mastery into replayability | XL | AFT-008 |
-| AFT-015 | P2 | Installable/offline release package and lifecycle handling | Makes the phone experience app-like and resilient | L | AFT-006, AFT-011 |
+| AFT-015 | P2 | Installable/offline release package and phone lifecycle handling | Makes the phone experience app-like and resilient | L | AFT-006, AFT-011 |
 | AFT-016 | P2 | Architecture and documentation cleanup | Lowers the cost and risk of future content work | L | after feature churn |
 
 ## Detailed acceptance criteria
+
+### AFT-005 — Automated release gate (two stages)
+
+**Stage A — headless gate (schedule FIRST; nothing depends on the UI work).**
+
+- Replace the placeholder `npm test` echo with a headless-browser runner that
+  serves the repo, loads `test.html`, waits for `window.TEST_RESULTS`, and
+  exits non-zero on any failing invariant or uncaught console error.
+- Kill the 20-minute fronted-tab constraint. Headless pages are not subject to
+  the same background rAF throttling, and the suite already drives the sim
+  clock directly — target a full run in single-digit minutes so it can gate
+  every commit, not just releases.
+- One command runs, in order: `npm run check`, `npm run verify-assets`, the
+  invariant suite, save/checkpoint migration round-trips, `npm run build-dist`
+  with a required `RESIDUE: none`, and a smoke boot of the built dist (plus
+  both skins booting in the workshop).
+- Treat uncaught console errors, missing art, fallback procedural art where a
+  production override exists, and forbidden Aetherfall vocabulary (see
+  AFT-003) as failures.
+
+**Stage B — visual regression (after AFT-001–004 stabilize the screens).**
+
+- Add deterministic mobile screenshots for home, setup, settings, arrival,
+  objective, boss reveal, boss combat, charge/overheat, Surge-ready, upgrade
+  draft/web, results, codex, ending, and game over.
+- Add semantic assertions for every fitted label: its measured bounds must be
+  contained by its declared layout region (the AFT-001 primitives make this
+  checkable).
+- Add a deterministic artifact-storm benchmark that runs the worst realistic
+  combination of group kills, projectiles, trails, fragments, rings, boss VFX,
+  upgraded weapons, affinity effects, and bloom (consumed by AFT-018 as its
+  permanent gate).
+- Required clean viewports: 667×375, 740×360, 780×360, 844×390, 932×430,
+  390×844, and the existing 1280×720 desktop reference. This list is shared
+  with AFT-001 and owned here.
 
 ### AFT-001 — Mobile safe zones and text containment
 
@@ -113,15 +192,68 @@ smaller hard-coded fonts.
   to tiny multi-clause strings.
 - Add a developer safe-zone overlay that shows text bounds and reports any
   draw outside its assigned rectangle.
-- Required clean viewports: 667×375, 740×360, 780×360, 844×390, 932×430,
-  390×844, and the existing 1280×720 desktop reference.
+- Build every new fitted label against the final Aetherfall copy — land the
+  AFT-003 vocabulary helper before (or alongside) the label retrofit so no
+  label is fitted twice.
+
+### AFT-003 — Finish the SURGE vocabulary migration
+
+The type half shipped 2026-07-22 (ASPECT lexicon via `typeLabel()` /
+`typeWord()` / `SKIN.typeNames`). What remains is the **MEGA half**: 56
+player-facing strings in the dist today. The public concept is **AETHER
+SURGE**. `CHARGE` remains the held weapon shot; these are two different
+systems and must never be conflated.
+
+| Old public term | Aetherfall term |
+|---|---|
+| Mega / Mega Evolution | Aether Surge / Surge |
+| Mega meter | Surge meter |
+| Mega ready | Surge ready |
+| Mega active | Surge active |
+| Hits charge Mega | Hits build Surge |
+| Mega duration / damage | Surge duration / damage |
+| Mega button | Surge button |
+
+- Follow the pattern that already worked for types: a skin-aware helper
+  (e.g. `surgeWord()` / `SKIN.strings.surgeWord`, plus a phrase helper for
+  composed copy) with the pokemon skin defaulting to MEGA. No shared UI may
+  emit the raw word from either vocabulary.
+- Much of the copy lives in shared engine tables (`PATHS.surge` role
+  `'MEGA TEMPO'`, tier descriptions, satellite/fusion strings, coach copy,
+  the touch button, results, settings). Route all of it through the helper —
+  the SURGE path naming converges cleanly ("the SURGE path builds your
+  Surge").
+- Audit HUD, touch controls, tutorials, upgrade names/descriptions, codex,
+  results, settings, announcements, logs intended for players, and README.
+  Avoid a blind replacement where `charge` means the held charge shot.
+- **Internal identifiers do not rename.** `G.mega`, `megaT`, `tryMega`,
+  `megaDur`, stat ledger keys, and icon keys are engine vocabulary and ship
+  unchanged — the same rule that keeps `br.poke` and `pkbrk-*` keys stable.
+  This removes the checkpoint-migration risk entirely; there is no save
+  impact, so no migration is needed.
+- Acceptance: the player-facing `MEGA` grep of the dist returns zero, and the
+  AFT-005A vocabulary scan enforces that permanently.
+
+### AFT-004 — Trial and announcement sequencing
+
+- Starting at a selected gauntlet round/phase clears banners, entrances, and
+  story cards belonging to earlier rounds.
+- Exactly one trial notice and one selected-boss reveal may be queued.
+- Announcement panels use a single owner/priority queue; objective state,
+  trial state, boss reveal, and combat tips may not all occupy the same lane.
+  This queue is the surface AFT-002's reveal scene plugs into — build it
+  first.
+- No announcement may cover the player vessel or touch controls on required
+  mobile viewports.
+- Add tests for direct launches to all 27 stages, every gauntlet round, and
+  every selectable boss phase (runnable under the AFT-005A gate).
 
 ### AFT-002 — Full-resolution boss reveal and clean combat transition
 
 Use the high-resolution boss sources to make the entrance a separate scene,
 not another layer inside active combat.
 
-1. Freeze combat and clear ordinary announcements.
+1. Freeze combat and clear ordinary announcements (via the AFT-004 queue).
 2. Show a 512–768 px runtime boss portrait at the largest size that fits the
    phone safe area. Keep the art unobstructed; place the name, title, realm,
    phase count, and one short counterplay cue in a dedicated panel below or
@@ -137,44 +269,23 @@ not another layer inside active combat.
 Additional requirements:
 
 - Create optimized boss-reveal exports from the existing masters; do not ship
-  1–2K source files directly.
+  1–2K source files directly. Reveal exports go through the existing art
+  pipeline tooling and obey its two hard rules: read the chroma colour off the
+  frame (green AND magenta screens exist), and match the finals' 79% subject
+  framing so art never jumps size between surfaces.
 - Use one entrance contract for all legendaries, mythics, sentinels, and the
   secret boss, while retaining their authored motion styles.
 - Reduced-motion mode uses a dissolve/scale cut with the same information and
   no camera sweep.
 - Tapping skips the hold but never skips into an undodgeable attack.
-- The codex reuses the same reveal asset, so the extra payload serves two
-  player-facing purposes.
-
-### AFT-003 — Aetherfall terminology migration
-
-The public concept is **AETHER SURGE**. `CHARGE` remains the held weapon shot;
-these are two different systems and must never be conflated.
-
-| Old public term | Aetherfall term |
-|---|---|
-| Mega / Mega Evolution | Aether Surge / Surge |
-| Mega meter | Surge meter |
-| Mega ready | Surge ready |
-| Mega active | Surge active |
-| Hits charge Mega | Hits build Surge |
-| Mega duration / damage | Surge duration / damage |
-| Mega button | Surge button |
-
-- Audit HUD, touch controls, tutorials, upgrade names/descriptions, codex,
-  results, settings, announcements, logs intended for players, and README.
-- Rename `APEX MEGA` and other upgrade copy in the Aetherfall build. Avoid a
-  blind replacement where `charge` means the held charge shot.
-- Add skin-aware vocabulary helpers immediately so no shared UI emits the old
-  term.
-- Then migrate internal names (`G.mega`, `megaT`, `tryMega`, `megaDur`, stats,
-  icon keys) to Surge terminology with a backward-compatible checkpoint
-  migration. Old saves must load without losing meter state or upgrades.
-- The standalone distribution should contain no player-facing `MEGA` string.
+- The codex reuses the same reveal asset (AFT-013), so the extra payload
+  serves two player-facing purposes.
 
 ### AFT-017 — Progressive LIGHT/DARK vessel evolution
 
-The oath should be recognizable at Form I, developed at Form II, and
+Already live as of 2026-07-22: the form-graded `[0.42, 0.72, 1]` curve and
+neutral-until-sworn on vessel select. This item is the second, deeper step:
+the oath should be recognizable at Form I, developed at Form II, and
 unmistakable only at Form III. It must feel as though the affinity evolves
 with the vessel rather than being a complete costume applied at selection.
 
@@ -207,48 +318,92 @@ with the vessel rather than being a complete costume applied at selection.
 - Reduced-effects mode keeps the material and silhouette progression while
   removing only animated bloom/pulsing.
 
-### AFT-004 — Trial and announcement sequencing
+### AFT-018 — Artifact-storm frame stability
 
-- Starting at a selected gauntlet round/phase clears banners, entrances, and
-  story cards belonging to earlier rounds.
-- Exactly one trial notice and one selected-boss reveal may be queued.
-- Announcement panels use a single owner/priority queue; objective state,
-  trial state, boss reveal, and combat tips may not all occupy the same lane.
-- No announcement may cover the player vessel or touch controls on required
-  mobile viewports.
-- Add tests for direct launches to all 27 stages, every gauntlet round, and
-  every selectable boss phase.
+Treat frame rate as part of combat correctness. A screen full of rewards,
+debris, projectiles, trails, and upgrade effects must not make steering,
+dodging, charging, or touch input feel slower.
 
-### AFT-005 — Automated release gate
-
-- `npm test` starts a headless browser and exits non-zero unless all invariant
-  tests pass. Keep `test.html` as a readable report, but remove the manual-only
-  release dependency.
-- Run syntax, asset verification, the 78 existing invariants, save migrations,
-  the standalone build, and a smoke load of that build in one command.
-- Add deterministic mobile screenshots for home, setup, settings, arrival,
-  objective, boss reveal, boss combat, charge/overheat, Surge-ready, upgrade
-  draft/web, results, codex, ending, and game over.
-- Add semantic assertions for every fitted label: its measured bounds must be
-  contained by its declared layout region.
-- Treat uncaught console errors, missing art, fallback procedural boss art,
-  and forbidden Aetherfall vocabulary as failures.
+- Add a lightweight frame profiler that records update time, actor drawing,
+  projectile drawing, decorative effects, bloom/compositing, HUD drawing,
+  total frame time, active effect counts, and garbage-collection-like spikes.
+- Define at least one mid-range and one low-range phone reference. Target 60
+  FPS on the mid-range device with P95 frames at or below 16.7 ms and no
+  sustained run of frames above 25 ms. Set an explicit 30 FPS fallback budget
+  for the low-range device instead of allowing uncontrolled degradation.
+- Create deterministic stress fixtures for the real peak combinations:
+  late-campaign boss patterns, maximum credible enemy fire, group destruction,
+  Twin/Hypernova or the future ORBITAL RELIC path, charged detonations,
+  fragments, reward pickups, affinity effects, telegraphs, and full bloom.
+- Replace independent effect ceilings with one weighted visual-effects budget.
+  A large blurred ring costs more than a tiny cached spark; counts alone are
+  not a sufficient proxy for GPU work.
+- When the moving frame-time average exceeds budget, degrade decorative work
+  in this order:
+  1. Reduce or skip full-frame bloom/compositing.
+  2. Reduce new particle emission and shorten decorative particle lifetimes.
+  3. Cull offscreen fragments, ghosts, trails, duplicate auras, and minor rim
+     passes.
+  4. Lower optional animation sampling before removing an authored sprite.
+- Never cull hostile projectiles, telegraphs, hit feedback, objective state,
+  the player vessel, boss health, or touch controls. Simulation, hitboxes,
+  input sampling, and gameplay timers remain identical at every effects level.
+- Remove per-frame collection churn in the hot path. Pool high-volume effect
+  objects, expire them in place rather than rebuilding several arrays with
+  `filter()` each frame, and reuse scratch target lists where profiling proves
+  allocation pressure.
+- Audit the 289 gradient/shadow references in `render.js`. Extend the existing
+  baked-sprite caches (`shotSprite`, `auraSprite`, `glowSprite`, …) to cover
+  repeated surfaces, replace repeated `shadowBlur` with baked sprites, and
+  avoid changing canvas composite/shadow state per artifact where batching can
+  do the same job.
+- Keep a player-facing effects-quality option (`AUTO`, `FULL`, `REDUCED`) with
+  `AUTO` as the phone default. Reduced-flash remains an accessibility choice,
+  not a disguised performance toggle.
+- Make the artifact-storm fixture (built in AFT-005B) part of the release
+  gate. Fail on a material frame-time regression, effect-array growth beyond
+  budget, uncapped trail growth, or simulation differences between effects
+  levels.
 
 ### AFT-006 — Save safety
 
+Dependency-free — schedule it early and in parallel. This is not a luxury:
+Safari's Intelligent Tracking Prevention can evict script-writable storage
+(including localStorage) after roughly seven days without a visit, which can
+erase a mid-campaign run on exactly the platform this game targets.
+
+- Request durable storage via `navigator.storage.persist()` where available,
+  and surface whether it was granted.
 - Export one versioned JSON backup containing settings, checkpoint, codex,
   medals, victories, daily history, and unlocks for Aetherfall.
 - Import previews what will change and validates schema before writing.
 - Keep at least one recoverable pre-import backup and one rolling autosave.
 - If storage is corrupt or unavailable, explain that the session is running
   unsaved instead of silently falling back.
-- Add migration and round-trip tests for every supported checkpoint version.
+- Add migration and round-trip tests for every supported checkpoint version,
+  runnable under the AFT-005A gate.
 
 ### AFT-007 — ORBITAL RELIC weapon path
 
 Recommended concept: a returning Relicforge glaive/halo. It is visibly and
 mechanically different from rapid VOLLEY fire and heavy IMPACT shots, yet it
 needs no new phone button.
+
+**Scope decision — this is an engine redesign riding existing keys, not a
+path swap.** The upgrade web is engine; the redesign keeps the `bond` path
+key and its four tier keys unchanged, and the skin layer renames the
+presentation (Aetherfall: ORBITAL RELIC; the pokemon skin gets its own
+fitting returning-item identity via `SKIN`). Consequences:
+
+- No storage-key changes and no rank migration: an owned `bond` rank simply
+  becomes the corresponding relic rank. A one-time notice explains the new
+  effects — never silently change what an owned pick does without telling the
+  player.
+- Because the engine is shared, the mechanics change in BOTH skins. The
+  suite's pokemon bit-identity guard exists to catch accidental drift from
+  the skin split; this is intentional engine evolution, so update the suite's
+  expectations deliberately in the same change — never by loosening the
+  guard.
 
 Proposed four-tier identity:
 
@@ -265,7 +420,8 @@ Mode adapters:
 - Starfighter/Blaster: the normal fire cadence launches and recalls the relic;
   hold-to-charge remains unchanged.
 - Breaker: rally hits bank relic arcs that sweep the upper wall and return to
-  the paddle. The ball remains the primary weapon.
+  the paddle. The ball remains the primary weapon (classic stays calm: relics
+  are ball-adjacent, never a gun).
 - No extra aim stick or action button is required on mobile.
 
 Required integration with the five remaining paths:
@@ -276,9 +432,7 @@ Required integration with the five remaining paths:
 - SURGE — active Surge accelerates orbit/recall without infinite meter gain.
 - AEGIS — a returning relic may intercept fire or reinforce a shield.
 
-Preferred scope: replace **BOND**, do not add a seventh spoke. BOND is useful,
-but its effects are the least moment-to-moment and have the most overlap with
-systems outside the web.
+Rehoming BOND's essential perks (so the spoke can become a weapon):
 
 - Make ITEM MAGNET a baseline phone quality-of-life behavior or a setting.
 - Move FORTUNE into codex/research progression or the existing drop-rate
@@ -288,20 +442,20 @@ systems outside the web.
 - Move BOND's score multiplier into medals/mastery so score play remains
   supported without consuming a weapon spoke.
 
-This is still an upgrade-web migration, not four isolated cards:
+This is still an upgrade-web redesign, not four isolated cards:
 
 - Keep six spokes, six adjacent bridges, 15 pairwise fusions, and two apexes.
-- Replace BOND's five pair fusions with five ORBITAL RELIC synergies. Retheme
-  and redesign its AEGIS and VOLLEY bridges. Rebuild CELESTIAL GUARDIAN's
-  BOND sector around the relic loop without changing the one-apex limit.
+- Redesign the five `bond` pair fusions as ORBITAL RELIC synergies under
+  their existing keys. Retheme and redesign its AEGIS and VOLLEY bridges.
+  Rebuild CELESTIAL GUARDIAN's `bond` sector around the relic loop without
+  changing the one-apex limit.
 - Rehome the BOND mastery satellite and LIGHT's DAWNLIGHT satellite. Preserve
   earned stack ranks even if their effects and presentation change.
-- Add a checkpoint schema migration that maps BOND ranks to equal ORBITAL RELIC
-  ranks. Convert owned BOND web nodes to their corresponding new nodes and
-  show the player a one-time migration/respec summary.
 - Preserve every unaffected save key. Never silently delete an owned pick.
 - Add one authored Relicforge weapon sprite, clear player/enemy silhouette
   rules, impact/return audio, and reduced-effects treatment.
+- Prototype the loop in a deterministic trial scene BEFORE touching the web;
+  the go/no-go on replacing BOND's identity is made on the prototype.
 - Verify at least three competitive end-run archetypes use ORBITAL RELIC for
   different reasons; it must not simply be the highest-DPS choice.
 
@@ -312,7 +466,8 @@ This is still an upgrade-web migration, not four isolated cards:
   eight build archetypes including the new weapon.
 - Record completion rate, stage duration, damage source, knockouts, charge-shot
   share, Surge frequency, heat lockout, upgrade pick rate, boss phase time,
-  and mobile frame time.
+  and mobile frame time. The `stats*` ledger machinery already records
+  per-wave combat data — build on it rather than adding a parallel recorder.
 - Establish regression budgets for difficulty spikes, dead upgrades, dominant
   picks, unavoidable damage, and bosses that die before demonstrating their
   mechanics.
@@ -320,9 +475,9 @@ This is still an upgrade-web migration, not four isolated cards:
 
 ### AFT-009 — Mobile constellation and build identity
 
-- Keep the replacement six-path web legible without requiring precise pinch
+- Keep the redesigned six-path web legible without requiring precise pinch
   gestures. Do not spend mobile readability on a seventh wedge unless
-  playtesting proves that replacing BOND is worse.
+  playtesting proves the in-place `bond` redesign is worse.
 - Use a bottom-sheet inspector, large touch targets, snap-to-focus navigation,
   reliable `FIT`/`FOCUS`, and no tall-viewport anchor drift.
 - Show owned build summary, named archetype, next synergy, lock reason, before/
@@ -331,30 +486,53 @@ This is still an upgrade-web migration, not four isolated cards:
 - Provide a practice chamber that can spawn a chosen wave/boss with the current
   build without changing the real save.
 
-### AFT-010 — Mobile accessibility
+### AFT-019 — First-session phone experience pass
+
+The public Aetherfall site is many players' first contact with the game, with
+no store page or manual around it. Presentation and pacing only — no new
+systems.
+
+- Cold-load the public site on a real phone with no saved data; measure and
+  minimize time from first tap to first shot fired.
+- Verify the three-doors title, vessel select, difficulty cards, and the
+  first-wave coach at 667×375 landscape and 390×844 portrait, through the
+  AFT-001 fitted-text helpers.
+- Confirm the coach copy, the first-volley grace window, and the FIRE pad
+  state labels teach the controls without a wall of text.
+- Confirm the standalone title screen carries no dead or confusing UI (the
+  edition pill is workshop-only) and that mode recipes read correctly to
+  someone who has never seen the game.
+
+### AFT-010 — Mobile accessibility (staged)
+
+**Stage 1 — settings-level wins (S–M each, ship piecemeal):**
 
 - Add text size, background dimming, projectile-outline strength,
   colorblind-safe threat palettes, toggle-charge, reduced hold time, and
   visual equivalents for important audio cues.
 - Preserve and improve button size, opacity, follow speed, handedness,
   haptics, auto-fire, reduced shake, and reduced flash.
+
+**Stage 2 — structural (L):**
+
 - Add a DOM accessibility layer for menus, settings, results, codex, and the
   upgrade web. Canvas visuals can remain, but choices and state must be
   keyboard/screen-reader discoverable.
 - Keyboard remapping and gamepad support remain valuable, but phone touch
   quality has priority.
 
-### AFT-011 — Mobile performance and packaging
+### AFT-011 — Mobile loading and packaging
 
 - Convert runtime art to WebP where alpha quality remains acceptable; retain
-  PNG only when it wins visually or by size.
+  PNG only when it wins visually or by size. Generate WebP from the masters in
+  the existing art pipeline, not by recompressing the shipped PNGs.
 - Load the current realm and prefetch the next realm instead of allowing a run
   to accumulate the entire campaign's decoded sprite memory.
-- Add a visible boot/loading state and graceful missing-asset fallback.
+- Add a visible boot/loading state and graceful missing-asset fallback (the
+  procedural art layer is already the fallback — surface it deliberately).
 - Profile representative low/mid-range phones at 60 and 120 Hz. Set budgets
-  for first interaction, peak decoded memory, long frames, and boss-phase FPS.
-- Audit the 289 gradient/shadow references in `render.js`; cache repeated
-  surfaces and remove hot-loop blur where profiling shows a real cost.
+  for first interaction, asset decode time, and peak decoded memory. Combat
+  frame-time budgets are owned by AFT-018.
 
 ### AFT-012 — Visual integration pass
 
@@ -370,41 +548,84 @@ This is still an upgrade-web migration, not four isolated cards:
 - Review the whole campaign at phone size, including LIGHT/DARK forms, reduced
   effects, and every boss reveal.
 
+### AFT-013 — Codex boss dossiers
+
+The codex full-size sprite gallery shipped 2026-07-22; this item is the boss
+layer on top of it.
+
+- A per-boss dossier page reusing the AFT-002 reveal asset: name, title,
+  realm, phase count, attack names, and the counterplay cue.
+- Record the player's history with each boss (defeats, knockouts, fastest
+  phase times from the stats ledger).
+- Unlock progressively: silhouette before first encounter, full dossier after.
+
+### AFT-015 — Installable/offline package and phone lifecycle
+
+- Service-worker offline packaging so the game loads without a network after
+  first visit; installable home-screen metadata.
+- Phone lifecycle correctness: pause cleanly on `visibilitychange`, resume the
+  audio context on the next gesture, and re-lay-out on orientation change
+  without losing state.
+- Ties into AFT-006: installed/persistent storage status shown honestly.
+
+### AFT-014 — Run history, boss rush, endless route, custom modifiers
+
+- Unchanged in scope; gated on a healthy AFT-008 balance matrix.
+
+### AFT-016 — Architecture and documentation cleanup
+
+- Unchanged in scope; do it incrementally at subsystem boundaries, not as a
+  rewrite that blocks player-facing work.
+
 ## Recommended delivery sequence
 
 ### Release-quality mobile pass
 
-AFT-001 → AFT-002 → AFT-003 → AFT-017 → AFT-004 → AFT-005 → AFT-006
+AFT-005A → AFT-001 → AFT-003 → AFT-004 → AFT-002 → AFT-017 → AFT-018 → AFT-005B
 
-This sequence fixes the visible mobile problems, proves the boss-art direction,
-removes legacy language, and installs the safety rails before progression is
-made larger.
+with **AFT-006 in parallel at any point after AFT-005A** (it touches nothing
+the UI work touches, and the storage-eviction risk is live today).
+
+The gate comes first because every subsequent item is safer and faster to ship
+against `npm test` than against a 20-minute fronted-tab ritual. The vocabulary
+lands before the label retrofit so text is fitted once, against final copy.
+The announcement queue (AFT-004, small) lands before the boss reveal (AFT-002,
+large) because the reveal scene plugs into it.
 
 ### New weapon expansion
 
-AFT-007 design prototype → BOND migration plan → AFT-009 six-path web update →
-AFT-007 full integration →
-AFT-008 balance matrix
+AFT-007 trial-scene prototype → go/no-go on the `bond` redesign →
+AFT-009 six-path web update → AFT-007 full integration → AFT-008 balance matrix
 
 Prototype the returning weapon in a deterministic trial scene before changing
-the web. Once the loop is fun, replace BOND, redistribute its essential perks,
-migrate the constellation and add the five pair synergies; then rebalance the
-whole campaign instead of tuning one stage at a time.
+the web. Once the loop is fun, redesign `bond` in place under its existing
+keys, rehome its essential perks, migrate the constellation presentation and
+add the five pair synergies; then rebalance the whole campaign instead of
+tuning one stage at a time.
 
 ### Shipping and replayability
 
-AFT-010 → AFT-011 → AFT-012 → AFT-013 → AFT-015, with AFT-014 after the
-campaign matrix is healthy. Do AFT-016 incrementally at subsystem boundaries,
-not as a rewrite that blocks player-facing work.
+AFT-019 → AFT-010 (stage 1, then stage 2) → AFT-011 → AFT-012 → AFT-013 →
+AFT-015, with AFT-014 after the campaign matrix is healthy. Do AFT-016
+incrementally at subsystem boundaries, not as a rewrite that blocks
+player-facing work.
 
 ## Guardrails
 
 - Do not put long introduction cards over live combat. Boss identity belongs in
   the reveal scene and codex; short combat warnings belong in reserved lanes.
+- Performance fallback may remove decorative artifacts, but never threats,
+  telegraphs, hit feedback, input responsiveness, or simulation accuracy.
 - Do not add a new permanent mobile button for ORBITAL RELIC.
-- Do not rename or discard existing save keys without migration.
+- Do not rename internal identifiers or storage keys — `G.mega`, path key
+  `bond`, `pkbrk-*` and friends ship unchanged; player-facing vocabulary
+  changes ride skin helpers.
+- The engine is shared: mechanics land in both skins, words and art differ per
+  skin. A mechanic that must behave differently per skin is a red flag.
 - Do not enlarge visual art in a way that enlarges damage hitboxes.
 - Do not reintroduce Pokémon names, terminology, glyphs, or assets into the
   standalone Aetherfall distribution.
 - Do not replace the locked production sprites wholesale. Improve their
   integration and presentation first.
+- Do not rebuild mid-level celebration moments (e.g. the reverted FIRST
+  ENCOUNTER splash). Art gets appreciated in the codex, on the player's terms.
