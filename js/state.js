@@ -167,8 +167,65 @@ function saveCheckpoint() {
     affinity: SETTINGS.affinity || null,
   };
   saveStore(storeKey('run'), RUN_CKPT);
+  writeAutosave(); // AFT-006: every region checkpoint refreshes the rolling autosave
 }
 function clearCheckpoint() { RUN_CKPT = null; saveStore(storeKey('run'), null); }
+
+// ── AFT-006: SAVE SAFETY — one versioned bundle, validated before writing ──
+// The bundle carries everything a campaign is: settings + music (global) and
+// the current skin's checkpoint/codex/medals/victories/best/daily/coach
+// state. Import NEVER writes an unknown key, NEVER writes a checkpoint that
+// fails migrateCheckpoint, and always snapshots a pre-import backup first.
+const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach'];
+const EXPORT_GLOBAL_KEYS = ['pkbrk-settings', 'pkbrk-music'];
+function exportBundle() {
+  const keys = {};
+  for (const k of EXPORT_GLOBAL_KEYS) { const v = loadStore(k, 'null'); if (v !== null) keys[k] = v; }
+  for (const b of EXPORT_SKIN_KEYS) { const k = storeKey(b); const v = loadStore(k, 'null'); if (v !== null) keys[k] = v; }
+  return { app: 'wavebreaker', v: 1, skin: SKIN.id, savedAt: new Date().toISOString(), keys };
+}
+function validateBundle(b) {
+  if (!b || typeof b !== 'object') return { ok: false, reason: 'NOT A SAVE FILE' };
+  if (b.app !== 'wavebreaker' || b.v !== 1) return { ok: false, reason: 'UNSUPPORTED SAVE VERSION' };
+  if (b.skin !== SKIN.id) return { ok: false, reason: 'THIS SAVE BELONGS TO THE ' + String(b.skin || '?').toUpperCase() + ' EDITION' };
+  if (!b.keys || typeof b.keys !== 'object' || Array.isArray(b.keys)) return { ok: false, reason: 'MALFORMED SAVE DATA' };
+  const allowed = new Set([...EXPORT_GLOBAL_KEYS, ...EXPORT_SKIN_KEYS.map(k => storeKey(k))]);
+  for (const k of Object.keys(b.keys)) {
+    if (!allowed.has(k)) return { ok: false, reason: 'UNRECOGNIZED KEY: ' + k.slice(0, 40) };
+  }
+  const runKey = storeKey('run');
+  if (b.keys[runKey] != null && !migrateCheckpoint(b.keys[runKey])) {
+    return { ok: false, reason: 'THE CHECKPOINT IN THIS SAVE IS UNREADABLE' };
+  }
+  // the preview: what changes, section by section — shown before any write
+  const curDex = loadStore(storeKey('dex'), '[]');
+  const incDex = b.keys[storeKey('dex')];
+  const curRun = loadStore(runKey, 'null');
+  const incRun = b.keys[runKey] != null ? migrateCheckpoint(b.keys[runKey]) : null;
+  const curMed = loadStore(storeKey('medals'), '{}');
+  const incMed = b.keys[storeKey('medals')];
+  const cnt = v => Array.isArray(v) ? v.length : (v && typeof v === 'object') ? Object.keys(v).length : 0;
+  const summary = [
+    { label: 'CHECKPOINT', cur: curRun ? 'WAVE ' + curRun.lvl : 'NONE', inc: incRun ? 'WAVE ' + incRun.lvl : 'NONE' },
+    { label: 'CODEX', cur: cnt(curDex) + ' LOGGED', inc: incDex != null ? cnt(incDex) + ' LOGGED' : 'KEPT' },
+    { label: 'MEDALS', cur: cnt(curMed) + ' STAGES', inc: incMed != null ? cnt(incMed) + ' STAGES' : 'KEPT' },
+    { label: 'BEST', cur: String(loadStore(storeKey('best'), '0') || 0), inc: b.keys[storeKey('best')] != null ? String(b.keys[storeKey('best')]) : 'KEPT' },
+  ];
+  return { ok: true, summary, savedAt: b.savedAt || '?' };
+}
+function applyBundle(b) {
+  saveStore(storeKey('preimport'), exportBundle()); // the recoverable pre-import backup
+  for (const [k, v] of Object.entries(b.keys)) saveStore(k, v);
+  return true;
+}
+function writeAutosave() { saveStore(storeKey('autosave'), exportBundle()); }
+function restoreAutosave() {
+  const b = loadStore(storeKey('autosave'), 'null');
+  const v = b && validateBundle(b);
+  if (!v || !v.ok) return false;
+  applyBundle(b);
+  return true;
+}
 let DAILY_RECORDS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore(storeKey('daily'), '{}'));
 function dailyBest() { return Math.max(0, +(DAILY_RECORDS[dailyDateKey()] || 0)); }
 function dailyStreak() {

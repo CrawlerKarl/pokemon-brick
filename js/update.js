@@ -2995,6 +2995,12 @@ function update(dt) {
     if (G.announce.t <= 0) G.announce = G.announceQueue.length ? G.announceQueue.shift() : null;
   }
   musicTick();
+  // AFT-006: blocked storage is said OUT LOUD, once — never silent loss
+  if (!STORAGE_HEALTH.writable && !STORAGE_HEALTH.noticed) {
+    STORAGE_HEALTH.noticed = true;
+    setAnnounce('alert', '#ff8a65', 'RUNNING UNSAVED',
+      'STORAGE IS BLOCKED — PROGRESS WILL NOT SURVIVE THIS SESSION', 4.5);
+  }
   // AFT-002: the reveal scene owns the frame — combat is frozen until the
   // portrait lands and the HUD lane docks (update returns; render draws it)
   if (G.reveal && (G.state === 'play' || G.state === 'serve')) { updateReveal(dt); return; }

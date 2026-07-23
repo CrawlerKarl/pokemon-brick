@@ -354,7 +354,10 @@ function advLayout() {
   const px = W / 2 - pw / 2, py = Math.max(compact ? 8 : 20, H / 2 - ph / 2);
   return {
     px, py, pw, ph, compact, sliders, toggles,
-    tab: i => ({ x: px + 28 + i * (pw - 56) / 2, y: py + (compact ? 48 : 58), w: (pw - 56) / 2, h: compact ? 30 : 36 }),
+    tab: i => ({ x: px + 24 + i * (pw - 48) / 3, y: py + (compact ? 48 : 58), w: (pw - 48) / 3 - 6, h: compact ? 30 : 36 }),
+    // AFT-006: the SAVE page — three stacked action buttons + status lines
+    saveBtn: i => ({ x: px + 36, y: py + (compact ? 108 : 128) + i * (compact ? 44 : 52), w: pw - 72, h: compact ? 36 : 42 }),
+    saveStatusY: py + (compact ? 108 : 128) + 3 * (compact ? 44 : 52) + 10,
     slider: i => ({ x: px + 36, y: py + top + i * rowH, w: pw - 72 }),
     toggle: i => ({ x: px + 30, y: py + top + sliders.length * rowH + i * togH, w: pw - 60, h: togH - (compact ? 4 : 8) }),
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },

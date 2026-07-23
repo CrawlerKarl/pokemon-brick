@@ -21,8 +21,25 @@ function loadStore(key, fallback) {
 }
 function saveStore(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-  catch (e) { return false; }
+  catch (e) { STORAGE_HEALTH.writable = false; return false; }
 }
+// AFT-006: storage health is a FIRST-CLASS, surfaced fact. Safari's ITP can
+// evict script storage after ~7 idle days — request durable storage where
+// available, record whether it was granted, and detect blocked storage so the
+// game can say "RUNNING UNSAVED" instead of silently losing a campaign.
+const STORAGE_HEALTH = { writable: true, durable: null, noticed: false };
+(function probeStorage() {
+  try { localStorage.setItem('pkbrk-probe', '1'); localStorage.removeItem('pkbrk-probe'); }
+  catch (e) { STORAGE_HEALTH.writable = false; }
+  try {
+    if (navigator.storage && navigator.storage.persisted) {
+      navigator.storage.persisted().then(p => { if (STORAGE_HEALTH.durable === null) STORAGE_HEALTH.durable = p; });
+    }
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then(g => { STORAGE_HEALTH.durable = g; }).catch(() => {});
+    }
+  } catch (e) { /* unsupported — durable stays unknown */ }
+})();
 try { if (!localStorage.getItem('pkbrk-v')) localStorage.setItem('pkbrk-v', '1'); } catch (e) { /* ok */ }
 // canvas-only text doesn't reliably trigger @font-face loading — kick the
 // local Orbitron variable font explicitly so the first frame isn't fallback

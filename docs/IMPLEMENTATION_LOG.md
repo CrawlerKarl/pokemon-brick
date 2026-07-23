@@ -5,6 +5,41 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22l — AFT-006: save safety (a 27-stage campaign can no longer vanish)
+
+Safari's ITP can evict script storage after ~7 idle days — on exactly the
+platform this game targets. Storage health is a first-class, surfaced fact
+now, and the campaign has real backups.
+
+- **`STORAGE_HEALTH`** (setup.js): a write probe detects blocked storage;
+  `navigator.storage.persist()` is requested at boot and the grant recorded.
+  Blocked storage announces **RUNNING UNSAVED** once, loudly — never a silent
+  loss. The SAVE settings page states the truth: DURABLE / BROWSER-MANAGED
+  (MAY EVICT — EXPORT A FILE) / BLOCKED.
+- **One versioned bundle** (state.js): `exportBundle()` = app/v/skin/savedAt +
+  a fixed key manifest (settings + music global; run/best/victory/medals/
+  dex/dexs/daily/jcoach per-skin via `storeKey`). `validateBundle()` refuses
+  foreign-skin bundles, unknown keys (an import can NEVER write an arbitrary
+  key), checkpoints that fail `migrateCheckpoint`, and garbage — and builds
+  the section-by-section PREVIEW (CHECKPOINT/CODEX/MEDALS/BEST, current →
+  incoming) shown before any write.
+- **Backups**: every region checkpoint refreshes a rolling
+  `storeKey('autosave')` bundle; `applyBundle()` snapshots a
+  `storeKey('preimport')` bundle before writing anything.
+- **The SAVE page** (settings, third tab): EXPORT SAVE FILE (a dated .json
+  download), IMPORT SAVE FILE (file picker → validated → previewed → CONFIRM
+  writes + reloads), RESTORE AUTOSAVE, plus the storage-health line and the
+  autosave timestamp.
+- Suite test 'AFT-006' (84th): bundle round-trip, the preview summary, four
+  refusal classes, checkpoint-driven autosave + restore, the pre-import
+  backup, health surfaced — with every touched key snapshotted and restored
+  so the suite can never eat a real save. (Bug found while testing: my test
+  used a level-2 checkpoint; `migrateCheckpoint` rejects lvl<4 BY DESIGN —
+  real checkpoints only exist from region boundaries. The test now mirrors
+  reality.) Verified visually: the SAVE page at 667×375.
+
+---
+
 ## 2026-07-22k — AFT-017: the oath becomes an evolution arc (deep pass)
 
 The single `[0.42, 0.72, 1]` alpha grade is gone. **`OATH_CH`** (render.js)

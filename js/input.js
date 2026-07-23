@@ -455,9 +455,10 @@ function handleAdvancedPress(x, y) {
   if (inRect(x, y, A.close) || !inRect(x, y, { x: A.px, y: A.py, w: A.pw, h: A.ph })) {
     advOpen = false; saveSettings(); return;
   }
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     if (inRect(x, y, A.tab(i))) { settingsPage = i; dragSlider = -1; SFX.wall(); return; }
   }
+  if (settingsPage === 2) { handleSavePress(x, y, A); return; }
   const grab = IS_TOUCH ? 26 : 18;
   for (let i = 0; i < A.sliders.length; i++) {
     const gm = A.slider(i);
@@ -470,6 +471,56 @@ function handleAdvancedPress(x, y) {
       SETTINGS[A.toggles[i].key] = !SETTINGS[A.toggles[i].key];
       saveSettings(); SFX.wall(); return;
     }
+  }
+}
+// ── AFT-006: the SAVE page — export / import (previewed) / restore ────────
+let importPreview = null; // { bundle, summary, savedAt } while previewing
+function exportSaveFile() {
+  const bundle = exportBundle();
+  const a = document.createElement('a');
+  a.download = 'wavebreaker-' + SKIN.id + '-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(bundle, null, 1));
+  a.click();
+  setAnnounce('star', '#80d8ff', 'SAVE EXPORTED', 'KEEP THE FILE SOMEWHERE SAFE — IMPORT RESTORES EVERYTHING', 3);
+}
+function importSavePick() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      let bundle = null;
+      try { bundle = JSON.parse(String(rd.result)); } catch (e) { /* handled below */ }
+      const v = validateBundle(bundle);
+      if (!v.ok) { setAnnounce('alert', '#ff8a65', 'IMPORT REFUSED', v.reason, 3.4); return; }
+      importPreview = { bundle, summary: v.summary, savedAt: v.savedAt };
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+function handleSavePress(x, y, A) {
+  if (importPreview) {
+    if (inRect(x, y, A.saveBtn(1.6))) {
+      applyBundle(importPreview.bundle); // pre-import backup written inside
+      importPreview = null;
+      setAnnounce('star', '#66bb6a', 'SAVE IMPORTED', 'RELOADING WITH THE RESTORED CAMPAIGN…', 2);
+      setTimeout(() => location.reload(), 900);
+      return;
+    }
+    if (inRect(x, y, A.saveBtn(2.6))) { importPreview = null; SFX.wall(); return; }
+    return;
+  }
+  if (inRect(x, y, A.saveBtn(0))) { exportSaveFile(); return; }
+  if (inRect(x, y, A.saveBtn(1))) { importSavePick(); return; }
+  if (inRect(x, y, A.saveBtn(2))) {
+    if (restoreAutosave()) {
+      setAnnounce('star', '#66bb6a', 'AUTOSAVE RESTORED', 'RELOADING WITH THE RECOVERED CAMPAIGN…', 2);
+      setTimeout(() => location.reload(), 900);
+    } else setAnnounce('alert', '#78909c', 'NO AUTOSAVE YET', 'A CHECKPOINT WRITES ONE AT EVERY REALM', 2.6);
+    return;
   }
 }
 // between-wave upgrade cards: 3 across on desktop, stacked rows on phones

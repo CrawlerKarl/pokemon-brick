@@ -6508,14 +6508,16 @@ function drawAdvanced() {
   ctx.moveTo(cb.x + 10, cb.y + 10); ctx.lineTo(cb.x + cb.w - 10, cb.y + cb.h - 10);
   ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
   ctx.stroke();
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     const r = A.tab(i), active = settingsPage === i;
     roundRect(r.x, r.y, r.w, r.h, 10);
     ctx.fillStyle = active ? 'rgba(66,165,245,0.26)' : 'rgba(255,255,255,0.05)'; ctx.fill();
     ctx.strokeStyle = active ? '#80d8ff' : 'rgba(255,255,255,0.15)'; ctx.lineWidth = active ? 2 : 1; ctx.stroke();
     ctx.font = `800 ${A.compact ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = active ? '#e3f2fd' : '#78909c';
-    ctx.fillText(i === 0 ? 'GAME' : 'TOUCH', r.x + r.w / 2, r.y + r.h / 2);
+    ctx.fillText(i === 0 ? 'GAME' : i === 1 ? 'TOUCH' : 'SAVE', r.x + r.w / 2, r.y + r.h / 2);
   }
+  // AFT-006: the SAVE page — export/import/restore + surfaced storage health
+  if (settingsPage === 2) { drawSaveSettings(A); ctx.restore(); return; }
   // sliders
   for (let i = 0; i < A.sliders.length; i++) {
     const s = A.sliders[i], gm = A.slider(i);
@@ -6553,6 +6555,60 @@ function drawAdvanced() {
     ctx.fillStyle = '#eceff1'; ctx.fill();
   }
   ctx.restore();
+}
+
+// AFT-006: export / import / restore, with the import PREVIEWED before any
+// write — the summary shows exactly what changes, section by section.
+function drawSaveSettings(A) {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (importPreview) {
+    ctx.font = `900 ${A.compact ? 11 : 13}px Orbitron, sans-serif`;
+    ctx.fillStyle = '#ffd54f';
+    fitLabel('IMPORT PREVIEW — SAVED ' + String(importPreview.savedAt).slice(0, 10),
+      A.px + A.pw / 2, A.saveBtn(0).y - 14, { size: A.compact ? 10 : 11, min: 8.5, weight: 900, color: '#ffd54f', maxW: A.pw - 60 });
+    importPreview.summary.forEach((row, i) => {
+      const y = A.saveBtn(0).y + 8 + i * (A.compact ? 18 : 22);
+      ctx.font = bodyFont(A.compact ? 10 : 11, 700);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#90a4ae';
+      ctx.fillText(row.label, A.px + 40, y);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#e3f2fd';
+      ctx.fillText(row.cur + '  →  ' + row.inc, A.px + A.pw - 40, y);
+    });
+    ctx.textAlign = 'center';
+    for (const [i, label, col] of [[1.6, 'CONFIRM IMPORT', '#66bb6a'], [2.6, 'CANCEL', '#ff8a65']]) {
+      const r = A.saveBtn(i);
+      roundRect(r.x, r.y, r.w, r.h, 12);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = `800 ${A.compact ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = col;
+      ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2);
+    }
+    return;
+  }
+  const auto = loadStore(storeKey('autosave'), 'null');
+  const rows = [
+    ['EXPORT SAVE FILE', '#80d8ff'],
+    ['IMPORT SAVE FILE', '#ffd54f'],
+    ['RESTORE AUTOSAVE' + (auto ? '' : ' — NONE YET'), auto ? '#66bb6a' : '#546e7a'],
+  ];
+  rows.forEach(([label, col], i) => {
+    const r = A.saveBtn(i);
+    roundRect(r.x, r.y, r.w, r.h, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.font = `800 ${A.compact ? 10 : 12}px Orbitron, sans-serif`; ctx.fillStyle = col;
+    ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2);
+  });
+  // storage health, stated plainly — never a silent failure mode
+  const health = !STORAGE_HEALTH.writable ? ['STORAGE BLOCKED — RUNNING UNSAVED', '#ff8a65']
+    : STORAGE_HEALTH.durable === true ? ['STORAGE: DURABLE (EVICTION-PROTECTED)', '#66bb6a']
+    : STORAGE_HEALTH.durable === false ? ['STORAGE: BROWSER-MANAGED (MAY EVICT WHEN IDLE — EXPORT A FILE)', '#ffd54f']
+    : ['STORAGE: BROWSER-MANAGED', '#90a4ae'];
+  fitLabel(health[0], A.px + A.pw / 2, A.saveStatusY, { size: A.compact ? 9 : 10, min: 8, weight: 700, color: health[1], maxW: A.pw - 48 });
+  if (auto && auto.savedAt) {
+    fitLabel('AUTOSAVE: ' + String(auto.savedAt).slice(0, 19).replace('T', ' '),
+      A.px + A.pw / 2, A.saveStatusY + (A.compact ? 15 : 18), { size: A.compact ? 8.5 : 9.5, min: 8, weight: 600, color: '#78909c', maxW: A.pw - 48 });
+  }
 }
 
 function drawDex() {

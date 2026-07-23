@@ -1657,6 +1657,68 @@ window.requestAnimationFrame = function () { return 0; };
     return 'channels monotonic + quiet Form I · blend earned by form · pokemon untouched · Form III departs ≥1.8× Form I · ceremony clean';
   });
 
+  // AFT-006: save safety — a versioned bundle that round-trips, validates
+  // before writing, refuses foreign/corrupt data, and keeps recoverable
+  // backups (rolling autosave + pre-import snapshot).
+  test('AFT-006: save bundle round-trip, validation, backups', async () => {
+    // snapshot EVERY key this test can touch — the suite must never eat a
+    // real player save (same discipline as the S1 storage tests)
+    const touched = [...EXPORT_GLOBAL_KEYS,
+      ...EXPORT_SKIN_KEYS.map(k => storeKey(k)), storeKey('autosave'), storeKey('preimport')];
+    const snap = {};
+    for (const k of touched) { try { snap[k] = localStorage.getItem(k); } catch (e) { snap[k] = null; } }
+    try {
+      // shape
+      const b0 = exportBundle();
+      assert(b0.app === 'wavebreaker' && b0.v === 1 && b0.skin === SKIN.id && b0.keys && typeof b0.keys === 'object',
+        'bundle shape wrong');
+      // round-trip: plant a sentinel codex, export, wipe, import → restored
+      saveStore(storeKey('dex'), [881001, 881002, 881003]);
+      const b1 = exportBundle();
+      saveStore(storeKey('dex'), []);
+      assert(loadStore(storeKey('dex'), '[]').length === 0, 'wipe failed');
+      const v1 = validateBundle(b1);
+      assert(v1.ok, 'own export must validate: ' + v1.reason);
+      assert(Array.isArray(v1.summary) && v1.summary.length >= 3 && v1.summary[1].label === 'CODEX',
+        'preview summary missing');
+      applyBundle(b1);
+      assert(loadStore(storeKey('dex'), '[]').join() === '881001,881002,881003', 'round-trip lost the codex');
+      // applyBundle wrote the recoverable pre-import backup FIRST
+      const pre = loadStore(storeKey('preimport'), 'null');
+      assert(pre && pre.app === 'wavebreaker', 'no pre-import backup written');
+      // validation refusals: wrong skin · unknown key · corrupt checkpoint · garbage
+      assert(!validateBundle({ ...b1, skin: 'aetherfall' }).ok, 'foreign-skin bundle accepted');
+      assert(!validateBundle({ ...b1, keys: { ...b1.keys, 'evil-key': 1 } }).ok, 'unknown key accepted');
+      const badRun = { ...b1, keys: { ...b1.keys, [storeKey('run')]: { v: 99, hostile: true } } };
+      assert(!validateBundle(badRun).ok, 'unreadable checkpoint accepted');
+      assert(!validateBundle('garbage').ok && !validateBundle(null).ok && !validateBundle({ app: 'x' }).ok,
+        'garbage bundles accepted');
+      // the rolling autosave: a real checkpoint writes it; restore round-trips
+      saveStore(storeKey('autosave'), null);
+      // a REAL run at a REGION level — checkpoints only exist from level 4+
+      // (migrateCheckpoint rejects lvl<4 by design), which is also the only
+      // place saveCheckpoint ever runs in real play
+      resetRun(4, false);
+      saveCheckpoint();
+      const auto = loadStore(storeKey('autosave'), 'null');
+      assert(auto && auto.app === 'wavebreaker' && auto.keys[storeKey('run')],
+        'saveCheckpoint did not refresh the autosave');
+      saveStore(storeKey('dex'), []); // damage → restore recovers it
+      assert(restoreAutosave() === true, 'restoreAutosave failed on a valid autosave');
+      assert(loadStore(storeKey('dex'), '[]').join() === '881001,881002,881003',
+        'autosave restore lost the codex');
+      // storage health is a surfaced first-class fact
+      assert(typeof STORAGE_HEALTH === 'object' && typeof STORAGE_HEALTH.writable === 'boolean',
+        'STORAGE_HEALTH missing');
+    } finally {
+      for (const k of touched) {
+        try { snap[k] === null ? localStorage.removeItem(k) : localStorage.setItem(k, snap[k]); } catch (e) {}
+      }
+      G.trial = true; // leave no real-run flag behind for later tests
+    }
+    return 'bundle round-trips · preview summary · 4 refusal classes · autosave via checkpoint · pre-import backup · health surfaced';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so
