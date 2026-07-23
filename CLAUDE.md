@@ -143,7 +143,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 84 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 86 checks; `window.TEST_RESULTS` at
   completion. Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
@@ -476,7 +476,14 @@ phone — flag anything only verifiable there.
   suite catch stragglers. Evolved species are bigger + tankier elites.
 - **Progression: paths + mastery + checkpoints.** Drafts advance the same
   6-path × 4-tier tree (two distinct offense paths; PRISM owns type-matchup mastery); junkie re-skins tiers as
-  Pokémon items (`JUNKIE_ITEMS`). **Every tier must stay live in all three
+  Pokémon items (`JUNKIE_ITEMS`). **The old BOND utility spoke is the
+  ORBITAL RELIC returning-glaive WEAPON since AFT-007 (2026-07-23)** — path
+  key `bond` and tier keys `magnetize/bond/fortune/revive` unchanged; the
+  bond web (bridges/fusions/apex 'e' sector) keys off relic events via
+  `webRelicProcs`; the displaced perks are BASELINE item drift, RESEARCH
+  drop yields, the AEGIS-capstone lives, and medal-scaled score
+  (`G.medalScoreBonus`). Relic damage is `meta.source 'relic'`, `noMega`,
+  and deterministic (no `gameRand` anywhere in its flight). **Every tier must stay live in all three
   modes** — tiers carry an optional `sdesc` (shooter-mode text, `tierDesc`)
   and mode-aware wiring: shields ABSORB a lethal hit on the player in every
   mode (`absorbHit`, update.js — never regress them to floor-line-only),

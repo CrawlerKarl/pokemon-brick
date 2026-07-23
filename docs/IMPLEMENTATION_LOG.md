@@ -5,6 +5,61 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-23e — AFT-007 ORBITAL RELIC + tappable wedge labels + the dock beat
+
+The owner confirmed boss frame rate on hardware (the open thread closed) and
+green-lit three items. The big one is **AFT-007: the `bond` path is a WEAPON
+now** — an engine redesign riding the existing keys, exactly per the backlog.
+
+- **The loop.** Every 4th attack (6th rally hit in BREAKER; 3rd with a deep
+  VOLLEY) launches a RETURNING GLAIVE: a deterministic out-bezier to a high
+  lane point, then a return leg homing on the ship's live position. One hit
+  per target per leg. Tier keys unchanged: `magnetize` = RELIC GLAIVE
+  (launch), `bond` = RECALL EDGE (return ×2 + intercepts one non-boss shot,
+  +1 with AEGIS depth), `fortune` = TWIN ORBIT (two on offset lanes; a full
+  airspace BANKS up to 3), `revive` = CROWNED RELIC (a full charge / classic
+  Mega ignition fans 1+bank; crown relics hit bosses at ×0.35 — the separate
+  boss cap). Path synergies per the spec: IMPACT +15%/rank outward and a
+  SPLASH-CHARGE detonating recall, PRISM retunes each launch via
+  `counterElements`, SURGE ×1.5 orbit speed with NO meter feed (relic damage
+  is `noMega` and never touches the hit meters), VOLLEY faster cadence +
+  wider lanes. Ledger family: `meta.source 'relic'` → `dmgRelic`.
+- **The bond web keys off relic events now** (`webRelicProcs`): launches
+  drive ESCORT DRONES (`salvage`, renamed) + VICTORY FORMATION sync; returns
+  drive WARDING ORBIT shields (`rescue`, every 6th), COMET SHEPHERD seeds
+  and the celestial 'e' sector; intercepts charge GUARDIAN ANGEL; BESTIARY
+  CHORUS hears the types the relic strikes. Every bond web node requires
+  bond ranks, so the feeds can never be orphaned. All keys unchanged.
+- **Perk rehoming (never silently delete value):** item magnet is BASELINE
+  QoL for every build; FORTUNE's +50% drops moved to RESEARCH (+10% per
+  claimed reward tier, all five = the old cap; pinned off on dailies like
+  the drops knob); the +1-life-per-region (and the install +1) ride the
+  AEGIS capstone; the catch score identity lives on mastery medals
+  (`G.medalScoreBonus`, +1%/medal capped +30%, real journeys) while saved
+  `G.catchBonus` stays honored forever. A one-time PATH REFORGED notice
+  (`relicNotice`, exported in bundles) fires on the first draft advance or
+  checkpoint restore with bond ranks.
+- **Skins:** engine copy is skin-neutral RELIC wording; aetherfall names the
+  path ORBITAL RELIC / RECALL ARRAY (`TREE_LEXICON`), pokemon's junkie items
+  are the BONE CLUB → BONEMERANG → TWIN BONES → BONE RUSH line, and the
+  sprite is baked per skin — a crescent glaive with an energy rim, or the
+  bone boomerang. The dist builder's three stale bond-copy swaps came out
+  (the neutral copy has no franchise strings; RESIDUE stays none).
+- **Suite:** the two pickup-pump tests now pump `webRelicProcs`, and a new
+  invariant (86th) locks cadence, banking, one-hit legs, the ledger family,
+  the no-Mega rule, recall interception + homecoming, the crown fan + boss
+  cap, the classic no-gun rally arc, and the AEGIS life.
+- **Also this round:** wedge labels on the constellation are TAP TARGETS
+  (jump to that path's frontier tier; `labelRect` shared by render + input),
+  and the boss reveal ends in a DOCK BEAT — white + type-colored rings, a
+  sparkle burst and a roar exactly where the portrait lands.
+
+Gate: full `npm test` green in 51s, 86/86, RESIDUE none, storms in budget.
+Balance follow-up belongs to AFT-008 (the matrix now has a relic family in
+the ledger to read).
+
+---
+
 ## 2026-07-23d — Four owner reports: web text, reveal continuity, bigger descriptions, stable vessel art
 
 Owner feedback round, all four items verified by screenshot + a numeric

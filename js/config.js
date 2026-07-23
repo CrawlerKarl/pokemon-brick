@@ -114,7 +114,9 @@ function diff() {
     // drops are rare on purpose — each one should feel like an event
     dropChance: 0.06 * (G.daily ? 1 : SETTINGS.drops) * (mod?.key === 'swift' ? 1.4 : 1)
       * starterMod('drop', 1)
-      * (1 + 0.5 * upgN('fortune')) // Bond path tier 3
+      // AFT-007: FORTUNE's +50% moved to RESEARCH — each claimed research
+      // reward tier improves field yields by +10% (all five = the old cap)
+      * (G.daily ? 1 : 1 + 0.1 * SKIN.dexRewards.filter(r => DEX.size >= r.at).length)
       * (1 + 0.08 * stackN('dawn')), // DAWNLIGHT CHARM (light affinity)
     catchChance: 0.07 * (!G.daily && dexRewardActive('lucky') ? 1.25 : 1) * starterMod('catch', 1),
   };

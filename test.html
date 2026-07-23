@@ -792,20 +792,21 @@ window.requestAnimationFrame = function () { return 0; };
     tryMega();
     assert(G.shieldCharges === 1 && G.reactiveCD === 20, 'entering Mega did not regrow a shield');
     G.megaT = 0;
-    // RESCUE CIRCUIT: potions restore a shield; every 8th pickup grows one
+    // WARDING ORBIT (AFT-007): potions restore a shield; every 6th RELIC
+    // RETURN grows one — the bond web keys off the relic loop now
     G.upg.rescue = 1;
     G.shieldCharges = 0; G.lives = 3;
     collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
     assert(G.shieldCharges === 1, 'potion did not restore a shield');
-    G.rescueN = 7; G.shieldCharges = 0;
-    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.star });
-    assert(G.shieldCharges === 1 && G.rescueN === 0, 'the 8th pickup did not grow a shield');
-    // SALVAGE DRONES (shooter): every 3rd pickup launches a seeking volley
+    G.rescueN = 5; G.shieldCharges = 0;
+    webRelicProcs('return');
+    assert(G.shieldCharges === 1 && G.rescueN === 0, 'the 6th relic return did not grow a shield');
+    // ESCORT DRONES (shooter): every 3rd relic LAUNCH sends a seeking volley
     G.upg.salvage = 1;
     G.salvageCount = 2; G.missiles = [];
-    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.star });
+    webRelicProcs('launch');
     assert(G.missiles.length === 2 && G.missiles.every(m => m.drone),
-      'the 3rd pickup did not launch 2 drones');
+      'the 3rd relic launch did not send 2 drones');
     // drones intercept enemy fire before falling back to targets
     G.enemyShots = [{ x: G.missiles[0].x + 4, y: G.missiles[0].y - 6, vy: 0 }];
     for (let f = 0; f < 12 && !G.enemyShots.every(s => s.dead); f++) update(1 / 60);
@@ -965,6 +966,93 @@ window.requestAnimationFrame = function () { return 0; };
 
   // 2w-iid) the NINE cross-web fusions and TWO apexes fire with their
   // declared limiters (banked resources, caps, once-per-wave rules).
+  test('AFT-007: orbital relic — cadence, legs, intercept, crown, classic arc', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    G.state = 'play'; G.reinforce = 0; G.fx = 0; G.fy = 0; G.enemyShots = [];
+    const mk = (x, y, t = 'normal') => ({ bx: x, by: y, hx: x, hy: y, row: 0, col: 0,
+      w: 70, h: 50, hp: 100, maxHp: 100, poke: { id: 19, t }, flash: 0, wobble: 0 });
+    const step = () => { paused = false; G.freeze = 0; update(1 / 60); };
+    const volley = () => { G.blasterCD = 0; G.heat = 0; G.overheat = 0; fireAction(); };
+    // no ranks → no relic, ever
+    G.bricks = [mk(400, 150)];
+    for (let i = 0; i < 6; i++) volley();
+    assert(G.relics.length === 0, 'a relic flew without the glaive rank');
+    // tier 1: every 4th shot launches; a full airspace BANKS instead
+    advancePath('bond'); // magnetize → RELIC GLAIVE
+    G.relics = []; G.relicCount = 0; G.relicBank = 0;
+    for (let i = 0; i < 4; i++) volley();
+    assert(G.relics.length === 1, 'the 4th shot did not launch (got ' + G.relics.length + ')');
+    const R0 = G.relics[0];
+    // element may be NULL for the neutral training drone — that's the
+    // untyped baseline, same as its bolts
+    assert(R0.phase === 'out', 'the relic launched without an out-flight');
+    for (let i = 0; i < 4; i++) volley();
+    assert(G.relics.length === 1 && G.relicBank === 1, 'a full airspace did not bank the relic');
+    // one hit per target per leg · ledger family · never feeds the Mega meter
+    // (position is a pure function of t — collapse the curve onto the brick)
+    const tgt = G.bricks[0], mega0 = G.mega;
+    R0.x0 = R0.cx = R0.ax = 400; R0.y0 = R0.cy = R0.ay = 150;
+    R0.hits.clear();
+    step();
+    assert(tgt.hp < 100, 'the pass dealt no damage');
+    const hpAfter = tgt.hp;
+    step();
+    assert(tgt.hp === hpAfter, 'one leg struck the same target twice');
+    assert(Math.abs(G.mega - mega0) < 1e-9, 'relic damage fed the Mega meter');
+    assert((statsCur().dmgRelic || 0) > 0, 'the ledger did not record the relic family');
+    // RECALL EDGE: the return leg intercepts hostile fire, then lands home
+    advancePath('bond'); // bond → RECALL EDGE
+    // keep one far-off brick alive so the wave never clears mid-segment
+    G.relics = []; G.relicBank = 0; G.relicCount = 3; G.bricks = [mk(900, 90)];
+    volley();
+    const R1 = G.relics[0];
+    assert(R1 && R1.icptN >= 1, 'recall edge armed no interception');
+    R1.phase = 'back'; R1.t = 0; R1.dur = 0.9; R1.x0 = R1.x; R1.y0 = R1.y; R1.hits.clear();
+    G.enemyShots = [{ x: R1.x, y: R1.y, vy: 60 }];
+    step();
+    assert(G.enemyShots.every(s => s.dead), 'the return pass did not intercept the shot');
+    for (let i = 0; i < 120 && G.relics.length; i++) step();
+    assert(!G.relics.length, 'the relic never returned home');
+    // TWIN ORBIT + CROWNED RELIC: a full charge fans 1+bank; boss cap holds
+    const lives0 = G.lives;
+    advancePath('bond'); // fortune → TWIN ORBIT
+    advancePath('bond'); // revive → CROWNED RELIC
+    assert(G.lives === lives0, 'the crown tier still grants the old +1 life');
+    G.relics = []; G.relicCount = 0; G.relicBank = 2;
+    G.heat = 0; G.overheat = 0;
+    fireCharge(1);
+    assert(G.relics.length === 3 && G.relics.every(r => r.crown),
+      'the crown did not fan 1+bank relics (got ' + G.relics.length + ')');
+    const boss = Object.assign(mk(500, 160), { isBoss: true, phase: 1 });
+    G.bricks = [boss];
+    const rc = G.relics[0];
+    rc.x0 = rc.cx = rc.ax = 500; rc.y0 = rc.cy = rc.ay = 160;
+    rc.hits.clear();
+    step();
+    assert(boss.hp < 100 && 100 - boss.hp <= 0.7,
+      'crown boss cap broken (dealt ' + (100 - boss.hp) + ')');
+    // CLASSIC stays calm: rally hits bank a BALL-ADJACENT arc — never a gun
+    SETTINGS.mode = 'classic';
+    resetRun(1, true);
+    G.state = 'play';
+    G.upg.magnetize = 1; G.path.bond = 1;
+    G.relics = []; G.relicCount = 0; G.lasers = [];
+    const cb = { rally: 0 };
+    for (let i = 0; i < 6; i++) awardRally(cb, 400, 500);
+    assert(G.relics.length === 1, 'the 6th rally hit did not launch the classic arc');
+    assert(G.lasers.length === 0 && !blasterArmed(), 'classic gained a gun from the relic path');
+    // the extra-life perk rides the AEGIS capstone now
+    G.upg = {}; G.path = {};
+    const lives1 = G.lives;
+    advancePath('aegis'); advancePath('aegis'); advancePath('aegis'); advancePath('aegis');
+    assert(G.lives === lives1 + 1, 'the AEGIS capstone did not grant its life');
+    SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    assert(ERR.length === e0, 'errors during the relic run');
+    return 'cadence 4 · bank · one-hit legs · ledger relic family · no Mega feed · recall intercept + homecoming · crown fan ×3 w/ boss cap · classic rally arc, no gun · AEGIS life';
+  });
+
   test('upgrade web: cross-web fusions + apex mechanics', async () => {
     const e0 = ERR.length;
     SETTINGS.mode = 'blaster'; SETTINGS.starter = 'none';
@@ -1036,11 +1124,12 @@ window.requestAnimationFrame = function () { return 0; };
     const lanceBolt = G.lasers.find(l => l.charged && l.lance);
     assert(G.shieldCharges === 1 && lanceBolt && lanceBolt.pierce === 99,
       'the lance did not spend a shield for an unstoppable bolt');
-    // COMET SHEPHERD: pickups bank seeds (max 3); a release sends them all
+    // COMET SHEPHERD (AFT-007): relic RETURNS bank seeds (max 3); a release
+    // sends them all
     G.upg.shepherd = 1;
     G.cometSeeds = 0;
-    collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.star });
-    assert(G.cometSeeds === 1, 'a pickup did not bank a comet seed');
+    webRelicProcs('return');
+    assert(G.cometSeeds === 1, 'a relic return did not bank a comet seed');
     G.cometSeeds = 3; G.missiles = []; G.lasers = []; G.heat = 0; G.overheat = 0; G.shieldCharges = 0;
     fireCharge(1);
     assert(G.missiles.filter(m => m.comet).length === 3 && G.cometSeeds === 0,

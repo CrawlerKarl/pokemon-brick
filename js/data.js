@@ -602,7 +602,7 @@ const PATHS = {
       visual: 'SEGMENTED GREEN ARMOR PLATES WIDEN THE SHIELD ARC' },
     { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 18% WIDER',
       sdesc: 'CATCH REACH +18% · YOUR HURTBOX STAYS SMALL', visual: 'GREEN SIDE WINGS EXTEND YOUR COLLECTION REACH' },
-    { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS',
+    { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS · +1 LIFE NOW AND EVERY REGION CLEARED',
       visual: 'A ROTATING REGENERATOR MARK TRAVELS THE SHIELD CROWN' },
   ]},
   surge: { name: 'SURGE', role: 'MEGA TEMPO', family: 'tempo', color: '#ffd54f',
@@ -616,16 +616,22 @@ const PATHS = {
     { key: 'megaX',     icon: 'mega', name: 'APEX MEGA',      desc: 'MEGA LASTS 9s · ATTACK DAMAGE +40%',
       visual: 'THE OVERDRIVE CORE GAINS A WHITE APEX CROWN' },
   ]},
-  bond: { name: 'BOND', role: 'PICKUPS & SCORE', family: 'utility', color: '#ec407a',
-    summary: 'MORE DROPS · SAFER CATCHES · EXTRA LIVES', tell: 'PINK MAGNET NODE', tiers: [
-    { key: 'magnetize', icon: 'magnet',   name: 'ITEM MAGNET',    desc: 'PICKUPS DRIFT TOWARD YOUR PADDLE',
-      sdesc: 'PICKUPS DRIFT TOWARD YOU', visual: 'PINK MAGNET VANES APPEAR BESIDE THE PILOT' },
-    { key: 'bond',      icon: 'pokeball', name: "TRAINER'S BOND", desc: 'EACH CATCH: PERMANENT +6% SCORE',
-      visual: 'A POKÉ BALL BOND CREST LOCKS TO THE REAR RIG' },
-    { key: 'fortune',   icon: 'coin',     name: 'FORTUNE',        desc: 'POWER-UP DROP CHANCE +50%',
-      visual: 'A SMALL GOLD-PINK FORTUNE CHARM HANGS FROM THE CREST' },
-    { key: 'revive',    icon: 'heart',    name: 'POKÉ REVIVE',    desc: '+1 LIFE NOW · +1 LIFE EVERY REGION CLEARED',
-      visual: 'A BRIGHT HEART CANISTER POWERS THE REAR RIG' },
+  // AFT-007: the old pickup/score path is now a WEAPON — a returning relic
+  // glaive. The path key and all four tier KEYS are storage-stable and ride
+  // unchanged (an owned rank simply becomes the matching relic rank); the
+  // old perks were rehomed: item magnet is baseline QoL, the catch score
+  // bonus moved to mastery medals, FORTUNE's drop bonus moved to research,
+  // and the periodic extra life lives on the AEGIS capstone now.
+  bond: { name: 'RELIC', role: 'RETURNING GLAIVE', family: 'utility', color: '#ec407a',
+    summary: 'A GLAIVE THAT FLIES OUT AND RETURNS · COVERS NEW LANES', tell: 'PINK RELIC BLADE RACK', tiers: [
+    { key: 'magnetize', icon: 'magnet',   name: 'RELIC GLAIVE',  desc: 'EVERY 6TH BALL HIT LAUNCHES A RELIC ARC THAT SWEEPS ABOVE AND RETURNS',
+      sdesc: 'EVERY 4TH SHOT ALSO LAUNCHES A RETURNING RELIC GLAIVE', visual: 'A CURVED RELIC BLADE RACKS BESIDE THE PILOT' },
+    { key: 'bond',      icon: 'pokeball', name: 'RECALL EDGE',   desc: 'THE RETURN PASS DEALS DOUBLE DAMAGE',
+      sdesc: 'THE RETURN PASS DEALS DOUBLE DAMAGE AND INTERCEPTS ONE ENEMY SHOT', visual: 'THE BLADE TRAILS A BRIGHT RECALL EDGE' },
+    { key: 'fortune',   icon: 'coin',     name: 'TWIN ORBIT',    desc: 'TWO RELICS FLY ON OFFSET ARCS',
+      visual: 'A SECOND BLADE RACKS ON THE OTHER WING' },
+    { key: 'revive',    icon: 'heart',    name: 'CROWNED RELIC', desc: 'MEGA IGNITION ALSO FANS OUT EVERY BANKED RELIC',
+      sdesc: 'A FULL CHARGE ALSO FANS OUT EVERY BANKED RELIC', visual: 'A CROWN OF RELIC BLADES ORBITS THE RIG' },
   ]},
 };
 const PATH_KEYS = Object.keys(PATHS);
@@ -659,15 +665,15 @@ function tierTags(pathKey, tierIdx) {
   if (family === 'defense') return ['DEFENSE'];
   if (family === 'element') return [typeWord()];
   if (family === 'tempo') return [lex('MEGA')];
-  return ['ITEM', 'SCORE'];
+  return ['RELIC', 'WEAPON'];
 }
 function tierSynergy(pathKey, tierIdx) {
   const family = PATHS[pathKey].family;
   if (family === 'offense' && pathLvl('surge')) return lex('SYNERGY: MORE HITS CHARGE MEGA FASTER');
-  if (family === 'defense' && pathLvl('bond')) return 'SYNERGY: SAFER ITEM COLLECTION';
+  if (family === 'defense' && pathLvl('bond')) return 'SYNERGY: A RETURNING RELIC COVERS THE SHIELD LANE';
   if (family === 'element' && G.starter) return 'SYNERGY: AMPLIFIES YOUR ' + SKIN.strings.partnerWord + ' ' + typeWord();
   if (family === 'tempo') return lex('SYNERGY: EVERY ' + PATHS.surge.name + ' RANK ADDS +10% MEGA DAMAGE');
-  if (family === 'utility' && pathLvl('aegis')) return 'SYNERGY: SHIELDS PROTECT ITEM RUNS';
+  if (family === 'utility' && pathLvl('aegis')) return 'SYNERGY: THE RETURN PASS CAN GUARD YOUR LANE';
   return 'BUILDS TOWARD ' + PATHS[pathKey].tiers[Math.min(3, tierIdx + 1)].name;
 }
 function tierComparison(pathKey, tierIdx) {
@@ -751,14 +757,14 @@ const WEB_BRIDGES = [
     desc: 'A SHIELD ABSORB CHARGES +15% MEGA · ENTERING MEGA REGROWS 1 SHIELD',
     visual: 'GREEN-GOLD FEED LINES LINK THE SHIELD ARC TO THE CORE',
     proc: 'A GOLD SURGE RUNS THE FEED LINES WHEN EITHER SIDE TRIGGERS' },
-  { key: 'rescue', name: 'RESCUE CIRCUIT', icon: 'heart', color: '#ff8a80', paths: ['aegis', 'bond'],
-    desc: 'MAX POTIONS ALSO RESTORE +1 SHIELD · EVERY 8 PICKUPS GROW +1 SHIELD',
-    visual: 'A PINK-GREEN LIFELINE COILS AROUND THE SHIELD SOCKET',
-    proc: 'A SHIELD PIP LIGHTS WITH A HEARTBEAT RING ON RESCUE' },
-  { key: 'salvage', name: 'SALVAGE DRONES', icon: 'magnet', color: '#ea80fc', paths: ['bond', 'arsenal'],
-    desc: 'EVERY 3 PICKUPS: DRONES INTERCEPT THE NEXT ENEMY SHOT (STORES 2)',
-    sdesc: 'EVERY 3 PICKUPS OR CATCHES: DRONES FIRE A SEEKING COUNTER-VOLLEY',
-    visual: 'TWO SMALL SALVAGE DRONES DOCK OFF THE MAGNET VANES',
+  { key: 'rescue', name: 'WARDING ORBIT', icon: 'heart', color: '#ff8a80', paths: ['aegis', 'bond'],
+    desc: 'MAX POTIONS ALSO RESTORE +1 SHIELD · EVERY 6 RELIC RETURNS GROW +1 SHIELD',
+    visual: 'A PINK-GREEN LIFELINE COILS AROUND THE RELIC RACK',
+    proc: 'A SHIELD PIP LIGHTS WITH A HEARTBEAT RING ON EACH WARD' },
+  { key: 'salvage', name: 'ESCORT DRONES', icon: 'magnet', color: '#ea80fc', paths: ['bond', 'arsenal'],
+    desc: 'EVERY 3 RELIC LAUNCHES: DRONES INTERCEPT THE NEXT ENEMY SHOT (STORES 2)',
+    sdesc: 'EVERY 3 RELIC LAUNCHES: DRONES FIRE A SEEKING COUNTER-VOLLEY',
+    visual: 'TWO SMALL ESCORT DRONES DOCK OFF THE RELIC RACK',
     proc: 'DRONE BOLTS TRAIL CYAN-PINK · INTERCEPTS FLASH A HEX' },
 ];
 // FUSION POWERS — the progression spine's late-game identity layer
@@ -802,7 +808,7 @@ const WEB_FUSIONS = [
     limit: 'SHIELD REGROWTH STALLS 6s AFTER IT FIRES' },
   { key: 'guardian', name: 'GUARDIAN ANGEL', icon: 'fairy', color: '#b9f6ca', paths: ['aegis', 'bond'], bridge: 'rescue',
     role: 'RECOVERY',
-    desc: 'POTIONS, CATCHES + SHIELD SAVES CHARGE THE PULSE (8) — AT FULL: CLEAR ENEMY FIRE, HEAL +1 HP',
+    desc: 'POTIONS, RELIC INTERCEPTS + SHIELD SAVES CHARGE THE PULSE (8) — AT FULL: CLEAR ENEMY FIRE, HEAL +1 HP',
     ready: 'EIGHT SIGIL PIPS FILL BEHIND YOU',
     visual: 'A COMPANION SIGIL WITH PINK-GREEN PULSE WINGS RIDES BEHIND YOU',
     proc: 'THE SIGIL FLARES AND A WING-SHAPED PULSE SWEEPS THE SCREEN',
@@ -855,7 +861,7 @@ const WEB_FUSIONS = [
     limit: 'COSTS A REAL SHIELD CHARGE EVERY TIME' },
   { key: 'shepherd', name: 'COMET SHEPHERD', icon: 'coin', color: '#ffab91', paths: ['impact', 'bond'],
     role: 'ECONOMY BURST',
-    desc: 'PICKUPS BANK COMET SEEDS (MAX 3) — YOUR NEXT RELEASE SENDS THEM AT SEPARATE TARGETS',
+    desc: 'RELIC RETURNS BANK COMET SEEDS (MAX 3) — YOUR NEXT RELEASE SENDS THEM AT SEPARATE TARGETS',
     ready: 'SEED STARS ORBIT THE REAR RIG (0-3)',
     visual: 'HELD-ITEM GLYPHS BECOME SMALL ORBITING SEED STARS',
     proc: 'CURVED COMET TRAILS PEEL AWAY TOWARD TARGETS',
@@ -869,14 +875,14 @@ const WEB_FUSIONS = [
     limit: 'THREE FACETS · REFLECTIONS NEVER RE-CHARGE IT' },
   { key: 'chorus', name: 'BESTIARY CHORUS', icon: 'sound', color: '#f48fb1', paths: ['prism', 'bond'],
     role: 'COMPANION STRIKE',
-    desc: 'RECORD 3 DIFFERENT TYPES (CATCHES / ELEMENT ORBS) — A FAVORABLE-TYPE COMPANION STRIKE ANSWERS',
+    desc: 'YOUR RELIC RECORDS 3 DIFFERENT TYPES IT STRIKES — A FAVORABLE-TYPE COMPANION STRIKE ANSWERS',
     ready: 'THREE CONSTELLATION OUTLINES FILL BEHIND THE CREST',
-    visual: 'FAINT MON CONSTELLATIONS ORBIT THE BOND CREST',
+    visual: 'FAINT MON CONSTELLATIONS ORBIT THE RELIC CREST',
     proc: 'THE OUTLINES CONVERGE INTO ONE ATTACK GLYPH',
     limit: 'ONCE PER WAVE' },
   { key: 'formation', name: 'VICTORY FORMATION', icon: 'pokeball', color: '#ffd180', paths: ['surge', 'bond'],
     role: 'SQUADRON CALL',
-    desc: 'PICKUPS + CATCHES FILL SYNC (8) — MEGA AT FULL SYNC CALLS A PARTNER SQUADRON FOR 8s',
+    desc: 'RELIC LAUNCHES FILL SYNC (8) — MEGA AT FULL SYNC CALLS A PARTNER SQUADRON FOR 8s',
     ready: 'THE SYNC METER RIDES YOUR POWER RING',
     visual: 'TWO LIGHT SILHOUETTES HOLD A V OFF YOUR WINGS',
     proc: 'THE SQUADRON LAUNCHES SYNCHRONIZED SEEKING ATTACKS',
@@ -896,7 +902,7 @@ const WEB_APEXES = [
     limit: 'BOTH FORMS SHARE ONE HEAT BAR' },
   { key: 'celestial', name: 'CELESTIAL GUARDIAN', icon: 'star', color: '#b388ff', paths: ['prism', 'aegis', 'bond'], mapSlot: 4.5,
     role: 'CONSTELLATION WARD',
-    desc: 'TYPE, SHIELD AND BOND EVENTS FILL THREE HALO SECTORS — AT FULL: A TYPED WAVE CLEARS FIRE, CRACKS ARMOR, RESTORES 1 SHIELD OR 1 HP',
+    desc: 'TYPE, SHIELD AND RELIC EVENTS FILL THREE HALO SECTORS — AT FULL: A TYPED WAVE CLEARS FIRE, CRACKS ARMOR, RESTORES 1 SHIELD OR 1 HP',
     ready: 'THREE HALO SECTORS FILL BEHIND THE PILOT',
     visual: 'A SIX-POINT HALO WITH THREE COLORED SECTORS',
     proc: 'THE HALO EXPANDS AS TRANSLUCENT WINGS',
@@ -908,7 +914,7 @@ const WEB_APEXES = [
 const WEB_SATELLITES = [
   { stackKey: 'orb', path: 'impact' },   // LIFE ORB — damage mastery
   { stackKey: 'ice', path: 'arsenal' },  // NEVER-MELT ICE — cooling mastery
-  { stackKey: 'bell', path: 'bond' },    // SOOTHE BELL — fortune mastery
+  { stackKey: 'bell', path: 'bond' },    // SOOTHE BELL — score mastery
 ];
 // affinity trios dock on the same three-satellite frame (same slots, same
 // caps); the pick simply swaps WHICH mastery items fill empty offers
@@ -1058,7 +1064,9 @@ function advancePath(p) {
   const tier = PATHS[p].tiers[lvl];
   G.path[p] = lvl + 1;
   G.upg[tier.key] = 1;
-  if (tier.key === 'revive') G.lives++;
+  // AFT-007: the extra-life perk lives on the AEGIS capstone now (the old
+  // `revive` key is the CROWNED RELIC weapon tier and grants no life)
+  if (tier.key === 'aegisX') G.lives++;
   return tier;
 }
 function regressPath(p) {
@@ -1067,7 +1075,7 @@ function regressPath(p) {
   const tier = PATHS[p].tiers[lvl - 1];
   G.path[p] = lvl - 1;
   delete G.upg[tier.key];
-  if (tier.key === 'revive') G.lives = Math.max(1, G.lives - 1); // inverse of advancePath
+  if (tier.key === 'aegisX') G.lives = Math.max(1, G.lives - 1); // inverse of advancePath
   return tier;
 }
 

@@ -87,7 +87,7 @@ const JUNKIE_ITEMS = {
   prism:   ['PRISM SCALE', 'WISE GLASSES', 'CELL BATTERY', 'LEGEND PLATE'],
   aegis:   ['FOCUS BAND', 'EVIOLITE', 'LEFTOVERS', 'ASSAULT VEST'],
   surge:   ['POWER HERB', 'METRONOME', 'CHARCOAL', 'MEGA STONE'],
-  bond:    ['MAGNET', 'SOOTHE BELL', 'AMULET COIN', 'MAX REVIVE'],
+  bond:    ['BONE CLUB', 'BONEMERANG', 'TWIN BONES', 'BONE RUSH'], // AFT-007: the returning-weapon identity
 };
 
 // ============================================================

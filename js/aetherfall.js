@@ -80,7 +80,7 @@
     prism:   { magic: 'ELEMENTAL LORE', tech: 'SPECTRUM LAB',     magitech: 'PRISM MATRIX' },
     aegis:   { magic: 'WARDING CIRCLE', tech: 'BULWARK SYSTEMS',  magitech: 'AEGIS LATTICE' },
     surge:   { magic: 'MANA TIDE',      tech: 'OVERCLOCK',        magitech: 'FLUX SURGE' },
-    bond:    { magic: 'SOULBOND',       tech: 'SUPPORT UPLINK',   magitech: 'SYMBIOSIS' },
+    bond:    { magic: 'ORBITAL RELIC',  tech: 'RECALL ARRAY',     magitech: 'ORBITAL RELIC' },
   };
 
   // pilot-vessel ids: class i (STARTER_KEYS order) → [10+3i, 11+3i, 12+3i]
@@ -456,7 +456,7 @@
     prism: ['PRISM SHARD', 'LOREKEEPER GLASS', 'FLUX BATTERY', 'THE OMNIPLATE'],
     aegis: ['WARD BAND', 'GUARDIAN SHELL', 'MENDING LOOP', 'BASTION VEST'],
     surge: ['CHARGE HERB', 'TEMPO GYRO', 'EMBER COIL', 'SURGE STONE'],
-    bond: ['SOOTHING CHIME', 'FORTUNE COIN', 'LODESTAR COMPASS', 'PHOENIX CORE'],
+    bond: ['ORBIT GLAIVE', 'RECALL EDGE', 'TWIN HALO', 'RELIC CROWN'],
   };
 
   // ---- objective families: species remapped into this id space
@@ -664,9 +664,10 @@
   // read tier.name/visual directly, junkie already rides SKIN.junkieItems)
   if (SKIN === AF) {
     for (const m of MODES) if (MODE_COPY[m.key]) Object.assign(m, MODE_COPY[m.key]);
-    Object.assign(PATHS.bond.tiers[1], { name: "KEEPER'S PACT",
-      visual: 'A BINDING SIGIL CREST LOCKS TO THE REAR RIG' });
-    Object.assign(PATHS.bond.tiers[3], { name: 'AETHER REVIVE' });
+    // AFT-007: the engine's relic tier names are already skin-neutral —
+    // only the crest visual carries a realm-flavored line here
+    Object.assign(PATHS.bond.tiers[1], {
+      visual: 'A BINDING SIGIL BURNS ALONG THE RECALL EDGE' });
     // AFT-003: the overdrive is the SURGE here, but the TEMPO PATH was already
     // called SURGE — "EVERY SURGE RANK ADDS +10% SURGE DAMAGE" reads as a
     // circular sentence. The path becomes CRESCENDO (building to a peak — what

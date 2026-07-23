@@ -16,12 +16,10 @@
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
 > - dist `CrawlerKarl/aetherfall` → the standalone AETHERFALL build
 >
-> **⚠ ONE THREAD IS OPEN — START HERE: boss-level frame rate.** The owner
-> reported lag on boss levels TWICE. Round one (AFT-018b) fixed the
-> fill-rate causes. Round two landed the **rAF cadence profiler** (below) —
-> **but it has NOT been confirmed on the owner's real phone yet.** Ask
-> whether boss levels feel smooth now before starting P1 work; if not, the
-> next levers are listed under "If boss lag persists".
+> **✅ THE BOSS FRAME-RATE THREAD IS CLOSED.** The owner confirmed on
+> 2026-07-23 (real device) that boss levels run smoothly after the cadence
+> profiler round. The deeper rungs (3+) stay unimplemented by design; the
+> storm ledger keeps accumulating the baseline every gate run.
 >
 > **`AETHERFALL_IMPROVEMENT_BACKLOG.md` remains the scope authority** (17
 > ranked items + acceptance criteria) and SUPERSEDES `FULL_GAME_ROADMAP.md`
@@ -193,10 +191,11 @@ band so copy never covers the flock or the pilot.)
 
 ## Pick up here
 
-### 0. FIRST: confirm boss-level frame rate on a real device
+### 0. ~~FIRST: confirm boss-level frame rate on a real device~~ — DONE
 
-The owner reported boss lag twice; two rounds of fixes shipped, and the
-second is **unconfirmed on hardware**. Everything else waits on this.
+**Confirmed smooth on the owner's phone (2026-07-23).** The P1 track is
+unblocked. Historical context below stands in case a future regression
+reopens it.
 
 - **What shipped, round 1 (AFT-018b)**: adaptive resolution (rung 2 → 75% of
   native DPR), ~0.5s ladder escalation, `fxGlow()` flattening the big
@@ -224,12 +223,14 @@ second is **unconfirmed on hardware**. Everything else waits on this.
 
 ### Then: the P1 track
 
-The backlog's P1 sequence, in its own order:
+The backlog's P1 sequence, in its own order (**AFT-007 SHIPPED 2026-07-23e**
+— the bond path flies the ORBITAL RELIC now, all keys unchanged, suite 86):
 
 ```
-AFT-007 ORBITAL RELIC (redesign the bond path)  →  AFT-008 balance matrix
-   →  AFT-009 constellation redesign  →  AFT-019 first-session phone pass
-   →  AFT-010 accessibility  →  AFT-011 loading/WebP  →  AFT-012 visual pass
+✅ AFT-007 ORBITAL RELIC  →  AFT-008 balance matrix (NEXT — the ledger has a
+   `relic` damage family to read)  →  AFT-009 constellation redesign
+   →  AFT-019 first-session phone pass  →  AFT-010 accessibility
+   →  AFT-011 loading/WebP  →  AFT-012 visual pass
 ```
 
 Notes so you don't redo finished work:

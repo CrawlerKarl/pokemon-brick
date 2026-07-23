@@ -14,9 +14,10 @@
 > | "boss exports are 192×192; high-res not packaged" | 43 × **512px** boss reveal portraits ship and drive the reveal scene |
 > | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
 >
-> **The live plan is the P1 track**: AFT-007 (ORBITAL RELIC) → AFT-008
-> (balance matrix) → AFT-009 (constellation) → AFT-019 → AFT-010 → AFT-011
-> → AFT-012. Its acceptance criteria below are unchanged and authoritative.
+> **The live plan is the P1 track**: ~~AFT-007 (ORBITAL RELIC)~~ **shipped
+> 2026-07-23e** → AFT-008 (balance matrix — NEXT; the ledger now carries a
+> `relic` damage family to read) → AFT-009 (constellation) → AFT-019 →
+> AFT-010 → AFT-011 → AFT-012. Acceptance criteria below stay authoritative.
 
 
 Last reviewed: 2026-07-23 session closeout (runtime through `ed39d79`;
@@ -116,8 +117,8 @@ items have since shipped.
 | AFT-018 | P0 | ✅ Shipped; hardware check open | Artifact-storm frame stability and adaptive effects budget | Prevents effect-heavy combat from becoming slow or unresponsive on phones | L | AFT-005A for the permanent gate |
 | AFT-005B | P0 | ✅ Shipped | Mobile visual-regression scenes and fitted-label assertions | Makes layout, terminology, and presentation regressions catchable before release | M–L | AFT-001–004, AFT-005A |
 | AFT-006 | P0 | ✅ Shipped | Save export/import, versioned backup, and storage persistence | Protects a long 27-stage run against Safari storage eviction and corruption | M | — |
-| AFT-007 | P1 | ⬜ Next | ORBITAL RELIC redesign of the `bond` path (same keys, new identity) | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-003, AFT-005A |
-| AFT-008 | P1 | ⬜ Open | Full-campaign balance matrix and regression budgets | Finds difficulty spikes, dead builds, and unfair mobile encounters | L | AFT-005A/B, AFT-007 |
+| AFT-007 | P1 | ✅ Shipped 07-23e | ORBITAL RELIC redesign of the `bond` path (same keys, new identity) | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-003, AFT-005A |
+| AFT-008 | P1 | ⬜ Next | Full-campaign balance matrix and regression budgets | Finds difficulty spikes, dead builds, and unfair mobile encounters | L | AFT-005A/B, AFT-007 |
 | AFT-009 | P1 | ⬜ Open | Mobile-first constellation redesign and build identity | Makes the updated web understandable and touch-friendly | L | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |

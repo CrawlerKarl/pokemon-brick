@@ -176,7 +176,7 @@ function clearCheckpoint() { RUN_CKPT = null; saveStore(storeKey('run'), null); 
 // the current skin's checkpoint/codex/medals/victories/best/daily/coach
 // state. Import NEVER writes an unknown key, NEVER writes a checkpoint that
 // fails migrateCheckpoint, and always snapshots a pre-import backup first.
-const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach'];
+const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach', 'relicNotice'];
 const EXPORT_GLOBAL_KEYS = ['pkbrk-settings', 'pkbrk-music'];
 function exportBundle() {
   const keys = {};
@@ -274,6 +274,7 @@ function resumeRun() {
   G.adapt = c.adapt || 1; G.mega = Math.max(G.mega, c.mega || 0);
   G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
   G.lastDraftForm = webForm(); // resume never fakes a fresh-evolution draft
+  maybeRelicNotice(); // AFT-007: a restored bond build learns about the reforge once
   if (c.secret) {
     G.secret.shards = Array.from({ length: 3 }, (_, i) => !!c.secret.shards?.[i]);
     G.secret.offered = Array.from({ length: 3 }, (_, i) => !!c.secret.offered?.[i] || !!c.secret.shards?.[i]);
@@ -301,6 +302,7 @@ const G = {
   lives: 3, livesMax: 3, level: 1, combo: 0, // livesMax = ring denominator (peak lives held)
   paddle: { x: 0, w: 130, h: 18, speed: 0, squash: 0 },
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
+  relics: [], relicCount: 0, relicBank: 0, relicLane: 1, // AFT-007: the returning glaive
   particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
   scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
   announce: null, announceQueue: [], modifier: null, combatNotice: null,
@@ -447,6 +449,7 @@ function statsDmgOut(source, dmg) {
   else if (source === 'charge') { L.dmgC += dmg; L.chargeHits++; }
   else if (source === 'ball') L.dmgBall += dmg;
   else if (source === 'splash') L.dmgSplash += dmg;
+  else if (source === 'relic') L.dmgRelic = (L.dmgRelic || 0) + dmg; // AFT-007 weapon family
   else L.dmgOther += dmg;
 }
 function statsKill() { const L = statsCur(); if (L) L.kills++; }
@@ -486,7 +489,20 @@ function awardMedal(lvl, key) {
   if (medalEarned(lvl, key)) return false;
   (MEDALS[lvl] = MEDALS[lvl] || {})[key] = 1;
   saveStore(storeKey('medals'), MEDALS);
+  // AFT-007: medals carry the score-mastery identity — refresh the cache
+  G.medalScoreBonus = Math.min(0.30, 0.01 * medalCount());
   return true;
+}
+// AFT-007 one-time notice: an owned pick must never silently change what it
+// does. The first time a player with bond ranks meets the reforged path
+// (checkpoint restore or a fresh draft advance), one card explains it.
+function maybeRelicNotice() {
+  if (pathLvl('bond') <= 0) return;
+  if (loadStore(storeKey('relicNotice'), 0)) return;
+  saveStore(storeKey('relicNotice'), 1);
+  setAnnounce('magnet', '#ec407a', skinPathName('bond') + ' — PATH REFORGED',
+    'YOUR RANKS CARRIED OVER · THE PATH NOW FLIES A RETURNING RELIC GLAIVE', 4.5,
+    'MAGNET, FORTUNE, LIVES AND SCORE PERKS MOVED TO BASELINE, RESEARCH, AEGIS AND MEDALS');
 }
 function medalCount() { let n = 0; for (const k in MEDALS) n += Object.keys(MEDALS[k]).length; return n; }
 // Build the results-interstitial payload for the stage that just cleared.
@@ -884,6 +900,7 @@ function assignClassicBrickBehaviors(regionsIn, stage) {
 }
 function buildLevel(lvl) {
   G.bricks = []; G.powerups = []; G.lasers = []; G.missiles = []; G.enemyShots = [];
+  G.relics = []; G.relicCount = 0; // a wave never inherits mid-flight relics
   G.fragments = []; G.ghosts = []; G.telegraphs = []; G.columnStrikes = []; G.rings = [];
   G.fx = 0; G.fy = 0; G.swayT = 0;
   G.secret.pendingShard = null; G.secret.vmax = false; G.secret.rewardDraft = false;
@@ -1617,6 +1634,12 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.facets = []; G.lastFacetVolley = -1; G.wallVolleyId = -1; G.wallVolleyCount = 0;
   G.chorusTypes = []; G.chorusUsed = false;
   G.syncMeter = 0; G.squadT = 0; G.squadCD = 0; G.railPressure = 0;
+  // AFT-007: the relic loop is run state; lane parity is SIM-relevant (it
+  // decides which bricks a pass can strike), so it resets like a seed timer
+  G.relics = []; G.relicCount = 0; G.relicBank = 0; G.relicLane = 1;
+  // mastery medals carry the old catch-score identity — cached so scoreMult
+  // stays cheap; refreshed whenever a new medal lands (saveMedal)
+  G.medalScoreBonus = Math.min(0.30, 0.01 * medalCount());
   G.celT = false; G.celS = false; G.celE = false; G.regenLockT = 0;
   G.webSeen = {}; G.lastOfferKeys = [];
   G.lastDraftForm = 1; // re-baselined below once starterLvl is known

@@ -60,12 +60,9 @@ const CONFIG_SWAPS = [
 
 // engine literals whose RUNTIME values are already skin-patched for
 // aetherfall — the dist ships the aetherfall wording as the base so no
-// franchise string exists in the files at all
-const DATA_SWAPS = [
-  ['name: "TRAINER\'S BOND"', 'name: "KEEPER\'S PACT"'],
-  ["visual: 'A POKÉ BALL BOND CREST LOCKS TO THE REAR RIG'", "visual: 'A BINDING SIGIL CREST LOCKS TO THE REAR RIG'"],
-  ["name: 'POKÉ REVIVE'", "name: 'AETHER REVIVE'"],
-];
+// franchise string exists in the files at all. (AFT-007 made the bond
+// tier copy skin-neutral RELIC wording, so the old three swaps are gone.)
+const DATA_SWAPS = [];
 const INPUT_SWAPS = [
   ["(SKIN.secret.riftName || 'KANTO RIFT')", "(SKIN.secret.riftName || 'RIFT')"],
 ];

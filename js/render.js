@@ -315,6 +315,45 @@ function drawAtmosphere(genIdx) {
 // a spiky energy orb baked in an arbitrary type COLOR and radius — enemy shots
 // now come in every type's colour (electric yellow, water blue, …) instead of
 // one red. Cached per (color, r, spikes).
+// AFT-007: the returning relic — baked once per (skin, color) like every
+// repeated projectile. The pokemon skin flies the bone boomerang; every
+// other skin flies the curved relic glaive with an energy rim.
+function relicGlaiveSprite(color) {
+  const key = 'relic_' + SKIN.id + '_' + color;
+  if (fxCache[key]) return fxCache[key];
+  const size = 56;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.translate(size / 2, size / 2);
+  // baked halo — never per-frame shadowBlur
+  const hg = g.createRadialGradient(0, 0, 6, 0, 0, size / 2);
+  hg.addColorStop(0, color + '55'); hg.addColorStop(1, color + '00');
+  g.fillStyle = hg; g.fillRect(-size / 2, -size / 2, size, size);
+  if (SKIN.id === 'pokemon') {
+    // BONEMERANG: a stout shaft with knobbed ends
+    g.rotate(Math.PI / 4);
+    g.fillStyle = '#f2ead8'; g.strokeStyle = 'rgba(58,48,38,0.9)'; g.lineWidth = 2;
+    g.fillRect(-4, -14, 8, 28); g.strokeRect(-4, -14, 8, 28);
+    for (const [kx, ky] of [[-5, -16], [5, -16], [-5, 16], [5, 16]]) {
+      g.beginPath(); g.arc(kx, ky, 6, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  } else {
+    // the RELIC GLAIVE: a crescent blade, steel core, bright energy rim
+    g.beginPath();
+    g.arc(0, 0, 21, -0.35, Math.PI * 0.85);
+    g.arc(5, 4, 12, Math.PI * 0.85, -0.35, true);
+    g.closePath();
+    g.fillStyle = '#e8eaf6'; g.fill();
+    g.lineWidth = 2; g.strokeStyle = 'rgba(7,12,28,0.85)'; g.stroke();
+    g.beginPath(); g.arc(0, 0, 21, -0.35, Math.PI * 0.85);
+    g.lineWidth = 3.5; g.lineCap = 'round'; g.strokeStyle = color; g.stroke();
+    g.beginPath(); g.arc(-4, -3, 4, 0, Math.PI * 2);
+    g.fillStyle = color; g.fill();
+  }
+  fxCache[key] = c;
+  return c;
+}
 function shotSprite(color, r, spikes) {
   const key = 'shot_' + color + '_' + r + '_' + spikes;
   if (fxCache[key]) return fxCache[key];
@@ -3349,6 +3388,24 @@ function drawProjectiles() {
       ctx.fillStyle = '#ff8a65';
       ctx.beginPath(); ctx.arc(0, 14, 5, 0, Math.PI * 2); ctx.fill();
     }
+    ctx.restore();
+  }
+  // AFT-007: the returning relic glaive — a baked sprite spun at draw time
+  // plus a short velocity trail. No per-frame gradients or shadowBlur; the
+  // glow is baked into the sprite once per (skin, color).
+  for (const R of G.relics) {
+    const col = TYPE_COLORS[R.element] || '#ec407a';
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(R.x - (R.x - R.px) * 4, R.y - (R.y - R.py) * 4);
+    ctx.lineTo(R.x, R.y); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.translate(R.x, R.y);
+    ctx.rotate(R.spin);
+    const spr = relicGlaiveSprite(col);
+    ctx.drawImage(spr, -spr.width / 2, -spr.height / 2);
     ctx.restore();
   }
   // Enemy fire: cached type/species silhouettes. Size communicates threat,
@@ -7481,7 +7538,7 @@ function drawFullUpgradeTree() {
     const lb = T.label(pi);
     treeMapLabel(skinPathName(pk), lb.x, lb.y, {
       size: T.compact ? 11.5 : 11, min: 8.5, weight: 900, color: P.color,
-      maxW: Math.max(56, Math.min(96, T.radius * 0.42)),
+      maxW: T.labelMaxW, // shared with the layout's labelRect tap target
       plate: 'rgba(4,9,22,0.78)', plateStroke: P.color + '3d',
     });
     if (!T.compact && T.radius >= 265) {

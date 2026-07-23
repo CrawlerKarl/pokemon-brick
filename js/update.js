@@ -45,7 +45,8 @@ function scoreMult() {
   return (G.fx_score ? 2 * G.fx_score.tier : 1)
     * (1 + Math.min(G.combo, 20) * 0.1 * comboAmp)
     * (G.modifier?.key === 'bounty' ? 2 : 1)
-    * (1 + G.catchBonus)
+    * (1 + G.catchBonus) // legacy TRAINER'S BOND stacks stay honored forever
+    * (1 + (G.medalScoreBonus || 0)) // AFT-007: mastery medals carry the score identity
     * starterMod('score', 1)
     * (1 + Math.min(G.combo, 20) * starterMod('comboScore', 0))
     * (1 + 0.06 * ((G.stacks && G.stacks.bell) || 0)) // SOOTHE BELL stacks
@@ -1139,6 +1140,7 @@ function flightPos(F, tAbs) {
 function awardRally(b, x, y) {
   b.rally = (b.rally || 0) + 1;
   G.bestRally = Math.max(G.bestRally, b.rally);
+  relicOnRally(); // AFT-007 BREAKER adapter: rally hits bank the relic arcs
   if (b.rally < 3) return;
   const bonus = Math.round(b.rally * 15 * scoreMult() * (upgN('rally') ? 1.5 : 1));
   G.score += bonus;
@@ -1213,8 +1215,9 @@ function spawnRiftShard(index, x = W / 2, y = Math.max(105, H * 0.22)) {
 function collectPickup(pu) {
   if (G.runStats) G.runStats.itemsCaught++;
   haptic('item');
-  webPickupProcs(); // RESCUE / SALVAGE / GUARDIAN pickup economy
-  if (pu.p && (pu.p.key === 'heal' || pu.p.key === 'pokeball')) webGuardianCharge();
+  // AFT-007: the bond web keys off the RELIC loop now (webRelicProcs) —
+  // pickups only feed the aegis-side guardian source (potions)
+  if (pu.p && pu.p.key === 'heal') webGuardianCharge();
   // GRACE LIGHT (light affinity): mending also banks Mega
   if (pu.p && pu.p.key === 'heal' && stackN('grace') && G.megaT <= 0) {
     G.mega = Math.min(1, G.mega + 0.15 * stackN('grace'));
@@ -1252,7 +1255,6 @@ function collectPickup(pu) {
     // PRISM SCALE proc: the extended clock is announced AT the pickup — the
     // tier stops being an invisible multiplier on a timer nobody reads
     if (upgN('attune')) addFloater(pu.x, pu.y - 22, 'ATTUNED · +50% DURATION', '#4dd0e1', 11);
-    chorusRecord(pu.p.t);   // BESTIARY CHORUS learns the orb's type
     celestialSector('t');   // CELESTIAL GUARDIAN: a type event
     const strong = (EFFECTIVE[pu.p.t] || []).slice(0, 3).map(typeLabel).join(', ');
     setAnnounce(pu.p.t, TYPE_COLORS[pu.p.t], typeLabel(pu.p.t) + ' ' + ((SKIN.strings && SKIN.strings.orbWord) || 'BALL'),
@@ -1264,11 +1266,8 @@ function collectPickup(pu) {
     SFX.gotcha();
     burst(pu.x, pu.y, pu.shiny ? '#ffd700' : '#ef5350', 18, 220);
     sparkle(pu.x, pu.y, pu.shiny ? 12 : 6, pu.shiny);
-    if (upgN('bond')) {
-      G.catchBonus += 0.06 * upgN('bond');
-      addFloater(pu.x, pu.y - 26, 'BOND +' + Math.round(G.catchBonus * 100) + '% SCORE', '#ffd54f', 12);
-    }
-    chorusRecord(attackElement()); // BESTIARY CHORUS learns your live type
+    // AFT-007: the old catch score bonus lives on mastery medals now
+    // (G.medalScoreBonus in scoreMult); saved G.catchBonus is honored forever
     const nm = (SKIN.names[pu.dexId] || SKIN.strings.creature).toUpperCase();
     const research = isNew ? dexRewardAt(DEX.size) : null;
     if (research) {
@@ -2011,31 +2010,151 @@ function absorbHit(x, y, shotType = null, volleyId = null) {
   return true;
 }
 
-// ---- pickup-economy bridges: RESCUE CIRCUIT + SALVAGE DRONES (and the
-// GUARDIAN ANGEL superskill) all key off collection — one shared hook so
-// every collection path counts exactly once.
-function webPickupProcs() {
-  if (upgN('rescue') && ++G.rescueN >= 8) {
-    G.rescueN = 0;
-    if (G.shieldCharges < shieldCap()) {
-      G.shieldCharges++;
-      ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
-      addFloater(G.paddle.x, shipY() - 34, 'RESCUE SHIELD!', '#ff8a80', 12);
-      SFX.shield();
+// ============================================================
+// AFT-007 — THE ORBITAL RELIC: the bond path is a WEAPON now. A returning
+// glaive launches off your normal attack cadence, flies an OUT arc to a
+// high lane point, then RETURNS to the ship's live position. All geometry
+// is deterministic (never gameRand — same seed, same passes); cosmetics
+// ride Math.random through sparkle/ringFx only.
+function relicAllowed() { return upgN('fortune') ? 2 : 1; } // TWIN ORBIT
+function relicCadence() { // VOLLEY synergy: a deep arsenal speeds the loop
+  return G.mode === 'classic' ? 6 : (pathLvl('arsenal') >= 3 ? 3 : 4);
+}
+function relicPower(back) {
+  let d = 1.6 * (1 + 0.15 * pathLvl('impact')) * starterMod('power', 1); // IMPACT: heavier outward hit
+  if (back && upgN('bond')) d *= 2; // RECALL EDGE
+  if (G.megaT > 0) d *= 1.5;
+  return d;
+}
+function launchRelic(crown, fi, nFan) {
+  if (!upgN('magnetize')) return;
+  if (!crown && G.relics.length >= relicAllowed()) {
+    G.relicBank = Math.min(3, G.relicBank + 1); // CROWNED RELIC spends this
+    return;
+  }
+  G.relicLane = -(G.relicLane || 1); // lanes alternate deterministically
+  const sx = G.paddle.x, sy = shipY() - 10;
+  const laneW = W * (upgN('hyper') ? 0.30 : 0.22); // WIDE ARRAY widens coverage
+  let dx = G.relicLane * laneW;
+  if (crown && nFan > 1) dx = ((fi / (nFan - 1)) - 0.5) * 2 * laneW * 1.25;
+  const apexY = Math.max(80, H * (G.mode === 'classic' ? 0.16 : 0.16 + 0.05 * ((fi || 0) % 2)));
+  // PRISM synergy: with lens ranks the relic launches retuned to counter
+  // the living wave; otherwise it carries your own attack element
+  const el = pathLvl('prism') > 0 ? (counterElements(1)[0] || attackElement()) : attackElement();
+  G.relics.push({
+    x: sx, y: sy, px: sx, py: sy, x0: sx, y0: sy,
+    ax: Math.max(30, Math.min(W - 30, sx + dx)), ay: apexY,
+    cx: Math.max(20, Math.min(W - 20, sx + dx * 0.55)), cy: sy - (sy - apexY) * 0.9,
+    t: 0, dur: 0.85, phase: 'out', element: el, spin: 0, crown: !!crown,
+    hits: new Set(), struck: 0, lastHX: sx, lastHY: sy,
+    icptN: upgN('bond') ? 1 + (pathLvl('aegis') >= 2 ? 1 : 0) : 0, // AEGIS: +1 intercept
+  });
+  webRelicProcs('launch');
+  SFX.relic();
+}
+function relicOnShot() { // shooter modes: every Nth attack also throws
+  if (!upgN('magnetize') || G.mode === 'classic') return;
+  if (++G.relicCount >= relicCadence()) { G.relicCount = 0; launchRelic(); }
+}
+function relicOnRally() { // BREAKER: rally hits bank the arcs — ball-adjacent, never a gun
+  if (!upgN('magnetize') || G.mode !== 'classic') return;
+  if (++G.relicCount >= relicCadence()) { G.relicCount = 0; launchRelic(); }
+}
+function crownRelease() { // CROWNED RELIC: a full charge / Mega ignition fans the bank
+  if (!upgN('revive')) return;
+  const n = 1 + G.relicBank;
+  G.relicBank = 0;
+  for (let i = 0; i < n; i++) launchRelic(true, i, n);
+  addFloater(G.paddle.x, shipY() - 58, 'RELIC CROWN ×' + n, '#ec407a', 14);
+}
+function updateRelics(dt) {
+  if (!G.relics.length) return;
+  const ts = G.megaT > 0 ? 1.5 : 1; // SURGE synergy: overdrive spins the orbit faster
+  for (const R of G.relics) {
+    R.t += dt * ts;
+    R.spin += dt * ts * 9;
+    const k = Math.min(1, R.t / R.dur);
+    const e = k * k * (3 - 2 * k);
+    R.px = R.x; R.py = R.y;
+    if (R.phase === 'out') {
+      const ix0 = R.x0 + (R.cx - R.x0) * e, iy0 = R.y0 + (R.cy - R.y0) * e;
+      const ix1 = R.cx + (R.ax - R.cx) * e, iy1 = R.cy + (R.ay - R.cy) * e;
+      R.x = ix0 + (ix1 - ix0) * e; R.y = iy0 + (iy1 - iy0) * e;
+      if (k >= 1) { R.phase = 'back'; R.t = 0; R.dur = 0.9; R.hits.clear(); R.x0 = R.x; R.y0 = R.y; }
+    } else {
+      // the return leg homes on the ship's LIVE position (shipY, never PADDLE_Y)
+      const tx = G.paddle.x, ty = shipY() - 8;
+      const cx2 = (R.x0 + tx) / 2 + (R.x0 < W / 2 ? -60 : 60), cy2 = Math.min(R.y0, ty) - 40;
+      const ix0 = R.x0 + (cx2 - R.x0) * e, iy0 = R.y0 + (cy2 - R.y0) * e;
+      const ix1 = cx2 + (tx - cx2) * e, iy1 = cy2 + (ty - cy2) * e;
+      R.x = ix0 + (ix1 - ix0) * e; R.y = iy0 + (iy1 - iy0) * e;
+      // RECALL EDGE interception: the returning edge eats hostile fire —
+      // same filter as the salvage drones (never a boss shot)
+      if (R.icptN > 0) for (const s of G.enemyShots) {
+        if (R.icptN <= 0) break;
+        if (s.dead || s.boss) continue;
+        if (Math.hypot(s.x - R.x, s.y - R.y) < 26) {
+          s.dead = true; R.icptN--;
+          ringFx(R.x, R.y, '#ec407a', 4, 30, 3, 0.3);
+          tone(880, 0.07, 'square', 0.04, -160);
+          webRelicProcs('intercept');
+        }
+      }
+      if (k >= 1) {
+        R.dead = true;
+        // IMPACT synergy: SPLASH CHARGE detonates the recall at the last strike
+        if (R.struck && upgN('demo')) chargeSplash(R.lastHX, R.lastHY, R.element, relicPower(true) * 0.6);
+        webRelicProcs('return');
+        SFX.relicBack();
+      }
+    }
+    // damage pass: one hit per target per leg; friendlies/crossers excluded
+    if (!R.dead) for (const br of G.bricks) {
+      if (br.dead || br.dormant || br.phaseT > 0 || br.friendly || br.crosser || R.hits.has(br)) continue;
+      const bx = br.bx + G.fx, by = br.by + G.fy;
+      if (Math.abs(R.x - bx) < br.w / 2 + 16 && Math.abs(R.y - by) < br.h / 2 + 16) {
+        R.hits.add(br);
+        R.struck++; R.lastHX = R.x; R.lastHY = R.y;
+        let dmg = relicPower(R.phase === 'back');
+        if (br.isBoss) dmg *= R.crown ? 0.35 : 0.65; // crown fans are crowd tools — boss cap is separate
+        damageBrick(br, dmg, R.x, R.y, R.element, { source: 'relic', noMega: true });
+        if (upgN('chorus') && !br.dead) chorusRecord(br.poke.t); // the BESTIARY hears each struck type
+        ringFx(R.x, R.y, TYPE_COLORS[R.element] || '#ec407a', 3, 22, 2, 0.22);
+      }
     }
   }
-  if (upgN('salvage') && ++G.salvageCount >= 3) {
-    G.salvageCount = 0;
-    launchSalvageDrones();
+  compactInPlace(G.relics, r => !r.dead);
+}
+// ---- relic-economy web procs: the bond web keys off the relic loop.
+// LAUNCHES send escorts + bank squadron sync; RETURNS restore shields, bank
+// comet seeds and count as the celestial ward's bond events; INTERCEPTS
+// charge the guardian. One shared hook so every event counts exactly once
+// (and the suite can pump it directly).
+function webRelicProcs(ev) {
+  if (ev === 'launch') {
+    if (upgN('salvage') && ++G.salvageCount >= 3) {
+      G.salvageCount = 0;
+      launchSalvageDrones();
+    }
+    if (upgN('formation') && G.syncMeter < 8) G.syncMeter++;
+  } else if (ev === 'return') {
+    if (upgN('rescue') && ++G.rescueN >= 6) {
+      G.rescueN = 0;
+      if (G.shieldCharges < shieldCap()) {
+        G.shieldCharges++;
+        ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
+        addFloater(G.paddle.x, shipY() - 34, 'WARDING ORBIT!', '#ff8a80', 12);
+        SFX.shield();
+      }
+    }
+    if (upgN('shepherd') && G.cometSeeds < 3) {
+      G.cometSeeds++;
+      addFloater(G.paddle.x, shipY() - 22, 'SEED ' + G.cometSeeds + '/3', '#ffab91', 10);
+    }
+    celestialSector('e');
+  } else if (ev === 'intercept') {
+    webGuardianCharge();
   }
-  // COMET SHEPHERD banks seeds; VICTORY FORMATION banks sync; the CELESTIAL
-  // ward counts every collection as a bond event
-  if (upgN('shepherd') && G.cometSeeds < 3) {
-    G.cometSeeds++;
-    addFloater(G.paddle.x, shipY() - 22, 'SEED ' + G.cometSeeds + '/3', '#ffab91', 10);
-  }
-  if (upgN('formation') && G.syncMeter < 8) G.syncMeter++;
-  celestialSector('e');
 }
 function launchSalvageDrones() {
   if (G.mode === 'classic') {
@@ -2055,9 +2174,9 @@ function launchSalvageDrones() {
   addFloater(G.paddle.x, shipY() - 46, 'SALVAGE VOLLEY!', '#ea80fc', 12);
   SFX.missile();
 }
-// GUARDIAN ANGEL (fusion): potions, catches, and shield saves each add a
-// charge; at eight the guardian pulse sweeps the sky clear and heals one
-// life — AT MOST ONCE PER WAVE (the plan's recovery limiter).
+// GUARDIAN ANGEL (fusion): potions, relic INTERCEPTS, and shield saves each
+// add a charge; at eight the guardian pulse sweeps the sky clear and heals
+// one life — AT MOST ONCE PER WAVE (the plan's recovery limiter).
 function webGuardianCharge() {
   if (!upgN('guardian') || G.guardPulsedWave) return;
   G.guardCharge = (G.guardCharge || 0) + 1;
@@ -2857,7 +2976,21 @@ function updateReveal(dt) {
   // the transform is complete: dock the lane, free the announce lane (the
   // reveal DELIVERED the boss card's content), arm the restart grace
   G.reveal = null;
-  if (r.kind !== 'sentinels') G.revealDock = r.ids[0];
+  if (r.kind !== 'sentinels') {
+    G.revealDock = r.ids[0];
+    // the DOCK BEAT: one readable impact pop where the portrait landed —
+    // strokes + glints only (ringFx/sparkle honor the effects ladder), so
+    // the moment reads on every rung and reduced-effects stays calm
+    for (const b of r.brs) {
+      if (!b || b.dead) continue;
+      const bx = b.bx + G.fx, by = b.by + G.fy;
+      const col = TYPE_COLORS[b.poke.t] || '#d780ff';
+      ringFx(bx, by, '#ffffff', 8, Math.max(46, b.w * 0.6), 3, 0.28);
+      ringFx(bx, by, col, 10, Math.max(80, b.w * 1.05), 4, 0.42);
+      sparkle(bx, by, 10);
+    }
+    SFX.roar();
+  }
   if (en && en.viaReveal) {
     // the portrait IS the arrival: the pending entrance plays its motif FX
     // at the docked spot but never touches position/scale again
@@ -4576,6 +4709,7 @@ function update(dt) {
     if (m.y < 30 || m.x < -40 || m.x > W + 40) m.dead = true;
   }
   compactInPlace(G.missiles, m => !m.dead);
+  updateRelics(dt); // AFT-007: the returning glaive rides the projectile phase
 
   // ---- SINGULARITY / EVENT HORIZON gravity wells: a lingering typed
   // implosion at the blast point. Ticks reuse damageBrick (so effectiveness
@@ -5264,9 +5398,10 @@ function update(dt) {
         pu.vy = pu.y > shipY() - 120 ? 48 : 72;
       }
     }
-    if (upgN('magnetize')) { // Item Magnet: pickups drift toward the paddle
+    { // AFT-007: the item magnet is BASELINE phone QoL now — every build gets
+      // the drift (the old `magnetize` key is the RELIC GLAIVE weapon tier)
       const dx = G.paddle.x - pu.x;
-      pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 75 * upgN('magnetize')) * dt;
+      pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 60) * dt;
     }
     const pw = paddleW(), py = shipY(); // the ship catches wherever it flies
     // Overgrowth widens the pickup catch envelope at each evolution.
@@ -5335,10 +5470,11 @@ function update(dt) {
     if (G.results.objectives.some(o => o.isNew)) setTimeout(() => SFX.medal(), 650);
     G.clearedStage = clearedStage;
     if (G.deathsThisWave === 0) G.adapt = Math.min(1.15, G.adapt * 1.04); // flawless → push back
-    // Poké Revive capstone: every region you finish grants a life
-    if (clearedStage === 2 && upgN('revive')) {
+    // AFT-007: the region-clear life rides the AEGIS capstone now (the old
+    // `revive` key is the CROWNED RELIC weapon tier)
+    if (clearedStage === 2 && upgN('aegisX')) {
       G.lives++;
-      addFloater(W / 2, H * 0.42, PATHS.bond.tiers[3].name + ' — +1 LIFE', '#ec407a', 20);
+      addFloater(W / 2, H * 0.42, PATHS.aegis.tiers[3].name + ' — +1 LIFE', '#66bb6a', 20);
     }
     // draft: advance one of up to three paths (skip maxed ones)
     rollUpgradeChoices();

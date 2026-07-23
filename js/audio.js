@@ -65,6 +65,8 @@ const SFX = {
   bossHit: () => tone(110, 0.15, 'square', 0.07, -30),
   bossDown: () => { noiseBurst(0.6, 0.16); [220, 330, 440, 660, 880].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'triangle', 0.08), i * 90)); },
   shield: () => tone(440, 0.15, 'sine', 0.08, 220),
+  relic: () => tone(520, 0.12, 'sawtooth', 0.04, 260),      // the glaive whips out
+  relicBack: () => tone(300, 0.09, 'triangle', 0.05, -120), // and slaps home
   // stage-clear fanfare (results screen) — brighter than levelUp, shorter
   // than mega: an upward triad roll with a sparkle tail
   stageClear: () => {

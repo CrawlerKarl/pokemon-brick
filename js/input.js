@@ -799,6 +799,14 @@ function upgradeTreeLayout() {
       const aa = vert ? a : a - 0.07;
       return { x: cx + Math.cos(aa) * radius * 1.01, y: cy + Math.sin(aa) * radius * 1.01, a, vert };
     },
+    // the label's fitted text budget and its TAP TARGET — render and
+    // hit-testing must read the same numbers (the shared-rects invariant)
+    labelMaxW: Math.max(56, Math.min(96, radius * 0.42)),
+    labelRect: function (pi) {
+      const l = this.label(pi);
+      const w = this.labelMaxW + 18, h = 32;
+      return { x: l.x - w / 2, y: l.y - h / 2, w, h };
+    },
     node: (pi, ti) => at(spokeA(pi), inner + ti * step, drawR + (ti === 3 ? 1 : 0)),
     // a bridge sits on the BOUNDARY between its two wedges at mid-ring height
     bridgeNode: bi => at(-Math.PI / 2 + bridgeHalfPos(WEB_BRIDGES[bi]) * Math.PI / 6,
@@ -935,6 +943,7 @@ function pickUpgrade(i) {
   const junkieName = junkieTierName(c.pathKey, c.tierIdx);
   statsUpgradePick(c.pathKey + ':' + (c.tierIdx + 1));
   const tier = advancePath(c.pathKey);
+  if (c.pathKey === 'bond') maybeRelicNotice(); // AFT-007: first relic rank explains the reforge
   beginUpgradeInstallFx(tier.icon, c.path.color, junkieName, c.pathKey, c.tierIdx);
   G.upgradeChoices = null;
   upgradeTreeOpen = false;
@@ -1126,6 +1135,17 @@ function onPress(x, y) {
         for (let si = 0; si < activeSatellites().length; si++) {
           if (inRect(x, y, T.satNode(si))) {
             selectMapNode({ kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(activeSatellites()[si].path)), ti: 3 });
+            return;
+          }
+        }
+        // Tap a wedge LABEL to jump the cursor to that path's frontier —
+        // its next installable tier (or the capstone when maxed) — and pan
+        // it into view. Nodes hit-test first, so a label never steals a tap
+        // that landed on a hex.
+        for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+          if (inRect(x, y, T.labelRect(pi))) {
+            selectMapNode({ kind: 'tier', pi, ti: Math.min(3, pathLvl(PATH_KEYS[pi])) });
+            ensureTreeSelVisible();
             return;
           }
         }
@@ -1383,6 +1403,7 @@ function fireAction(auto = false) {
   // armed blaster fires the same typed bolts the Starfighter pilot does.
   const pil = pilotInfo();
   if (G.mode === 'junkie') G.attackAnim = 1; // the pilot visibly ATTACKS — lunge + flash
+  relicOnShot(); // AFT-007: every Nth attack also throws the returning glaive
   // PRISMSTORM ARRAY: the primed volley fans into five tuned lanes instead
   if (upgN('prismstorm') && G.prismReady) {
     G.prismReady = false;
@@ -1484,6 +1505,7 @@ function fireCharge(c, resonant = false) {
     G.calibShots = 3;
     addFloater(G.paddle.x, shipY() - 58, 'CALIBRATED!', '#ffcc80', 13);
   }
+  if (c >= 0.9) crownRelease(); // CROWNED RELIC: a full charge fans the bank
   fusionChargeReleases(c); // meteor / cataclysm / shepherd / mirror / battery
   SFX.blaster();
   tone(170 + c * 320, 0.2, 'sawtooth', 0.06, 300);
@@ -1554,7 +1576,10 @@ function tryMega() {
   // classic is ball-first with no charge input, so every charge-released
   // fusion fires on Mega activation instead (recipes force an offense path
   // to rank 3+, so the sidearm is always armed there)
-  if (G.mode === 'classic') classicFusionReleases();
+  if (G.mode === 'classic') {
+    classicFusionReleases();
+    crownRelease(); // AFT-007 BREAKER adapter: Mega ignition fans the relic bank
+  }
   G.shake = 14;
   haptic('boss');
   SFX.mega();
