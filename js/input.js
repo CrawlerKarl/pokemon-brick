@@ -787,10 +787,17 @@ function upgradeTreeLayout() {
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
     spokeA,
     label: pi => {
-      // wedge labels sit INSIDE the fusion halo, between the crown ring and
-      // the halo nodes, so nothing prints over the outer rings
+      // wedge labels sit between the crown ring and the halo nodes. EVERY
+      // spoke axis carries a cross-web fusion at 1.16r, so on the DIAGONAL
+      // spokes horizontal text on the axis can never clear both the capstone
+      // (0.84r) and that fusion — their vertical separation is halved by
+      // sin(30°). A few degrees of off-axis shift (away from the satellite
+      // side, which docks at +0.3 rad) buys the clearance back; the vertical
+      // spokes keep the centered slot, where separation is full.
       const a = spokeA(pi);
-      return { x: cx + Math.cos(a) * radius * 1.01, y: cy + Math.sin(a) * radius * 1.01, a };
+      const vert = Math.abs(Math.cos(a)) < 0.25;
+      const aa = vert ? a : a - 0.07;
+      return { x: cx + Math.cos(aa) * radius * 1.01, y: cy + Math.sin(aa) * radius * 1.01, a, vert };
     },
     node: (pi, ti) => at(spokeA(pi), inner + ti * step, drawR + (ti === 3 ? 1 : 0)),
     // a bridge sits on the BOUNDARY between its two wedges at mid-ring height

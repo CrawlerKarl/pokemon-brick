@@ -103,7 +103,7 @@ suite test guards every rect across six sizes.
   bricked startup permanently.
 
 ## Verifying (there is no live human tester)
-**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~31s, fully
+**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~28–31s, fully
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
@@ -112,7 +112,7 @@ at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (30
 screenshots → `.gate-shots/`) → the WAVE and BOSS artifact-storm benchmarks
 (ms/frame plus machine-portable per-frame gradient/blur budgets, recorded in
 `.gate-report.json` every run). `--fast` skips the
-dist/scene/storm steps (~20s); `--suite` runs the invariants alone. Any
+dist/scene/storm steps (~15s); `--suite` runs the invariants alone (~12–18s). Any
 uncaught page error fails it. Run the gate before every commit — the old
 "keep the tab FRONTED for 20 minutes" constraint is dead (headless Chrome
 runs the suite at CPU speed; the fronted tab remains for interactive

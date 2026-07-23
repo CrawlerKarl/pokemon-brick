@@ -2519,7 +2519,7 @@ function updateGauntletEntrance(dt) {
       br.introScale = 0.7 + q * 0.3;
       br.introRot = style === 'swords' ? (k - (n - 1) / 2) * (1 - q) * 0.42 : 0;
     }
-  } else {
+  } else if (!e.fxOnly) { // a reveal-docked boss already sits at its spot
     const br = e.boss && !e.boss.dead ? e.boss : G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
     if (br) {
       const tx = e.targetX, ty = e.targetY;
@@ -2825,6 +2825,13 @@ function beginBossReveal(kind, brs) {
     sub: roleLine + ' · ' + gen.name + ' · ' + bossPhaseCount(primary) + (bossPhaseCount(primary) > 1 ? ' PHASES' : ' PHASE'),
     cue,
   };
+  // CONTINUITY: a revealed boss ENTERS where the portrait lands. The junkie
+  // entrance keeps its motif FX but must not replay a position flight — the
+  // old off-screen re-park made the boss visibly re-enter from the bottom or
+  // a side edge AFTER the portrait had already shrunk onto its combat spot.
+  if (kind !== 'sentinels' && G.gauntlet && G.gauntlet.entry && G.gauntlet.entry.boss) {
+    G.gauntlet.entry.viaReveal = true;
+  }
 }
 function revealSkip() { // tap: skip the hold, never the information
   const r = G.reveal;
@@ -2837,11 +2844,26 @@ function updateReveal(dt) {
     if (r.t >= r.holdDur) { r.phase = 'fly'; r.t = 0; }
     return;
   }
+  // the live boss materializes UNDER the shrinking portrait — the entrance
+  // flight is frozen while the reveal runs, so the cross-fade needs the
+  // entity visible at full scale exactly where the art is landing
+  const en = G.gauntlet && G.gauntlet.entry;
+  if (en && en.viaReveal && en.boss && !en.boss.dead) {
+    en.boss.introAlpha = Math.max(en.boss.introAlpha || 0,
+      Math.max(0, Math.min(1, (r.t / r.flyDur - 0.62) / 0.38)));
+    en.boss.introScale = 1; en.boss.introRot = 0;
+  }
   if (r.t < r.flyDur) return;
   // the transform is complete: dock the lane, free the announce lane (the
   // reveal DELIVERED the boss card's content), arm the restart grace
   G.reveal = null;
   if (r.kind !== 'sentinels') G.revealDock = r.ids[0];
+  if (en && en.viaReveal) {
+    // the portrait IS the arrival: the pending entrance plays its motif FX
+    // at the docked spot but never touches position/scale again
+    en.fxOnly = true;
+    if (en.boss) { en.boss.gauntletEntering = false; en.boss.introAlpha = 1; en.boss.introScale = 1; en.boss.introRot = 0; }
+  }
   if (G.announce && G.announce.kind === 'boss') G.announce = null;
   G.announceQueue = G.announceQueue.filter(a => a.kind !== 'boss');
   if (!G.announce && G.announceQueue.length) G.announce = G.announceQueue.shift();

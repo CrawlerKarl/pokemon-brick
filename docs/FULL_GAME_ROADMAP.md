@@ -6,6 +6,15 @@ each milestone ends with the full quality-gate checklist (bottom) and a
 deployed commit. Progress notes and design decisions live in
 `IMPLEMENTATION_LOG.md` next to this file.
 
+> **CURRENT STATUS — 2026-07-23:** this file is durable milestone history.
+> `AETHERFALL_IMPROVEMENT_BACKLOG.md` supersedes its unchecked items. All
+> backlog P0 work is shipped: the 85-invariant headless gate, mobile
+> containment, SURGE vocabulary, clean announcements, boss reveals, oath
+> evolution, save safety, adaptive performance, and mobile/storm regression
+> coverage. The immediate open check is real-phone confirmation of the latest
+> boss-FPS cadence fix; after that, resume with AFT-007 and the P1 sequence in
+> `NEXT_SESSION_HANDOFF.md`.
+
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started · ◐ partial
 (pre-existing systems cover part of it)
 
@@ -364,7 +373,8 @@ localization, telemetry, captures), not identity.**
 
 ## Quality gates (every milestone)
 
-1. `npm run check` · `npm run verify-assets` · full `test.html` suite green.
+1. Full `npm test` green (includes syntax, assets, 85 invariants, both-edition
+   and standalone boots, mobile scenes, vocabulary, and wave/boss storms).
 2. No browser console errors.
 3. Inspect 1280×720 desktop, 390×844 phone, short landscape (~844×390).
 4. Test every affected mode (all three, even when Starfighter is the focus).

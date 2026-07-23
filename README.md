@@ -140,7 +140,7 @@ renderer), and `assets/fonts/` (vendored Orbitron).
 | `build-aetherfall-art-manifest.js` | Derives the art manifest (the id/slug contract for image generation) straight from `aetherfall.js` — no DOM, no game load |
 | `build-aetherfall-dist.js` | Generates the pokemon-free standalone into `dist-aetherfall/`; prints a franchise-term RESIDUE report (a release requires **none**) |
 | `build-aetherfall-reveals.py` | 512px boss-reveal portraits for the 43 boss-class ids (same chroma + framing rules as the previews) |
-| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 84-check suite headless → both-skin + dist boot smokes → vocabulary scan → mobile scenes with fitted-label assertions + screenshots → the artifact-storm benchmark. ~37s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
+| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 85-check suite headless → both-skin + dist boot smokes → vocabulary scan → 30 mobile scenes with fitted-label assertions + screenshots → wave and boss artifact-storm benchmarks. ~28–31s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
 
 **`art/aetherfall-production/`** — the production art. `sprites/final/` (128px
 runtime sprites) and `sprites/preview/` (320px portraits) and `weapons/final/`
@@ -601,6 +601,17 @@ flash) decays in `update()` dt-scaled, NOT render — it gates the pierce
 i-frame, so a per-render-frame decay would couple DPS to the display's refresh
 rate. **Rule: mutate any field gameplay reads in `update`; render only reads.**
 
+On `AUTO`, the effects ladder reads both JavaScript work time and actual
+`requestAnimationFrame` cadence. This distinction matters on phones: a GPU or
+compositor stall can drop visible FPS while `update()` and `render()` still
+return in about 1ms. Sustained cadence above 20ms drops full-frame bloom and
+large decorative blurs; above 26ms it also thins cosmetic emission and renders
+the canvas backing store at 75% scale (CSS size, coordinates, input, hitboxes,
+and simulation remain unchanged). Boss hit-stop frames are profiled too.
+`DEV.perf()` reports work time, `cadenceMs`, estimated FPS, effects rung, and
+live effect counts. Hostile shots, telegraphs, hit feedback, the vessel, boss
+health, and controls are never culled.
+
 ### Skill tree (`PATHS` in data.js ~423) — now the hub of THE UPGRADE WEB
 Six paths × four tiers, **permanent**, drafted between every wave. The 24
 tiers are the save-stable ANCHOR nodes of a 50-node web (`WEB_SPOKE_ORDER`,
@@ -956,26 +967,24 @@ viewports` test — keep it green when adding menu items.
 
 ---
 
-## Verifying changes (no human tester)
+## Verifying changes
 
-The preview browser **throttles `requestAnimationFrame` when backgrounded**
-(and auto-pauses via visibilitychange), so you can't watch real-time physics.
-Instead, drive the sim deterministically from the JS console:
-`update(1/60)` in a loop, set `mouseX` to steer, `paused=false; G.freeze=0` to
-force-run, then read `G.*`. `G.freeze=999` freezes a frame for a screenshot.
-This is how every mechanic in the git history was verified. `?touch` +
-synthetic `TouchEvent`s test mobile paths.
+**`npm test` is the release gate.** It runs syntax + asset checks, 85 headless
+invariants, both-edition boot smokes, the standalone build and vocabulary
+scan, 30 mobile reference scenes with fitted-label containment assertions,
+and both wave and boss artifact-storm benchmarks. A full run is currently
+about 28–31s; `npm test -- --fast` is about 15s and
+`npm test -- --suite` is about 12–18s. Results and performance ledgers land in
+`.gate-report.json`; scene captures land in `.gate-shots/`.
 
-**Automated invariants:** open `http://localhost:8741/test.html` — a
-self-contained suite (startup, per-mode smoke, wall/flyer non-overlap,
-density budget, roster/sprite coverage, menu fit, storage-corruption
-recovery, the balance-instrumentation ledger, the boss phase harness, and
-seeded dev-launch reproducibility) that drives the sim headless and reports
-PASS/FAIL (`window.TEST_RESULTS` for automation). Keep the suite tab
-FOREGROUNDED — background-tab timer throttling makes it crawl.
-`npm run check` syntax-checks all modules; `npm run verify-assets`
-cross-checks rosters vs NAMES vs sprite files (tools/verify-assets.js). Run
-these after any invariant-adjacent change.
+For interactive investigation, the preview browser still throttles
+`requestAnimationFrame` when backgrounded (and auto-pauses on visibility
+change). Drive the sim deterministically from the console with
+`update(1/60)`, set `mouseX`/`lastMouseY`, and use
+`paused=false; G.freeze=0`. `G.freeze=999; render()` freezes a screenshot.
+Append `?touch` for mobile controls. The standalone `test.html` page remains
+useful for debugging, but it no longer needs to stay foregrounded for the
+release gate.
 
 **Balance instrumentation (Milestone 0, js/dev.js + the stats layer in
 state.js).** Every run keeps one compact record per wave attempt on
@@ -998,30 +1007,25 @@ knockouts). All LOCAL-ONLY — nothing is transmitted. Surfaces:
 
 ---
 
-## Roadmap / ideas for the next session
-Not committed to — a menu of high-value work, roughly by leverage. Nothing
-here is started; the game is stable and shippable as-is.
+## Next session
 
-**Onboarding & clarity**
-- Boss identity: short named intro cards + one clear counterplay lesson each.
+`docs/NEXT_SESSION_HANDOFF.md` is the exact resume point and
+`docs/AETHERFALL_IMPROVEMENT_BACKLOG.md` is the scope authority.
 
-**Gameplay depth**
-- Build synergy tags on draft cards ("Ball / Blaster / Defense / Catch").
-- ~~Local balance telemetry~~ — SHIPPED (Milestone 0): per-level stats layer
-  + `DEV.report()` + F9 dashboard + seeded dev launches; see Verifying.
+1. Confirm boss-level smoothness on the owner's real phone. Two performance
+   rounds are shipped; the cadence-driven fallback is the latest and still
+   needs hardware confirmation.
+2. If smooth, begin the P1 track in backlog order: AFT-007 ORBITAL RELIC →
+   AFT-008 balance matrix → AFT-009 constellation redesign → AFT-019
+   first-session phone pass → AFT-010 accessibility → AFT-011 loading/WebP →
+   AFT-012 visual integration.
+3. If boss lag persists, use `DEV.perf()` and the boss storm ledger before
+   adding deeper quality rungs. The handoff records the ordered fallback
+   levers.
 
-**Visual / UX**
-- Colorblind-friendly type palette (flyers convey type by aura color alone;
-  boxed cards at least show a glyph). Reuse the accessibility-toggle framework.
-- Per-region color grade + animated scenery accents (the atmosphere wash is a
-  start); richer boss-phase VFX.
-
-**Architecture** (deferred on purpose — the no-build vanilla setup is a feature)
-- If files grow further, migrate incrementally to native ES modules (no
-  bundler) and split `G` into `run`/`world`/`actors`/`ui`; route screen changes
-  through a small scene state machine. Do this between phases, not mid-feature.
-- Convert PNG sprites to WebP (≈17 MB of art); add an asset manifest that
-  preloads only the current + next region.
+The no-build vanilla architecture remains intentional. Structural cleanup and
+native-module splitting belong at subsystem boundaries (AFT-016), not in the
+middle of a player-facing feature.
 
 **Known small items**
 - Upgrade-web zoom anchoring can drift at unusual very-tall viewports (the

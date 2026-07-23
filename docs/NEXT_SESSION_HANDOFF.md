@@ -1,8 +1,8 @@
 # HANDOFF — resume here
 
-> **STATUS (2026-07-22 evening): ALL EIGHT P0s FROM THE BACKLOG ARE
+> **STATUS (2026-07-23 session closeout): ALL P0 ITEMS FROM THE BACKLOG ARE
 > IMPLEMENTED, TESTED, AND LIVE** (rounds g–o in the log): AFT-005A the
-> 31s headless release gate (`npm test`), AFT-001 safe zones + fitted
+> 28–31s headless release gate (`npm test`), AFT-001 safe zones + fitted
 > labels, AFT-003 the SURGE lexicon, AFT-004 the kinded announce queue +
 > clean launches, AFT-002 the full-resolution boss reveal + HUD-lane dock,
 > AFT-017 the oath evolution channels, AFT-006 save safety
@@ -10,7 +10,7 @@
 > (baked hot loops + the adaptive effects budget), and AFT-005B mobile
 > scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 85/85. `npm test` (~31s headless) ran green before every
+> **Suite: 85/85. `npm test` (~28–31s headless) ran green before every
 > commit.** Production art: 259 base + 259 radiant + 54 previews +
 > **43 boss reveals** + 21 weapon sprites. Both sites live:
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
@@ -39,7 +39,7 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
-  the reasoning behind it. Newest entries run through **2026-07-23b**.
+  the reasoning behind it. Newest entries run through **2026-07-23d**.
 - `FULL_GAME_ROADMAP.md` — milestone history (useful design context; the
   backlog wins on open items).
 - `archive/` — historical plan docs for shipped features (see its README).
@@ -122,8 +122,9 @@ is always safe.
 
 `art/` is **1.1 GB** — but **1.0 GB of that is `sprites/source/`** (the
 1254px editable masters) plus 31 MB of weapon art. Only `final/`(14 MB),
-`preview/`(9 MB) and `weapons/final/` are referenced at runtime.
-`dist-aetherfall/` is 64 MB. If repo size becomes a problem, pruning
+`preview/`(13 MB) and `weapons/final/` are referenced at runtime.
+`dist-aetherfall/` is about 37.4 MiB excluding its nested Git metadata
+(about 114 MB on disk including `.git`). If repo size becomes a problem, pruning
 `sprites/source/` is the lever — **but ASK FIRST, it's the user's working
 art.** Local same-origin files only; the no-remote-fetch rule stands.
 
@@ -131,13 +132,21 @@ art.** Local same-origin files only; the no-remote-fetch rule stands.
 
 ## What shipped, in brief (full detail in `IMPLEMENTATION_LOG.md`)
 
-**2026-07-22 → 07-23: all eight P0s** — the headless gate (AFT-005A), safe
+**2026-07-22 → 07-23: all P0 items** — the headless gate (AFT-005A), safe
 zones + fitted labels (001), the SURGE lexicon (003), the kinded announce
 queue (004), the boss reveal scene (002), the oath evolution channels (017),
 save safety (006), frame stability (018 + 018b + the cadence profiler), and
 the mobile scene/label/storm harness (005B). Plus owner-reported fixes: the
 trial picker overflow, the vessel size "pop", and two rounds of boss-level
 performance work.
+
+**2026-07-23d (owner feedback round):** upgrade-web labels never hide behind
+nodes (late plate pass + per-spoke slots + relocated ring names), boss
+reveals hand off continuously into the fight (`viaReveal`/`fxOnly` — no more
+bottom re-entry after the portrait docks), draft descriptions read at body
+size and fill their sheet, and vessel-select art is warmed at the title so
+the hero/tiles never swap renders after a click (plus a skin gate that
+stopped aetherfall previews leaking onto colliding pokemon ids).
 
 ### Earlier context — the 2026-07-22 art/identity rounds
 
@@ -209,7 +218,9 @@ second is **unconfirmed on hardware**. Everything else waits on this.
   counts to compare against, (d) a WebGL compositor (AFT-011 territory).
 - **The gate now guards this**: a BOSS storm runs every `npm test` with
   machine-portable budgets (grad ≤8, blur ≤14/frame at FULL; ≤6 lean).
-  Absolute ms stay advisory; state-change counts gate hard.
+  Absolute ms stay advisory; state-change counts gate hard. The final
+  closeout run was green in 28s: wave 1.01ms average; boss 0.87ms average /
+  1.3ms P95; boss FULL 1.4 gradients + 3.9 blur writes/frame.
 
 ### Then: the P1 track
 
@@ -223,7 +234,7 @@ AFT-007 ORBITAL RELIC (redesign the bond path)  →  AFT-008 balance matrix
 
 Notes so you don't redo finished work:
 
-- **`npm test` is the gate** (~31s full, `--fast` ~15s, `--suite` alone):
+- **`npm test` is the gate** (~28–31s full, `--fast` ~15s, `--suite` ~12–18s):
   syntax → assets → 85 invariants headless → both-skin + dist boots →
   vocabulary scan → RESIDUE → 15 mobile scenes × 2 viewports with
   fitted-label assertions (30 screenshots → `.gate-shots/`) → the wave AND
@@ -249,7 +260,7 @@ Notes so you don't redo finished work:
    `update(1/60)`, read `G.*`; `G.freeze=999; render()` for a screenshot.
    Add `&skin=aetherfall` to any dev URL. If `!W`, force `W/H/canvas` then
    `buildStars(); buildVignette(); bgGen=-1`.
-4. **Suite:** `npm test` (headless, ~31s; `--fast` ~15s while iterating).
+4. **Suite:** `npm test` (headless, ~28–31s; `--fast` ~15s while iterating).
    The fronted `/test.html` tab still works for interactive debugging but is
    never required. Modal boss reveals are dormant under the suite
    (`window.__SUITE`); a test that needs one sets `window.__SUITE_REVEALS`.

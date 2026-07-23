@@ -606,6 +606,10 @@ function vesselForm(id) {
 // keeps the small sprite. Absent previews fall through to the final.
 const aetherPreviewImages = {};
 function aetherPreviewImage(id, light) {
+  // the preview tables are AETHERFALL art keyed by bare numeric ids, which
+  // COLLIDE with pokemon dex numbers (id 25 is both Pikachu and the
+  // Aeronaut) — under any other skin they must never resolve
+  if (SKIN.id !== 'aetherfall') return null;
   const table = light ? (typeof AETHERFALL_ART_PREVIEW_RADIANT !== 'undefined' && AETHERFALL_ART_PREVIEW_RADIANT)
     : (typeof AETHERFALL_ART_PREVIEW !== 'undefined' && AETHERFALL_ART_PREVIEW);
   const src = table && table[id];
@@ -613,6 +617,25 @@ function aetherPreviewImage(id, light) {
   if (!aetherPreviewImages[src]) { const im = new Image(); im.src = src; aetherPreviewImages[src] = im; }
   const img = aetherPreviewImages[src];
   return (img.complete && img.naturalWidth) ? img : null;
+}
+// The partner screen's hero card draws the high-res PREVIEW portrait while
+// the shelf tiles draw the final sprite — two different renders of the same
+// vessel. Both load lazily on first draw, so the first click on any tile
+// showed the scaled-up tile art for a beat and then swapped to the preview
+// (and the tiles themselves popped from procedural bakes to their PNGs).
+// Warming the whole roster while the TITLE screen is up means every image a
+// click can reach is already decoded before the player gets there.
+let warmedSetupArt = '';
+function warmSetupArt() {
+  if (warmedSetupArt === SKIN.id) return;
+  warmedSetupArt = SKIN.id;
+  for (const k in SKIN.starterMon) {
+    const sm = SKIN.starterMon[k];
+    if (!sm || !sm.ids) continue;
+    for (const id of sm.ids) getSprite(id); // tiles + evolution forms (kicks the final-PNG overrides)
+    aetherPreviewImage(sm.ids[0], false);   // the hero portrait
+    aetherPreviewImage(sm.ids[0], true);    // its radiant casting (LIGHT oath summary card)
+  }
 }
 function affinityVesselImage(id, big, forceBase) {
   if (id > 0) {
@@ -5542,6 +5565,7 @@ function drawMenuRedesign() {
   if (trialOpen) drawTrial();
 }
 function drawMenu() {
+  warmSetupArt(); // roster art decodes while the player reads the title
   if (menuPage === 'setup') { drawSetup(); return; }
   drawMenuRedesign();
   return;
@@ -7004,6 +7028,41 @@ function treeNodeVisualState(owned, offered, reachable) {
 }
 const TREE_NODE_ALPHA = Object.freeze({ offered: 1, owned: 0.78, reachable: 0.42, locked: 0.2 });
 
+// Chart-space text: the constellation pans/zooms inside its own clip, so map
+// labels shrink-then-ellipsize against the CHART like fitLabel does against
+// the screen — but they must never viewport-clamp (the map clip is the
+// containment authority here, and a pannable label dragged to the screen
+// edge would detach from its wedge). Optional plate keeps a label readable
+// over connectors and ring strokes at any zoom.
+function treeMapLabel(text, x, y, o) {
+  const maxW = Math.max(24, o.maxW);
+  let size = o.size;
+  const weight = o.weight || 800;
+  ctx.font = `${weight} ${size}px Orbitron, sans-serif`;
+  let t = String(text);
+  let w = ctx.measureText(t).width;
+  if (w > maxW) {
+    size = Math.max(o.min || 8, size * maxW / w);
+    ctx.font = `${weight} ${size}px Orbitron, sans-serif`;
+    w = ctx.measureText(t).width;
+  }
+  if (w > maxW && t.length > 2) {
+    while (t.length > 1 && ctx.measureText(t.replace(/\s+$/, '') + '…').width > maxW) t = t.slice(0, -1);
+    t = t.replace(/\s+$/, '') + '…';
+    w = ctx.measureText(t).width;
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (o.plate) {
+    const ph = size * 1.44 + 6;
+    roundRect(x - w / 2 - 5, y - ph / 2, w + 10, ph, ph / 2);
+    ctx.fillStyle = o.plate; ctx.fill();
+    if (o.plateStroke) { ctx.strokeStyle = o.plateStroke; ctx.lineWidth = 1; ctx.stroke(); }
+  }
+  ctx.fillStyle = o.color;
+  ctx.fillText(t, x, y);
+  return { w, size };
+}
+
 // The constellation is both atlas and choice surface. It deliberately maps
 // the current 24 save-compatible tiers before the later branching graph adds
 // more nodes, so the visual redesign can ship without changing balance.
@@ -7077,12 +7136,19 @@ function drawFullUpgradeTree() {
     ctx.beginPath(); ctx.arc(C.x, C.y, rr, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
     if (!T.compact || ti === 3) {
-      // ring names live on the EMPTY diagonal between the VOLLEY and IMPACT
-      // spokes — straight up they printed across the top spoke's nodes
-      const la = -Math.PI / 3;
-      ctx.font = `700 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`;
-      ctx.fillStyle = ti === 3 ? 'rgba(255,213,79,0.62)' : 'rgba(128,216,255,0.45)';
-      ctx.fillText(ringNames[ti], C.x + Math.cos(la) * (rr + 6), C.y + Math.sin(la) * (rr + 6));
+      // ring names: the -60° line is not empty anymore — that BOUNDARY
+      // carries a bridge node and a crown fusion (drawn later, i.e. over the
+      // text). Mid-wedge placement shy of the top spoke instead; the
+      // innermost ring needs a wider angle (its chord to the spoke's hex
+      // shrinks with ring radius) and its slice of the boundary is empty,
+      // while the outer rings must stay off the boundary's bridge/fusion.
+      // Satellites dock on the other side of a spoke, so this side is safe.
+      const la = -Math.PI / 2 - (ti === 0 ? 0.47 : 0.30);
+      treeMapLabel(ringNames[ti], C.x + Math.cos(la) * (rr + 6), C.y + Math.sin(la) * (rr + 6), {
+        size: T.compact ? 8.5 : 8, min: 7, weight: 700,
+        color: ti === 3 ? 'rgba(255,213,79,0.62)' : 'rgba(128,216,255,0.45)',
+        maxW: Math.max(34, T.radius * 0.22),
+      });
     }
   }
   // the CROWN ring (adjacent fusions + satellites), the FUSION HALO (the
@@ -7250,15 +7316,6 @@ function drawFullUpgradeTree() {
       if (offered) offerFlag(n, offer, ti === 3);
       ctx.restore();
     }
-    // constellation identity stays outside the busy node field
-    const lb = T.label(pi);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `900 ${T.compact ? 10.5 : 10}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-    ctx.fillText(skinPathName(PATH_KEYS[pi]), lb.x, lb.y, T.compact ? 88 : 90);
-    if (!T.compact) {
-      ctx.font = '600 6.5px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
-      ctx.fillText(pathRole(pk), lb.x, lb.y + 12, 100);
-    }
   }
 
   // ---- WEB nodes: bridges (two-tone), superskills (double-hex crowns) and
@@ -7411,6 +7468,25 @@ function drawFullUpgradeTree() {
     inspectionRing(n, sel, offered);
     if (offered) offerFlag(n, offer, true);
     ctx.restore();
+  }
+
+  // ---- wedge identity labels, AFTER every node body: they used to draw
+  // inside the tier loop, so the halo fusions and apexes (painted later on
+  // the same spoke axes) printed straight over the text on the outer rings.
+  // The plate keeps them readable over connectors at any zoom; the role
+  // sub-line only appears when the chart is roomy enough to clear the
+  // capstone below it (it also lives in the detail panel's heading now).
+  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+    const pk = PATH_KEYS[pi], P = PATHS[pk];
+    const lb = T.label(pi);
+    treeMapLabel(skinPathName(pk), lb.x, lb.y, {
+      size: T.compact ? 11.5 : 11, min: 8.5, weight: 900, color: P.color,
+      maxW: Math.max(56, Math.min(96, T.radius * 0.42)),
+      plate: 'rgba(4,9,22,0.78)', plateStroke: P.color + '3d',
+    });
+    if (!T.compact && T.radius >= 265) {
+      treeMapLabel(pathRole(pk), lb.x, lb.y + 13, { size: 6.5, min: 6, weight: 600, color: '#78909c', maxW: 100 });
+    }
   }
 
   // The actual current build sits at the center, so installing a node has an
@@ -7577,34 +7653,42 @@ function drawTreeDetailWeb(T) {
   ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
 
   let y = d.y + pad + Math.max(iconSize + 8, 54);
-  ctx.font = bodyFont(T.compact ? 11 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
-  const descLines = wrapText(desc, d.w - pad * 2).slice(0, T.sideDetail ? 4 : 3);
-  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 15 : 16), d.w - pad * 2));
-  y += descLines.length * (T.compact ? 15 : 16) + (T.compact ? 5 : 10);
+  // description at body size with a height-aware line budget — same rule as
+  // the tier panel (the lock list below keeps first claim on its rows)
+  const lineH = T.compact ? 16 : 18;
+  ctx.font = bodyFont(T.compact ? 12 : 13, 650); ctx.fillStyle = '#d8e2ee';
+  const rowH = T.compact ? 13 : 14;
+  const reserveW = locks.length
+    ? rowH + Math.min(4, locks.length) * rowH + 10
+    : rowH + (T.sideDetail ? 2 : 1) * rowH + (T.sideDetail && proc ? 2 * rowH + 8 : 10);
+  const maxDescW = Math.max(2, Math.floor((T.reroll.y - 10 - y - reserveW) / lineH));
+  const descLines = wrapText(desc, d.w - pad * 2).slice(0, maxDescW);
+  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * lineH, d.w - pad * 2));
+  y += descLines.length * lineH + (T.compact ? 5 : 10);
 
   if (locks.length) {
     // exact lock reasons — the player never needs a guide to see the route
     ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = '#ffab91';
     ctx.fillText('TO UNLOCK', d.x + pad, y, d.w - pad * 2);
     y += T.compact ? 13 : 14;
-    ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#ffcdb8';
+    ctx.font = bodyFont(10.5, 650); ctx.fillStyle = '#ffcdb8';
     for (const reason of locks.slice(0, 4)) {
       ctx.fillText('· ' + reason, d.x + pad, y, d.w - pad * 2);
-      y += T.compact ? 12 : 13;
+      y += rowH;
     }
     y += 4;
   } else {
     ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = color;
     ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
     y += T.compact ? 13 : 14;
-    ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#aebdca';
+    ctx.font = bodyFont(10.5, 650); ctx.fillStyle = '#aebdca';
     const visualLines = wrapText(visual, d.w - pad * 2).slice(0, T.sideDetail ? 2 : 1);
-    visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 13), d.w - pad * 2));
-    y += visualLines.length * (T.compact ? 12 : 13) + 5;
+    visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * rowH, d.w - pad * 2));
+    y += visualLines.length * rowH + 5;
     if (T.sideDetail && proc) {
       ctx.fillStyle = '#90a4ae';
       const procLines = wrapText('PROC · ' + proc, d.w - pad * 2).slice(0, 2);
-      procLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * 13, d.w - pad * 2));
+      procLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * rowH, d.w - pad * 2));
     }
   }
   drawTreeDetailButtons(T, offered, chosen, offer, color);
@@ -7636,25 +7720,31 @@ function drawTreeDetail(T) {
   ctx.globalAlpha = 1;
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
-  ctx.fillText(skinPathName(pk) + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
+  ctx.fillText(skinPathName(pk) + ' · ' + pathRole(pk) + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
   ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
   ctx.fillText(junkieTierName(pk, ti), d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
   ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
   ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
 
   let y = d.y + pad + Math.max(iconSize + 8, 54);
-  ctx.font = bodyFont(T.compact ? 11 : 11.5, 650); ctx.fillStyle = '#d8e2ee';
-  const descLines = wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, T.sideDetail ? 5 : 3);
-  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 15 : 16), d.w - pad * 2));
-  y += descLines.length * (T.compact ? 15 : 16) + (T.compact ? 5 : 10);
+  // the description is the panel's PAYLOAD: body size, and as many lines as
+  // the sheet's real height allows (tall maps reclaim a dead band into this
+  // panel — the old fixed 3-line cap left that space blank)
+  const lineH = T.compact ? 16 : 18;
+  ctx.font = bodyFont(T.compact ? 12 : 13, 650); ctx.fillStyle = '#d8e2ee';
+  const reserveT = (T.compact ? 13 : 14) + (T.sideDetail ? 3 : 1) * (T.compact ? 13 : 14) + (T.sideDetail ? 118 : 16);
+  const maxDescT = Math.max(2, Math.floor((T.reroll.y - 10 - y - reserveT) / lineH));
+  const descLines = wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, maxDescT);
+  descLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * lineH, d.w - pad * 2));
+  y += descLines.length * lineH + (T.compact ? 5 : 10);
 
   ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
   ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
   y += T.compact ? 13 : 14;
-  ctx.font = bodyFont(T.compact ? 9.5 : 9.5, 650); ctx.fillStyle = '#aebdca';
+  ctx.font = bodyFont(10.5, 650); ctx.fillStyle = '#aebdca';
   const visualLines = wrapText(tier.visual || P.tell, d.w - pad * 2).slice(0, T.sideDetail ? 3 : 1);
-  visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 12 : 13), d.w - pad * 2));
-  y += visualLines.length * (T.compact ? 12 : 13) + 7;
+  visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 13 : 14), d.w - pad * 2));
+  y += visualLines.length * (T.compact ? 13 : 14) + 7;
 
   if (T.sideDetail && choice) {
     ctx.font = '800 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';

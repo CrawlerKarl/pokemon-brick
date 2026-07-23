@@ -5,6 +5,65 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-23d — Four owner reports: web text, reveal continuity, bigger descriptions, stable vessel art
+
+Owner feedback round, all four items verified by screenshot + a numeric
+position trace before the gate.
+
+- **Upgrade-web text behind nodes (outer rings).** Two real offenders.
+  (1) The six wedge labels were drawn inside the tier-node loop, then the
+  fusion halo (1.16r) and apex (1.3r) bodies painted OVER them — and every
+  spoke axis carries a cross-web fusion, so on the four diagonal spokes
+  horizontal text at 1.01r could never clear both the capstone and that
+  fusion (sin 30° halves the separation). Labels now draw in a LATE pass
+  after every node body, on a dark plate, via the new `treeMapLabel`
+  (shrink→ellipsize against the chart, never viewport-clamped — the map
+  clip is the containment authority); diagonal spokes shift 0.07 rad
+  off-axis away from the satellite side (`T.label` returns the slot). The
+  role sub-line shows only when the chart is roomy (radius ≥ 265) and now
+  ALSO lives in the tier detail heading, so the info survives.
+  (2) The ring names' "-60° empty diagonal" comment predates the web: that
+  boundary hosts a bridge + crown fusion, which painted over TIER III /
+  CAPSTONE. They moved to mid-wedge lines shy of the top spoke — the
+  innermost ring takes a wider angle (its chord to the spoke's hex shrinks
+  with ring radius; 0.30 rad grazed TIER I at default zoom, verified by
+  screenshot, so ring 0 uses 0.47 rad where its boundary slice is empty).
+- **Boss reveal → fight continuity.** The reveal froze combat, flew the
+  portrait onto the boss's spawn spot… and only THEN ran the junkie
+  entrance flight, whose four bottom-riser styles (maelstrom/moonrise/
+  timebloom/junglecall) re-parked the boss at `H + h` and replayed a climb —
+  the owner's "shrank at the top, then came up from the bottom".
+  `beginBossReveal` now stamps the pending entry `viaReveal`; during the
+  reveal's fly the live boss ramps `introAlpha` under the portrait's
+  cross-fade at full scale, and at teardown the entry flips to `fxOnly` —
+  the motif FX still plays at the docked spot but position/scale are never
+  touched again. Verified: Lugia (maelstrom) and Celebi (timebloom) hold
+  `by` exactly at their combat spot through the whole handoff (old path
+  peaked at `H + h`). Sentinel trains, suite-dormant reveals, and the
+  blaster/classic paths (no entrance flight) are untouched.
+- **Bigger draft descriptions.** The detail panels' description is the
+  payload: now body-size (12/13px, up from 11/11.5) with a height-aware
+  line budget that grows into the sheet's real height (the reclaimed dead
+  band was sitting blank above the buttons) instead of a fixed 3-line cap.
+  Lock reasons / rig-tell lines bumped 9.5 → 10.5px.
+- **Vessel art must not swap after a click.** The hero card draws the
+  high-res `preview/` portrait while tiles draw `final/` sprites — both
+  lazily loaded on first draw, so each first click showed the scaled tile
+  art, then swapped renders a beat later (and tiles popped from procedural
+  bakes on screen entry). `warmSetupArt()` now warms the whole roster
+  (finals for every form + base and radiant previews) on the first TITLE
+  frame, once per skin — verified 36/36 previews complete before the
+  partner screen can be reached. Bonus latent bug fixed on the way:
+  `aetherPreviewImage` had no skin gate, and the preview tables' bare
+  numeric ids collide with dex numbers — under the pokemon skin, big draws
+  of id 25 (Pikachu) would have swapped in `af-025-aeronaut.png` once
+  loaded. Previews now resolve only under the aetherfall skin.
+
+Gate: full `npm test` green in 35s, 85/85, RESIDUE none, 30 mobile scenes
+contained, storms wave 1.26ms / boss 0.73ms.
+
+---
+
 ## 2026-07-23c — Boss lag round 2: the rAF cadence profiler + a seed leak
 
 The owner reported boss-level lag a SECOND time after AFT-018b. The missing
@@ -32,6 +91,12 @@ it mattered.
 - **Still unconfirmed on hardware** — the owner has not retested boss levels
   since this landed. The handoff leads with it, plus the next levers if the
   lag persists.
+- **Session-closeout verification:** full `npm test` green in 28s, 85/85
+  invariants, both editions + standalone booted, 30 mobile scenes contained,
+  RESIDUE none. Final storm ledger: wave 1.01ms average; boss 0.87ms average /
+  1.3ms P95; boss FULL 1.4 gradient allocations and 3.9 blur writes/frame
+  (well inside the 8 / 14 hard budgets). Runtime commit: `ed39d79`;
+  documentation closeout began at `ee0b250`.
 
 ---
 
@@ -143,7 +208,7 @@ object; `addFloater` counts instead of filtering. Storm p95: 2.8 → 1.8ms.
   the overrides pin the rungs. The storm benchmark records the regression
   ledger every gate run.
 
-With this, **all eight P0s from the second-pass backlog are implemented**:
+With this, **all P0 items from the second-pass backlog are implemented**:
 005A, 001, 003, 004, 002, 017, 018, 005B, 006 (003 shipped earlier today).
 
 ---
