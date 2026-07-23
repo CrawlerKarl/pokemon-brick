@@ -52,6 +52,7 @@ if (!new URLSearchParams(location.search).has('skin')) {
     + (location.search ? '&' : '?') + 'skin=pokemon');
 }
 // 1) capture every uncaught error / rejection so tests can assert "no exception"
+window.__SUITE = true; // headless invariant run — modal reveals opt in per-test
 window.__ERRORS = [];
 window.addEventListener('error', e => {
   window.__ERRORS.push((e.message || 'error') + ' @ ' + (e.filename || '?') + ':' + (e.lineno || 0));
@@ -1546,6 +1547,65 @@ window.requestAnimationFrame = function () { return 0; };
       render();
     } finally { forceViewport(900, 700); }
     return 'shrink → ellipsis · edge clamps · zone stack · 667×375 live frames render contained';
+  });
+
+  // AFT-002: the boss reveal is a separate SCENE — combat frozen, portrait +
+  // dedicated info panel, skippable hold, fly-to-combat, HUD-lane dock, and
+  // a fire grace so a skip never lands inside an attack.
+  test('AFT-002: boss reveal — art coverage, freeze, skip, fly, dock, grace', async () => {
+    window.__SUITE_REVEALS = true;
+    try {
+      // every boss-class id has a 512px reveal export wired in the map
+      const AFS = SKINS.aetherfall;
+      const bossIds = new Set();
+      AFS.gens.forEach(g => {
+        bossIds.add(g.boss.id);
+        g.gauntlet.subs.forEach(([i]) => bossIds.add(i));
+        bossIds.add(g.gauntlet.myth[0]);
+      });
+      assert(bossIds.size >= 40, 'boss id derivation broke: ' + bossIds.size);
+      for (const id of bossIds) assert(AETHERFALL_ART_REVEAL[id], 'no reveal export for boss id ' + id);
+      // a finale build reveals the sentinel trio and freezes hostile sim
+      resetRun(3, true);
+      assert(G.reveal && G.reveal.kind === 'sentinels' && G.reveal.ids.length >= 1,
+        'no sentinel reveal on a finale build');
+      assert(G.reveal.title && G.reveal.sub && G.reveal.cue, 'reveal panel copy incomplete');
+      for (let i = 0; i < 30; i++) update(1 / 60);
+      assert(G.reveal && G.reveal.phase === 'hold', 'reveal should still be holding');
+      assert(G.enemyShots.length === 0, 'hostile fire during a reveal');
+      render(); // the hold frame renders clean
+      // tap-skip → fly → complete: boss card consumed, fire grace armed
+      revealSkip();
+      assert(G.reveal.phase === 'fly', 'skip did not advance to fly');
+      for (let i = 0; i < 90 && G.reveal; i++) update(1 / 60);
+      assert(!G.reveal, 'reveal never completed');
+      assert(![G.announce, ...G.announceQueue].filter(Boolean).some(a => a.kind === 'boss'),
+        'the boss card must clear once the reveal delivered it');
+      assert(G.enemyShotCD >= 1.0, 'no post-reveal fire grace');
+      // a round jump reveals the selected boss and docks the HUD lane
+      // (jump API: 1 = the legendary, 2 = the mythical, 3 = the secret)
+      jumpToGauntletRound(1);
+      assert(G.reveal && G.reveal.kind === 'legendary', 'no legendary reveal on jump(1)');
+      while (G.reveal) update(0.4);
+      assert(G.revealDock === genFor(3).boss.id, 'legendary did not dock: ' + G.revealDock);
+      render(); // docked lane + suppressed overhead plate render clean
+      // jumping straight to the mythical REPLACES the wake-armed legendary
+      // reveal with the mythical's — one reveal at a time, freshest wins
+      jumpToGauntletRound(2);
+      assert(G.reveal && G.reveal.kind === 'mythic', 'jump(2) must reveal the mythical, got ' + (G.reveal && G.reveal.kind));
+      while (G.reveal) update(0.4);
+      assert(G.revealDock === genFor(3).gauntlet.myth[0], 'mythical did not dock: ' + G.revealDock);
+      // reduced-effects mode: shorter hold, dissolve fly
+      SETTINGS.reduceFlash = true;
+      resetRun(3, true);
+      assert(G.reveal && G.reveal.reduced && G.reveal.holdDur < 2, 'reduced mode must shorten the hold');
+      SETTINGS.reduceFlash = false;
+      // and the suite guard itself: with the opt-in off, no reveal arms
+      window.__SUITE_REVEALS = false;
+      resetRun(3, true);
+      assert(!G.reveal, 'reveals must stay dormant under the headless suite');
+    } finally { window.__SUITE_REVEALS = false; SETTINGS.reduceFlash = false; }
+    return '43 exports mapped · hold freezes fire · skip→fly→dock · card consumed · grace armed · reduced mode · suite-dormant';
   });
 
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no

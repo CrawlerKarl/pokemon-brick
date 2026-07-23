@@ -2765,6 +2765,60 @@ function spawnBonusFlock() {
   setAnnounce('swift', '#80d8ff', bf.name, bf.sub, 2.4);
   SFX.power();
 }
+// ---- AFT-002: THE BOSS REVEAL — a separate scene, not a combat layer ----
+// Freeze combat, show the full-resolution portrait with a dedicated info
+// panel (name/round/realm/phases/one counterplay cue), hold skippably, then
+// fly the art into the boss's combat rectangle and dock the name/health to a
+// HUD lane. Hostile simulation resumes only after docking, with a fire grace
+// so a skip can never land the player inside an undodgeable attack. ONE
+// contract for sentinels, legendaries, mythicals and the secret boss.
+function beginBossReveal(kind, brs) {
+  brs = (brs || []).filter(Boolean);
+  if (!brs.length) return;
+  // the invariant suite drives update() headless — reveals arm only for real
+  // sessions (or the dedicated reveal test, which opts back in)
+  if (typeof window !== 'undefined' && window.__SUITE && !window.__SUITE_REVEALS) return;
+  const reduced = !!SETTINGS.reduceFlash; // reduced-effects: dissolve, no sweep
+  const gen = genFor(G.level);
+  const primary = brs[0];
+  const cue = kind === 'sentinels' ? 'STRIKE THE ONE THAT JUST ATTACKED — IT IS OPEN'
+    : kind === 'secret' ? 'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE'
+    : kind === 'mythic' ? 'THREE PHASES · DENY ITS SUMMONS — TWO HITS EACH'
+    : blasterArmed() ? 'A CHARGED SHOT BREAKS ITS CHANNEL'
+    : 'THE BALL IS YOUR ONLY WEAPON — KEEP THE HIGH GROUND';
+  const roleLine = kind === 'sentinels' ? 'ROUND 1 — THE SENTINELS'
+    : kind === 'legendary' ? 'ROUND 2 — THE LEGENDARY'
+    : kind === 'secret' ? 'MAX RIFT — THE SECRET BOSS' : 'FINAL ROUND — THE MYTHICAL';
+  G.reveal = {
+    kind, brs, ids: brs.map(b => b.poke.id), t: 0, phase: 'hold',
+    holdDur: reduced ? 1.5 : 2.4, flyDur: reduced ? 0.28 : 0.65, reduced,
+    title: brs.map(b => b.poke.n.toUpperCase()).join(' · '),
+    sub: roleLine + ' · ' + gen.name + ' · ' + bossPhaseCount(primary) + (bossPhaseCount(primary) > 1 ? ' PHASES' : ' PHASE'),
+    cue,
+  };
+}
+function revealSkip() { // tap: skip the hold, never the information
+  const r = G.reveal;
+  if (r && r.phase === 'hold' && r.t > 0.35) { r.phase = 'fly'; r.t = 0; }
+}
+function updateReveal(dt) {
+  const r = G.reveal;
+  r.t += dt;
+  if (r.phase === 'hold') {
+    if (r.t >= r.holdDur) { r.phase = 'fly'; r.t = 0; }
+    return;
+  }
+  if (r.t < r.flyDur) return;
+  // the transform is complete: dock the lane, free the announce lane (the
+  // reveal DELIVERED the boss card's content), arm the restart grace
+  G.reveal = null;
+  if (r.kind !== 'sentinels') G.revealDock = r.ids[0];
+  if (G.announce && G.announce.kind === 'boss') G.announce = null;
+  G.announceQueue = G.announceQueue.filter(a => a.kind !== 'boss');
+  if (!G.announce && G.announceQueue.length) G.announce = G.announceQueue.shift();
+  G.enemyShotCD = Math.max(G.enemyShotCD || 0, 1.2);
+  for (const b of r.brs) if (b && !b.dead) b.abilityCD = Math.max(b.abilityCD || 0, 1.6);
+}
 // ---- gauntlet round transitions — used by the controller AND trial jumps
 // Jump a freshly built legendary stage straight to a later gauntlet round:
 // 1 = the legendary, 2 = the mythical, 3 = the Kanto Mew VMAX secret.
@@ -2823,6 +2877,7 @@ function gauntletWake() {
   setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
     'ROUND 2 — THE LEGENDARY' + (G.mode === 'junkie' ? ' · 2 PHASES' : ''), 3,
     G.mode === 'junkie' ? gauntletEntranceName(legendStyle) : null, null, false, true);
+  beginBossReveal('legendary', [legend]); // AFT-002
 }
 function gauntletSummonMythic(forceSecret = false) {
   const gj = G.gauntlet;
@@ -2851,6 +2906,7 @@ function gauntletSummonMythic(forceSecret = false) {
     G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); G.flashT = Math.max(G.flashT, 0.2);
     SFX.roar();
     clearAnnouncements(['trial']);
+    beginBossReveal('secret', [vmax]); // AFT-002
     setAnnounce('fairy', '#d780ff', SKIN.secret.announce,
       SKIN.secret.announceSub, 4,
       'MAX RIFT · DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE', null, false, true);
@@ -2881,6 +2937,7 @@ function gauntletSummonMythic(forceSecret = false) {
   setAnnounce('fairy', '#ff80ab', SKIN.names[mid].toUpperCase() + ' — THE MYTHICAL!',
     'FINAL ROUND · 3 PHASES — A NEW KIND OF FIGHT', 3.2,
     G.mode === 'junkie' ? gauntletEntranceName(mythStyle) : null, null, false, true);
+  beginBossReveal('mythic', [myth]); // AFT-002
 }
 
 function updateSpriteKinematics(dt) {
@@ -2938,6 +2995,9 @@ function update(dt) {
     if (G.announce.t <= 0) G.announce = G.announceQueue.length ? G.announceQueue.shift() : null;
   }
   musicTick();
+  // AFT-002: the reveal scene owns the frame — combat is frozen until the
+  // portrait lands and the HUD lane docks (update returns; render draws it)
+  if (G.reveal && (G.state === 'play' || G.state === 'serve')) { updateReveal(dt); return; }
 
   // STARFIGHTER's pilot is a small mon — its edge clamp is the SHIP's half
   // width, never paddleW(): Tailwind/WIDE inflate the paddle stat to ~300px,

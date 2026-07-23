@@ -247,6 +247,7 @@ const G = {
   particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
   scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
   announce: null, announceQueue: [], modifier: null, combatNotice: null,
+  reveal: null, revealDock: null, // AFT-002: the boss-reveal scene + HUD-lane dock
   fx: 0, fy: 0, swayT: 0,
   brickW: 0, brickH: 0,
   shake: 0, flashT: 0, stateT: 0,
@@ -922,6 +923,8 @@ function buildLevel(lvl) {
         'ROUND 1 — THE SENTINELS: ' + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
         (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
           'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true, 'boss');
+      // AFT-002: the round-1 reveal — the sentinel trio, one shared contract
+      beginBossReveal('sentinels', G.bricks.filter(b => b.subBoss && !b.dead));
     } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
     // never pays a cache-miss hitch mid-fight
@@ -1546,6 +1549,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.adapt = 1; G.mega = 0; G.megaT = 0; G.ballElement = null;
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.shieldFlash = 0; G.surgeFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
+  G.reveal = null; G.revealDock = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.calibReturns = 0; G.calibShots = 0; G.lensKills = 0; G.vortexes = [];
   G.salvageCount = 0; G.salvageStored = 0; G.rescueN = 0; G.reactiveCD = 0; G.reactorUsed = false;

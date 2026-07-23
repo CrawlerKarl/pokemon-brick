@@ -784,8 +784,9 @@ function drawBossMon(br, x, y) {
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = lastStand ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-  fitLabel((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''),
-    x, y - hh - 26, { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(160, br.w * 1.5)), zone: 'field' });
+  if (G.revealDock !== br.poke.id) // AFT-002: a docked boss reads from the HUD lane
+    fitLabel((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''),
+      x, y - hh - 26, { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(160, br.w * 1.5)), zone: 'field' });
   ctx.shadowBlur = 0;
   const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
   roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
@@ -948,8 +949,9 @@ function drawBossBrick(br, x, y) {
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = ph === 3 ? '#ff8a80' : '#ffffff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-  fitLabel('BOSS BRICK · ' + br.poke.n.toUpperCase(), x, y - hh - 29,
-    { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(170, br.w * 1.3)), zone: 'field' });
+  if (G.revealDock !== br.poke.id) // AFT-002: a docked boss reads from the HUD lane
+    fitLabel('BOSS BRICK · ' + br.poke.n.toUpperCase(), x, y - hh - 29,
+      { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(170, br.w * 1.3)), zone: 'field' });
   ctx.shadowBlur = 0;
   const barW = Math.max(br.w * 0.9, 150), barY = y - hh - 18;
   roundRect(x - barW / 2, barY, barW, 9, 4.5);
@@ -3558,6 +3560,9 @@ function drawAnnounce() {
   // card bleeding through it is a layering bug. The card's timer is frozen
   // while paused (update is gated), so it resumes cleanly on unpause.
   if (paused && (G.state === 'play' || G.state === 'serve')) return;
+  // AFT-002: the reveal scene owns the frame — its panel IS the boss card;
+  // the strip would just bleed through the scrim underneath it.
+  if (G.reveal) return;
   // LIVE COMBAT never gets a banner in the flight lane: while playing,
   // everything but a hero announcement (boss-round reveals) renders as a
   // compact strip tucked under the HUD, sliding in from the top. The centre
@@ -4336,6 +4341,7 @@ function drawHUD() {
     drawGlyph(ctx, G.modifier.icon, mb.x0 - 8, 42, 6, G.modifier.color);
   }
   drawPlayerHealthBar();
+  drawBossLane(); // AFT-002: the docked boss name/health lane
   ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
   drawBrickBehaviorLegend();
   drawCombatNotice();
@@ -4784,6 +4790,129 @@ function drawZoneOverlay() {
     }
   }
   ctx.restore();
+}
+// ── AFT-002: THE BOSS REVEAL SCENE ──────────────────────────────────────────
+// Full-resolution portrait art (AETHERFALL_ART_REVEAL 512px exports on the
+// aetherfall skin; the skin's own largest sprite elsewhere), an info panel
+// that NEVER overlaps the art, a skippable hold, then the portrait flies
+// into the boss's combat rectangle. Reduced-effects mode dissolves in place.
+const revealImgCache = {};
+function bossRevealImage(id) {
+  if (revealImgCache[id]) return revealImgCache[id];
+  let img = null;
+  if (SKIN.id === 'aetherfall' && typeof AETHERFALL_ART_REVEAL !== 'undefined' && AETHERFALL_ART_REVEAL[id]) {
+    img = new Image();
+    img.src = AETHERFALL_ART_REVEAL[id];
+  } else img = getSprite(id);
+  revealImgCache[id] = img;
+  return img;
+}
+function drawRevealPortrait(id, cx, cy, side, alpha) {
+  let img = bossRevealImage(id);
+  if (!img || !img.complete || !img.naturalWidth) img = getSprite(id); // load gap → live sprite
+  if (!img || !(img.naturalWidth || img.width)) return;
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  const sc = Math.min(side / iw, side / ih);
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, cx - iw * sc / 2, cy - ih * sc / 2, iw * sc, ih * sc);
+  ctx.globalAlpha = 1;
+}
+function drawBossReveal() {
+  const r = G.reveal;
+  if (!r) return;
+  const primary = r.brs[0];
+  const col = TYPE_COLORS[primary.poke.t] || '#d780ff';
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (r.phase === 'hold') {
+    const enter = Math.min(1, r.t / 0.3);
+    const a = enter;
+    ctx.fillStyle = 'rgba(3,6,18,' + (0.74 * a).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+    // art zone: the largest square the safe area allows, panel BELOW the art
+    const panelH = 92;
+    const y0 = SAFE_T + 34;
+    const side = Math.max(120, Math.min(W - 48, H - y0 - panelH - SAFE_B - 52));
+    const pop = r.reduced ? 1 : 0.94 + 0.06 * (1 - Math.pow(1 - enter, 3));
+    const artCy = y0 + side / 2;
+    ctx.globalAlpha = a;
+    // a restrained ring stage behind the art — strokes only, no gradients
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(W / 2, artCy, side * 0.52 * pop, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = a * 0.35;
+    ctx.beginPath(); ctx.arc(W / 2, artCy, side * 0.58 * pop, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (r.kind === 'sentinels' && r.ids.length > 1) {
+      const each = side * (r.ids.length === 2 ? 0.62 : 0.5) * pop;
+      const span = Math.min(W - 40, side * 1.3);
+      r.ids.forEach((id, i) => {
+        const fx2 = W / 2 + span * (i / (r.ids.length - 1) - 0.5);
+        drawRevealPortrait(id, fx2, artCy, each, a);
+      });
+    } else {
+      drawRevealPortrait(r.ids[0], W / 2, artCy, side * pop, a);
+    }
+    // the info panel — a dedicated band, never over the art
+    const py = y0 + side + 10;
+    ctx.globalAlpha = a;
+    fitLabel(r.title, W / 2, py + 16, { size: 24, min: 13, weight: 900, color: col, maxW: W - 56 });
+    fitLabel(r.sub, W / 2, py + 40, { size: 11.5, min: 9, weight: 700, color: '#e3f2fd', maxW: W - 64 });
+    ctx.font = bodyFont(11, 700);
+    fitLabel(r.cue, W / 2, py + 60, { size: 11, min: 8.5, weight: 700, color: '#ffe082', maxW: W - 64, family: 'Verdana, system-ui, sans-serif' });
+    if (r.t > 0.55) {
+      ctx.globalAlpha = a * (0.55 + 0.45 * Math.sin(G.time * 4));
+      fitLabel(IS_TOUCH ? 'TAP TO ENGAGE' : 'CLICK TO ENGAGE', W / 2, py + 80,
+        { size: 10, min: 9, weight: 800, color: '#90a4ae', maxW: W - 80 });
+    }
+  } else {
+    // FLY: the same art travels into the boss's combat rectangle while the
+    // scrim lifts; reduced mode is a dissolve at the destination instead
+    const k = Math.min(1, r.t / r.flyDur);
+    const e = k * k * (3 - 2 * k); // smoothstep
+    ctx.fillStyle = 'rgba(3,6,18,' + (0.74 * (1 - e)).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+    const panelH = 92;
+    const y0 = SAFE_T + 34;
+    const side = Math.max(120, Math.min(W - 48, H - y0 - panelH - SAFE_B - 52));
+    const artCy = y0 + side / 2;
+    const fade = 1 - Math.max(0, (k - 0.62) / 0.38); // cross-fade to the live sprite
+    r.brs.forEach((b, i) => {
+      if (!b || b.dead) return;
+      const tx = b.bx + G.fx, ty = b.by + G.fy;
+      const tSide = Math.max(60, b.w * 1.12);
+      let sx2 = W / 2, sSide = side;
+      if (r.kind === 'sentinels' && r.ids.length > 1) {
+        const span = Math.min(W - 40, side * 1.3);
+        sx2 = W / 2 + span * (i / (r.ids.length - 1) - 0.5);
+        sSide = side * (r.ids.length === 2 ? 0.62 : 0.5);
+      }
+      const cx = r.reduced ? tx : sx2 + (tx - sx2) * e;
+      const cy = r.reduced ? ty : artCy + (ty - artCy) * e;
+      drawRevealPortrait(b.poke.id, cx, cy, r.reduced ? tSide : sSide + (tSide - sSide) * e, fade);
+    });
+  }
+  ctx.restore();
+}
+// the docked boss lane: name · phase + a slim health bar in the HUD's own
+// band — the revealed boss carries NO floating nameplate over its art
+function drawBossLane() {
+  const id = G.revealDock;
+  if (!id || (G.state !== 'play' && G.state !== 'serve')) return;
+  const br = G.bricks.find(b => !b.dead && b.isBoss && b.poke.id === id);
+  if (!br) return;
+  const narrow = W < 560;
+  const x1 = W - 18, y = narrow ? 60 : 50;
+  const barW = narrow ? 112 : 154;
+  const frac = Math.max(0, br.hp / br.maxHp);
+  const pc = bossPhaseCount(br), ph = Math.min(pc, br.phase || 1);
+  fitLabel(br.poke.n.toUpperCase() + ' · ' + ph + '/' + pc, x1, y,
+    { size: 10, min: 8.5, weight: 900, color: ph >= pc ? '#ff8a80' : '#ffccbc', align: 'right', maxW: Math.min(W * 0.5, 230), zone: 'topHud' });
+  roundRect(x1 - barW, y + 8, barW, 6, 3);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+  if (frac > 0) {
+    roundRect(x1 - barW, y + 8, Math.max(3, barW * frac), 6, 3);
+    ctx.fillStyle = ph >= pc ? '#ff5252' : '#ff8a65'; ctx.fill();
+  }
 }
 // The title is the start of a journey, not a dim pause screen. A painted route
 // crosses nine colourful regions behind the mode cards while a warm morning
@@ -8371,5 +8500,6 @@ function render() {
   if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade' && G.state !== 'results') drawHUD();
   drawOverlays();
   if (G.state === 'menu' || G.state === 'dex') drawAnnounce(); // konami toast etc.
+  drawBossReveal(); // AFT-002: modal, above HUD and overlays
   drawCursor();
 }

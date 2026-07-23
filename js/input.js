@@ -123,6 +123,7 @@ window.addEventListener('wheel', e => {
 window.addEventListener('touchstart', e => {
   audio();
   lastTouchT = performance.now();
+  if (G.reveal) { revealSkip(); e.preventDefault(); return; } // AFT-002 modal
   for (const t of e.changedTouches) {
     const x = t.clientX, y = t.clientY;
     if (G.state === 'upgrade' && upgradeTreeOpen) {
@@ -971,6 +972,7 @@ async function shareDailyResult() {
 }
 function onPress(x, y) {
   audio();
+  if (G.reveal) { revealSkip(); return; } // AFT-002: the reveal owns the tap
   if (G.state === 'ending') {
     const E = G.ending;
     if (!E) { G.state = 'menu'; menuPage = 'modes'; return; }

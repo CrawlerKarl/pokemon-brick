@@ -250,6 +250,15 @@ try {
     previewN++;
   }
 } catch (e) { /* no preview pass in this checkout */ }
+// 512px boss-reveal portraits (AFT-002; optional — the finals cover any gap)
+const revealDir = path.join(root, 'art', 'aetherfall-production', 'sprites', 'reveal');
+let revealN = 0;
+try {
+  for (const f of fs.readdirSync(revealDir).filter(f => f.endsWith('.png'))) {
+    copy(path.join(revealDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'reveal', f));
+    revealN++;
+  }
+} catch (e) { /* no reveal pass in this checkout */ }
 const weaponDir = path.join(root, 'art', 'aetherfall-production', 'weapons', 'final');
 let weaponN = 0;
 for (const f of fs.readdirSync(weaponDir).filter(f => f.endsWith('.png'))) {
@@ -309,7 +318,7 @@ for (const f of fs.readdirSync(path.join(out, 'js')).filter(f => f.endsWith('.js
   lines.forEach((l, i) => { if (STRONG.test(l) && !OK.test(l)) residue.push(f + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); });
 }
 console.log('build-aetherfall-dist: ' + checked + ' js modules (all node --check clean), '
-  + artN + ' vessel PNGs, ' + previewN + ' preview PNGs, ' + weaponN
+  + artN + ' vessel PNGs, ' + previewN + ' preview PNGs, ' + revealN + ' reveal PNGs, ' + weaponN
   + ' weapon/fitting PNGs, fonts, index.html, serve.js → dist-aetherfall/');
 console.log(residue.length
   ? 'RESIDUE (' + residue.length + ' lines carry pokemon terms — review):\n  ' + residue.join('\n  ')

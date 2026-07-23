@@ -5,6 +5,46 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22j — AFT-002: the boss reveal (a scene, not a combat layer)
+
+Every boss round now opens on a REVEAL SCENE built from the full-resolution
+art: combat freezes, the 512px portrait fills the safe area on a restrained
+ring stage, and a dedicated panel below the art carries the name, round,
+realm, phase count, and ONE counterplay cue — the art itself is never
+obstructed (the exact Velmora complaint from the review). A skippable hold
+(tap/click; never skippable into an attack), then the portrait FLIES into the
+boss's combat rectangle, cross-fading to the live sprite as it lands.
+
+- **Art**: `tools/build-aetherfall-reveals.py` exported 512px portraits for
+  all **43 boss-class ids** (25 sentinels — realm 6 authors only 1 — + 9
+  legendaries + 9 mythics) under both pipeline rules (chroma read off the
+  frame; 79% subject framing). `AETHERFALL_ART_REVEAL` is the fifth override
+  map; the pokemon skin reveals with its own sprite art; any load gap falls
+  back to the live sprite. The dist ships them (43 reveal PNGs, RESIDUE
+  none).
+- **One contract, four kinds**: sentinels reveal as the TRIO (side-by-side
+  portraits), legendary/mythic/secret as singles. Triggered from the shared
+  paths — finale build (round 1), `gauntletWake` (legendary),
+  `gauntletSummonMythic` (mythic + secret) — so natural transitions AND
+  trial/dev jumps all reveal. Authored entrance fx still play after.
+- **The AFT-004 queue is the surface**: the reveal's panel IS the boss card —
+  the announce strip yields while a reveal runs, and on completion the
+  boss-kind card is consumed (delivered). `G.enemyShotCD ≥ 1.2` + boss
+  `abilityCD ≥ 1.6` arm on completion, so hostile simulation resumes only
+  after docking, dodgeably.
+- **HUD-lane dock**: after a single-boss reveal, the name (`NAME · phase/pc`,
+  fitted) + a slim health bar dock top-right under the player HP — the
+  floating over-sprite nameplate is suppressed for the docked boss
+  (`G.revealDock`). Sentinels keep their tiny contained plates.
+- **Reduced-effects**: shorter hold, dissolve-in-place instead of the sweep.
+- **Suite**: reveals stay DORMANT under the headless suite (`window.__SUITE`)
+  so 54 existing boss tests keep their timing; the dedicated 'AFT-002' test
+  opts in and proves art coverage (43 ids), the freeze, skip→fly→dock, card
+  consumption, the grace, reduced mode, and the dormancy guard itself.
+  Verified visually at 667×375: hold scene + docked lane screenshots.
+
+---
+
 ## 2026-07-22i — AFT-001: safe zones + fitted labels (phone copy stays contained)
 
 Built from a full text-containment audit of every player-facing draw in the
