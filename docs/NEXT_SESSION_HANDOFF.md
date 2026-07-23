@@ -1,15 +1,20 @@
 # HANDOFF — resume here
 
-> **STATUS (2026-07-22): AETHERFALL is a shipped standalone game with its own
-> repo + Pages site, and this repo is the WORKSHOP that generates it.** The
-> 27-stage campaign is complete through Milestone 4 in both skins; production
-> art covers all 259 ids (base + radiant) plus 54 high-res vessel previews and
-> 21 Relicforge weapon sprites; the LIGHT/DARK oath is a real progression arc.
+> **STATUS (2026-07-22 evening): ALL EIGHT P0s FROM THE BACKLOG ARE
+> IMPLEMENTED, TESTED, AND LIVE** (rounds g–o in the log): AFT-005A the
+> 31s headless release gate (`npm test`), AFT-001 safe zones + fitted
+> labels, AFT-003 the SURGE lexicon, AFT-004 the kinded announce queue +
+> clean launches, AFT-002 the full-resolution boss reveal + HUD-lane dock,
+> AFT-017 the oath evolution channels, AFT-006 save safety
+> (export/import/backups/durable storage), AFT-018 frame stability
+> (baked hot loops + the adaptive effects budget), and AFT-005B mobile
+> scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 78/78 PASSED.** Both sites live and verified (last GAMEPLAY
-> commit in each — later docs-only commits don't change the build):
-> - workshop `CrawlerKarl/pokemon-brick` @ `06b1714` → https://crawlerkarl.github.io/pokemon-brick/
-> - dist `CrawlerKarl/aetherfall` @ `ad9e906` → the standalone AETHERFALL build
+> **Suite: 85/85. The gate (`npm test`, ~31–75s headless) ran green before
+> every commit.** Production art: 259 base + 259 radiant + 54 previews +
+> **43 boss reveals** + 21 weapon sprites. Both sites live:
+> - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
+> - dist `CrawlerKarl/aetherfall` → the standalone AETHERFALL build
 >
 > **START WITH `AETHERFALL_IMPROVEMENT_BACKLOG.md`.** It is the current
 > product backlog (17 ranked items, acceptance criteria, delivery sequence)
@@ -159,36 +164,30 @@ band so copy never covers the flock or the pilot.)
 
 ## Pick up here
 
-**The backlog's P0 sequence is the recommended path:**
+**Every P0 is done.** The backlog's P1 track is next, in its own order:
 
 ```
-AFT-001 mobile safe zones  →  AFT-002 boss reveal  →  AFT-017 oath evolution
-   →  AFT-004 trial sequencing  →  AFT-005 release gate  →  AFT-006 save safety
+AFT-007 ORBITAL RELIC (redesign the bond path)  →  AFT-008 balance matrix
+   →  AFT-009 constellation redesign  →  AFT-019 first-session phone pass
+   →  AFT-010 accessibility  →  AFT-011 loading/WebP  →  AFT-012 visual pass
 ```
-(AFT-003 is done bar an optional internal rename — see below.)
 
-Two notes so you don't redo finished work:
+Notes so you don't redo finished work:
 
-- **AFT-003 player-facing migration SHIPPED (2026-07-22f).** Both halves of
-  the presentation leak are gone: the TYPE half (ASPECT lexicon) landed 07-21c,
-  and the **MEGA → AETHER SURGE** half landed now via `SKIN.lexicon` + `lex()`
-  + `applyLexicon()` (data.js) — no player-facing MEGA string reaches an
-  AETHERFALL screen, guarded by suite test `skin S7`. The AETHERFALL tempo path
-  is renamed CRESCENDO (engine key stays `surge`). **`CHARGE` is the held
-  weapon shot — a different system — and stays CHARGE.** The one thing left is
-  OPTIONAL: renaming the internal `G.mega`/`megaT`/`tryMega` identifiers to
-  Surge. It's **user-invisible** (so zero AFT-003 value) and CLAUDE.md's
-  release rule says engine identifiers ship unchanged — skip it unless a future
-  round specifically wants it, and only with a checkpoint migration.
-- **AFT-017 builds on what just shipped.** The form-graded curve
-  (`[0.42, 0.72, 1]`) and neutral-until-sworn are live; the backlog asks for
-  a much quieter start (~`0.10 / 0.48 / 1.00`), independently scaled fitting
-  geometry/opacity/aura/rim rather than one alpha multiplier, and the oath
-  resolving *during* the evolution ceremony.
-
-The single highest-leverage structural item is **AFT-005 (automated release
-gate)** — the 78-check suite still requires a human to front a browser tab
-for ~20 minutes, which is the main brake on shipping confidently.
+- **`npm test` is the gate** (~31s full, `--fast` ~15s, `--suite` alone):
+  syntax → assets → 85 invariants headless → both-skin + dist boots →
+  vocabulary scan → RESIDUE → 14 mobile scenes × 2 viewports with
+  fitted-label assertions (28 screenshots → `.gate-shots/`) → the
+  artifact-storm ledger (`.gate-report.json`). Run it before every commit.
+- **AFT-003's optional tail** (renaming internal `G.mega`/`megaT`) remains
+  ruled out by the backlog itself — engine identifiers ship unchanged.
+- **AFT-018's deeper rungs are available but unimplemented by design**:
+  rung 3+ (offscreen fragment/trail culls, animation sampling) waits for
+  real-device evidence; the storm ledger accumulates the baseline every run.
+- **AFT-007 groundwork that already exists**: the announce queue, fitLabel,
+  the gate, and `compactInPlace` are the rails the relic path will ride;
+  the backlog's guardrails section (bond key stays, five pair fusions
+  re-themed under existing keys) is the spec.
 
 ---
 
@@ -201,9 +200,10 @@ for ~20 minutes, which is the main brake on shipping confidently.
    `update(1/60)`, read `G.*`; `G.freeze=999; render()` for a screenshot.
    Add `&skin=aetherfall` to any dev URL. If `!W`, force `W/H/canvas` then
    `buildStars(); buildVignette(); bgGen=-1`.
-4. **Suite:** open `/test.html`, keep the tab **FRONTED** (background
-   throttling makes it crawl — a full run is ~20 min). `TEST_RESULTS` only
-   populates at completion, so poll the DOM table for live progress.
+4. **Suite:** `npm test` (headless, ~31s; `--fast` ~15s while iterating).
+   The fronted `/test.html` tab still works for interactive debugging but is
+   never required. Modal boss reveals are dormant under the suite
+   (`window.__SUITE`); a test that needs one sets `window.__SUITE_REVEALS`.
 5. Gates: `npm run check`, `npm run verify-assets`, `npm run art-overrides`
    (if new finals), suite green, no console errors, both skins boot
    (`/?skin=aetherfall` + default), inspect 1280×720 + 390×844 + short
@@ -245,6 +245,12 @@ for ~20 minutes, which is the main brake on shipping confidently.
   → `storeKey`.
 - **Don't poll agents with sleep loops** — background work notifies
   automatically.
+- **Git worktrees don't carry gitignored files** — an agent running the gate
+  in a worktree will find `serve.js`-adjacent gitignored assets missing;
+  restore what the task needs or expect a red step that isn't real.
+- **`migrateCheckpoint` rejects lvl<4 BY DESIGN** — checkpoints only exist
+  from region boundaries; a test that hand-saves at level 2 will "fail" the
+  bundle validator correctly.
 
 ---
 
