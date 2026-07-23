@@ -3042,21 +3042,21 @@ function update(dt) {
     p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
     p.vx *= (1 - dt * 2); p.vy = p.vy * (1 - dt * 2) + 320 * dt;
   }
-  G.particles = G.particles.filter(p => p.life > 0);
+  compactInPlace(G.particles, p => p.life > 0);
   for (const f of G.floaters) { f.life -= dt; f.y -= 40 * dt; }
-  G.floaters = G.floaters.filter(f => f.life > 0);
+  compactInPlace(G.floaters, f => f.life > 0);
   for (const f of G.fragments) {
     f.life -= dt; f.x += f.vx * dt; f.y += f.vy * dt;
     f.vy += 900 * dt; f.rot += f.vr * dt;
   }
-  G.fragments = G.fragments.filter(f => f.life > 0);
+  compactInPlace(G.fragments, f => f.life > 0);
   for (const gh of G.ghosts) {
     gh.life -= dt; gh.s += dt * (gh.faint ? 26 : 60); gh.rot += gh.vr * dt;
     if (gh.faint) { gh.y += gh.vy * dt; gh.vy += 520 * dt; } // faint = arc up then fall
   }
-  G.ghosts = G.ghosts.filter(g => g.life > 0);
+  compactInPlace(G.ghosts, g => g.life > 0);
   for (const r of G.rings) r.life -= dt;
-  G.rings = G.rings.filter(r => r.life > 0);
+  compactInPlace(G.rings, r => r.life > 0);
   // brick HIT FLASH decays here (dt-scaled), NOT in render: it gates the
   // piercing Fireball/Mega i-frame (`br.flash <= 0.5` in the ball loop), so a
   // fixed per-render-frame decay coupled that DPS to the display's refresh
@@ -4000,7 +4000,11 @@ function update(dt) {
     // SKY WARP: the ball phases straight up through every block, then pops
     // out in the high-ground zone with a rally-friendly sideways angle
     if (b.phasing) {
-      b.trail.unshift({ x: b.x, y: b.y });
+      // AFT-018: reuse the evicted tail object as the new head instead of
+      // allocating a fresh {x,y} every frame (the trail cap keeps this bounded)
+      const ph = b.trail.length >= 16 ? b.trail.pop() : {};
+      ph.x = b.x; ph.y = b.y;
+      b.trail.unshift(ph);
       if (b.trail.length > 16) b.trail.length = 16;
       b.y -= ballSp() * 1.3 * bts * dt;
       const stopY = wallTop < Infinity ? Math.max(56 + b.r + 8, wallTop - 44) : 56 + b.r + 70;
@@ -4015,8 +4019,12 @@ function update(dt) {
       }
       continue;
     }
-    b.trail.unshift({ x: b.x, y: b.y });
     const tl = 10 + Math.min(10, G.combo); // trail charges up with your combo
+    // AFT-018: reuse the evicted tail object as the new head instead of
+    // allocating a fresh {x,y} every frame
+    const th = b.trail.length >= tl ? b.trail.pop() : {};
+    th.x = b.x; th.y = b.y;
+    b.trail.unshift(th);
     if (b.trail.length > tl) b.trail.length = tl;
     if (windy) b.vx += Math.sin(G.time * 1.6 + b.y * 0.012) * (G.gustT > 0 ? 320 : 230) * dt;
     // endgame aim-assist: gently steer rising balls toward the last few bricks
@@ -4232,7 +4240,7 @@ function update(dt) {
       }
     }
   }
-  G.balls = G.balls.filter(b => !b.dead);
+  compactInPlace(G.balls, b => !b.dead);
   // classic mode loses a life when the last ball drops; the shooter modes have
   // no ball — you only lose to enemy fire, so losing "all balls" never applies
   if (G.mode === 'classic' && G.state === 'play' && G.balls.length === 0) { loseLife('MISSED BALL'); return; }
@@ -4436,7 +4444,7 @@ function update(dt) {
       L.dead = true;
     }
   }
-  G.lasers = G.lasers.filter(L => !L.dead);
+  compactInPlace(G.lasers, L => !L.dead);
 
   // ---- draco missiles ----
   if (G.fx_draco && G.state === 'play') {
@@ -4507,7 +4515,7 @@ function update(dt) {
     }
     if (m.y < 30 || m.x < -40 || m.x > W + 40) m.dead = true;
   }
-  G.missiles = G.missiles.filter(m => !m.dead);
+  compactInPlace(G.missiles, m => !m.dead);
 
   // ---- SINGULARITY / EVENT HORIZON gravity wells: a lingering typed
   // implosion at the blast point. Ticks reuse damageBrick (so effectiveness
@@ -4542,7 +4550,7 @@ function update(dt) {
       }
     }
   }
-  G.vortexes = G.vortexes.filter(v => v.t < v.dur);
+  compactInPlace(G.vortexes, v => v.t < v.dur);
 
   // ---- METEOR MATRIX rain: six spaced typed strikes on random living targets
   if (G.meteorRain && G.state === 'play') {
@@ -4816,7 +4824,7 @@ function update(dt) {
       SFX.enemyShot();
     }
   }
-  G.telegraphs = G.telegraphs.filter(tg => tg.t > 0 && !tg.br.dead);
+  compactInPlace(G.telegraphs, tg => tg.t > 0 && !tg.br.dead);
   if (G.mode === 'classic') G.columnStrikes.length = 0; // no boss beams in calm BREAKER
   // column strikes (Zekrom / Eternatus): a warned zone, then the beam lands
   for (const cs of G.columnStrikes) {
@@ -4842,7 +4850,7 @@ function update(dt) {
       }
     }
   }
-  G.columnStrikes = G.columnStrikes.filter(cs => cs.warn > 0 || cs.strike > 0);
+  compactInPlace(G.columnStrikes, cs => cs.warn > 0 || cs.strike > 0);
   for (const s of G.enemyShots) {
     s.age = (s.age || 0) + dt * ts;
     // FOCUS ORBS (Mewtwo duel): the orb rides its summoner until the lock
@@ -5177,7 +5185,7 @@ function update(dt) {
     }
     if (s.y > H + 80 || s.y < -120 || s.x < -120 || s.x > W + 120 || s.age > 9) s.dead = true;
   }
-  G.enemyShots = G.enemyShots.filter(s => !s.dead);
+  compactInPlace(G.enemyShots, s => !s.dead);
 
   // ---- falling pickups (power-ups + pokéballs + element orbs) ----
   for (const pu of G.powerups) {
@@ -5215,7 +5223,7 @@ function update(dt) {
         SKIN.secret.missWarn || 'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
     } else if (!pu.dead && pu.y > H + 30) pu.dead = true;
   }
-  G.powerups = G.powerups.filter(p => !p.dead);
+  compactInPlace(G.powerups, p => !p.dead);
 
   // ---- level clear → reinforcements first, then draft and move on ----
   if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly)) {

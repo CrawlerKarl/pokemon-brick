@@ -346,6 +346,170 @@ function shotSprite(color, r, spikes) {
   return c;
 }
 
+// roundRect() paints on the global ctx; this variant takes a target context so
+// the bake helpers below can build their rounded shapes on an offscreen canvas.
+function roundRectP(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+// ---- baked combat-loop art (AFT-018): the brick top-face, ball body, bolt
+// glows and laser slugs used to allocate a gradient (and/or set shadowBlur)
+// per entity per frame — the two mobile stutter killers. Each is baked ONCE
+// into an fxCache canvas here and blitted with a plain drawImage.
+
+// The standard brick's glossy top face: a vertical gradient inside a rounded
+// rect. Baked per (color, width-bucket, height-bucket); buckets snap up to 8px
+// so a wave of same-size tiles shares one canvas and the cache stays tiny.
+function brickTopSprite(col, w, h) {
+  const bw = Math.max(8, Math.ceil(w / 8) * 8), bh = Math.max(8, Math.ceil(h / 8) * 8);
+  const key = 'brtop_' + col + '_' + bw + '_' + bh;
+  if (fxCache[key]) return fxCache[key];
+  const c = document.createElement('canvas'); c.width = bw; c.height = bh;
+  const cc = c.getContext('2d');
+  const g = cc.createLinearGradient(0, 0, 0, bh);
+  g.addColorStop(0, col + 'e6');
+  g.addColorStop(1, col + '66');
+  roundRectP(cc, 0, 0, bw, bh, 12);
+  cc.fillStyle = g; cc.fill();
+  fxCache[key] = c;
+  return c;
+}
+
+// A soft radial glow disc in an arbitrary colour (bright core → transparent
+// rim). Replaces per-frame createRadialGradient halos and per-entity shadowBlur
+// on the ball, typed bolts, and the leaf/volt attack discs. Cached per colour.
+function glowDisc(color) {
+  const key = 'gdisc_' + color;
+  if (fxCache[key]) return fxCache[key];
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const cc = c.getContext('2d');
+  const g = cc.createRadialGradient(32, 32, 1, 32, 32, 32);
+  g.addColorStop(0, color);
+  g.addColorStop(0.5, color + '66');
+  g.addColorStop(1, color + '00');
+  cc.fillStyle = g; cc.beginPath(); cc.arc(32, 32, 32, 0, Math.PI * 2); cc.fill();
+  fxCache[key] = c;
+  return c;
+}
+
+// A lit orb (white-hot core → colour → faint rim) used as a clipped fill for
+// the water-dart body. Cached per colour; the animated teardrop path clips it.
+function orbSprite(color) {
+  const key = 'orb_' + color;
+  if (fxCache[key]) return fxCache[key];
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const cc = c.getContext('2d');
+  const g = cc.createRadialGradient(32, 32, 1, 32, 32, 32);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, color); g.addColorStop(1, color + '18');
+  cc.fillStyle = g; cc.fillRect(0, 0, 64, 64);
+  fxCache[key] = c;
+  return c;
+}
+
+// The razor-leaf blade (white tip → colour), baked once and blitted under the
+// branch's live translate+rotate so it still spins — no per-bolt linear
+// gradient allocation. Origin-centred: draw at (-size/2, -size/2). Per colour.
+function leafBladeSprite(color) {
+  const key = 'leafblade_' + color;
+  if (fxCache[key]) return fxCache[key];
+  const size = 40, c = document.createElement('canvas'); c.width = c.height = size;
+  const cc = c.getContext('2d'), m = size / 2;
+  const g = cc.createLinearGradient(m, m - 13, m, m + 13);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, color); g.addColorStop(1, color);
+  cc.fillStyle = g;
+  cc.beginPath();
+  cc.moveTo(m, m - 13);
+  cc.quadraticCurveTo(m + 9, m - 3, m, m + 13);
+  cc.quadraticCurveTo(m - 9, m - 3, m, m - 13);
+  cc.fill();
+  fxCache[key] = c;
+  return c;
+}
+
+// The player's ball body, with its emissive halo baked in place of the
+// per-frame shadowBlur. Cached per (scheme, colour, radius). Schemes mirror the
+// original branch set exactly: high-contrast, fire, element-tinted, default.
+function ballBodySprite(scheme, col, r) {
+  const key = 'ball_' + scheme + '_' + col + '_' + r;
+  if (fxCache[key]) return fxCache[key];
+  const pad = scheme === 'hc' ? 4 : 20;
+  const size = Math.ceil(r + pad) * 2;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const cc = c.getContext('2d');
+  const cx = size / 2, cy = size / 2;
+  if (scheme === 'hc') {
+    cc.fillStyle = '#ffffff';
+    cc.beginPath(); cc.arc(cx, cy, r, 0, Math.PI * 2); cc.fill();
+    cc.lineWidth = 2.5; cc.strokeStyle = '#000';
+    cc.beginPath(); cc.arc(cx, cy, r + 1, 0, Math.PI * 2); cc.stroke();
+  } else {
+    cc.shadowColor = scheme === 'fire' ? '#ff5722' : (col || '#90caf9');
+    cc.shadowBlur = 16;
+    const g = cc.createRadialGradient(cx - 3, cy - 3, 1, cx, cy, r);
+    if (scheme === 'fire') { g.addColorStop(0, '#fff3e0'); g.addColorStop(0.5, '#ffb74d'); g.addColorStop(1, '#e64a19'); }
+    else if (scheme === 'elem') { g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, col); g.addColorStop(1, col); }
+    else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#bbdefb'); g.addColorStop(1, '#42a5f5'); }
+    cc.fillStyle = g;
+    cc.beginPath(); cc.arc(cx, cy, r, 0, Math.PI * 2); cc.fill();
+  }
+  fxCache[key] = c;
+  return c;
+}
+
+// A shooter-mode laser bolt (rounded slug + white core + baked glow). The
+// per-laser shadowBlur that lit these is baked in once. The glow colour can
+// differ from the body colour (the classic slug lights brighter than it fills).
+// Returns {c, ax, ay}: blit at (L.x - ax, L.y - ay) so the sprite anchors on
+// the bolt origin. Cached per (variant, body, core, width, glow, glow-colour).
+function laserBoltSprite(variant, col, coreCol, w, glow, glowCol) {
+  const gc = glowCol || col;
+  const key = 'lbolt_' + variant + '_' + col + '_' + coreCol + '_' + w + '_' + glow + '_' + gc;
+  if (fxCache[key]) return fxCache[key];
+  let top, h, coreTop, coreH, coreW, rad;
+  if (variant === 'blaster') { top = 26; h = 42; coreTop = 22; coreH = 32; coreW = 2.6; rad = w / 2; }
+  else { top = 20; h = 32; coreTop = 16; coreH = 24; coreW = 3; rad = 4; }
+  const pad = glow + 3;
+  const cw = Math.ceil(w + pad * 2), ch = Math.ceil(h + pad * 2);
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const cc = c.getContext('2d');
+  const ax = cw / 2, ay = pad + top;
+  cc.shadowColor = gc; cc.shadowBlur = glow;
+  cc.fillStyle = col;
+  roundRectP(cc, ax - w / 2, ay - top, w, h, rad); cc.fill();
+  cc.shadowBlur = 0;
+  cc.fillStyle = coreCol;
+  roundRectP(cc, ax - coreW / 2, ay - coreTop, coreW, coreH, coreW / 2); cc.fill();
+  const spr = { c, ax, ay };
+  fxCache[key] = spr;
+  return spr;
+}
+
+// The charged plasma slug's glowing ellipse body (white core → colour → faint),
+// baked with its shadowBlur halo. Cached per (colour, radius-bucket).
+function chargedSlugSprite(ccol, r) {
+  const key = 'cslug_' + ccol + '_' + r;
+  if (fxCache[key]) return fxCache[key];
+  const pad = 28 + 4;
+  const rx = r * 0.62, ry = r;
+  const cw = Math.ceil(rx + pad) * 2, ch = Math.ceil(ry + pad) * 2;
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const cc = c.getContext('2d');
+  const cx = cw / 2, cy = ch / 2;
+  cc.shadowColor = ccol; cc.shadowBlur = 28;
+  const g = cc.createRadialGradient(cx, cy, 2, cx, cy, r);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, ccol); g.addColorStop(1, ccol + '1f');
+  cc.fillStyle = g;
+  cc.beginPath(); cc.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); cc.fill();
+  fxCache[key] = c;
+  return c;
+}
+
 // AETHERFALL's authored Relicforge sprites. Images and their restrained
 // aspect-color overlays are cached once; gameplay falls back to the existing
 // vector language while a PNG is still loading or in the legacy skin.
@@ -1205,15 +1369,11 @@ function drawBricks() {
     roundRect(x - hw, y - hh + depth, br.w, br.h, rad);
     ctx.fillStyle = 'rgba(0,0,10,0.5)';
     ctx.fill();
-    // top face
-    if (br.isBoss) { ctx.shadowColor = br.phase === 2 ? '#ff5252' : col; ctx.shadowBlur = br.phase === 2 ? 30 + Math.sin(G.time * 8) * 8 : 26; }
-    const grad = ctx.createLinearGradient(x, y - hh, x, y + hh);
-    grad.addColorStop(0, col + 'e6');
-    grad.addColorStop(1, col + '66');
-    roundRect(x - hw, y - hh, br.w, br.h, rad);
-    ctx.fillStyle = grad;
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    // top face — baked per (colour, size-bucket) so no gradient is allocated
+    // per brick per frame (AFT-018, the worst hot-loop violation). Non-boss
+    // path only: bosses `continue` above, so the old `if (br.isBoss)` shadow
+    // set that lived here was dead code and is gone.
+    ctx.drawImage(brickTopSprite(col, br.w, br.h), x - hw, y - hh, br.w, br.h);
     // top edge highlight
     ctx.strokeStyle = 'rgba(255,255,255,0.35)';
     ctx.lineWidth = 1.5;
@@ -2377,26 +2537,17 @@ function drawBalls() {
     if (bright > 0.04 && !b.phasing) {
       const hr = b.r + 6 + bright * 13;
       const hc = G.fx_fire ? '#ffcc80' : (elemCol || '#c5e1ff');
-      const hg = ctx.createRadialGradient(b.x, b.y, b.r * 0.4, b.x, b.y, hr);
-      hg.addColorStop(0, hc); hg.addColorStop(1, 'rgba(255,255,255,0)');
+      // baked tinted glow disc replaces the per-frame clutter-halo gradient
       ctx.globalAlpha = 0.12 + bright * 0.34;
-      ctx.fillStyle = hg;
-      ctx.beginPath(); ctx.arc(b.x, b.y, hr, 0, Math.PI * 2); ctx.fill();
+      ctx.drawImage(glowDisc(hc), b.x - hr, b.y - hr, hr * 2, hr * 2);
       ctx.globalAlpha = 1;
     }
-    ctx.shadowColor = G.fx_fire ? '#ff5722' : (elemCol || '#90caf9');
-    ctx.shadowBlur = SETTINGS.hcBall ? 0 : 16 + bright * 20;
-    const g = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, b.r);
-    if (SETTINGS.hcBall) { g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#ffffff'); }
-    else if (G.fx_fire) { g.addColorStop(0, '#fff3e0'); g.addColorStop(0.5, '#ffb74d'); g.addColorStop(1, '#e64a19'); }
-    else if (elemCol) { g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, elemCol); g.addColorStop(1, elemCol); }
-    else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#bbdefb'); g.addColorStop(1, '#42a5f5'); }
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
-    if (SETTINGS.hcBall) { // black keyline: visible over any background
-      ctx.lineWidth = 2.5; ctx.strokeStyle = '#000';
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1, 0, Math.PI * 2); ctx.stroke();
-    }
+    // baked ball body: its emissive halo is baked in place of the per-ball
+    // shadowBlur + the radialGradient body fill (AFT-018). The hcBall keyline is
+    // baked into the sprite too. Keyed per (scheme, colour, radius).
+    const scheme = SETTINGS.hcBall ? 'hc' : G.fx_fire ? 'fire' : elemCol ? 'elem' : 'def';
+    const bodySpr = ballBodySprite(scheme, scheme === 'elem' ? elemCol : '', Math.round(b.r));
+    ctx.drawImage(bodySpr, b.x - bodySpr.width / 2, b.y - bodySpr.height / 2);
     // a ball dropping toward the paddle gets a bright ring so you never lose it
     if (!b.stuck && b.vy > 0) {
       const closeness = Math.max(0, Math.min(1, (b.y - H * 0.35) / (PADDLE_Y() - H * 0.35)));
@@ -2609,11 +2760,17 @@ function drawTypedBolt(L) {
   ctx.beginPath(); ctx.moveTo(L.x, L.y + 20); ctx.lineTo(L.x, L.y + 40); ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
-  ctx.shadowColor = col; ctx.shadowBlur = 14;
   // evolved partners hit VISIBLY harder: the whole attack scales up a step
   // per tier (geometry only — hitboxes are unchanged, generosity stays)
   const sz = 1 + (tier - 1) * 0.16;
   if (sz !== 1) { ctx.translate(L.x, L.y); ctx.scale(sz, sz); ctx.translate(-L.x, -L.y); }
+  // baked additive glow replaces the per-bolt shadowBlur (GPU-state stall);
+  // drawn under the tier scale so the halo grows with the attack (AFT-018).
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.55;
+  ctx.drawImage(glowDisc(col), L.x - 20, L.y - 20, 40, 40);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
   const relic = aetherRelicImage(L.shape);
   if (drawAetherRelic(relic, L.x, L.y, AETHER_RELIC_SIZE[L.shape] || 46, col, tier)) {
     ctx.restore();
@@ -2650,14 +2807,17 @@ function drawTypedBolt(L) {
   } else if (L.shape === 'aqua') {
     // a sleek water dart: teardrop body, specular highlight, ripple ring
     const puls = 1 + 0.12 * Math.sin(t * 18 + L.x);
-    const g = ctx.createRadialGradient(L.x - 2, L.y - 4, 1, L.x, L.y, 13 * puls);
-    g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, col); g.addColorStop(1, col + '18');
-    ctx.fillStyle = g;
+    // baked orb (white-hot core → colour) clipped to the animated teardrop —
+    // no per-bolt gradient allocation (AFT-018)
+    ctx.save();
     ctx.beginPath();
     ctx.moveTo(L.x, L.y - 15 * puls);
     ctx.quadraticCurveTo(L.x + 8 * puls, L.y - 2, L.x, L.y + 12 * puls);
     ctx.quadraticCurveTo(L.x - 8 * puls, L.y - 2, L.x, L.y - 15 * puls);
-    ctx.fill();
+    ctx.clip();
+    const aor = 16 * puls;
+    ctx.drawImage(orbSprite(col), L.x - 2 - aor, L.y - 4 - aor, aor * 2, aor * 2);
+    ctx.restore();
     ctx.shadowBlur = 0;
     // specular glint
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -2677,21 +2837,15 @@ function drawTypedBolt(L) {
   } else if (L.shape === 'leaf') {
     // a spinning razor leaf inside a slicing light-disc
     ctx.globalCompositeOperation = 'lighter';
-    const dg = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, 15);
-    dg.addColorStop(0, col + '55'); dg.addColorStop(1, col + '00');
-    ctx.fillStyle = dg;
-    ctx.beginPath(); ctx.arc(L.x, L.y, 15, 0, Math.PI * 2); ctx.fill();
+    // baked glow disc replaces the additive radial gradient (AFT-018)
+    ctx.globalAlpha = 0.33;
+    ctx.drawImage(glowDisc(col), L.x - 15, L.y - 15, 30, 30);
+    ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     ctx.translate(L.x, L.y);
     ctx.rotate(t * 16 + L.x * 0.1);
-    const lg = ctx.createLinearGradient(0, -13, 0, 13);
-    lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.35, col); lg.addColorStop(1, col);
-    ctx.fillStyle = lg;
-    ctx.beginPath();
-    ctx.moveTo(0, -13);
-    ctx.quadraticCurveTo(9, -3, 0, 13);
-    ctx.quadraticCurveTo(-9, -3, 0, -13);
-    ctx.fill();
+    // baked blade blitted under the live rotate — no per-bolt linear gradient
+    ctx.drawImage(leafBladeSprite(col), -20, -20);
     ctx.shadowBlur = 0;
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.3;
     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke();
@@ -2823,7 +2977,6 @@ function drawTypedBolt(L) {
   } else if (L.shape === 'sting') {
     // BUG — a fanned volley of needle darts: 2/3/4 stingers each tier
     const n = 1 + tier;
-    ctx.shadowBlur = 8;
     for (let i = 0; i < n; i++) {
       const off = (i - (n - 1) / 2) * 9;
       const drop = Math.abs(i - (n - 1) / 2) * 5;
@@ -2943,10 +3096,9 @@ function drawTypedBolt(L) {
       ctx.beginPath(); ctx.ellipse(L.x, L.y, 4 + ph * 15, (4 + ph * 15) * 0.72, 0, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    ctx.shadowColor = col; ctx.shadowBlur = 12;
+    // eye-dot glow now comes from the bolt's baked halo (no per-bolt shadowBlur)
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(L.x, L.y, 5.5, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath(); ctx.ellipse(L.x, L.y, 2.2, 3.4, 0, 0, Math.PI * 2); ctx.fill();
   } else if (L.shape === 'star') {
@@ -3018,10 +3170,10 @@ function drawTypedBolt(L) {
   } else { // 'volt' — a forked lightning bolt with a halo flash
     const h = 36, seg = 6;
     ctx.globalCompositeOperation = 'lighter';
-    const hg2 = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, 16);
-    hg2.addColorStop(0, col + '66'); hg2.addColorStop(1, col + '00');
-    ctx.fillStyle = hg2;
-    ctx.beginPath(); ctx.arc(L.x, L.y, 16, 0, Math.PI * 2); ctx.fill();
+    // baked glow disc replaces the per-bolt radial halo flash (AFT-018)
+    ctx.globalAlpha = 0.4;
+    ctx.drawImage(glowDisc(col), L.x - 16, L.y - 16, 32, 32);
+    ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     const jag = (amp, lw, color, seed) => {
       ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -3052,14 +3204,12 @@ function drawProjectiles() {
     if (L.charged) {
       const r = L.r || 20;
       const ccol = L.element ? (TYPE_COLORS[L.element] || '#4dd0e1') : '#4dd0e1';
-      ctx.shadowColor = ccol; ctx.shadowBlur = 28;
-      const g = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, r);
-      g.addColorStop(0, '#ffffff'); g.addColorStop(0.42, ccol); g.addColorStop(1, ccol + '1f');
-      ctx.fillStyle = g;
       const chargedRelic = aetherRelicImage(L.shape);
       const chargedRelicReady = !!(chargedRelic && chargedRelic.complete && chargedRelic.naturalWidth);
-      if (chargedRelicReady) ctx.globalAlpha = 0.42;
-      ctx.beginPath(); ctx.ellipse(L.x, L.y, r * 0.62, r, 0, 0, Math.PI * 2); ctx.fill();
+      // baked slug body (glow + radial gradient) replaces the per-shot allocation
+      const slug = chargedSlugSprite(ccol, Math.round(r));
+      ctx.globalAlpha = chargedRelicReady ? 0.42 : 1;
+      ctx.drawImage(slug, L.x - slug.width / 2, L.y - slug.height / 2);
       ctx.globalAlpha = 1;
       if (chargedRelicReady) drawAetherRelic(chargedRelic, L.x, L.y, Math.max(48, r * 2.25), ccol, L.tier || 1);
       // leading spark
@@ -3095,11 +3245,9 @@ function drawProjectiles() {
     if (G.mode === 'blaster' && L.basic) {
       const bw4 = 5 + (L.heavy ? 3 : 0) + (L.pulse ? 2 : 0) + (L.calib ? 2 : 0);
       const boltCol = L.calib ? '#ffcc80' : L.nova ? '#ffccbc' : L.pulse ? PATHS.impact.color : '#4dd0e1';
-      ctx.shadowColor = boltCol; ctx.shadowBlur = L.pulse || L.calib ? 23 : 15;
-      ctx.fillStyle = boltCol;
-      roundRect(L.x - bw4 / 2, L.y - 26, bw4, 42, bw4 / 2); ctx.fill();
-      ctx.fillStyle = '#e0ffff';
-      roundRect(L.x - 1.3, L.y - 22, 2.6, 32, 1.3); ctx.fill();
+      // baked bolt (body + core + glow) replaces the per-laser shadowBlur (AFT-018)
+      const spr = laserBoltSprite('blaster', boltCol, '#e0ffff', bw4, L.pulse || L.calib ? 23 : 15);
+      ctx.drawImage(spr.c, L.x - spr.ax, L.y - spr.ay);
       if (L.pulse) {
         ctx.strokeStyle = L.nova ? '#ffffff' : '#ffab91'; ctx.lineWidth = L.nova ? 2.5 : 1.5;
         ctx.beginPath(); ctx.ellipse(L.x, L.y - 4, bw4 + 4, 24, 0, 0, Math.PI * 2); ctx.stroke();
@@ -3108,14 +3256,13 @@ function drawProjectiles() {
       continue;
     }
     const pulseCol = L.nova ? '#ffccbc' : PATHS.impact.color;
-    ctx.shadowColor = L.pulse ? pulseCol : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
-    ctx.shadowBlur = L.pulse ? 22 : 16;
-    ctx.fillStyle = L.pulse ? pulseCol : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
+    const glowCol = L.pulse ? pulseCol : L.explosive ? '#ff7043' : L.basic ? '#80d8ff' : '#ffd54f';
+    const bodyCol = L.pulse ? pulseCol : L.explosive ? '#ff8a65' : L.basic ? '#b3e5fc' : '#fff176';
     const bw4 = 8 + (L.heavy ? 3 : 0) + (L.pulse ? 2 : 0);
-    roundRect(L.x - bw4 / 2, L.y - 20, bw4, 32, 4); ctx.fill();
-    // bright core
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    roundRect(L.x - 1.5, L.y - 16, 3, 24, 1.5); ctx.fill();
+    // baked slug (body + core + glow) replaces the per-laser shadowBlur (AFT-018);
+    // the glow colour differs from the body fill here, so both are keyed.
+    const spr = laserBoltSprite('classic', bodyCol, 'rgba(255,255,255,0.85)', bw4, L.pulse ? 22 : 16, glowCol);
+    ctx.drawImage(spr.c, L.x - spr.ax, L.y - spr.ay);
     if (L.pulse) {
       ctx.strokeStyle = L.nova ? '#fff' : '#ffab91'; ctx.lineWidth = L.nova ? 2.5 : 1.5;
       ctx.beginPath(); ctx.ellipse(L.x, L.y - 4, bw4 + 3, 20, 0, 0, Math.PI * 2); ctx.stroke();
@@ -3317,8 +3464,14 @@ function drawPowerups() {
       ctx.shadowColor = '#d780ff'; ctx.shadowBlur = 20 + pulse * 12;
       ctx.beginPath();
       ctx.moveTo(0, -24); ctx.lineTo(16, -4); ctx.lineTo(7, 22); ctx.lineTo(-13, 12); ctx.lineTo(-17, -8); ctx.closePath();
-      const sg = ctx.createLinearGradient(-14, -20, 14, 22);
-      sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.3, '#80e8ff'); sg.addColorStop(0.68, '#d780ff'); sg.addColorStop(1, '#6a1b9a');
+      // gradient cached in local space — the CTM re-maps it per pickup at paint,
+      // so no gradient is allocated per drop per frame (AFT-018)
+      let sg = fxCache.riftGrad;
+      if (!sg) {
+        sg = ctx.createLinearGradient(-14, -20, 14, 22);
+        sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.3, '#80e8ff'); sg.addColorStop(0.68, '#d780ff'); sg.addColorStop(1, '#6a1b9a');
+        fxCache.riftGrad = sg;
+      }
       ctx.fillStyle = sg; ctx.fill();
       ctx.shadowBlur = 0;
       ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
@@ -3401,8 +3554,13 @@ function drawPowerups() {
       }
       ctx.restore();
       roundRect(-16, -16, 32, 32, 10);
-      const hg = ctx.createLinearGradient(-12, -16, 12, 16);
-      hg.addColorStop(0, '#ffd7e2'); hg.addColorStop(0.36, col); hg.addColorStop(1, '#5b1730');
+      // gradient cached per colour in local space (CTM re-maps per drop at paint)
+      let hg = fxCache['healGrad_' + col];
+      if (!hg) {
+        hg = ctx.createLinearGradient(-12, -16, 12, 16);
+        hg.addColorStop(0, '#ffd7e2'); hg.addColorStop(0.36, col); hg.addColorStop(1, '#5b1730');
+        fxCache['healGrad_' + col] = hg;
+      }
       ctx.fillStyle = hg; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = '#fff0f4'; ctx.stroke();
       drawGlyph(ctx, 'heart', 0, 1, 9, '#fff');
@@ -3422,10 +3580,15 @@ function drawPowerups() {
       ctx.beginPath(); ctx.arc(0, 0, 21 + pulse * 1.5, 0, Math.PI * 2);
       ctx.fillStyle = col + '14'; ctx.fill();
       roundRect(-17, -17, 34, 34, 10);
-      const cg = ctx.createLinearGradient(0, -17, 0, 17);
-      cg.addColorStop(0, col + 'd9');
-      cg.addColorStop(0.55, col + '55');
-      cg.addColorStop(1, 'rgba(8,12,30,0.92)');
+      // gradient cached per colour in local space (CTM re-maps per drop at paint)
+      let cg = fxCache['capGrad_' + col];
+      if (!cg) {
+        cg = ctx.createLinearGradient(0, -17, 0, 17);
+        cg.addColorStop(0, col + 'd9');
+        cg.addColorStop(0.55, col + '55');
+        cg.addColorStop(1, 'rgba(8,12,30,0.92)');
+        fxCache['capGrad_' + col] = cg;
+      }
       ctx.fillStyle = cg; ctx.fill();
       ctx.lineWidth = 1.8; ctx.strokeStyle = col;
       roundRect(-17, -17, 34, 34, 10); ctx.stroke();
@@ -3560,18 +3723,20 @@ function drawParticles() {
   }
   ctx.restore();
   ctx.globalAlpha = 1;
+  // the floater drop-shadow is a constant #000 / blur 6 — set it ONCE before
+  // the loop, not per floater (AFT-018: no per-entity shadowBlur in a hot loop)
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
   for (const f of G.floaters) {
     ctx.globalAlpha = Math.min(1, f.life);
     ctx.font = `900 ${f.size}px Orbitron, sans-serif`;
-    ctx.textAlign = 'center';
     ctx.fillStyle = f.color;
-    ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
     // AFT-001: floaters spawn at world coords — measure once, clamp on-screen
     if (f._w == null) f._w = ctx.measureText(f.text).width;
     f._cx = Math.max(f._w / 2 + 4, Math.min(W - f._w / 2 - 4, f.x));
     ctx.fillText(f.text, f._cx, f.y);
-    ctx.shadowBlur = 0;
   }
+  ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 }
 
@@ -4264,9 +4429,15 @@ function drawRiftTracker() {
 }
 function drawHUD() {
   // the bar absorbs the top safe-area inset (notch / Dynamic Island): the
-  // backdrop grows taller and every top-anchored element shifts down with it
-  const g = ctx.createLinearGradient(0, 0, 0, 56 + SAFE_T);
-  g.addColorStop(0, 'rgba(5,8,25,0.92)'); g.addColorStop(1, 'rgba(5,8,25,0.4)');
+  // backdrop grows taller and every top-anchored element shifts down with it.
+  // The backdrop gradient depends only on SAFE_T — cache it instead of
+  // rebuilding it every frame (AFT-018).
+  let g = fxCache['hudbar_' + SAFE_T];
+  if (!g) {
+    g = ctx.createLinearGradient(0, 0, 0, 56 + SAFE_T);
+    g.addColorStop(0, 'rgba(5,8,25,0.92)'); g.addColorStop(1, 'rgba(5,8,25,0.4)');
+    fxCache['hudbar_' + SAFE_T] = g;
+  }
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, 56 + SAFE_T);
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.beginPath(); ctx.moveTo(0, 56 + SAFE_T); ctx.lineTo(W, 56 + SAFE_T); ctx.stroke();

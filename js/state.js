@@ -1736,11 +1736,28 @@ function burst(x, y, color, n = 18, speed = 260, life = 0.7) {
     });
   }
 }
+// AFT-018: in-place array compaction. Keeps only elements for which keep(el)
+// is truthy, preserving order, mutating the SAME array (arr.length trimmed at
+// the end) — so the per-frame `arr = arr.filter(...)` rebuilds that churned the
+// GC every frame allocate NOTHING when nothing died. Used at all the per-frame
+// entity-cull sites (particles/floaters/lasers/enemyShots/…). Predicate takes
+// the element only, exactly like the filter() calls it replaces.
+function compactInPlace(arr, keep) {
+  let w = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const el = arr[i];
+    if (keep(el)) { if (w !== i) arr[w] = el; w++; }
+  }
+  arr.length = w;
+  return arr;
+}
 function addFloater(x, y, text, color, size = 16) {
   // Nearby rewards used to print directly on top of one another (rally, type,
   // score, and power-up text could all land on the same ball). Give each local
   // burst a tiny vertical lane and cap the transient queue.
-  const nearby = G.floaters.filter(f => f.life > 0.45 && Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 72).length;
+  // count, don't build an intermediate array (AFT-018)
+  let nearby = 0;
+  for (const f of G.floaters) if (f.life > 0.45 && Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 72) nearby++;
   G.floaters.push({ x, y: Math.max(28, y - nearby * 20), text, color, size, life: 1.1 });
   if (G.floaters.length > 14) G.floaters.splice(0, G.floaters.length - 14);
 }
