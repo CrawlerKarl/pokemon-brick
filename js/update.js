@@ -2784,9 +2784,12 @@ function effectsLevel() {
   // AUTO: ESCALATE on the fast 30-frame window (~0.5s — a boss entrance
   // spike degrades before the drop is felt), DE-ESCALATE only when the slow
   // 120-frame average also recovers — hysteresis in the right direction.
-  const hot = Math.max(PERF.recent(30), PERF.avg());
-  if (hot > 22 || fxLoad() > 1.6) return 2; // rung 2: emission + resolution
-  if (hot > 15 || fxLoad() > 1.15) return 1; // rung 1: bloom + big glows first
+  // Work time alone misses GPU/compositor stalls on phones, so actual rAF
+  // cadence is an equal input: >20ms is below 50 FPS; >26ms is below 39 FPS.
+  const workHot = Math.max(PERF.recent(30), PERF.avg());
+  const cadenceHot = Math.max(PERF.cadenceRecent(30), PERF.cadenceAvg());
+  if (workHot > 22 || cadenceHot > 26 || fxLoad() > 1.6) return 2; // emission + resolution
+  if (workHot > 15 || cadenceHot > 20 || fxLoad() > 1.15) return 1; // bloom + big glows first
   return 0;
 }
 function fxWantedScale() { return effectsLevel() >= 2 ? 0.75 : 1; }

@@ -41,15 +41,24 @@ const STORAGE_HEALTH = { writable: true, durable: null, noticed: false };
   } catch (e) { /* unsupported — durable stays unknown */ }
 })();
 
-// AFT-018: the frame profiler — a fixed ring of the last 120 frames' update
-// and render times, written by main.js, read by the adaptive effects budget
-// and the F9 dev panel. Typed arrays + in-place writes: profiling must never
-// itself allocate in the hot path.
+// AFT-018: the frame profiler — fixed rings for the last 120 frames' update /
+// render work AND the actual requestAnimationFrame cadence, written by main.js
+// and read by the adaptive effects budget + F9 dev panel. The cadence ring is
+// separate because test/dev callers can drive update+render synchronously.
+// Typed arrays + in-place writes: profiling must never allocate in the hot path.
 const PERF = {
   u: new Float32Array(120), r: new Float32Array(120), i: 0, n: 0,
-  push(u, r) {
+  c: new Float32Array(120), ci: 0, cn: 0,
+  push(u, r, cadenceMs) {
     this.u[this.i] = u; this.r[this.i] = r;
     this.i = (this.i + 1) % 120; if (this.n < 120) this.n++;
+    // Ignore bootstrap/resume gaps and implausibly short callbacks. A hidden
+    // tab must not return in reduced quality, while sustained 20–40ms frames
+    // during a boss fight absolutely must reach the adaptive ladder.
+    if (Number.isFinite(cadenceMs) && cadenceMs >= 4 && cadenceMs <= 100) {
+      this.c[this.ci] = cadenceMs;
+      this.ci = (this.ci + 1) % 120; if (this.cn < 120) this.cn++;
+    }
   },
   avg() { // moving total-frame average (ms) across the window
     let s = 0;
@@ -63,6 +72,21 @@ const PERF = {
     for (let k = 0; k < m; k++) {
       const idx = (this.i - 1 - k + 120) % 120;
       s += this.u[idx] + this.r[idx];
+    }
+    return s / m;
+  },
+  cadenceAvg() {
+    let s = 0;
+    for (let k = 0; k < this.cn; k++) s += this.c[k];
+    return this.cn ? s / this.cn : 0;
+  },
+  cadenceRecent(n = 30) {
+    const m = Math.min(n, this.cn);
+    if (!m) return 0;
+    let s = 0;
+    for (let k = 0; k < m; k++) {
+      const idx = (this.ci - 1 - k + 120) % 120;
+      s += this.c[idx];
     }
     return s / m;
   },

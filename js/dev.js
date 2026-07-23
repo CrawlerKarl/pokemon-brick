@@ -269,7 +269,9 @@ window.DEV = {
   download: devDownloadReport,
   panel: devTogglePanel,
   perf() { // AFT-018: the profiler at a glance
+    const cadenceMs = PERF.cadenceAvg();
     return { avgMs: +PERF.avg().toFixed(2), p95Ms: +PERF.p95().toFixed(2),
+      cadenceMs: +cadenceMs.toFixed(2), fps: cadenceMs ? +(1000 / cadenceMs).toFixed(1) : 0,
       level: effectsLevel(), load: +fxLoad().toFixed(3),
       counts: { particles: G.particles.length, rings: G.rings.length, fragments: G.fragments.length,
         ghosts: G.ghosts.length, floaters: G.floaters.length, shots: G.enemyShots.length, lasers: G.lasers.length } };

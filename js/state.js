@@ -1630,6 +1630,12 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.charge = 0; G.chargeCD = 0; G.chargeFullT = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;
+  // A seeded run must be reproducible no matter what ran before it in
+  // this page. splashCD is a free-running timer that consumes gameRand()
+  // when it fires, so leaving it mid-cycle made a run's RNG stream depend
+  // on RUN HISTORY — the AFT-018 sim-identity check went flaky because of
+  // it. Reset every free-running rand-consuming timer here.
+  G.splashCD = 8;
   G.stacks = freshStacks(); G.attackAnim = 0; G.upgradeFx = null;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins

@@ -1731,6 +1731,8 @@ window.requestAnimationFrame = function () { return 0; };
       // the profiler exists and records without allocating surprises
       PERF.push(2, 3); PERF.push(4, 5);
       assert(PERF.avg() > 0 && PERF.p95() >= PERF.avg() * 0.5, 'profiler math broken');
+      assert(Number.isFinite(PERF.cadenceAvg()) && Number.isFinite(PERF.cadenceRecent()),
+        'cadence profiler math broken');
       assert(Number.isFinite(fxLoad()) && fxLoad() >= 0, 'fxLoad not finite');
       // overrides pin the ladder
       SETTINGS.fx = 'full'; assert(effectsLevel() === 0, 'FULL must never degrade');
@@ -1768,6 +1770,15 @@ window.requestAnimationFrame = function () { return 0; };
       assert(PERF.recent(30) > 30 && PERF.avg() < 15,
         'fast/slow windows broken: recent=' + PERF.recent(30).toFixed(1) + ' avg=' + PERF.avg().toFixed(1));
       assert(effectsLevel() === 2, 'a 0.5s spike must escalate immediately (got ' + effectsLevel() + ')');
+      // GPU/compositor pressure often appears only as late animation frames:
+      // work stays cheap while cadence falls to ~30 FPS. That real-device
+      // boss case must drive the same fallback.
+      for (let i = 0; i < 120; i++) PERF.push(1, 1, 16.67);
+      for (let i = 0; i < 30; i++) PERF.push(1, 1, 33.33);
+      assert(PERF.recent(30) < 3 && PERF.cadenceRecent(30) > 30,
+        'cadence spike did not stay independent from work time');
+      assert(effectsLevel() === 2,
+        '30 FPS cadence with cheap JS must escalate (got ' + effectsLevel() + ')');
       assert(fxWantedScale() === 0.75, 'rung 2 must request 75% resolution');
       SETTINGS.fx = 'full';
       assert(fxGlow(12) === 12, 'FULL must keep decorative glows');
@@ -1775,7 +1786,7 @@ window.requestAnimationFrame = function () { return 0; };
       assert(fxGlow(12) === 0, 'REDUCED must flatten decorative glows');
       update(1 / 60); // the controller runs — but never rescales under the suite
       assert(RENDER_SCALE === 1, 'adaptive resolution must stay off under the suite');
-      for (let i = 0; i < 120; i++) PERF.push(1, 1);      // settle the ring for later tests
+      for (let i = 0; i < 120; i++) PERF.push(1, 1, 16.67); // settle both rings for later tests
       // decorative emission DOES scale down (the whole point)
       G.particles.length = 0;
       burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
@@ -1785,7 +1796,7 @@ window.requestAnimationFrame = function () { return 0; };
       burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
       assert(lean < G.particles.length, 'REDUCED did not thin decorative emission (' + lean + ' vs ' + G.particles.length + ')');
     } finally { SETTINGS.fx = realFx; SETTINGS.mode = realMode; }
-    return 'profiler live · overrides pin rungs · 240-frame seeded sim BIT-IDENTICAL full vs reduced · hostiles spawn · cosmetics thin';
+    return 'work + real-FPS profiler live · overrides pin rungs · 240-frame seeded sim BIT-IDENTICAL full vs reduced · hostiles spawn · cosmetics thin';
   });
 
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
