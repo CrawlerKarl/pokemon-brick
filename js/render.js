@@ -456,42 +456,68 @@ function affinityVesselImage(id, big, forceBase) {
   }
   return aetherAuxImage('trainingDrone');
 }
-// The vessel wears its sworn path. LIGHT flies the RADIANT casting, DARK the
-// base hull — but the tell has to survive a phone glance, so the affinity
-// colour is BAKED into the sprite (source-atop wash + rim) instead of leaning
-// on ctx.filter, which some mobile browsers quietly ignore. Baked once per
-// (id, affinity) like every other repeated art surface.
+// The vessel wears its sworn path — but the oath is an EVOLUTION ARC, not a
+// costume (AFT-017). Each treatment channel has its OWN per-form curve; a
+// single alpha multiplier can't make Form I read as a restrained mark and
+// Form III as an unmistakable transformation. LIGHT's SOURCE ART is part of
+// the arc too: Form I flies the base casting, Form II blends radiant
+// materials in, only Form III earns the true radiant source. Everything is
+// baked once per (id, affinity, form) — source-atop only, never 'lighter'
+// (additive paints the transparent pixels and lights the bounding box).
+const OATH_CH = {
+  tint:  [0.10, 0.48, 1.00], // material wash strength
+  rim:   [0.14, 0.52, 1.00], // warm highlight / umbral deepening
+  aura:  [0.08, 0.45, 1.00], // outer glow radius
+  fitS:  [0.25, 0.60, 1.00], // rear-fitting scale (20–30% reveal at Form I)
+  fitA:  [0.25, 0.62, 1.00], // rear-fitting opacity
+  blend: [0.00, 0.45, 1.00], // LIGHT radiant-source blend
+  runes: [1, 3, 6],          // engraved oath marks on the hull
+};
+function oathCh(ch, form) {
+  const f = Math.max(1, Math.min(3, form || G.starterLvl || 1));
+  return OATH_CH[ch][f - 1];
+}
 function affinityVesselSprite(id, big, neutral) {
   const aff = !neutral && ((SKIN.affinities && SETTINGS.affinity) || null);
-  const img = affinityVesselImage(id, big, neutral);
-  if (!img || !img.complete || !img.naturalWidth) return null;
-  if (!aff) return img;
-  // THE OATH DEEPENS BY ARC (2026-07-22): Form I wears its path lightly;
-  // each ascension makes the radiant gold / umbral violet unmistakable.
+  const base = affinityVesselImage(id, big, true); // the hull as forged
+  if (!base || !base.complete || !base.naturalWidth) return null;
+  if (!aff) return base;
   const form = vesselForm(id);
-  const grade = [0.42, 0.72, 1][form - 1] || 1;
-  const key = 'vessel_' + id + '_' + aff + '_' + form + '_' + img.naturalWidth;
+  const blend = aff === 'light' ? oathCh('blend', form) : 0;
+  const radiant = blend > 0 ? affinityVesselImage(id, big, false) : null;
+  const radiantReady = !!(radiant && radiant.complete && radiant.naturalWidth && radiant !== base);
+  const key = 'vessel_' + id + '_' + aff + '_' + form + '_' + base.naturalWidth + (radiantReady ? 'r' : '');
   if (fxCache[key]) return fxCache[key];
-  const s = Math.max(8, img.naturalWidth);
+  const s = Math.max(8, base.naturalWidth);
   const c = document.createElement('canvas');
   c.width = s; c.height = s;
   const g = c.getContext('2d');
-  g.drawImage(img, 0, 0, s, s);
-  // tint ONLY the vessel's own pixels
+  g.drawImage(base, 0, 0, s, s);
+  if (radiantReady) { // the radiant materials TAKE HOLD by form, not at once
+    if (blend >= 1) { g.clearRect(0, 0, s, s); g.drawImage(radiant, 0, 0, s, s); }
+    else { g.globalAlpha = blend; g.drawImage(radiant, 0, 0, s, s); g.globalAlpha = 1; }
+  }
+  // material wash — the vessel's own pixels only
   g.globalCompositeOperation = 'source-atop';
-  g.fillStyle = aff === 'light' ? 'rgba(255,214,110,' + (0.30 * grade).toFixed(3) + ')'
-    : 'rgba(150,96,255,' + (0.34 * grade).toFixed(3) + ')';
+  const tint = oathCh('tint', form), rim = oathCh('rim', form);
+  g.fillStyle = aff === 'light' ? 'rgba(255,214,110,' + (0.26 * tint).toFixed(3) + ')'
+    : 'rgba(150,96,255,' + (0.30 * tint).toFixed(3) + ')';
   g.fillRect(0, 0, s, s);
-  if (aff === 'light') { // radiant: a warm highlight ON THE HULL ONLY —
-    // NEVER 'lighter' here: additive paints the transparent pixels too and
-    // the sprite's bounding box shows up as a lit square
-    g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = 'rgba(255,240,190,' + (0.14 * grade).toFixed(3) + ')';
-    g.fillRect(0, 0, s, s);
-  } else { // umbral: deepen the hull so the violet reads as shadow, not paint
-    g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = 'rgba(18,6,42,' + (0.24 * grade).toFixed(3) + ')';
-    g.fillRect(0, 0, s, s);
+  g.fillStyle = aff === 'light' ? 'rgba(255,240,190,' + (0.14 * rim).toFixed(3) + ')'
+    : 'rgba(18,6,42,' + (0.24 * rim).toFixed(3) + ')';
+  g.fillRect(0, 0, s, s);
+  // engraved oath runes: seeded per id, clipped to the hull by source-atop —
+  // one quiet mark at Form I, a constellation by Form III
+  const runeN = oathCh('runes', form);
+  let seed = id * 2654435761 >>> 0;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  g.fillStyle = aff === 'light' ? 'rgba(255,236,170,0.85)' : 'rgba(190,140,255,0.85)';
+  for (let i = 0; i < runeN; i++) {
+    const rx = s * (0.3 + rnd() * 0.4), ry = s * (0.34 + rnd() * 0.4);
+    const rr = s * (0.008 + rnd() * 0.008);
+    g.beginPath();
+    g.moveTo(rx, ry - rr * 1.6); g.lineTo(rx + rr, ry); g.lineTo(rx, ry + rr * 1.6); g.lineTo(rx - rr, ry);
+    g.closePath(); g.fill();
   }
   g.globalCompositeOperation = 'source-over';
   fxCache[key] = c;
@@ -508,17 +534,22 @@ function drawAffinityVessel(id, x, y, size, neutral) {
   const frameKey = !neutral && SKIN.affinities && SETTINGS.affinity
     ? (SETTINGS.affinity === 'light' ? 'lightFrame' : 'darkFrame') : null;
   const frame = frameKey ? aetherAuxImage(frameKey) : null;
+  const form = vesselForm(id);
   if (frame && frame.complete && frame.naturalWidth) {
-    const fs = size * 1.5;
-    ctx.shadowColor = affinityColor() || '#ffffff'; ctx.shadowBlur = size * 0.16;
+    // AFT-017: the rear fitting GROWS with the oath — a 20–30% reveal at
+    // Form I, roughly half at Form II, the full sun/crescent only at Form III
+    const fs = size * (0.75 + 0.75 * oathCh('fitS', form));
+    const fa = oathCh('fitA', form);
+    ctx.globalAlpha = fa;
+    ctx.shadowColor = affinityColor() || '#ffffff'; ctx.shadowBlur = size * 0.16 * fa;
     ctx.drawImage(frame, x - fs / 2, y - fs / 2 + size * 0.03, fs, fs);
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   }
   // an affinity-coloured aura reads at any size (the tint itself is baked in)
   const aCol = !neutral && affinityColor();
   if (aCol) {
     ctx.shadowColor = aCol;
-    ctx.shadowBlur = size * 0.22 * ([0.42, 0.72, 1][vesselForm(id) - 1] || 1);
+    ctx.shadowBlur = size * 0.22 * oathCh('aura', form);
     ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
     ctx.shadowBlur = 0;
   }
@@ -1816,15 +1847,19 @@ function drawPilotRig(x, py, preview = false) {
   // slow-breathing ring in radiant gold or umbral violet, brighter under Mega
   const affCol = affinityColor();
   if (affCol && !preview) {
-    const breathe = 0.55 + 0.25 * Math.sin(G.time * (mega ? 6 : 2.2));
+    // AFT-017: the halo follows the oath arc — a faint mark at Form I, the
+    // full breathing ring only at Form III. Reduced-effects stills the pulse
+    // but keeps the material progression.
+    const auraCh = oathCh('aura', G.starterLvl);
+    const breathe = SETTINGS.reduceFlash ? 0.65 : 0.55 + 0.25 * Math.sin(G.time * (mega ? 6 : 2.2));
     ctx.save();
-    ctx.globalAlpha = (mega ? 0.5 : 0.3) * breathe;
-    ctx.strokeStyle = affCol; ctx.lineWidth = mega ? 2.4 : 1.6;
+    ctx.globalAlpha = (mega ? 0.5 : 0.3) * breathe * (0.35 + 0.65 * auraCh);
+    ctx.strokeStyle = affCol; ctx.lineWidth = (mega ? 2.4 : 1.6) * (0.6 + 0.4 * auraCh);
     ctx.beginPath(); ctx.arc(x, y, s * (0.62 + 0.05 * breathe), 0, Math.PI * 2); ctx.stroke();
-    if (SETTINGS.affinity === 'light') { // radiant: four cardinal glints
+    if (SETTINGS.affinity === 'light' && (G.starterLvl || 1) >= 2) { // glints arrive at Form II
       ctx.fillStyle = affCol;
       for (let i = 0; i < 4; i++) {
-        const a = i * Math.PI / 2 + G.time * 0.5;
+        const a = i * Math.PI / 2 + (SETTINGS.reduceFlash ? 0 : G.time * 0.5);
         ctx.beginPath(); ctx.arc(x + Math.cos(a) * s * 0.64, y + Math.sin(a) * s * 0.64, 1.6, 0, Math.PI * 2); ctx.fill();
       }
     }
@@ -6234,6 +6269,22 @@ function drawCeremony() {
           if (rim) { ctx.globalAlpha = 0.6; ctx.drawImage(rim, -sz / 2 - 3, -sz / 2 - 3, sz + 6, sz + 6); ctx.globalAlpha = 1; }
         }
         ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+        // AFT-017: the oath RESOLVES during the transformation — the sworn
+        // casting (new form's runes, materials, radiant blend) fades onto the
+        // freshly ascended hull instead of appearing before it
+        if (showNew && SKIN.affinities && SETTINGS.affinity) {
+          const oathK = Math.min(1, (t - 2.45) / 0.8);
+          const sworn = affinityVesselSprite(c.evo.toId, sz >= 96, false);
+          if (oathK > 0 && sworn && sworn !== img) {
+            ctx.globalAlpha = oathK;
+            if (!SETTINGS.reduceFlash) {
+              ctx.shadowColor = affinityColor();
+              ctx.shadowBlur = sz * 0.2 * oathK * oathCh('aura', vesselForm(c.evo.toId));
+            }
+            ctx.drawImage(sworn, -sz / 2, -sz / 2, sz, sz);
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+          }
+        }
         if (!showNew && pulse > 0.55) { // tension pulses: white overlay flickers
           const sil = getSilhouette(c.evo.fromId, '#ffffff');
           if (sil) { ctx.globalAlpha = (pulse - 0.55) * 1.6; ctx.drawImage(sil, -sz / 2, -sz / 2, sz, sz); ctx.globalAlpha = 1; }

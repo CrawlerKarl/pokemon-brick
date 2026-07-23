@@ -232,6 +232,40 @@ window.DEV = {
     return devLaunch({ region, stage: 3, round, ...opts });
   },
   report: devRunReport,
+  // AFT-017 reference captures: every vessel family × 3 forms × LIGHT/DARK,
+  // side by side, downloaded as one PNG contact sheet. Run it twice if PNG
+  // overrides were still loading on the first pass (bakes cache per form).
+  oathSheet(cell = 96) {
+    const roster = SKIN.starterMon || {};
+    const keys = Object.keys(roster).filter(k => roster[k] && roster[k].ids);
+    const cols = 6; // I/II/III light · I/II/III dark
+    const sheet = document.createElement('canvas');
+    sheet.width = cols * cell + 140; sheet.height = keys.length * cell + 30;
+    const q = sheet.getContext('2d');
+    q.fillStyle = '#0a0f22'; q.fillRect(0, 0, sheet.width, sheet.height);
+    q.font = '700 10px Orbitron, sans-serif'; q.textBaseline = 'middle';
+    const savedAff = SETTINGS.affinity;
+    try {
+      keys.forEach((k, row) => {
+        q.fillStyle = '#90a4ae';
+        q.fillText(k.toUpperCase(), 6, 30 + row * cell + cell / 2);
+        roster[k].ids.forEach((id, fi) => {
+          for (const [ai, aff] of [[0, 'light'], [1, 'dark']]) {
+            SETTINGS.affinity = aff;
+            const img = affinityVesselSprite(id, true, false);
+            if (img) q.drawImage(img, 140 + (ai * 3 + fi) * cell + 4, 30 + row * cell + 4, cell - 8, cell - 8);
+          }
+        });
+      });
+    } finally { SETTINGS.affinity = savedAff; }
+    q.fillStyle = '#e3f2fd';
+    ['LIGHT I', 'LIGHT II', 'LIGHT III', 'DARK I', 'DARK II', 'DARK III']
+      .forEach((t, i) => q.fillText(t, 140 + i * cell + 8, 14));
+    const a = document.createElement('a');
+    a.download = 'oath-sheet.png'; a.href = sheet.toDataURL('image/png');
+    a.click();
+    return keys.length + ' families × 6 castings';
+  },
   download: devDownloadReport,
   panel: devTogglePanel,
   seed(s) { setRunSeed(s); return s; },

@@ -1608,6 +1608,55 @@ window.requestAnimationFrame = function () { return 0; };
     return '43 exports mapped · hold freezes fire · skip→fly→dock · card consumed · grace armed · reduced mode · suite-dormant';
   });
 
+  // AFT-017: the oath is an EVOLUTION ARC — independent per-form channels,
+  // a quiet Form I, LIGHT's radiant source earned by form, pokemon untouched.
+  test('AFT-017: oath channels — quiet start, earned radiance, pokemon identical', async () => {
+    const realSkin = SKIN, realAff = SETTINGS.affinity;
+    try {
+      // channel table sanity: monotonic, quiet at Form I, full at Form III
+      for (const ch of ['tint', 'rim', 'aura', 'fitS', 'fitA', 'blend']) {
+        const c = OATH_CH[ch];
+        assert(c[0] <= c[1] && c[1] <= c[2] && c[2] === 1, ch + ' channel not monotonic to 1');
+      }
+      assert(OATH_CH.tint[0] <= 0.15 && OATH_CH.aura[0] <= 0.15, 'Form I must be a restrained mark');
+      assert(OATH_CH.fitS[0] <= 0.35, 'Form I fitting must be a 20–30% reveal');
+      assert(OATH_CH.blend[0] === 0 && OATH_CH.blend[2] === 1,
+        'LIGHT source: base at Form I, full radiant only at Form III');
+      assert(OATH_CH.runes[0] < OATH_CH.runes[2], 'runes must accumulate with form');
+      // pokemon: no affinities table → the sprite passes through untouched
+      SKIN = SKINS.pokemon; SETTINGS.affinity = 'light';
+      const pkImg = affinityVesselSprite(4, false, false);
+      assert(pkImg === affinityVesselImage(4, false, true),
+        'pokemon skin must never bake an oath casting');
+      // aetherfall: Form I stays close to the neutral hull; Form III departs
+      SKIN = SKINS.aetherfall; SETTINGS.affinity = 'light';
+      const line = SKIN.starterMon[Object.keys(SKIN.starterMon)[0]];
+      const [id1, , id3] = line.ids;
+      const diffFrom = (id, sworn) => {
+        const base = affinityVesselImage(id, false, true);
+        const size = 48, ca = document.createElement('canvas'), cb = document.createElement('canvas');
+        ca.width = ca.height = cb.width = cb.height = size;
+        ca.getContext('2d').drawImage(base, 0, 0, size, size);
+        cb.getContext('2d').drawImage(sworn, 0, 0, size, size);
+        const da = ca.getContext('2d').getImageData(0, 0, size, size).data;
+        const db = cb.getContext('2d').getImageData(0, 0, size, size).data;
+        let d = 0, n = 0;
+        for (let i = 0; i < da.length; i += 16) { if (da[i + 3] > 40 || db[i + 3] > 40) { d += Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2]); n++; } }
+        return n ? d / n : 0;
+      };
+      const s1 = affinityVesselSprite(id1, false, false);
+      const s3 = affinityVesselSprite(id3, false, false);
+      assert(s1 && s3, 'aetherfall oath bakes missing');
+      const d1 = diffFrom(id1, s1), d3 = diffFrom(id3, s3);
+      assert(d3 > d1 * 1.8, 'Form III must depart far more than Form I (I=' + d1.toFixed(1) + ' III=' + d3.toFixed(1) + ')');
+      // the ceremony resolves the oath without throwing
+      G.ceremony = { act: 1, t: 2.9, evo: { fromId: id1, toId: line.ids[1], fromName: 'A', toName: 'B', type: 'fire', ability: 'X' }, burst1: true, burst2: true };
+      drawCeremony();
+      G.ceremony = null;
+    } finally { SKIN = realSkin; SETTINGS.affinity = realAff; G.ceremony = null; }
+    return 'channels monotonic + quiet Form I · blend earned by form · pokemon untouched · Form III departs ≥1.8× Form I · ceremony clean';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so

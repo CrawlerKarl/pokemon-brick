@@ -5,6 +5,39 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22k — AFT-017: the oath becomes an evolution arc (deep pass)
+
+The single `[0.42, 0.72, 1]` alpha grade is gone. **`OATH_CH`** (render.js)
+gives every treatment channel its OWN per-form curve — tint 0.10/0.48/1,
+rim 0.14/0.52/1, aura 0.08/0.45/1, fitting scale 0.25/0.60/1 (a 20–30%
+reveal at Form I), fitting opacity 0.25/0.62/1, radiant-source blend
+0/0.45/1, runes 1/3/6 — read via `oathCh(ch, form)`.
+
+- **LIGHT's source art is earned, not granted**: Form I flies the BASE
+  casting, Form II bakes the radiant materials in at 45%, only Form III uses
+  the true radiant source. DARK deepens the base hull by form. Both washes
+  are `source-atop` only (the 'lighter' trap stays dead).
+- **Engraved oath runes**: tiny per-id-seeded diamond marks clipped to the
+  hull by source-atop — one quiet mark at Form I, a constellation of six by
+  Form III. Silhouette-level differentiation that isn't aura colour.
+- **The combat rig halo follows the arc** (alpha/width scaled by the aura
+  channel; LIGHT's cardinal glints arrive at Form II) and **reduced-effects
+  stills the pulse but keeps the material progression** — exactly the
+  criteria's split.
+- **The ceremony resolves the oath**: on the evolution reveal beat, the sworn
+  casting (new form's blend/runes/materials) FADES ONTO the freshly ascended
+  hull over 0.8s with a rising aura — the affinity grows during the
+  transformation instead of appearing before it.
+- **`DEV.oathSheet()`** downloads the reference contact sheet: all 18
+  families × 3 forms × LIGHT/DARK.
+- Suite test 'AFT-017' (83rd): channel monotonicity + Form-I quietness caps,
+  blend endpoints (0 → 1), pokemon pass-through identity, a PIXEL assertion
+  that Form III departs ≥1.8× further from the neutral hull than Form I, and
+  the ceremony resolve rendering clean. Verified visually: side-by-side arc
+  screenshot (light + dark + neutral reference).
+
+---
+
 ## 2026-07-22j — AFT-002: the boss reveal (a scene, not a combat layer)
 
 Every boss round now opens on a REVEAL SCENE built from the full-resolution
