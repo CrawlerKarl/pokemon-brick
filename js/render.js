@@ -784,7 +784,8 @@ function drawBossMon(br, x, y) {
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = lastStand ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-  ctx.fillText((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''), x, y - hh - 26);
+  fitLabel((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''),
+    x, y - hh - 26, { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(160, br.w * 1.5)), zone: 'field' });
   ctx.shadowBlur = 0;
   const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
   roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
@@ -947,7 +948,8 @@ function drawBossBrick(br, x, y) {
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = ph === 3 ? '#ff8a80' : '#ffffff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-  ctx.fillText('BOSS BRICK · ' + br.poke.n.toUpperCase(), x, y - hh - 29);
+  fitLabel('BOSS BRICK · ' + br.poke.n.toUpperCase(), x, y - hh - 29,
+    { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(170, br.w * 1.3)), zone: 'field' });
   ctx.shadowBlur = 0;
   const barW = Math.max(br.w * 0.9, 150), barY = y - hh - 18;
   roundRect(x - barW / 2, barY, barW, 9, 4.5);
@@ -1409,15 +1411,13 @@ function drawBricks() {
     ctx.save();
     ctx.globalAlpha = a;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '900 40px Orbitron, sans-serif';
     const col = TYPE_COLORS[boss.poke.t];
     ctx.shadowColor = col; ctx.shadowBlur = 28;
-    ctx.fillStyle = col;
-    ctx.fillText('★ ' + boss.poke.n.toUpperCase() + ' ★', W / 2, H * 0.42);
+    fitLabel('★ ' + boss.poke.n.toUpperCase() + ' ★', W / 2, H * 0.42,
+      { size: 40, min: 20, weight: 900, color: col, maxW: W - 36, zone: 'field' });
     ctx.shadowBlur = 0;
-    ctx.font = '700 16px Orbitron, sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.fillText((boss.mythic ? 'MYTHICAL OF ' : boss.subBoss ? 'SENTINEL OF ' : 'GUARDIAN OF ') + genFor(G.level).name, W / 2, H * 0.42 + 40);
+    fitLabel((boss.mythic ? 'MYTHICAL OF ' : boss.subBoss ? 'SENTINEL OF ' : 'GUARDIAN OF ') + genFor(G.level).name,
+      W / 2, H * 0.42 + 40, { size: 16, min: 10, weight: 700, color: '#fff', maxW: W - 40, zone: 'field' });
     ctx.restore();
   }
 }
@@ -3529,7 +3529,10 @@ function drawParticles() {
     ctx.textAlign = 'center';
     ctx.fillStyle = f.color;
     ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-    ctx.fillText(f.text, f.x, f.y);
+    // AFT-001: floaters spawn at world coords — measure once, clamp on-screen
+    if (f._w == null) f._w = ctx.measureText(f.text).width;
+    f._cx = Math.max(f._w / 2 + 4, Math.min(W - f._w / 2 - 4, f.x));
+    ctx.fillText(f.text, f._cx, f.y);
     ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1;
@@ -3658,9 +3661,13 @@ function drawAnnounceStrip(a) {
   // bosses live — the strip was landing on the characters. It now rides the
   // LOW BAND between the formation floor and the ship's lane. Classic keeps
   // the under-HUD strip (its wall starts lower and the paddle owns the floor).
-  const y = G.mode !== 'classic'
+  // AFT-001: on SHORT viewports (375-tall landscape) the low-band formula
+  // wraps back into the top band and lands on the objective pill and the
+  // left HUD rows (combo/element/build end ~y116) — floor it below the whole
+  // banner cluster. Tall screens keep the original low-band placement.
+  const y = Math.max(SAFE_T + 120, G.mode !== 'classic'
     ? (G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y()) - 78
-    : H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 150 : 88);
+    : H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 150 : 88));
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.translate(0, -14 * (1 - enter) * (1 - enter));
@@ -3738,7 +3745,7 @@ function drawShootHint() {
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '800 15px Orbitron, sans-serif';
-    const tw2 = ctx.measureText(txt).width + 44;
+    const tw2 = Math.min(W - 24, ctx.measureText(txt).width + 44); // AFT-001: viewport cap
     const hy2 = H * 0.62;
     ctx.globalAlpha = pa;
     ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 18;
@@ -4254,7 +4261,7 @@ function drawHUD() {
     // element readout renders that as NEUTRAL rather than a type.
     const el = hudElem ? attackElement() : G.ballElement;
     const elLabel = typeLabel(el);
-    ctx.fillStyle = el ? TYPE_COLORS[el] : '#b0bec5';
+    ctx.fillStyle = el ? TYPE_COLORS[el] : '#b0bec5'; // fitLabel keeps this fill
     ctx.font = '700 11px Orbitron, sans-serif';
     const basePartner = G.ballElementT > 1000 && G.starter && el === G.starter;
     const tag = hudElem
@@ -4264,15 +4271,16 @@ function drawHUD() {
       : elLabel + (G.mode === 'classic' ? ' BALL' : ' WEAPON') + (basePartner
         ? ' · ' + SKIN.strings.partnerWord
         : ' · POWER-UP · ' + Math.max(1, Math.ceil(G.ballElementT)) + 's');
-    ctx.fillText('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72);
+    const tagB = fitLabel('⬤ ' + tag, 20, G.combo > 1 ? 90 : 72,
+      { size: 11, min: 8.5, weight: 700, align: 'left',
+        maxW: Math.min(W * 0.62, W - 110), zone: 'banner' });
     // AFFINITY chip rides the same line (light/dark skins): the path is
     // permanent run identity, so it lives beside the element, always visible
     const affCol = affinityColor();
     if (affCol) {
-      const tagW = ctx.measureText('⬤ ' + tag).width;
-      ctx.fillStyle = affCol;
-      ctx.fillText((SETTINGS.affinity === 'light' ? '  ☀ LIGHT' : '  ☾ DARK'),
-        20 + tagW + 6, G.combo > 1 ? 90 : 72);
+      fitLabel(SETTINGS.affinity === 'light' ? '☀ LIGHT' : '☾ DARK',
+        tagB.x1 + 8, G.combo > 1 ? 90 : 72,
+        { size: 11, min: 8.5, weight: 700, align: 'left', color: affCol, maxW: 70, zone: 'banner' });
     }
   }
   // skill tree at a glance — Phoenix-style: your build is always visible
@@ -4306,19 +4314,26 @@ function drawHUD() {
   drawRiftTracker();
   ctx.textAlign = 'center';
   const narrow = W < 560; // phones: wave title drops to the second HUD row
-  ctx.font = `900 ${Math.min(16, W / 30)}px Orbitron, sans-serif`;
-  ctx.fillStyle = '#e3f2fd';
   const gen = genFor(G.level);
   const stg = stageIdx(G.level);
-  const waveY = narrow ? 46 : (G.modifier ? 22 : 28);
+  // AFT-001: the title owns ONLY its free span — right of the score column,
+  // left of the health bar on row 1; on phones it takes row 2 fully BELOW the
+  // bar (y 48 clears the bar's bottom edge at 41). It can no longer collide
+  // with the health display at any width: fitLabel shrinks then ellipsizes.
+  const hbLeft = W - 18 - (narrow ? 112 : 154); // drawPlayerHealthBar geometry
+  const span0 = narrow ? 12 : 150, span1 = narrow ? W - 12 : hbLeft - 10;
+  const waveY = narrow ? 48 : (G.modifier ? 22 : 28);
   const waveText = G.secret.vmax ? 'SECRET RIFT · ' + SKIN.secret.name
     : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + SKIN.stageNames[stg];
-  ctx.fillText(waveText, W / 2, waveY);
-  if (G.modifier && !narrow) {
-    ctx.font = '700 10px Orbitron, sans-serif';
-    ctx.fillStyle = G.modifier.color;
-    drawGlyph(ctx, G.modifier.icon, W / 2 - ctx.measureText(G.modifier.name).width / 2 - 12, 42, 6, G.modifier.color);
-    ctx.fillText(G.modifier.name, W / 2 + 4, 42);
+  fitLabel(waveText, (span0 + span1) / 2, waveY,
+    { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
+  // AFT-001: the modifier chip is SECONDARY copy — it yields its row to a
+  // live objective banner (the win condition) instead of stacking under it
+  const objLive = G.objective && !G.objective.done && !G.objective.failed;
+  if (G.modifier && !narrow && !objLive) {
+    const mb = fitLabel(G.modifier.name, (span0 + span1) / 2 + 4, 42,
+      { size: 10, min: 8.5, weight: 700, color: G.modifier.color, maxW: span1 - span0 - 28, zone: 'topHud' });
+    drawGlyph(ctx, G.modifier.icon, mb.x0 - 8, 42, 6, G.modifier.color);
   }
   drawPlayerHealthBar();
   ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
@@ -4414,7 +4429,8 @@ function drawBrickBehaviorLegend() {
   ctx.font = `800 ${W < 560 ? 8.5 : 9.5}px Orbitron, sans-serif`;
   const w = Math.min(W * 0.58, Math.max(172, ctx.measureText(label).width + 38));
   const elemRows = G.ballElement || G.mode === 'junkie';
-  const y = elemRows ? (G.combo > 1 ? 128 : 94) : (G.combo > 1 ? 110 : 72);
+  // AFT-001: this draws outside drawHUD's translate — add SAFE_T explicitly
+  const y = SAFE_T + (elemRows ? (G.combo > 1 ? 128 : 94) : (G.combo > 1 ? 110 : 72));
   const x = W / 2 - w / 2, h = 24;
   roundRect(x, y, w, h, 12);
   ctx.fillStyle = 'rgba(6,10,26,0.78)'; ctx.fill();
@@ -4441,7 +4457,9 @@ function drawObjectiveBanner() {
   // PROTECT objectives inline the friendly's remaining heart pips
   const fr = O.friendly;
   if (fr && !fr.dead) label += '  ·  ' + '♥'.repeat(Math.max(0, fr.fhp));
-  const y = short ? 44 : 52;
+  // AFT-001: SAFE_T (drawn outside the HUD translate) + collapse the
+  // SECONDARY readout before ever shrinking the primary objective name
+  const y = SAFE_T + (short ? 44 : 52);
   const w = Math.min(W * 0.72, (short ? 220 : 300));
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -4458,8 +4476,10 @@ function drawObjectiveBanner() {
     ctx.restore();
   }
   ctx.font = `900 ${short ? 9.5 : 11}px Orbitron, sans-serif`;
-  ctx.fillStyle = '#ffe082';
-  ctx.fillText('◎ ' + label + (readout ? '  ·  ' + readout : ''), W / 2, y + (short ? 13.5 : 15.5), w - 20);
+  let line = '◎ ' + label + (readout ? '  ·  ' + readout : '');
+  if (readout && ctx.measureText(line).width > w - 20) line = '◎ ' + label; // secondary copy collapses first
+  fitLabel(line, W / 2, y + (short ? 13.5 : 15.5),
+    { size: short ? 9.5 : 11, min: 8.5, weight: 900, color: '#ffe082', maxW: w - 20, zone: 'banner' });
   ctx.restore();
 }
 function drawCombatNotice() {
@@ -4470,7 +4490,7 @@ function drawCombatNotice() {
   // shooters: ride the LOW BAND under the announce strip, never the flock zone
   const y = G.mode !== 'classic'
     ? (G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y()) - 42
-    : hasRule ? (elemRows ? (G.combo > 1 ? 160 : 126) : (G.combo > 1 ? 142 : 104)) : 70;
+    : SAFE_T + (hasRule ? (elemRows ? (G.combo > 1 ? 160 : 126) : (G.combo > 1 ? 142 : 104)) : 70);
   const alpha = Math.min(1, n.t / Math.min(0.25, n.max));
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -4580,17 +4600,20 @@ function drawTouchControls() {
     // starts cooking — the state language stays explicit at every moment
     const resonantNow = full && G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW;
     const overNow = full && G.chargeFullT > 1.4;
-    const label = hot ? 'COOLING ' + Math.ceil(G.overheat) + 's'
+    // AFT-001: SHORT state words on the pad face — the explanatory clause
+    // lives on the sub-line, so nothing squishes inside the circle at any
+    // buttonScale. The pad still names its state at every moment.
+    const label = hot ? 'COOLING'
       : charging ? (resonantNow ? 'RESONANT!' : overNow ? 'OVERCHARGE' : full ? 'RELEASE!' : Math.round(Math.min(1, G.charge) * 100) + '%')
       : heatWarn ? 'HEAT HIGH'
-      : shooter ? (SETTINGS.autoFire ? 'AUTO ON' : 'TAP FIRE') : 'FIRE';
-    ctx.font = '900 9px Orbitron, sans-serif';
+      : shooter ? (SETTINGS.autoFire ? 'AUTO ON' : 'TAP') : 'FIRE';
+    ctx.font = '900 9.5px Orbitron, sans-serif';
     ctx.fillStyle = hot ? '#ff8a80' : charging ? (resonantNow ? '#80ffea' : overNow ? '#ffab66' : full ? '#e0ffff' : '#80deea') : heatWarn ? '#ffb74d' : '#b3e5fc';
     ctx.fillText(label, f.x, f.y + 12, f.r * 1.7);
     // second line: what HOLDING does right now (shooter modes only)
-    const sub = !shooter ? '' : hot ? 'LOCKED' : charging ? (full ? '' : 'KEEP HOLDING') : 'HOLD = CHARGE';
+    const sub = !shooter ? '' : hot ? Math.ceil(G.overheat) + 's · LOCKED' : charging ? (full ? '' : 'KEEP HOLDING') : 'HOLD = CHARGE';
     if (sub) {
-      ctx.font = '800 6.5px Orbitron, sans-serif';
+      ctx.font = '800 7px Orbitron, sans-serif';
       ctx.fillStyle = hot ? '#ff8a80' : charging ? '#b2ebf2' : heatWarn ? '#ffcc80' : '#90a4ae';
       ctx.fillText(sub, f.x, f.y + 23, f.r * 1.6);
     }
@@ -4664,6 +4687,103 @@ function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, san
   }
   ctx.fillStyle = color;
   ctx.fillText(text, W / 2, y, maxW);
+}
+
+// ── AFT-001: SAFE ZONES + FITTED LABELS ─────────────────────────────────────
+// The mobile screen is a stack of RESERVED bands; every fitted label belongs
+// to one. fitLabel is the one true containment primitive: shrink toward a
+// readable floor, then ELLIPSIZE — never rely on fillText's maxWidth squish
+// as the only strategy (it distorts glyphs instead of reflowing). It also
+// clamps its own bounds on-screen, so a world-anchored label near an edge
+// slides inward instead of clipping. Returns measured bounds for callers
+// (glyph placement, the dev overlay, the suite's containment assertions).
+let ZONE_DEBUG = /[?&]zones\b/.test(location.search);
+let zoneLog = null; // per-frame label bounds, collected only while debugging
+function uiZones() {
+  const hudH = 56 + SAFE_T;
+  const bannerH = 100; // objective banner / region rail / element rows lane
+  const shipTop = G.mode === 'junkie' ? PADDLE_Y() - SHIP_BAND : PADDLE_Y() - 46;
+  const z = {
+    topHud: { x: 0, y: 0, w: W, h: hudH },
+    banner: { x: 0, y: hudH, w: W, h: bannerH },
+    field: { x: 0, y: hudH + bannerH, w: W, h: Math.max(0, shipTop - hudH - bannerH) },
+    ship: { x: 0, y: shipTop, w: W, h: Math.max(0, FLOOR() - shipTop) },
+    controls: null,
+  };
+  if (IS_TOUCH) {
+    const B = touchButtons();
+    const bs = [B.fire, B.mega, B.pause, B.sound].filter(Boolean);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const b of bs) { x0 = Math.min(x0, b.x - b.r); y0 = Math.min(y0, b.y - b.r); x1 = Math.max(x1, b.x + b.r); y1 = Math.max(y1, b.y + b.r); }
+    if (bs.length) z.controls = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+  return z;
+}
+function fitLabel(text, x, y, o = {}) {
+  const maxW = Math.max(24, o.maxW || W - 24);
+  const min = o.min || 9;
+  let size = o.size || 13;
+  const family = o.family || 'Orbitron, sans-serif';
+  const weight = o.weight || 800;
+  ctx.font = `${weight} ${size}px ${family}`;
+  let t = String(text);
+  let w = ctx.measureText(t).width;
+  if (w > maxW) { // 1) shrink toward the readable floor
+    size = Math.max(min, size * maxW / w);
+    ctx.font = `${weight} ${size}px ${family}`;
+    w = ctx.measureText(t).width;
+  }
+  if (w > maxW && t.length > 2) { // 2) at the floor: ellipsis, never squish
+    while (t.length > 1 && ctx.measureText(t.replace(/\s+$/, '') + '…').width > maxW) t = t.slice(0, -1);
+    t = t.replace(/\s+$/, '') + '…';
+    w = ctx.measureText(t).width;
+  }
+  const align = o.align || 'center';
+  let ax = x; // keep the label's own bounds on-screen wherever it was anchored
+  if (o.clamp !== false) {
+    if (align === 'center') ax = Math.max(w / 2 + 4, Math.min(W - w / 2 - 4, x));
+    else if (align === 'left') ax = Math.max(4, Math.min(W - w - 4, x));
+    else ax = Math.max(w + 4, Math.min(W - 4, x));
+  }
+  if (o.color) ctx.fillStyle = o.color;
+  const pa = ctx.textAlign;
+  ctx.textAlign = align;
+  ctx.fillText(t, ax, y, maxW); // maxWidth stays as belt-and-braces only
+  ctx.textAlign = pa;
+  const x0 = align === 'center' ? ax - w / 2 : align === 'right' ? ax - w : ax;
+  const b = { x0, x1: x0 + w, w, y, size, text: t };
+  if (zoneLog) { b.zone = o.zone || null; zoneLog.push(b); }
+  return b;
+}
+// dev overlay (?zones): zone bands + every fitted label's measured box; a
+// label outside the viewport or its declared band is flagged loud red.
+// NOTE: labels drawn inside the HUD's translate(0, SAFE_T) record local y.
+function drawZoneOverlay() {
+  if (!ZONE_DEBUG) return;
+  const z = uiZones();
+  const colors = { topHud: '#4dd0e1', banner: '#ffd54f', field: '#66bb6a', ship: '#ff8a65', controls: '#d780ff' };
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.font = '700 9px monospace';
+  for (const [name, r] of Object.entries(z)) {
+    if (!r) continue;
+    ctx.globalAlpha = 0.8; ctx.lineWidth = 1;
+    ctx.strokeStyle = colors[name] || '#fff';
+    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+    ctx.fillStyle = colors[name] || '#fff';
+    ctx.fillText(name, r.x + 4, r.y + 3);
+  }
+  let vy = 64;
+  for (const b of (zoneLog || [])) {
+    const out = b.x0 < -0.5 || b.x1 > W + 0.5;
+    ctx.strokeStyle = out ? '#ff1744' : 'rgba(102,187,106,0.55)';
+    ctx.strokeRect(b.x0, b.y - b.size * 0.7, b.w, b.size * 1.4);
+    if (out) {
+      ctx.fillStyle = '#ff1744';
+      ctx.fillText('OUT ' + (b.zone || '?') + ' · ' + b.text.slice(0, 30), 8, vy);
+      vy += 11;
+    }
+  }
+  ctx.restore();
 }
 // The title is the start of a journey, not a dim pause screen. A painted route
 // crosses nine colourful regions behind the mode cards while a warm morning
@@ -8216,6 +8336,7 @@ function drawCursor() {
 }
 
 function render() {
+  zoneLog = ZONE_DEBUG ? [] : null; // AFT-001 dev overlay collection
   ctx.save();
   if (G.dramaticT > 0) { // last-brick slow-mo zoom
     const z = 1 + 0.035 * Math.sin(Math.min(1, (0.9 - G.dramaticT) / 0.25) * Math.PI / 2);
@@ -8245,6 +8366,7 @@ function render() {
   ctx.restore();
   // bloom the gameplay scene before the vignette darkens the edges
   if (G.state === 'play' || G.state === 'serve') drawBloom();
+  drawZoneOverlay(); // AFT-001 (?zones) — zone bands + fitted-label bounds
   if (vignette) ctx.drawImage(vignette, 0, 0, W, H); // may be unset pre-boot
   if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade' && G.state !== 'results') drawHUD();
   drawOverlays();

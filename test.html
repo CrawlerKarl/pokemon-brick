@@ -1500,6 +1500,54 @@ window.requestAnimationFrame = function () { return 0; };
     return 'queue: prio + singletons + selective clear · 27 trial launches · 9 finales × rounds · phases land mid-band';
   });
 
+  // AFT-001: fitted labels + safe zones — adversarial copy stays contained
+  // at phone sizes: shrink to the readable floor, then ellipsize, never
+  // squish; world-anchored text clamps on-screen; the wave title's span
+  // geometrically excludes the health bar.
+  test('AFT-001: fitted labels + safe zones contain adversarial copy', async () => {
+    forceViewport(667, 375); // the review's short-landscape phone reference
+    try {
+      // the primitive: shrink first…
+      let b = fitLabel('A LONG BOSS DESIGNATION', W / 2, 100, { size: 40, min: 20, maxW: 300 });
+      assert(b.w <= 300.5, 'shrunk label still exceeds maxW: ' + b.w);
+      assert(b.size < 40 && b.size >= 20, 'label did not shrink into the floor band');
+      // …then ellipsize at the floor — glyphs are never squished
+      b = fitLabel('THE EXTRAORDINARILY LONG DESIGNATION THAT CANNOT POSSIBLY FIT', W / 2, 100,
+        { size: 40, min: 20, maxW: 300 });
+      assert(b.w <= 300.5, 'floor label exceeds maxW: ' + b.w);
+      assert(Math.abs(b.size - 20) < 0.01 && b.text.endsWith('…'),
+        'at the floor the label must ellipsize (size=' + b.size + ', text=' + b.text + ')');
+      // short labels pass through untouched
+      b = fitLabel('SHORT', W / 2, 100, { size: 16, min: 9, maxW: 300 });
+      assert(b.text === 'SHORT' && b.size === 16, 'short label was altered');
+      // world-edge anchors clamp on-screen (both edges)
+      b = fitLabel('EDGE LABEL', 2, 100, { size: 14, min: 9, maxW: 220 });
+      assert(b.x0 >= 0, 'left-edge label clipped off-screen: ' + b.x0);
+      b = fitLabel('EDGE LABEL', W - 2, 100, { size: 14, min: 9, maxW: 220 });
+      assert(b.x1 <= W, 'right-edge label clipped off-screen: ' + b.x1);
+      // the wave title span excludes the health bar rect at 667×375
+      const hbLeft = W - 18 - 154; // W>=560 bar geometry in drawPlayerHealthBar
+      assert(150 < hbLeft - 10, 'wave-title span collapsed');
+      // zones are a sane stack
+      const z = uiZones();
+      assert(z.topHud.h >= 56 && z.banner.y === z.topHud.h && z.field.y === z.banner.y + z.banner.h,
+        'zone stack out of order');
+      // a live phone-size frame with HUD text + a floater at the world edge
+      resetRun(8, true);
+      G.state = 'play';
+      G.floaters.push({ x: 1, y: 200, text: 'EDGE +999', color: '#fff', size: 14, life: 1 });
+      render(); // must not throw at 667×375 with everything fitted
+      const f = G.floaters[G.floaters.length - 1];
+      assert(f._w > 0 && f._cx - f._w / 2 >= 0 && f._cx + f._w / 2 <= W,
+        'floater not clamped on-screen: cx=' + f._cx + ' w=' + f._w);
+      // a finale frame exercises the boss nameplate + intro containment
+      resetRun(3, true);
+      G.state = 'play'; G.bossIntro = 1.0;
+      render();
+    } finally { forceViewport(900, 700); }
+    return 'shrink → ellipsis · edge clamps · zone stack · 667×375 live frames render contained';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so

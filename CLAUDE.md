@@ -492,8 +492,11 @@ phone — flag anything only verifiable there.
   a 3.4s junkie first-volley grace, state.js — keep card duration ≤ grace).
   Everything else renders as the compact top strip (`drawAnnounceStrip`), so
   no banner ever covers the pilot's lane under fire.
-  The FIRE pad must always NAME its state (TAP FIRE / AUTO ON / charge % /
-  RELEASE! / HEAT HIGH / COOLING Ns) — never a bare unexplained label. All
+  The FIRE pad must always NAME its state — never a bare unexplained label.
+  Since AFT-001 the pad FACE carries the SHORT state word (TAP / AUTO ON /
+  charge % / RESONANT! / RELEASE! / OVERCHARGE / HEAT HIGH / COOLING) and the
+  sub-line carries the clause (HOLD = CHARGE / Ns · LOCKED), so nothing
+  squishes inside the circle at any buttonScale. All
   four safe-area insets (`SAFE_T/L/R/B`, setup.js) shift the HUD bar and
   corner controls; keep new top/edge-anchored UI behind them.
 

@@ -5,6 +5,49 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22i — AFT-001: safe zones + fitted labels (phone copy stays contained)
+
+Built from a full text-containment audit of every player-facing draw in the
+play states (the audit's inventory is in the session record; the sharpest
+finding: the wave title had ZERO width containment and geometrically collided
+with the health bar at 667×375 and 390×844 — the user's reported bug).
+
+- **`fitLabel(text, x, y, opts)`** is the one true containment primitive:
+  shrink toward a readable floor (`min`), then **ELLIPSIZE** — never rely on
+  fillText's maxWidth squish as the only strategy (it distorts glyphs). It
+  clamps its own bounds on-screen (world-anchored labels slide inward instead
+  of clipping) and returns measured bounds. **`uiZones()`** names the reserved
+  bands (topHud / banner / field / ship / controls). **`?zones`** enables the
+  dev overlay: zone rects + every fitted label's measured box, out-of-bounds
+  flagged red.
+- **Retrofits** (audit-ranked): the wave title now owns ONLY its free span —
+  right of the score column, left of the health bar; phones use row 2 at y48,
+  fully below the bar. The 40px boss-intro banner (the single worst site),
+  both boss nameplates, the element/affinity row, and the objective banner all
+  went through fitLabel. `drawObjectiveBanner`/`drawCombatNotice`/
+  `drawBrickBehaviorLegend` were drawing OUTSIDE drawHUD's `translate(0,
+  SAFE_T)` — glued to the physical top on notched phones — now SAFE_T-aware.
+  **Floaters** (the highest-volume text site, 60+ call sites at world coords)
+  measure once and clamp on-screen. The charge-tutor pill gained the viewport
+  cap its sibling always had.
+- **Secondary copy collapses before primary shrinks**: the objective banner
+  drops its readout before shrinking its name; the modifier chip yields its
+  row entirely to a live objective banner.
+- **Short-viewport slots**: on 375-tall landscape the shooter announce
+  strip's "low band" formula wrapped back into the top band (PADDLE_Y −
+  SHIP_BAND − 78 ≈ 53) onto the objective pill and HUD rows — floored below
+  the whole banner cluster now.
+- **Touch pads speak short state words**: the face carries TAP / COOLING /
+  READY / % / RESONANT! / RELEASE!; the clause (HOLD = CHARGE, Ns · LOCKED)
+  lives on the sub-line — nothing squishes at any buttonScale. CLAUDE.md's
+  FIRE-pad invariant updated to match.
+- Verified by suite test 'AFT-001' (adversarial strings shrink→ellipsize,
+  edge clamps, zone stack, live 667×375 frames) AND by screenshots at
+  667×375 with maximum simultaneous copy (trial title + objective + strip +
+  combo/element/build rows + touch pads) — every surface in its own slot.
+
+---
+
 ## 2026-07-22h — AFT-004: the announce queue grows kinds + launches start clean
 
 - **`setAnnounce` is a single-owner PRIORITY queue now.** Every card carries a
