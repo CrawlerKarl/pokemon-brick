@@ -103,8 +103,24 @@ suite test guards every rect across six sizes.
   bricked startup permanently.
 
 ## Verifying (there is no live human tester)
-The preview browser throttles rAF when backgrounded, so you can't watch
-real-time physics. **Drive the sim from the JS console:** loop `update(1/60)`,
+**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~37s, fully
+headless.** It runs, in order: syntax check → asset verification → the full
+invariant suite (test.html driven by system Chrome over raw CDP — no deps,
+Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 14 mobile scenes
+at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (28
+screenshots → `.gate-shots/`) → the artifact-storm benchmark (avg/p95
+ms/frame recorded in `.gate-report.json` every run). `--fast` skips the
+dist/scene/storm steps (~20s); `--suite` runs the invariants alone. Any
+uncaught page error fails it. Run the gate before every commit — the old
+"keep the tab FRONTED for 20 minutes" constraint is dead (headless Chrome
+runs the suite at CPU speed; the fronted tab remains for interactive
+debugging only). Modal boss reveals stay DORMANT under the suite
+(`window.__SUITE`); tests that need one set `window.__SUITE_REVEALS`.
+
+For interactive debugging, the preview browser throttles rAF when
+backgrounded, so you can't watch real-time physics. **Drive the sim from the
+JS console:** loop `update(1/60)`,
 set `mouseX`/`lastMouseY` to steer, `paused=false; G.freeze=0` to force-run,
 read `G.*` to assert. `G.freeze=999` freezes a frame for a screenshot. Note: the
 preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
@@ -125,9 +141,9 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
 - **`gallery.html`** renders every projectile through the real renderer over
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
-- **Automated invariants:** open `/test.html` (drives the sim headless, 57
-  checks, sets `window.TEST_RESULTS`; keep the tab FRONTED — background
-  timer throttling makes it crawl). Keep it green. Two overlap invariants:
+- **Automated invariants:** `npm test` (preferred) or open `/test.html`
+  fronted (slow — legacy path). 84 checks; `window.TEST_RESULTS` at
+  completion. Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
   sprites is not a blob, and chasing a literal 0 across random patterns is a
@@ -207,6 +223,43 @@ phone — flag anything only verifiable there.
 - **Tint a sprite with `source-atop`, NEVER `'lighter'`.** `lighter` paints
   transparent pixels too, so an affinity wash lights the sprite's whole
   bounding box as a glowing square. (Cost a real bug; the fix is one line.)
+- **The announce queue is kinded and prioritized (AFT-004).** Every card
+  carries a `kind` (boss 5 > trial 4 > objective 3 > region 2 > info 1);
+  'boss' and 'trial' are SINGLETONS (freshest replaces). Launch hygiene goes
+  through `clearAnnouncements(keepKinds)` — a gauntlet round jump keeps only
+  the trial notice. `drawAnnounce` yields while paused and while a reveal
+  runs. Never bypass `setAnnounce` to place a card.
+- **Boss rounds open on the REVEAL SCENE (AFT-002).** `beginBossReveal` from
+  the shared build/wake/summon paths — one contract for sentinels (trio),
+  legendary, mythic, secret. Combat is frozen (update() gates on `G.reveal`),
+  the 512px portrait (`AETHERFALL_ART_REVEAL`; the skin's own sprite
+  elsewhere) is never obstructed, the info panel lives BELOW the art, tap
+  skips the hold but hostile sim resumes only after the fly + HUD-lane dock,
+  with `enemyShotCD ≥ 1.2` grace. A docked boss (`G.revealDock`) reads from
+  the HUD lane and carries NO floating nameplate. Reveals are DORMANT under
+  the suite (`window.__SUITE`) — the AFT-002 test opts in; keep it that way
+  or 50+ boss-timing tests shift.
+- **Text containment goes through `fitLabel` (AFT-001).** Shrink to a
+  readable floor, then ELLIPSIZE — never rely on fillText's maxWidth squish
+  alone; world-anchored labels clamp on-screen. Zones come from `uiZones()`;
+  `?zones` draws the dev overlay; the gate's mobile scenes ASSERT every
+  fitted label inside the viewport. Secondary copy collapses before primary
+  shrinks (objective readout first; the modifier chip yields to a live
+  objective banner). The three top banners add SAFE_T themselves (they draw
+  outside drawHUD's translate).
+- **The oath rides `OATH_CH` channels (AFT-017), not one alpha.** tint / rim
+  / aura / fitting scale / fitting opacity / radiant blend / rune count each
+  have a per-form curve; LIGHT's radiant SOURCE is earned (base → 45% blend →
+  full at Form III); the ceremony RESOLVES the oath onto the new hull.
+  Reduced-effects stills pulses but keeps material progression. All washes
+  source-atop.
+- **Saves ride the versioned bundle (AFT-006).** `exportBundle` /
+  `validateBundle` / `applyBundle` (state.js): imports never write an unknown
+  key, never accept a checkpoint that fails `migrateCheckpoint`, always
+  snapshot `storeKey('preimport')` first; every region checkpoint refreshes
+  `storeKey('autosave')`. `STORAGE_HEALTH` (setup.js) is surfaced truth —
+  blocked storage announces RUNNING UNSAVED once. Note `migrateCheckpoint`
+  rejects lvl<4 BY DESIGN (checkpoints only exist from region boundaries).
 - **Modes share one wave generator.** `buildLevel` (state.js) branches on
   `G.mode`. When touching fire / serve / the loss condition, keep all three
   working: the shooter modes (`!== 'classic'`) spawn NO ball, skip the

@@ -139,6 +139,8 @@ renderer), and `assets/fonts/` (vendored Orbitron).
 | `build-aetherfall-radiant-variants.py` | The shipped radiant transform (`transform_final`, stable per-id key) |
 | `build-aetherfall-art-manifest.js` | Derives the art manifest (the id/slug contract for image generation) straight from `aetherfall.js` — no DOM, no game load |
 | `build-aetherfall-dist.js` | Generates the pokemon-free standalone into `dist-aetherfall/`; prints a franchise-term RESIDUE report (a release requires **none**) |
+| `build-aetherfall-reveals.py` | 512px boss-reveal portraits for the 43 boss-class ids (same chroma + framing rules as the previews) |
+| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 84-check suite headless → both-skin + dist boot smokes → vocabulary scan → mobile scenes with fitted-label assertions + screenshots → the artifact-storm benchmark. ~37s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
 
 **`art/aetherfall-production/`** — the production art. `sprites/final/` (128px
 runtime sprites) and `sprites/preview/` (320px portraits) and `weapons/final/`
