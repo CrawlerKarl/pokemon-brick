@@ -5,6 +5,35 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22h — AFT-004: the announce queue grows kinds + launches start clean
+
+- **`setAnnounce` is a single-owner PRIORITY queue now.** Every card carries a
+  `kind` — boss(5) > trial(4) > objective(3) > region(2) > info(1) — with
+  stable FIFO within a kind, priority insert, and the lowest-priority tail
+  dropped at the cap. **'boss' and 'trial' are SINGLETONS**: a new card of
+  that kind replaces the old one wherever it lives (current or queued), so a
+  round jump can never stack two reveals and a launch always carries exactly
+  one trial notice. Untagged hero cards default to kind 'boss' (the reveal
+  path); ~13 sites tagged explicitly (trial/daily/resume → trial; region
+  intros + stage-2 cards → region; objective outcomes → objective; boss
+  phase transitions → boss, so ENRAGED naturally supersedes a stale reveal).
+- **`clearAnnouncements(keepKinds)`** is the launch-hygiene primitive:
+  `jumpToGauntletRound` clears everything but the trial notice (plus stale
+  telegraphs/enemy shots/column strikes) before the wake/summon queues the
+  selected round's ONE reveal; the secret-summon path's raw clear now routes
+  through it too.
+- **Pause layering fix** (user-visible bug caught by screenshot): the TRIAL
+  MODE card rendered through the pause overlay. `drawAnnounce` now yields
+  while paused in play/serve; the card's timer is frozen anyway, so it
+  resumes cleanly.
+- New suite test 'AFT-004' (80th): queue semantics (priority, singletons,
+  selective clear), direct trial launches to ALL 27 stages, rounds 1–2 on all
+  nine finales asserting zero stale flavor/fire after a jump, the secret
+  round, and every selectable phase landing mid-band. This queue is the
+  surface AFT-002's reveal scene plugs into next.
+
+---
+
 ## 2026-07-22g — AFT-005A: the headless release gate (npm test for real, GATE GREEN in 40s)
 
 The 20-minute fronted-tab suite constraint is DEAD. `npm test` now runs the

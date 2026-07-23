@@ -3551,6 +3551,10 @@ function wrapText(text, maxW) {
 function drawAnnounce() {
   const a = G.announce;
   if (!a) return;
+  // AFT-004: the pause overlay owns the whole screen — a TRIAL MODE or boss
+  // card bleeding through it is a layering bug. The card's timer is frozen
+  // while paused (update is gated), so it resumes cleanly on unpause.
+  if (paused && (G.state === 'play' || G.state === 'serve')) return;
   // LIVE COMBAT never gets a banner in the flight lane: while playing,
   // everything but a hero announcement (boss-round reveals) renders as a
   // compact strip tucked under the HUD, sliding in from the top. The centre

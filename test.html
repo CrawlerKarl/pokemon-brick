@@ -1434,6 +1434,72 @@ window.requestAnimationFrame = function () { return 0; };
     return 'MEGA→SURGE across copy · CHARGE + OMEGA spared · pokemon identical · shared tables pristine';
   });
 
+  // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
+  // and launches are CLEAN — a trial/round jump inherits no stale banners.
+  test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
+    const cards = () => [G.announce, ...G.announceQueue].filter(Boolean);
+    const ofKind = k => cards().filter(a => a.kind === k);
+    // 1) queue semantics: priority insert, boss/trial singletons, tail drop
+    G.announce = null; G.announceQueue = [];
+    setAnnounce('a', '#fff', 'FIRST', 'holds the slot', 2);            // info, current
+    setAnnounce('a', '#fff', 'FLAVOR', 'queued info', 2);              // info
+    setAnnounce('a', '#fff', 'BOSS ONE', 'reveal', 2, null, null, false, true); // boss (hero default)
+    assert(G.announceQueue[0].name === 'BOSS ONE', 'boss must sort ahead of queued info');
+    setAnnounce('a', '#fff', 'BOSS TWO', 'fresher reveal', 2, null, null, false, true);
+    assert(ofKind('boss').length === 1 && ofKind('boss')[0].name === 'BOSS TWO',
+      'boss is a singleton — freshest replaces');
+    setAnnounce('a', '#fff', 'TRIAL A', '', 2, null, null, false, false, 'trial');
+    setAnnounce('a', '#fff', 'TRIAL B', '', 2, null, null, false, false, 'trial');
+    assert(ofKind('trial').length === 1 && ofKind('trial')[0].name === 'TRIAL B',
+      'trial is a singleton — freshest replaces');
+    clearAnnouncements(['trial']);
+    assert(cards().length === 1 && cards()[0].kind === 'trial',
+      'clearAnnouncements keeps only the kept kinds');
+    // 2) direct trial launches to all 27 stages: exactly one trial notice
+    for (let lvl = 1; lvl <= 27; lvl++) {
+      resetRun(lvl, true);
+      assert(G.level === lvl, 'launch landed on level ' + G.level + ' wanted ' + lvl);
+      assert(ofKind('trial').length === 1, 'level ' + lvl + ': trial notices = ' + ofKind('trial').length);
+      assert(cards().length <= 5, 'level ' + lvl + ': queue overflow (' + cards().length + ')');
+    }
+    // 3) every gauntlet round on every finale: exactly ONE boss card survives
+    for (let lvl = 3; lvl <= 27; lvl += 3) {
+      for (const round of [1, 2]) {
+        resetRun(lvl, true);
+        assert(G.gauntlet, 'level ' + lvl + ' must build a gauntlet');
+        if (round >= 2) jumpToGauntletRound(round);
+        const bosses = ofKind('boss'), trials = ofKind('trial');
+        assert(bosses.length === 1, 'L' + lvl + ' R' + round + ': boss cards = ' + bosses.length);
+        assert(trials.length <= 1, 'L' + lvl + ' R' + round + ': trial cards = ' + trials.length);
+        if (round === 2) {
+          assert(ofKind('region').length === 0 && ofKind('info').length === 0,
+            'L' + lvl + ' R2: stale round-1 flavor survived the jump');
+          assert(G.telegraphs.length === 0 && G.enemyShots.length === 0,
+            'L' + lvl + ' R2: stale round-1 fire survived the jump');
+        }
+      }
+    }
+    // 4) the secret round (3) + every selectable phase lands mid-band
+    resetRun(3, true);
+    jumpToGauntletRound(3);
+    assert(ofKind('boss').length === 1 && G.bricks.some(b => !b.dead && b.secretBoss),
+      'round 3 must summon the secret boss with ONE reveal card');
+    for (const [round, phases] of [[1, 3], [2, 3]]) {
+      for (let ph = 1; ph <= phases; ph++) {
+        resetRun(3, true);
+        jumpToGauntletRound(round, ph);
+        const boss = round >= 2
+          ? G.bricks.find(b => !b.dead && b.isBoss && (b.mythic || b.secretBoss))
+          : G.bricks.find(b => !b.dead && b.isBoss && !b.mythic && !b.secretBoss);
+        assert(boss, 'R' + round + ' P' + ph + ': no live boss');
+        const want = Math.min(bossPhaseCount(boss), ph);
+        assert(boss.phase === want, 'R' + round + ' P' + ph + ': phase=' + boss.phase + ' want ' + want);
+        assert(boss.hp > 0 && boss.hp <= boss.maxHp, 'R' + round + ' P' + ph + ': hp out of band');
+      }
+    }
+    return 'queue: prio + singletons + selective clear · 27 trial launches · 9 finales × rounds · phases land mid-band';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so

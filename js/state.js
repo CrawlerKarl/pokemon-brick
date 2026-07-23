@@ -225,7 +225,7 @@ function resumeRun() {
   G.secretUpg = Object.assign({ heart: false, lens: false, echo: false }, c.secretUpg);
   setAnnounce('swift', '#80d8ff', 'JOURNEY RESUMED',
     genFor(c.lvl).name + ' · WAVE ' + c.lvl + ' — WELCOME BACK', 3,
-    'SAVED AT EVERY REGION · GAME OVER CLEARS THE SAVE');
+    'SAVED AT EVERY REGION · GAME OVER CLEARS THE SAVE', null, false, false, 'trial');
 }
 function freshSecretState() {
   return {
@@ -491,12 +491,46 @@ function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
 // hero: keep the dramatic centre-card treatment even during live combat —
 // reserved for boss-round reveals. Everything else renders as a compact strip
 // under the HUD while playing, so no banner ever covers the pilot's lane.
-function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false, hero = false) {
-  const next = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny, hero };
+//
+// AFT-004 — the announce queue is a SINGLE-OWNER PRIORITY QUEUE now. Every
+// card carries a KIND; the queue orders by kind priority (stable FIFO within
+// a kind) so a boss reveal always outranks a trial notice outranks stage
+// flavor. Two kinds are SINGLETONS — 'boss' and 'trial': a new card of that
+// kind REPLACES any existing one (current or queued), so a round jump can
+// never stack two boss reveals and a launch always shows exactly one trial
+// notice. Kind also lets launches clear selectively (clearAnnouncements).
+const ANNOUNCE_PRIO = { boss: 5, trial: 4, objective: 3, region: 2, info: 1 };
+const ANNOUNCE_SINGLETON = { boss: true, trial: true };
+function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false, hero = false, kind = null) {
+  // untagged hero cards are boss-lane drama by convention (the reveal path)
+  const k = kind || (hero ? 'boss' : 'info');
+  const next = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny, hero, kind: k };
+  if (ANNOUNCE_SINGLETON[k]) {
+    // freshest wins: displace the old card of this kind wherever it lives
+    G.announceQueue = G.announceQueue.filter(a => a.kind !== k);
+    if (G.announce && G.announce.kind === k) { G.announce = next; return; }
+  }
   if (!G.announce) { G.announce = next; return; }
   if (G.announce.name === name || G.announceQueue.some(a => a.name === name)) return;
-  G.announceQueue.push(next);
-  if (G.announceQueue.length > 4) G.announceQueue.shift();
+  // stable priority insert: before the first strictly-lower-priority card
+  const prio = ANNOUNCE_PRIO[k] || 1;
+  let at = G.announceQueue.length;
+  for (let i = 0; i < G.announceQueue.length; i++) {
+    if ((ANNOUNCE_PRIO[G.announceQueue[i].kind] || 1) < prio) { at = i; break; }
+  }
+  G.announceQueue.splice(at, 0, next);
+  if (G.announceQueue.length > 4) G.announceQueue.pop(); // drop the lowest-priority tail
+}
+// Launch hygiene (AFT-004): jumping into a trial / gauntlet round / dev
+// launch must not inherit banners from earlier rounds. keepKinds preserves
+// what still applies (the TRIAL MODE notice survives a round jump; the
+// stale round-1 reveal does not).
+function clearAnnouncements(keepKinds = []) {
+  const keep = new Set(keepKinds);
+  if (G.announce && !keep.has(G.announce.kind)) G.announce = null;
+  G.announceQueue = G.announceQueue.filter(a => keep.has(a.kind));
+  if (!G.announce && G.announceQueue.length) G.announce = G.announceQueue.shift();
+  G.combatNotice = null;
 }
 
 function applyPower(p, srcType) {
@@ -887,7 +921,7 @@ function buildLevel(lvl) {
       setAnnounce('alert', gen.accent, 'THE ' + gen.name + ' GAUNTLET',
         'ROUND 1 — THE SENTINELS: ' + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
         (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
-          'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true);
+          'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true, 'boss');
     } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
     // never pays a cache-miss hitch mid-fight
@@ -1338,15 +1372,15 @@ function buildLevel(lvl) {
     const actTag = regionsIn % 3 === 0 ? 'ACT ' + SKIN.acts[actIdx(lvl)].n + ': ' + SKIN.acts[actIdx(lvl)].name : null;
     const intro = SKIN.regionIntros[regionsIn % SKIN.regionIntros.length];
     setAnnounce(null, gen.accent, gen.name, intro ? intro.tag : 'STAGE 1/3 — ARRIVAL', 3.2,
-      [actTag, intro && intro.sub].filter(Boolean).join('  ·  '), null, false, true);
+      [actTag, intro && intro.sub].filter(Boolean).join('  ·  '), null, false, true, 'region');
     SFX.regionIntro();
   } else if (G.modifier) {
     const m = G.modifier;
     setAnnounce(m.icon, m.color, m.name, m.desc, 3.2,
-      [gen.name + ' 2/3', form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
+      [gen.name + ' 2/3', form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '), null, false, false, 'region');
   } else {
     setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4,
-      [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '));
+      [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '), null, false, false, 'region');
   }
   // hard readability cap: random form-skips + stream squads can land the
   // walled modes a brick or two over budget — trim boxed filler to the cap
@@ -1594,11 +1628,11 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
     G.announce = null; G.announceQueue = [];
     if (G.daily) setAnnounce('star', '#ffd54f', 'DAILY CHALLENGE · ' + dailyDateKey(),
       'SAME WALLS · DROPS · STARTER · UPGRADES FOR EVERY PLAYER', 3.4,
-      'LOCAL BEST ' + dailyBest() + ' · ONE SEEDED JOURNEY');
+      'LOCAL BEST ' + dailyBest() + ' · ONE SEEDED JOURNEY', null, false, false, 'trial');
     else setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
       genFor(startLevel).name + ' · ' + SKIN.stageNames[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
-      granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null);
-    encounterCards.forEach(a => setAnnounce(a.icon, a.color, a.name, a.desc, a.max, a.sub, a.spriteId, a.spriteShiny));
+      granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null, null, false, false, 'trial');
+    encounterCards.forEach(a => setAnnounce(a.icon, a.color, a.name, a.desc, a.max, a.sub, a.spriteId, a.spriteShiny, a.hero, a.kind));
   }
 }
 function startDailyRun() {

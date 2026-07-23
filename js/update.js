@@ -740,7 +740,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
       setAnnounce('alert', lastStand ? '#ff1744' : '#ff5252',
         br.poke.n.toUpperCase() + (lastStand ? ' — LAST STAND!' : ' IS ENRAGED!'),
-        lastStand ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4);
+        lastStand ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4,
+        null, null, false, false, 'boss');
       haptic('boss');
     }
   }
@@ -2671,7 +2672,7 @@ function completeProtect(O, name) {
   disperseSwarm();
   statsObjective(O.type, true);
   setAnnounce('star', '#ffd54f', name, 'THE FLOCK SCATTERS — THE SKY IS YOURS', 2.8,
-    null, null, false, true);
+    null, null, false, true, 'objective');
   SFX.levelUp(); haptic('boss');
 }
 // the traveler / relay fell: the objective FAILS (the first fail state). No
@@ -2682,7 +2683,8 @@ function friendlyFaints(fr) {
   fr.dead = true;
   shatterBrick(fr, fr.bx + G.fx, fr.by + G.fy, true); // bare faint
   if (O) { O.failed = true; statsObjective(O.type, false); }
-  setAnnounce('star', '#ff80ab', 'THE TRAVELER FELL — CLEAR THE WAVE!', '', 2.4);
+  setAnnounce('star', '#ff80ab', 'THE TRAVELER FELL — CLEAR THE WAVE!', '', 2.4,
+    null, null, false, false, 'objective');
   SFX.hit(0); haptic('hit');
 }
 function updateObjective(dt) {
@@ -2726,7 +2728,7 @@ function updateObjective(dt) {
       G.enemyShots = G.enemyShots.filter(s => s.boss); // the swarm's fire scatters too
       G.reinforce = 0; // outlasting the swarm ENDS the stage — no grind wave after
       setAnnounce('star', '#ffd54f', 'MIGRATION SURVIVED!', 'THE FLOCK PASSES — THE SKY IS YOURS', 2.8,
-        null, null, false, true);
+        null, null, false, true, 'objective');
       SFX.levelUp(); haptic('boss');
     }
   }
@@ -2769,6 +2771,11 @@ function spawnBonusFlock() {
 // Shared by the trial picker, the dev launcher, and the boss test harness.
 function jumpToGauntletRound(round, phase) {
   if (!(round > 0) || !G.gauntlet) return;
+  // AFT-004: banners/entrances/story cards from earlier rounds do not follow
+  // a jump — only the run-level trial notice survives; the wake/summon below
+  // queues exactly ONE boss reveal for the selected round.
+  clearAnnouncements(['trial']);
+  G.telegraphs = []; G.enemyShots = []; G.columnStrikes = [];
   for (const b of G.bricks) if (b.subBoss) b.dead = true;
   gauntletWake();
   if (round >= 2) {
@@ -2843,7 +2850,7 @@ function gauntletSummonMythic(forceSecret = false) {
     else { G.enemyShots = []; G.telegraphs = []; G.columnStrikes = []; G.bossIntro = 1.8; }
     G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); G.flashT = Math.max(G.flashT, 0.2);
     SFX.roar();
-    G.announce = null; G.announceQueue = [];
+    clearAnnouncements(['trial']);
     setAnnounce('fairy', '#d780ff', SKIN.secret.announce,
       SKIN.secret.announceSub, 4,
       'MAX RIFT · DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE', null, false, true);
