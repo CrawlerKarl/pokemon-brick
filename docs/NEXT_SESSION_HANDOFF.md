@@ -10,17 +10,24 @@
 > (baked hot loops + the adaptive effects budget), and AFT-005B mobile
 > scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 85/85. The gate (`npm test`, ~31–75s headless) ran green before
-> every commit.** Production art: 259 base + 259 radiant + 54 previews +
+> **Suite: 85/85. `npm test` (~31s headless) ran green before every
+> commit.** Production art: 259 base + 259 radiant + 54 previews +
 > **43 boss reveals** + 21 weapon sprites. Both sites live:
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
 > - dist `CrawlerKarl/aetherfall` → the standalone AETHERFALL build
 >
-> **START WITH `AETHERFALL_IMPROVEMENT_BACKLOG.md`.** It is the current
-> product backlog (17 ranked items, acceptance criteria, delivery sequence)
-> and it SUPERSEDES unchecked items in `FULL_GAME_ROADMAP.md` where the two
-> disagree. It was authored against the code as it stands today, so its P0
-> list is the real "what's next" — not the older roadmap milestones.
+> **⚠ ONE THREAD IS OPEN — START HERE: boss-level frame rate.** The owner
+> reported lag on boss levels TWICE. Round one (AFT-018b) fixed the
+> fill-rate causes. Round two landed the **rAF cadence profiler** (below) —
+> **but it has NOT been confirmed on the owner's real phone yet.** Ask
+> whether boss levels feel smooth now before starting P1 work; if not, the
+> next levers are listed under "If boss lag persists".
+>
+> **`AETHERFALL_IMPROVEMENT_BACKLOG.md` remains the scope authority** (17
+> ranked items + acceptance criteria) and SUPERSEDES `FULL_GAME_ROADMAP.md`
+> where they disagree — but read its status banner: its P0 list is DONE, and
+> some of its status lines describe the pre-P0 world. Its **P1 ranking and
+> acceptance criteria are still live and authoritative.**
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -32,7 +39,7 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
-  the reasoning behind it. Newest entries: 2026-07-22a–d.
+  the reasoning behind it. Newest entries run through **2026-07-23b**.
 - `FULL_GAME_ROADMAP.md` — milestone history (useful design context; the
   backlog wins on open items).
 - `archive/` — historical plan docs for shipped features (see its README).
@@ -84,15 +91,16 @@ setup → config → skin → audio → data → pokeworld → aetherfall
 New finals land in `art/aetherfall-production/`. **To wire them in:**
 
 ```
-npm run art-overrides                          # scans final/ + preview/, regenerates the maps
 python3 tools/build-aetherfall-previews.py     # 320px setup portraits from the 1254px masters
+python3 tools/build-aetherfall-reveals.py      # 512px boss-reveal portraits (43 boss ids)
+npm run art-overrides                          # scans final/ + preview/ + reveal/, regenerates the 5 maps
 npm run build-dist                             # regenerates dist-aetherfall/ (RESIDUE must be "none")
 ```
 
 **Live coverage today: 259 base + 259 radiant + 54 preview + 54
-radiant-preview overrides, plus 21 weapon sprites.** Procedural art still
-covers any id with no override and any load gap, so a partial run is always
-safe.
+radiant-preview + 43 reveal overrides, plus 21 weapon sprites.** Procedural
+art still covers any id with no override and any load gap, so a partial run
+is always safe.
 
 **At session start: `git status` — if the user dropped new finals, run
 `npm run art-overrides`, verify, commit, deploy.**
@@ -104,9 +112,11 @@ safe.
   green-heavy art (water/grass/ice/bug lines — ids 13–18, 28–30, 43–45).
   Assuming green silently left 12 vessels sitting on a solid backdrop block.
   `detect_chroma()` medians a 6px border; the despill is channel-matched.
-- **Previews must match the finals' framing (79% subject ratio,
-  `pad = side * 0.134`).** Otherwise a hull visibly jumps size whenever the
-  game swaps between a preview and its fallback final.
+- **Previews/reveals must match THE ID'S OWN final's framing.** The finals'
+  subject ratios VARY per id (0.725–0.785), so both tools measure each id's
+  final (`final_subject_ratio`) and pad to match. A fixed global ratio made
+  hulls visibly GROW when the high-res art finished loading (2026-07-23
+  owner report) — regenerate both sets if you touch either tool.
 
 ### Disk
 
@@ -119,7 +129,17 @@ art.** Local same-origin files only; the no-remote-fetch rule stands.
 
 ---
 
-## What shipped 2026-07-22 (four rounds, all live)
+## What shipped, in brief (full detail in `IMPLEMENTATION_LOG.md`)
+
+**2026-07-22 → 07-23: all eight P0s** — the headless gate (AFT-005A), safe
+zones + fitted labels (001), the SURGE lexicon (003), the kinded announce
+queue (004), the boss reveal scene (002), the oath evolution channels (017),
+save safety (006), frame stability (018 + 018b + the cadence profiler), and
+the mobile scene/label/storm harness (005B). Plus owner-reported fixes: the
+trial picker overflow, the vessel size "pop", and two rounds of boss-level
+performance work.
+
+### Earlier context — the 2026-07-22 art/identity rounds
 
 1. **Calm BREAKER + earned Rift** (07-21 tail, deployed 07-22): classic takes
    zero enemy fire and has no paddle gun; offense paths reskin to ball power
@@ -164,7 +184,36 @@ band so copy never covers the flock or the pilot.)
 
 ## Pick up here
 
-**Every P0 is done.** The backlog's P1 track is next, in its own order:
+### 0. FIRST: confirm boss-level frame rate on a real device
+
+The owner reported boss lag twice; two rounds of fixes shipped, and the
+second is **unconfirmed on hardware**. Everything else waits on this.
+
+- **What shipped, round 1 (AFT-018b)**: adaptive resolution (rung 2 → 75% of
+  native DPR), ~0.5s ladder escalation, `fxGlow()` flattening the big
+  whole-sprite blurs (pilot, paddle hull, pad rings), baked rig gradients.
+- **What shipped, round 2 (cadence)**: work time alone missed the problem —
+  JS was ~1ms while the COMPOSITOR fell behind, so AUTO never engaged.
+  `PERF` now keeps a second ring of real `requestAnimationFrame` cadence
+  (ignoring bootstrap/resume gaps and hidden-tab returns) and
+  `effectsLevel()` treats it as an equal input: cadence >20ms drops bloom +
+  big glows, >26ms adds emission + resolution. Freeze/hit-stop frames are
+  profiled too (phase transitions are the densest boss frames).
+- **How to check on device**: play a finale, then read `DEV.perf()` — it
+  reports `cadenceMs`, `fps`, the active `level`, weighted `load`, and live
+  effect counts. `level` should climb above 0 while it's struggling.
+- **If boss lag persists**, in order: (a) a rung-3 that simplifies
+  atmosphere/scenery and culls offscreen trails, (b) drop the resolution
+  floor below 0.75, (c) profile the boss's own draw path (guard wings, HP
+  glows, entrance fx) — the gate's boss storm gives per-frame gradient/blur
+  counts to compare against, (d) a WebGL compositor (AFT-011 territory).
+- **The gate now guards this**: a BOSS storm runs every `npm test` with
+  machine-portable budgets (grad ≤8, blur ≤14/frame at FULL; ≤6 lean).
+  Absolute ms stay advisory; state-change counts gate hard.
+
+### Then: the P1 track
+
+The backlog's P1 sequence, in its own order:
 
 ```
 AFT-007 ORBITAL RELIC (redesign the bond path)  →  AFT-008 balance matrix
@@ -176,9 +225,9 @@ Notes so you don't redo finished work:
 
 - **`npm test` is the gate** (~31s full, `--fast` ~15s, `--suite` alone):
   syntax → assets → 85 invariants headless → both-skin + dist boots →
-  vocabulary scan → RESIDUE → 14 mobile scenes × 2 viewports with
-  fitted-label assertions (28 screenshots → `.gate-shots/`) → the
-  artifact-storm ledger (`.gate-report.json`). Run it before every commit.
+  vocabulary scan → RESIDUE → 15 mobile scenes × 2 viewports with
+  fitted-label assertions (30 screenshots → `.gate-shots/`) → the wave AND
+  boss storm ledgers (`.gate-report.json`). Run it before every commit.
 - **AFT-003's optional tail** (renaming internal `G.mega`/`megaT`) remains
   ruled out by the backlog itself — engine identifiers ship unchanged.
 - **AFT-018's deeper rungs are available but unimplemented by design**:
@@ -245,6 +294,15 @@ Notes so you don't redo finished work:
   → `storeKey`.
 - **Don't poll agents with sleep loops** — background work notifies
   automatically.
+- **A free-running timer that consumes `gameRand()` must be reset in
+  `resetRun`** — `G.splashCD` wasn't, so a seeded run's RNG stream depended
+  on how many runs preceded it in the page, and the AFT-018 sim-identity
+  check went intermittently red. Fixed 2026-07-23. If a determinism test
+  ever goes flaky, instrument `gameRand` call SITES (wrap it and capture
+  `new Error().stack`) and diff two runs — that found this in minutes.
+- **Effects quality must never touch the seeded stream.** Cosmetic spawns
+  ride `Math.random()`; anything gated by `effectsLevel()` must not sit in
+  front of a `gameRand()` call.
 - **Git worktrees don't carry gitignored files** — an agent running the gate
   in a worktree will find `serve.js`-adjacent gitignored assets missing;
   restore what the task needs or expect a red step that isn't real.

@@ -103,14 +103,15 @@ suite test guards every rect across six sizes.
   bricked startup permanently.
 
 ## Verifying (there is no live human tester)
-**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~37s, fully
+**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~31s, fully
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 14 mobile scenes
-at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (28
-screenshots → `.gate-shots/`) → the artifact-storm benchmark (avg/p95
-ms/frame recorded in `.gate-report.json` every run). `--fast` skips the
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 15 mobile scenes
+at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (30
+screenshots → `.gate-shots/`) → the WAVE and BOSS artifact-storm benchmarks
+(ms/frame plus machine-portable per-frame gradient/blur budgets, recorded in
+`.gate-report.json` every run). `--fast` skips the
 dist/scene/storm steps (~20s); `--suite` runs the invariants alone. Any
 uncaught page error fails it. Run the gate before every commit — the old
 "keep the tab FRONTED for 20 minutes" constraint is dead (headless Chrome
@@ -554,6 +555,23 @@ phone — flag anything only verifiable there.
   corner controls; keep new top/edge-anchored UI behind them.
 
 ## Performance (mobile is the target — keep it smooth)
+- **The effects ladder reads WORK TIME *and* rAF CADENCE (AFT-018/018b).**
+  `PERF` (setup.js) keeps two rings — update/render work, and the real
+  `requestAnimationFrame` cadence — because on phones the compositor can fall
+  behind while JS stays cheap (that was the boss-lag report; work alone never
+  triggered AUTO). `effectsLevel()` escalates on the fast 30-frame window and
+  de-escalates on the slow 120-frame average: rung 1 drops full-frame bloom +
+  the big decorative blurs (`fxGlow`), rung 2 adds thinner emission and 75%
+  render resolution (`applyRenderScale` — backing store only; CSS size,
+  coordinates and hitboxes never change). **Never cull** hostile projectiles,
+  telegraphs, hit feedback, objective state, the vessel, boss HP, or touch
+  controls, and **simulation must stay bit-identical at every level** — which
+  means nothing gated by `effectsLevel()` may sit in front of a `gameRand()`
+  call, and cosmetic spawns stay on `Math.random()`.
+- **A free-running timer that consumes `gameRand()` MUST be reset in
+  `resetRun`.** `G.splashCD` wasn't, so a seeded run's RNG stream depended on
+  how many runs preceded it in the page and the sim-identity test went
+  intermittently red. Same seed → identical wave means identical *stream*.
 - **Never allocate gradients or set `shadowBlur` per-entity per-frame in hot
   loops.** Both are the mobile stutter killers (GC churn + GPU stalls). Repeated
   art is baked ONCE into offscreen sprite caches: `shotSprite`, `auraSprite`,

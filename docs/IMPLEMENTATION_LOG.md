@@ -5,6 +5,36 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-23c — Boss lag round 2: the rAF cadence profiler + a seed leak
+
+The owner reported boss-level lag a SECOND time after AFT-018b. The missing
+signal: the ladder measured only JS **work time**, which stayed ~1ms while
+the **compositor** fell behind — so AUTO never engaged on the device where
+it mattered.
+
+- **`PERF` now keeps a second ring: real `requestAnimationFrame` cadence**,
+  ignoring bootstrap/resume gaps and implausibly short callbacks (a hidden
+  tab must not come back in reduced quality; sustained 20–40ms boss frames
+  must reach the ladder). `effectsLevel()` treats cadence as an EQUAL input —
+  >20ms (below 50 FPS) drops bloom + the big glows, >26ms (below 39 FPS) adds
+  the emission + resolution rung. Freeze/hit-stop frames are profiled too,
+  since phase transitions are among the densest boss frames. `DEV.perf()`
+  reports `cadenceMs` and `fps` for on-device diagnosis.
+- **A real determinism leak, found by the gate.** The AFT-018 sim-identity
+  check went red. Instrumenting `gameRand` CALL SITES (wrap it, capture
+  `new Error().stack`, diff two runs) pinned it in minutes:
+  `update.js:3295` — `G.splashCD`, a free-running timer that draws
+  `gameRand()` when it fires, was never reset by `resetRun`. A seeded run's
+  RNG stream therefore depended on how many runs preceded it in the page,
+  so the test failed intermittently and *correctly*. `resetRun` clears it
+  now; ten alternating FULL/REDUCED seeded runs hash identically. The
+  invariant is recorded in CLAUDE.md.
+- **Still unconfirmed on hardware** — the owner has not retested boss levels
+  since this landed. The handoff leads with it, plus the next levers if the
+  lag persists.
+
+---
+
 ## 2026-07-23b — Trial picker overflow + the ship-size "pop" (user reports)
 
 Two more real-device reports, both fixed with permanent guards:
