@@ -1053,6 +1053,43 @@ window.requestAnimationFrame = function () { return 0; };
     return 'cadence 4 · bank · one-hit legs · ledger relic family · no Mega feed · recall intercept + homecoming · crown fan ×3 w/ boss cap · classic rally arc, no gun · AEGIS life';
   });
 
+  test('items + couriers: drops hold the clear, timers persist, patterns vary', async () => {
+    const e0 = ERR.length;
+    SETTINGS.mode = 'junkie'; SETTINGS.starter = 'none';
+    resetRun(1, true);
+    G.state = 'play'; G.reinforce = 0; G.objective = null;
+    // a falling drop holds the wave open; its exit releases the clear
+    for (const b of G.bricks) if (!b.dead) { b.hp = 0; b.dead = true; }
+    G.enemyShots = [];
+    G.powerups = [{ x: W / 2, y: 60, vy: 300, p: POWERS.star, rot: 0 }];
+    paused = false; G.freeze = 0;
+    update(1 / 60);
+    assert(G.state === 'play', 'the clear did not wait for the falling item');
+    for (let i = 0; i < 900 && G.state === 'play'; i++) update(1 / 60);
+    assert(G.state !== 'play', 'the wave never cleared after the item fell out');
+    // an active item clock freezes outside play — it survives to the next level
+    G.fx_score = { t: 6, tier: 1 };
+    for (let i = 0; i < 120; i++) update(1 / 60);
+    assert(G.fx_score && Math.abs(G.fx_score.t - 6) < 1e-9,
+      'item time burned during ' + G.state);
+    // couriers: three spawns in one run fly three DIFFERENT patterns
+    resetRun(1, false);
+    G.state = 'play';
+    const pats = [];
+    for (let i = 0; i < 3; i++) {
+      G.secret.pendingShard = null;
+      const c = spawnRiftShard(i);
+      assert(c && c.crosser && c.crosser.pat, 'courier ' + i + ' had no flight pattern');
+      pats.push(c.crosser.pat);
+      for (const b of G.bricks) if (b.courier) b.dead = true;
+      G.secret.pendingShard = null;
+    }
+    assert(new Set(pats).size === 3, 'courier patterns repeated within a run: ' + pats.join(','));
+    SETTINGS.starter = 'none';
+    assert(ERR.length === e0, 'errors during the item/courier run');
+    return 'clear holds for drops · releases on exit · timers frozen off-play · courier patterns ' + pats.join('/');
+  });
+
   test('upgrade web: cross-web fusions + apex mechanics', async () => {
     const e0 = ERR.length;
     SETTINGS.mode = 'blaster'; SETTINGS.starter = 'none';
@@ -2983,6 +3020,8 @@ window.requestAnimationFrame = function () { return 0; };
       assert(G.bricks.some(b => b.crosser && !b.dead), 'second flock did not spawn');
       await runFrames(300, () => {
         G.reinforce = 0;
+        G.powerups = []; // falling drops legitimately hold a clear now — this
+        // test is about CROSSERS, so keep the item rule out of its way
         for (const b of G.bricks) if (!b.dead && !b.crosser) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
         return G.state === 'play' ? undefined : false;
       });

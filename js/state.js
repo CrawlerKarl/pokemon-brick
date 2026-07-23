@@ -182,6 +182,11 @@ function exportBundle() {
   const keys = {};
   for (const k of EXPORT_GLOBAL_KEYS) { const v = loadStore(k, 'null'); if (v !== null) keys[k] = v; }
   for (const b of EXPORT_SKIN_KEYS) { const k = storeKey(b); const v = loadStore(k, 'null'); if (v !== null) keys[k] = v; }
+  // a checkpoint the migrator would refuse is ABSENT everywhere else in the
+  // game — exporting it would make validateBundle refuse the player's own
+  // save (the old lvl-1 arrival save was exactly that landmine)
+  const runKey = storeKey('run');
+  if (keys[runKey] != null && !migrateCheckpoint(keys[runKey])) delete keys[runKey];
   return { app: 'wavebreaker', v: 1, skin: SKIN.id, savedAt: new Date().toISOString(), keys };
 }
 function validateBundle(b) {
@@ -290,6 +295,7 @@ function freshSecretState() {
     shards: [false, false, false], offered: [false, false, false], pendingShard: null,
     vmax: false, rewardDraft: false, deferredChoices: null,
     completed: false, lastReward: null,
+    courierPats: [], // flight patterns already flown this run — no repeats
   };
 }
 function secretEligible() {
@@ -1552,8 +1558,10 @@ function buildLevel(lvl) {
   G.reactorUsed = false; G.vortexes = []; G.meteorRain = null;
   G.guardPulsedWave = false; G.chorusUsed = false; G.squadT = 0; G.lanceT = 0;
   // arriving at a region's doorstep checkpoints the run (post-draft state —
-  // buildLevel runs after every pick, and after knockout tree burns too)
-  if (!G.trial && stage === 0) saveCheckpoint();
+  // buildLevel runs after every pick, and after knockout tree burns too).
+  // Level 1 is stage 0 too, but migrateCheckpoint rejects lvl<4 BY DESIGN —
+  // saving there wrote a checkpoint the game itself refused to read
+  if (!G.trial && stage === 0 && lvl >= 4) saveCheckpoint();
 }
 
 // a fresh attack flight arrives after the main formation falls — pure

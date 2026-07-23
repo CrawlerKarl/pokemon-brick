@@ -55,13 +55,17 @@ function scoreMult() {
 
 function tickEffects(dt) {
   G.livesMax = Math.max(G.livesMax || G.lives, G.lives); // health ring denominator tracks the peak
-  for (const k of ['fx_fire', 'fx_laser', 'fx_wide', 'fx_slow', 'fx_magnet', 'fx_score', 'fx_draco']) {
+  // item clocks only BURN while the fight actually runs (owner request,
+  // 2026-07-23): remaining duration survives the results screen, the draft
+  // and the next serve, so a drop caught at the kill shot carries over
+  const fighting = G.state === 'play';
+  if (fighting) for (const k of ['fx_fire', 'fx_laser', 'fx_wide', 'fx_slow', 'fx_magnet', 'fx_score', 'fx_draco']) {
     if (G[k]) { G[k].t -= dt; if (G[k].t <= 0) G[k] = null; }
   }
   if (G.megaT > 0) G.megaT = Math.max(0, G.megaT - dt);
   else if (G.state === 'play') G.mega = Math.min(1, G.mega + dt * starterMod('megaPassive', 0));
   G.starterChillT = Math.max(0, (G.starterChillT || 0) - dt);
-  if (G.ballElement) {
+  if (G.ballElement && fighting) {
     G.ballElementT -= dt;
     if (G.ballElementT <= 0) {
       G.ballElement = null;
@@ -1190,6 +1194,18 @@ function spawnRiftShard(index, x = W / 2, y = Math.max(105, H * 0.22)) {
       crosser: { vx: (fromLeft ? 1 : -1) * Math.max(210, W * 0.26), bobPh: gameRand() * 6 },
       courier: { shardIndex: index },
     };
+    // each courier flies its OWN pattern (owner request, 2026-07-23): never
+    // the same twice in one run, and the pick rides gameRand so different
+    // seeds meet different escorts. Old checkpoints lack the list — lazy-init.
+    {
+      const pool = ['sway', 'weave', 'dash', 'dive'];
+      const used = G.secret.courierPats || (G.secret.courierPats = []);
+      const avail = pool.filter(p => !used.includes(p));
+      const pick = avail.length ? avail : pool;
+      const pat = pick[Math.min(pick.length - 1, Math.floor(gameRand() * pick.length))];
+      used.push(pat);
+      courier.crosser.pat = pat;
+    }
     G.bricks.push(courier);
     getSprite(cs.id);
     // strip, not a hero card — the player must SEE the courier to track it
@@ -2897,6 +2913,14 @@ function fxLoad() {
     + G.ghosts.length * 4 + G.floaters.length * 2 + G.enemyShots.length * 2
     + G.lasers.length * 2) / 900; // 1.0 ≈ the tuned full-load budget
 }
+// The ladder is STICKY (owner report, 2026-07-23: "the screen gets a shade
+// darker for a second, then back — over and over"). A device hovering at a
+// threshold used to flap rung 1 on/off, and rung 1 drops the full-frame
+// bloom — a visible 1s darkening each flip. Escalation still lands the same
+// frame (protect the frame rate first), but dropping BACK a rung now needs
+// a minimum dwell AND a sustained recovery, so marginal devices settle at
+// one steady look instead of flickering between two.
+const FX_LADDER = { level: 0, changedAt: 0, belowSince: 0 };
 function effectsLevel() {
   if (SETTINGS.fx === 'full') return 0;
   if (SETTINGS.fx === 'reduced') return 2;
@@ -2907,9 +2931,17 @@ function effectsLevel() {
   // cadence is an equal input: >20ms is below 50 FPS; >26ms is below 39 FPS.
   const workHot = Math.max(PERF.recent(30), PERF.avg());
   const cadenceHot = Math.max(PERF.cadenceRecent(30), PERF.cadenceAvg());
-  if (workHot > 22 || cadenceHot > 26 || fxLoad() > 1.6) return 2; // emission + resolution
-  if (workHot > 15 || cadenceHot > 20 || fxLoad() > 1.15) return 1; // bloom + big glows first
-  return 0;
+  const raw = (workHot > 22 || cadenceHot > 26 || fxLoad() > 1.6) ? 2 // emission + resolution
+    : (workHot > 15 || cadenceHot > 20 || fxLoad() > 1.15) ? 1 : 0;   // bloom + big glows first
+  const L = FX_LADDER, t = performance.now();
+  if (raw > L.level) { L.level = raw; L.changedAt = t; L.belowSince = 0; }
+  else if (raw < L.level) {
+    if (!L.belowSince) L.belowSince = t;
+    if (t - L.changedAt > 4000 && t - L.belowSince > 2500) {
+      L.level--; L.changedAt = t; L.belowSince = raw < L.level ? t : 0;
+    }
+  } else L.belowSince = 0;
+  return L.level;
 }
 function fxWantedScale() { return effectsLevel() >= 2 ? 0.75 : 1; }
 
@@ -3497,8 +3529,19 @@ function update(dt) {
   // off-screen retires them quietly (no faint, no reward)
   for (const br of G.bricks) {
     if (br.dead || !br.crosser) continue;
-    br.bx += br.crosser.vx * dt * ts;
-    br.by += Math.sin(G.time * 4 + br.crosser.bobPh) * 22 * dt * ts;
+    const C = br.crosser;
+    // COURIER flight patterns (owner request): sway = the calm classic,
+    // weave = deep serpentine, dash = surge-and-stall, dive = a long swoop.
+    // Dash's speed modulation averages ×1.0, so every pattern keeps the
+    // same honest ~4.2s crossing. Plain crossers keep the original bob.
+    const hx = C.pat === 'dash' ? 0.45 + 1.1 * (0.5 + 0.5 * Math.sin(G.time * 5.2 + C.bobPh)) : 1;
+    br.bx += C.vx * hx * dt * ts;
+    if (C.pat === 'weave') br.by += Math.sin(G.time * 2.4 + C.bobPh) * 210 * dt * ts;
+    else if (C.pat === 'dive') br.by += Math.cos(G.time * 1.8 + C.bobPh) * 170 * dt * ts;
+    else if (C.pat === 'sway') br.by += Math.sin(G.time * 3.2 + C.bobPh) * 60 * dt * ts;
+    else br.by += Math.sin(G.time * 4 + C.bobPh) * 22 * dt * ts;
+    // a courier never leaves the high band — the low band is the ship's
+    if (br.courier) br.by = Math.max(86, Math.min(H * 0.5, br.by));
     if ((br.crosser.vx > 0 && br.bx > W + 80) || (br.crosser.vx < 0 && br.bx < -80)) {
       br.dead = true;
       // a RIFT COURIER that makes the far edge takes its shard with it
@@ -5426,6 +5469,10 @@ function update(dt) {
     // ESCORT/DEFEND protects the friendly. A FAILED objective releases the
     // wave to a normal attrition clear (losing the bonus is the only cost).
     if (G.objective && !G.objective.done && !G.objective.failed) return;
+    // FALLING ITEMS hold it open too (owner request, 2026-07-23): a drop
+    // earned on the kill shot must be catchable — the stage waits until
+    // every pickup is caught or falls off-screen (gravity bounds the wait)
+    if (G.powerups.length) return;
     // the enemies are gone — any ROCK TOMB barriers crumble on their own
     for (const b of G.bricks) if (!b.dead && b.barrier) { b.dead = true; burst(b.bx + G.fx, b.by + G.fy, '#a1887f', 12, 180, 0.5); }
     if (G.reinforce > 0) {

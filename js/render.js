@@ -267,9 +267,13 @@ function glintSprite() {
 // cheap: one canvas read + a couple of scaled drawImages. Respects the
 // reduce-flashes accessibility toggle.
 let bloomA = null, bloomB = null, bloomW = 0;
+let bloomEase = 1; // the bloom CROSSFADES between ladder rungs — a hard
+// on/off read as a rhythmic 1s darkening on marginal phones (owner report)
 function drawBloom() {
   if (SETTINGS.reduceFlash || !W || !H) return;
-  if (effectsLevel() >= 1) return; // AFT-018 rung 1: full-frame bloom goes first
+  const target = effectsLevel() >= 1 ? 0 : 1; // AFT-018 rung 1: bloom goes first
+  bloomEase += (target - bloomEase) * 0.06;   // ~0.5s glide per rendered frame
+  if (bloomEase < 0.04) { if (target === 0) bloomEase = 0; return; } // skip the pass while invisible
   const bw = Math.max(2, Math.round(W / 2)), bh = Math.max(2, Math.round(H / 2));
   if (!bloomA || bloomW !== bw) {
     bloomA = document.createElement('canvas'); bloomA.width = bw; bloomA.height = bh;
@@ -285,7 +289,7 @@ function drawBloom() {
   a.drawImage(bloomB, 0, 0, bw, bh);          // back up = smeared
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';   // additive: brights bloom, darks barely lift
-  ctx.globalAlpha = 0.22;
+  ctx.globalAlpha = 0.22 * bloomEase;         // rung changes GLIDE, never pop
   ctx.drawImage(bloomA, 0, 0, W, H);
   ctx.restore();
 }
@@ -5150,8 +5154,11 @@ function drawBossReveal() {
     ctx.beginPath(); ctx.arc(W / 2, artCy, side * 0.58 * pop, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
     if (r.kind === 'sentinels' && r.ids.length > 1) {
-      const each = side * (r.ids.length === 2 ? 0.62 : 0.5) * pop;
-      const span = Math.min(W - 40, side * 1.3);
+      // the trio must sit WHOLLY inside the frame (owner report: outer
+      // herald portraits ran off phone edges) — cap each portrait by the
+      // width share, then cap the spread so outer edges keep a margin
+      const each = Math.min(side * (r.ids.length === 2 ? 0.62 : 0.5), (W - 32) / r.ids.length) * pop;
+      const span = Math.min(W - each - 24, side * 1.3);
       r.ids.forEach((id, i) => {
         const fx2 = W / 2 + span * (i / (r.ids.length - 1) - 0.5);
         drawRevealPortrait(id, fx2, artCy, each, a);
@@ -5189,9 +5196,11 @@ function drawBossReveal() {
       const tSide = Math.max(60, b.w * 1.12);
       let sx2 = W / 2, sSide = side;
       if (r.kind === 'sentinels' && r.ids.length > 1) {
-        const span = Math.min(W - 40, side * 1.3);
+        // mirror the hold branch's clamps so the fly starts exactly where
+        // the held portraits actually sat
+        sSide = Math.min(side * (r.ids.length === 2 ? 0.62 : 0.5), (W - 32) / r.ids.length);
+        const span = Math.min(W - sSide - 24, side * 1.3);
         sx2 = W / 2 + span * (i / (r.ids.length - 1) - 0.5);
-        sSide = side * (r.ids.length === 2 ? 0.62 : 0.5);
       }
       const cx = r.reduced ? tx : sx2 + (tx - sx2) * e;
       const cy = r.reduced ? ty : artCy + (ty - artCy) * e;

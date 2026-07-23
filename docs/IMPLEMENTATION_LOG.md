@@ -5,6 +5,48 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-23f — Five owner reports: the darkening flicker, courier variety, item fairness, the trio frame
+
+- **The rhythmic screen-darkening (level 1, ~1s, repeating)** was the
+  AFT-018 effects ladder FLAPPING: `effectsLevel()` was stateless, so a
+  device hovering at the 20ms cadence threshold flipped rung 1 on/off — and
+  rung 1 drops the full-frame bloom, which reads as "a shade darker".
+  Two-part fix: the ladder is STICKY (`FX_LADDER` — escalation still lands
+  the same frame, but dropping back needs 4s of dwell + 2.5s of sustained
+  recovery), and the bloom now CROSSFADES over ~0.5s (`bloomEase`) so even
+  a legitimate rung change glides instead of popping. Sim untouched —
+  both changes are render-side only.
+- **RIFT COURIER flight patterns** (owner request): each courier draws one
+  of four patterns — sway (the calm classic), weave (deep serpentine),
+  dash (surge-and-stall; speed modulation averages ×1.0 so the crossing
+  time stays honest), dive (a long swoop) — via `gameRand` at spawn, never
+  repeating within a run (`G.secret.courierPats`), clamped to the high
+  band. Plain crossers keep the original bob byte-for-byte.
+- **Falling drops hold the stage clear** (owner request): the clear guard
+  waits until every pickup is caught or falls off-screen — gravity bounds
+  the wait. And **item clocks only burn during 'play'** (`tickEffects`), so
+  a drop caught on the kill shot carries its remaining duration through
+  results, the draft, and into the next level (element-orb timers too).
+- **The herald trio reveal overflowed phone edges** (owner report): the
+  sentinel spread put outer portrait CENTERS at the screen margin. Both the
+  hold and fly branches now cap each portrait by width share and the span
+  by `W - each - 24`, so the trio sits wholly inside at any viewport.
+- **A real save-safety bug surfaced by the new test:** `buildLevel` saved a
+  checkpoint on EVERY real-run arrival stage — including level 1 — while
+  `migrateCheckpoint` rejects lvl<4 by design. Harmless for CONTINUE, but
+  `validateBundle` refused the player's OWN EXPORT during levels 1–3 of a
+  fresh journey ("THE CHECKPOINT IN THIS SAVE IS UNREADABLE"). Fixed on
+  both sides: the save now happens only at lvl ≥ 4, and `exportBundle`
+  drops a checkpoint the migrator would refuse (grandfathering anyone who
+  already has the stale lvl-1 key in storage).
+- Suite grows to 87: 'items + couriers' locks the clear-hold, the frozen
+  item clocks, and three-distinct-patterns-per-run; the Kanto-arc director
+  test clears pickups before asserting crossers never hold a wave hostage.
+
+Gate: full `npm test` green in 70s, 87/87, RESIDUE none, storms in budget.
+
+---
+
 ## 2026-07-23e — AFT-007 ORBITAL RELIC + tappable wedge labels + the dock beat
 
 The owner confirmed boss frame rate on hardware (the open thread closed) and

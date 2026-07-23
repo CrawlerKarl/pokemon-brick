@@ -37,7 +37,7 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
-  the reasoning behind it. Newest entries run through **2026-07-23d**.
+  the reasoning behind it. Newest entries run through **2026-07-23f**.
 - `FULL_GAME_ROADMAP.md` — milestone history (useful design context; the
   backlog wins on open items).
 - `archive/` — historical plan docs for shipped features (see its README).
