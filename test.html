@@ -1760,6 +1760,22 @@ window.requestAnimationFrame = function () { return 0; };
       const before = G.enemyShots.length;
       const shot = spawnEnemyShot({ x: W / 2, y: 120, vy: 240, type: 'fire' });
       assert(shot && G.enemyShots.length === before + 1, 'hostile fire culled under REDUCED');
+      // AFT-018b: the fast window escalates in ~0.5s; the glow gate and the
+      // resolution controller respond to the ladder (scale never under suite)
+      SETTINGS.fx = 'auto';
+      for (let i = 0; i < 120; i++) PERF.push(1, 1);      // calm history
+      for (let i = 0; i < 30; i++) PERF.push(20, 15);     // a 0.5s spike
+      assert(PERF.recent(30) > 30 && PERF.avg() < 15,
+        'fast/slow windows broken: recent=' + PERF.recent(30).toFixed(1) + ' avg=' + PERF.avg().toFixed(1));
+      assert(effectsLevel() === 2, 'a 0.5s spike must escalate immediately (got ' + effectsLevel() + ')');
+      assert(fxWantedScale() === 0.75, 'rung 2 must request 75% resolution');
+      SETTINGS.fx = 'full';
+      assert(fxGlow(12) === 12, 'FULL must keep decorative glows');
+      SETTINGS.fx = 'reduced';
+      assert(fxGlow(12) === 0, 'REDUCED must flatten decorative glows');
+      update(1 / 60); // the controller runs — but never rescales under the suite
+      assert(RENDER_SCALE === 1, 'adaptive resolution must stay off under the suite');
+      for (let i = 0; i < 120; i++) PERF.push(1, 1);      // settle the ring for later tests
       // decorative emission DOES scale down (the whole point)
       G.particles.length = 0;
       burst(W / 2, H / 2, '#fff', 20, 200, 0.6);

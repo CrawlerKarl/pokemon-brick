@@ -2781,13 +2781,15 @@ function fxLoad() {
 function effectsLevel() {
   if (SETTINGS.fx === 'full') return 0;
   if (SETTINGS.fx === 'reduced') return 2;
-  // AUTO: the moving frame average is the truth; weighted load is the
-  // early-warning signal so degradation starts BEFORE the drop is felt
-  const avg = PERF.avg();
-  if (avg > 22 || fxLoad() > 1.6) return 2; // rung 2: cut emission + lifetimes
-  if (avg > 15 || fxLoad() > 1.15) return 1; // rung 1: drop full-frame bloom first
+  // AUTO: ESCALATE on the fast 30-frame window (~0.5s — a boss entrance
+  // spike degrades before the drop is felt), DE-ESCALATE only when the slow
+  // 120-frame average also recovers — hysteresis in the right direction.
+  const hot = Math.max(PERF.recent(30), PERF.avg());
+  if (hot > 22 || fxLoad() > 1.6) return 2; // rung 2: emission + resolution
+  if (hot > 15 || fxLoad() > 1.15) return 1; // rung 1: bloom + big glows first
   return 0;
 }
+function fxWantedScale() { return effectsLevel() >= 2 ? 0.75 : 1; }
 
 // ---- AFT-002: THE BOSS REVEAL — a separate scene, not a combat layer ----
 // Freeze combat, show the full-resolution portrait with a dedicated info
@@ -3019,6 +3021,15 @@ function update(dt) {
     if (G.announce.t <= 0) G.announce = G.announceQueue.length ? G.announceQueue.shift() : null;
   }
   musicTick();
+  // AFT-018b: the adaptive-resolution controller — debounced so the canvas
+  // resize (which blanks one frame) only happens under SUSTAINED pressure,
+  // and never under the headless suite (render-only concern; the suite pins
+  // its own viewport).
+  G.fxScaleCD = Math.max(0, (G.fxScaleCD || 0) - dt);
+  if (!(typeof window !== 'undefined' && window.__SUITE) && G.fxScaleCD <= 0) {
+    const want = fxWantedScale();
+    if (want !== RENDER_SCALE) { applyRenderScale(want); G.fxScaleCD = 1.5; }
+  }
   // AFT-006: blocked storage is said OUT LOUD, once — never silent loss
   if (!STORAGE_HEALTH.writable && !STORAGE_HEALTH.noticed) {
     STORAGE_HEALTH.noticed = true;

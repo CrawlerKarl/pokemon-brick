@@ -1999,11 +1999,21 @@ function drawPilotRig(x, py, preview = false) {
   const bob = Math.sin(G.time * 3.2) * (preview ? 1.2 : 2.5);
   const y = py + bob;
   const tilt = preview ? 0 : Math.max(-0.34, Math.min(0.34, G.paddle.speed * 0.00028));
-  // element aura — the "this is you" glow
-  const ag = ctx.createRadialGradient(x, y, 4, x, y, s * 0.8);
-  ag.addColorStop(0, col + '3c'); ag.addColorStop(0.7, col + '14'); ag.addColorStop(1, col + '00');
-  ctx.fillStyle = ag;
-  ctx.beginPath(); ctx.arc(x, y, s * 0.8, 0, Math.PI * 2); ctx.fill();
+  // element aura — the "this is you" glow (AFT-018b: baked once per colour,
+  // drawn in local space so one sprite serves every position/size)
+  {
+    const gk = 'rigaura_' + col;
+    if (!fxCache[gk]) {
+      const c2 = document.createElement('canvas'); c2.width = c2.height = 128;
+      const q = c2.getContext('2d');
+      const g2 = q.createRadialGradient(64, 64, 3, 64, 64, 62);
+      g2.addColorStop(0, col + '3c'); g2.addColorStop(0.7, col + '14'); g2.addColorStop(1, col + '00');
+      q.fillStyle = g2; q.beginPath(); q.arc(64, 64, 62, 0, Math.PI * 2); q.fill();
+      fxCache[gk] = c2;
+    }
+    const d = s * 1.6;
+    ctx.drawImage(fxCache[gk], x - d / 2, y - d / 2, d, d);
+  }
   // AFFINITY HALO (light/dark skins): the chosen path rides the pilot — a
   // slow-breathing ring in radiant gold or umbral violet, brighter under Mega
   const affCol = affinityColor();
@@ -2031,9 +2041,13 @@ function drawPilotRig(x, py, preview = false) {
   ctx.save();
   ctx.translate(x, y + s * 0.34);
   ctx.rotate(tilt * 0.6);
-  const jg = ctx.createLinearGradient(0, 0, 0, 28 * fl);
-  jg.addColorStop(0, '#ffffff'); jg.addColorStop(0.35, col); jg.addColorStop(1, col + '00');
-  ctx.fillStyle = jg;
+  const jk = 'rigjet_' + col + '_' + Math.round(fl * 10); // AFT-018b: ~12 buckets
+  if (!fxCache[jk]) {
+    const jg = ctx.createLinearGradient(0, 0, 0, 28 * (Math.round(fl * 10) / 10));
+    jg.addColorStop(0, '#ffffff'); jg.addColorStop(0.35, col); jg.addColorStop(1, col + '00');
+    fxCache[jk] = jg;
+  }
+  ctx.fillStyle = fxCache[jk];
   ctx.beginPath();
   ctx.moveTo(-7, 0);
   ctx.quadraticCurveTo(-4, 14 * fl, 0, 26 * fl);
@@ -2071,7 +2085,7 @@ function drawPilotRig(x, py, preview = false) {
     ctx.globalAlpha = 1;
   }
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
-  ctx.shadowBlur = mega ? 26 : 12 + 14 * atk;
+  ctx.shadowBlur = fxGlow(mega ? 26 : 12 + 14 * atk); // AFT-018b: whole-sprite blur
   if (ok) drawAffinityVessel(pil.id, 0, 0, s);
   else {
     // Safe loading fallback for the authored neutral training drone.
@@ -2318,7 +2332,7 @@ function drawPaddle() {
     }
   }
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : (G.fx_laser ? '#ffd54f' : (G.starter ? TYPE_COLORS[G.starter] : '#42a5f5'));
-  ctx.shadowBlur = mega ? 26 : 18;
+  ctx.shadowBlur = fxGlow(mega ? 26 : 18); // AFT-018b: whole-hull blur
   // hull palette matches the starter — the paddle IS your partner's rig
   const HULLS = {
     fire:  ['#ffe0b2', '#ff8a50', '#bf360c'],
@@ -4799,7 +4813,7 @@ function drawTouchControls() {
       ctx.beginPath(); ctx.arc(f.x, f.y, f.r - 12, -Math.PI / 2, -Math.PI / 2 + Math.min(1, G.charge) * Math.PI * 2);
       ctx.lineWidth = 4; ctx.strokeStyle = full ? '#e0ffff' : '#80deea'; ctx.stroke();
       if (full) {
-        ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 12 + Math.sin(G.time * 10) * 6;
+        ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = fxGlow(12 + Math.sin(G.time * 10) * 6);
         ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.strokeStyle = '#e0ffff'; ctx.lineWidth = 2; ctx.stroke();
         ctx.shadowBlur = 0;
       }
@@ -4847,7 +4861,7 @@ function drawTouchControls() {
     ctx.stroke();
   }
   if (ready) {
-    ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = 12 + Math.sin(G.time * 6) * 8;
+    ctx.shadowColor = '#ffd54f'; ctx.shadowBlur = fxGlow(12 + Math.sin(G.time * 6) * 8);
     ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
     ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.shadowBlur = 0;
@@ -4998,6 +5012,12 @@ function drawZoneOverlay() {
   }
   ctx.restore();
 }
+// AFT-018b: DECORATIVE GLOW GATE — shadowBlur forces a GPU blur pass over
+// the draw's whole bounding box; over a 100px+ sprite EVERY frame it is a
+// fill-rate bill phones actually pay. At ladder rung ≥1 the big decorative
+// glows go flat (the information — ring, colour, label — all remains).
+function fxGlow(px) { return effectsLevel() >= 1 ? 0 : px; }
+
 // ── AFT-002: THE BOSS REVEAL SCENE ──────────────────────────────────────────
 // Full-resolution portrait art (AETHERFALL_ART_REVEAL 512px exports on the
 // aetherfall skin; the skin's own largest sprite elsewhere), an info panel

@@ -5,6 +5,50 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-23 — The region-1 boss frame drop (real-device report → AFT-018b)
+
+The owner hit a hard frame drop on the region-1 finale on a real phone —
+the first real-device data point, and an honest gap: AFT-018's storm
+benchmark tested a WAVE, not a BOSS fight, and the ladder's rungs never
+reached the boss fight's actual costs. Instrumented the exact fight live
+(per-frame gradient/blur/draw counts with a pinned Velmora at last stand,
+guards live, auto-fire): JS was innocent (~1ms, grad 3.1/frame) — the
+phone cost is GPU FILL-RATE: bloom's 3-pass full-canvas composite, the
+WHOLE-SPRITE shadowBlur on the pilot (26px blur over a 100px+ sprite,
+every frame) and paddle hull, the breathing pad glows, and the doubled
+blit surface of a boss fight.
+
+- **Adaptive resolution (the big phone lever)**: at ladder rung 2 the
+  canvas backing store drops to 75% of native DPR (≈44% fewer pixels for
+  every full-screen pass) — CSS size, coordinates, hitboxes, and layout
+  untouched by construction. Debounced 1.5s (a canvas resize blanks one
+  frame); never engages under the headless suite.
+- **The ladder reacts in ~0.5s, not 2s**: `PERF.recent(30)` escalates,
+  the 120-frame average de-escalates — hysteresis in the right direction,
+  so a boss-entrance spike degrades before the drop is felt.
+- **`fxGlow()`**: at rung ≥1 the big DECORATIVE blurs go flat — the
+  pilot's whole-sprite glow, the paddle hull glow, the breathing
+  full-charge and SURGE-ready pad rings. Information (ring, colour,
+  label) all remains.
+- **Baked the last every-frame rig gradients**: the element aura
+  (per-colour sprite) and the jet flame (bucketed cached gradients).
+- **The gate now runs a BOSS storm**: the exact reported scenario
+  (region-1 finale, last stand, guards, auto-fire, pinned boss) timed
+  every run, with MACHINE-PORTABLE budgets — grad ≤ 8 and blur ≤ 14 per
+  frame at FULL, blur ≤ 6 lean (measured now: 2.1 / 4.9 / 3.6). Absolute
+  ms stay advisory (machine-dependent); state-change budgets gate hard.
+- Suite: the AFT-018 test grew the fast-escalation proof (a 0.5s spike →
+  rung 2), `fxWantedScale`, `fxGlow` gating, and suite-never-rescales.
+
+What to expect on the phone: AUTO now drops bloom + the big glows within
+half a second of pressure and steps to 75% resolution if it persists; the
+player can also pin EFFECTS QUALITY: REDUCED in settings for the lean
+path always. If the finale still drops after this, the next levers are
+rung-3 (atmosphere/scenery simplification) and a WebGL compositor —
+both noted in the backlog's AFT-011/018 territory.
+
+---
+
 ## 2026-07-22o — AFT-018: frame stability (the last P0)
 
 Two halves, one contract: **frame rate is combat correctness.**

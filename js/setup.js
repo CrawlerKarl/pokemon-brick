@@ -56,6 +56,16 @@ const PERF = {
     for (let k = 0; k < this.n; k++) s += this.u[k] + this.r[k];
     return this.n ? s / this.n : 0;
   },
+  recent(n = 30) { // the FAST window — escalation reacts in ~0.5s, not 2s
+    const m = Math.min(n, this.n);
+    if (!m) return 0;
+    let s = 0;
+    for (let k = 0; k < m; k++) {
+      const idx = (this.i - 1 - k + 120) % 120;
+      s += this.u[idx] + this.r[idx];
+    }
+    return s / m;
+  },
   p95() { // dev/tests only — allocates a scratch copy, never call per frame
     if (!this.n) return 0;
     const t = [];
@@ -64,6 +74,19 @@ const PERF = {
     return t[Math.floor(t.length * 0.95)];
   },
 };
+// AFT-018b: ADAPTIVE RESOLUTION — the single biggest phone-GPU lever. The
+// canvas backing store drops to 75% of native DPR under sustained load
+// (≈44% fewer pixels for bloom, atmosphere, vignette, and every sprite
+// composite) while the CSS size — and therefore every coordinate, hitbox,
+// and layout — is untouched. Render-only by construction.
+let RENDER_SCALE = 1;
+function applyRenderScale(scale) {
+  if (scale === RENDER_SCALE || !W || !H || !canvas) return;
+  RENDER_SCALE = scale;
+  const eff = DPR * RENDER_SCALE;
+  canvas.width = Math.round(W * eff); canvas.height = Math.round(H * eff);
+  ctx.setTransform(eff, 0, 0, eff, 0, 0);
+}
 try { if (!localStorage.getItem('pkbrk-v')) localStorage.setItem('pkbrk-v', '1'); } catch (e) { /* ok */ }
 // canvas-only text doesn't reliably trigger @font-face loading — kick the
 // local Orbitron variable font explicitly so the first frame isn't fallback
@@ -97,12 +120,12 @@ function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   // no-op guard: setting canvas.width blanks the canvas for a frame, so
   // spurious resize events (scrollbars, zoom, focus) must not rebuild anything
-  if (w === W && h === H && dpr === DPR && canvas.width === w * dpr) return;
+  if (w === W && h === H && dpr === DPR && canvas.width === Math.round(w * dpr * RENDER_SCALE)) return;
   DPR = dpr;
   W = w; H = h;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-  canvas.width = W * DPR; canvas.height = H * DPR;
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  canvas.width = Math.round(W * DPR * RENDER_SCALE); canvas.height = Math.round(H * DPR * RENDER_SCALE);
+  ctx.setTransform(DPR * RENDER_SCALE, 0, 0, DPR * RENDER_SCALE, 0, 0);
   const probe = document.getElementById('safe-probe');
   SAFE_B = probe ? Math.round(probe.getBoundingClientRect().height) : 0;
   // top/left/right insets keep corner controls and the HUD clear of notches

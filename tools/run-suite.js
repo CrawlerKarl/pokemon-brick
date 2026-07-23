@@ -260,22 +260,57 @@ async function runStorm(cdp, port, reuse) {
   const res = await page.evaluate(`(() => {
     try {
       resize(); ZONE_DEBUG = false; upgradeTreeOpen = false; advOpen = false;
+      // instrument the context: gradient allocations + shadowBlur passes per
+      // frame are MACHINE-PORTABLE budgets (absolute ms are not)
+      if (!window.__GC) {
+        window.__GC = { grad: 0, blur: 0 };
+        const pL = ctx.createLinearGradient.bind(ctx), pR = ctx.createRadialGradient.bind(ctx);
+        ctx.createLinearGradient = (...a) => { __GC.grad++; return pL(...a); };
+        ctx.createRadialGradient = (...a) => { __GC.grad++; return pR(...a); };
+        const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'shadowBlur');
+        Object.defineProperty(ctx, 'shadowBlur', {
+          set(v) { if (v > 0) __GC.blur++; d.set.call(this, v); },
+          get() { return d.get.call(this); },
+        });
+      }
+      const timed = (frames, perFrame) => {
+        const times = [];
+        __GC.grad = 0; __GC.blur = 0;
+        for (let i = 0; i < frames; i++) {
+          const a = performance.now();
+          paused = false; G.freeze = 0;
+          if (perFrame) perFrame(i);
+          update(1/60); render();
+          times.push(performance.now() - a);
+        }
+        times.sort((x, y) => x - y);
+        return { avg: +(times.reduce((s2, v) => s2 + v, 0) / times.length).toFixed(2),
+          p95: +times[Math.floor(times.length * 0.95)].toFixed(2),
+          grad: +(__GC.grad / frames).toFixed(1), blur: +(__GC.blur / frames).toFixed(1) };
+      };
+      // ── pass A: the WAVE storm (Surge + forced burst/ring load) ──
       DEV.launch({ level: 24, mode: 'junkie', diff: 'hard', seed: 'STORM', upg: 'arsenal:4,surge:4,impact:4,prism:3' });
       paused = false; G.freeze = 0;
       for (let i = 0; i < 90; i++) update(1/60);
-      // the worst realistic combination: Surge active, bursts, rings, shots
       G.mega = 1; tryMega();
       for (let i = 0; i < 6; i++) { burst(W/2, H/2, '#ffd54f', 70, 420, 1); ringFx(W/2, H/2, '#80d8ff', 10, 200, 5, 0.7); }
-      const times = [];
-      for (let i = 0; i < 120; i++) {
-        const a = performance.now();
-        paused = false; G.freeze = 0;
-        update(1/60); render();
-        times.push(performance.now() - a);
-      }
-      times.sort((x, y) => x - y);
-      const avg = times.reduce((s2, v) => s2 + v, 0) / times.length;
-      return JSON.stringify({ ok: true, avg: +avg.toFixed(2), p95: +times[Math.floor(times.length * 0.95)].toFixed(2),
+      const wave = timed(120);
+      // ── pass B: the BOSS storm — the reported real-device drop scenario:
+      // the region-1 finale at last stand, guards live, player firing ──
+      SETTINGS.autoFire = true;
+      DEV.launch({ level: 3, mode: 'junkie', diff: 'hard', seed: 'BOSSTORM' });
+      paused = false; G.freeze = 0;
+      for (let i = 0; i < 10; i++) update(1/60);
+      jumpToGauntletRound(1, 3);
+      while (G.reveal) update(0.5);
+      const pin = () => { const b = G.bricks.find(x => !x.dead && x.isBoss); if (b) b.hp = Math.max(b.hp, Math.round(b.maxHp * 0.2)); return b; };
+      for (let i = 0; i < 180; i++) { G.freeze = 0; pin(); update(1/60); }
+      const bossFull = timed(120, i => { const b = pin(); mouseX = b ? b.bx + G.fx + Math.sin(i * 0.08) * 80 : W / 2; });
+      SETTINGS.fx = 'reduced';
+      const bossLean = timed(90, i => { const b = pin(); mouseX = b ? b.bx + G.fx : W / 2; });
+      SETTINGS.fx = 'auto'; SETTINGS.autoFire = false;
+      return JSON.stringify({ ok: true, wave, bossFull, bossLean,
+        avg: wave.avg, p95: wave.p95,
         counts: { particles: G.particles.length, shots: G.enemyShots.length, lasers: G.lasers.length, rings: G.rings.length } });
     } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 140) }); }
   })()`).then(JSON.parse).catch(e => ({ ok: false, err: e.message }));
@@ -408,15 +443,20 @@ async function main() {
       if (sc.failures.length) { if (sc.page) sc.page.close(); return finish(1); }
       scenePage = sc.page ? { page: sc.page, sid: sc.sid } : null;
     }
-    // ── AFT-005B/018: the artifact-storm benchmark (rides the scene page) ──
+    // ── AFT-005B/018: the artifact storms (wave + BOSS) on the scene page ──
     {
       const st = await runStorm(cdp, port, scenePage);
-      const catastrophic = st.ok && st.avg > 50; // absolute ms are machine-dependent — only a collapse fails
-      step('artifact-storm benchmark', !!st.ok && !catastrophic,
-        st.ok ? 'avg ' + st.avg + 'ms · p95 ' + st.p95 + 'ms/frame @390×844 dsf2' : (st.err || 'failed'), st.ms);
+      const catastrophic = st.ok && (st.wave.avg > 50 || st.bossFull.avg > 50);
+      // machine-PORTABLE budgets: GPU state changes per frame, not ms — the
+      // boss fight may never regress back into per-frame gradient/blur churn
+      const overBudget = st.ok && (st.bossFull.grad > 8 || st.bossFull.blur > 14 || st.bossLean.blur > 6);
+      step('artifact storms (wave + boss)', !!st.ok && !catastrophic && !overBudget,
+        st.ok
+          ? 'wave ' + st.wave.avg + 'ms · boss ' + st.bossFull.avg + 'ms (grad ' + st.bossFull.grad + ' · blur ' + st.bossFull.blur + '/frame; lean blur ' + st.bossLean.blur + ')'
+          : (st.err || 'failed'), st.ms);
       report.storm = st;
       if (scenePage) scenePage.page.close();
-      if (!st.ok || catastrophic) return finish(1);
+      if (!st.ok || catastrophic || overBudget) return finish(1);
     }
 
     return finish(0);
