@@ -5,6 +5,26 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-22n — Gate trim: same coverage, 31s (owner: "trim what's safely trimmable")
+
+Measured where the 37s went before cutting anything. **Zero of the 84
+invariants were cut** — headless, the whole suite costs ~8s and every test is
+load-bearing (the five non-overlap levels total 0.5s; the bit-identity,
+calm-classic, and boss-kit guards are the repo's spine). What WAS cut is dead
+harness wall-clock:
+
+- The two arbitrary 2.5s "settle" sleeps per boot smoke → 1s (async boot
+  errors surface within the first frames; deep behavior is the suite's job).
+- The scene runner now uses ONE Chrome page for both viewports (a
+  device-metrics switch + resize() is all a viewport change is), and the
+  artifact storm rides that same page afterwards — two page boots saved.
+- Timeouts sized to reality: suite hang fails in 5 min, not 30; boots in 30s.
+
+Full gate 37s → **31s**, `--fast` ~20s → ~15s. Assertions, scenes,
+screenshots, and the storm ledger are byte-for-byte the same checks.
+
+---
+
 ## 2026-07-22m — AFT-005B: mobile scenes, label assertions, the artifact storm
 
 The full gate now drives the game through **14 named scenes** (home,

@@ -47,8 +47,8 @@ const CHROME_PATHS = [
   '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
   '/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium',
 ];
-const SUITE_TIMEOUT_MS = 30 * 60 * 1000;
-const BOOT_TIMEOUT_MS = 45 * 1000;
+const SUITE_TIMEOUT_MS = 5 * 60 * 1000; // the suite runs in ~10s — a hang fails fast
+const BOOT_TIMEOUT_MS = 30 * 1000;
 
 const args = process.argv.slice(2);
 const FAST = args.includes('--fast');
@@ -215,16 +215,18 @@ async function runScenes(cdp, port) {
   fs.mkdirSync(shotsDir, { recursive: true });
   const failures = [];
   let shots = 0;
+  // one page, both viewports, then the storm — page boots are the expensive
+  // part, and a device-metrics switch + resize() is all a viewport change is
+  const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev&touch`);
+  const sid = page.sessionId;
+  const booted = await waitFor(page.evaluate,
+    `typeof SKIN !== 'undefined' && typeof DEV !== 'undefined' && typeof G !== 'undefined'`,
+    BOOT_TIMEOUT_MS, 'scene boot').catch(() => null);
+  if (!booted) { await page.close(); return { failures: ['scene page: boot failed'], shots: 0, ms: Date.now() - t0 }; }
   for (const [vw, vh] of SHOT_VIEWPORTS) {
-    const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev&touch`);
-    const sid = page.sessionId;
     await cdp.send('Emulation.setDeviceMetricsOverride',
       { width: vw, height: vh, deviceScaleFactor: 2, mobile: true }, sid);
-    const booted = await waitFor(page.evaluate,
-      `typeof SKIN !== 'undefined' && typeof DEV !== 'undefined' && typeof G !== 'undefined'`,
-      BOOT_TIMEOUT_MS, 'scene boot ' + vw + 'x' + vh).catch(() => null);
-    if (!booted) { failures.push(vw + 'x' + vh + ': boot failed'); await page.close(); continue; }
-    await page.evaluate(`resize(); ZONE_DEBUG = true; 'ok'`);
+    await page.evaluate(`resize(); ZONE_DEBUG = true; upgradeTreeOpen = false; advOpen = false; 'ok'`);
     for (const sc of SCENES) {
       const res = await page.evaluate(`(() => {
         try {
@@ -240,22 +242,24 @@ async function runScenes(cdp, port) {
       const shot = await cdp.send('Page.captureScreenshot', { format: 'png' }, sid).catch(() => null);
       if (shot) { fs.writeFileSync(path.join(shotsDir, sc.name + '-' + vw + 'x' + vh + '.png'), Buffer.from(shot.data, 'base64')); shots++; }
     }
-    for (const e of page.errors) failures.push('page@' + vw + 'x' + vh + ': ' + e);
-    await page.close();
   }
-  return { failures, shots, ms: Date.now() - t0 };
+  for (const e of page.errors) failures.push('scene page: ' + e);
+  return { failures, shots, ms: Date.now() - t0, page, sid };
 }
-async function runStorm(cdp, port) {
+async function runStorm(cdp, port, reuse) {
   const t0 = Date.now();
-  const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev&touch`);
-  const sid = page.sessionId;
+  let page = reuse && reuse.page, sid = reuse && reuse.sid;
+  if (!page) { // fallback: a fresh page if the scene page didn't survive
+    page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev&touch`);
+    sid = page.sessionId;
+    const booted = await waitFor(page.evaluate,
+      `typeof DEV !== 'undefined' && typeof G !== 'undefined'`, BOOT_TIMEOUT_MS, 'storm boot').catch(() => null);
+    if (!booted) { await page.close(); return { err: 'storm page failed to boot', ms: Date.now() - t0 }; }
+  }
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, sid);
-  const booted = await waitFor(page.evaluate,
-    `typeof DEV !== 'undefined' && typeof G !== 'undefined'`, BOOT_TIMEOUT_MS, 'storm boot').catch(() => null);
-  if (!booted) { await page.close(); return { err: 'storm page failed to boot', ms: Date.now() - t0 }; }
   const res = await page.evaluate(`(() => {
     try {
-      resize();
+      resize(); ZONE_DEBUG = false; upgradeTreeOpen = false; advOpen = false;
       DEV.launch({ level: 24, mode: 'junkie', diff: 'hard', seed: 'STORM', upg: 'arsenal:4,surge:4,impact:4,prism:3' });
       paused = false; G.freeze = 0;
       for (let i = 0; i < 90; i++) update(1/60);
@@ -346,8 +350,8 @@ async function main() {
         `typeof SKIN !== 'undefined' && SKIN.id === '${skin}' && typeof G !== 'undefined' && SKIN.gens && SKIN.gens.length === 9`,
         BOOT_TIMEOUT_MS, skin + ' boot').catch(e => { step('workshop boot: ' + skin, false, e.message); return null; });
       if (!ok) return finish(1);
-      // give the boot a beat to surface async errors (sprite loads, first frames)
-      await new Promise(r => setTimeout(r, 2500));
+      // a beat for async errors to surface (sprite loads, first frames)
+      await new Promise(r => setTimeout(r, 1000));
       step('workshop boot: ' + skin, page.errors.length === 0,
         page.errors.length ? page.errors[0] : 'world assembled, 0 errors', Date.now() - t);
       if (page.errors.length) return finish(1);
@@ -382,7 +386,7 @@ async function main() {
         `typeof SKIN !== 'undefined' && SKIN.id === 'aetherfall' && typeof G !== 'undefined' && document.title === 'AETHERFALL'`,
         BOOT_TIMEOUT_MS, 'dist boot').catch(e => { step('dist boot', false, e.message); return null; });
       if (ok) {
-        await new Promise(r => setTimeout(r, 2500));
+        await new Promise(r => setTimeout(r, 1000));
         const scan = JSON.parse(await page.evaluate(VOCAB_SCAN));
         const clean = page.errors.length === 0 && scan.leftover.length === 0 && scan.lexSample === 'SURGE READY!';
         step('dist boot + vocabulary scan', clean,
@@ -394,21 +398,24 @@ async function main() {
     }
 
     // ── AFT-005B: mobile scenes + label containment + screenshots ──
+    let scenePage = null;
     {
       const sc = await runScenes(cdp, port);
       for (const f of sc.failures) console.log('    SCENE ' + f);
       step('mobile scenes + fitted-label containment', sc.failures.length === 0,
         (SCENES.length * SHOT_VIEWPORTS.length) + ' scenes · ' + sc.shots + ' screenshots → .gate-shots/', sc.ms);
       report.scenes = { shots: sc.shots, failures: sc.failures };
-      if (sc.failures.length) return finish(1);
+      if (sc.failures.length) { if (sc.page) sc.page.close(); return finish(1); }
+      scenePage = sc.page ? { page: sc.page, sid: sc.sid } : null;
     }
-    // ── AFT-005B/018: the artifact-storm benchmark ──
+    // ── AFT-005B/018: the artifact-storm benchmark (rides the scene page) ──
     {
-      const st = await runStorm(cdp, port);
+      const st = await runStorm(cdp, port, scenePage);
       const catastrophic = st.ok && st.avg > 50; // absolute ms are machine-dependent — only a collapse fails
       step('artifact-storm benchmark', !!st.ok && !catastrophic,
         st.ok ? 'avg ' + st.avg + 'ms · p95 ' + st.p95 + 'ms/frame @390×844 dsf2' : (st.err || 'failed'), st.ms);
       report.storm = st;
+      if (scenePage) scenePage.page.close();
       if (!st.ok || catastrophic) return finish(1);
     }
 
