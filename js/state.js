@@ -1749,6 +1749,14 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   // on RUN HISTORY — the AFT-018 sim-identity check went flaky because of
   // it. Reset every free-running rand-consuming timer here.
   G.splashCD = 8;
+  // …and the rest of the free-running clock family (found by the AFT-008
+  // baseline's per-frame determinism bisect): G.time feeds boss volley
+  // geometry (rot = G.time * 0.7), and the fire/invuln cooldowns carry the
+  // previous run's tail into a new launch's first frames. Same seed →
+  // identical STREAM means every one of these starts fresh.
+  G.time = 0;
+  G.laserCD = 0; G.blasterCD = 0; G.missileCD = 0; G.invuln = 0; G.seCD = 0;
+  G.enemyShotCD = 6; G.bossShotCD = 4;
   G.stacks = freshStacks(); G.attackAnim = 0; G.upgradeFx = null;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins

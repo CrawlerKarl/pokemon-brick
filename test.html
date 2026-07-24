@@ -1598,6 +1598,37 @@ window.requestAnimationFrame = function () { return 0; };
     return 'fighting perk identical under pokemon + foreign ability names (engine rule, skin word)';
   });
 
+  // AFT-008: a seeded launch must be bit-identical no matter how long the
+  // page has been alive. The baseline harness's determinism bisect caught
+  // G.time (boss volley geometry reads it) and the fire/invuln cooldowns
+  // surviving resetRun — this locks the whole free-running clock family.
+  test('AFT-008: cross-launch determinism — seeded launch identical on an aged page', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    const runOnce = () => {
+      resetRun(8, true, { seed: 'XLAUNCH' });
+      G.state = 'play'; paused = false; G.freeze = 0;
+      mouseX = W / 2;
+      let hash = 0;
+      for (let i = 0; i < 240; i++) {
+        update(1 / 60);
+        for (const b of G.bricks) if (!b.dead) hash = (hash * 31 + ((b.bx * 7 + b.by * 13) | 0)) | 0;
+        hash = (hash * 31 + G.enemyShots.length) | 0;
+      }
+      return hash;
+    };
+    const h1 = runOnce();
+    // age the page: a different sim, then dirty every clock the fix resets
+    resetRun(14, true, { seed: 'NOISE' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    for (let i = 0; i < 200; i++) update(1 / 60);
+    G.time += 987.65; G.blasterCD = 0.123; G.laserCD = 0.4; G.missileCD = 0.9;
+    G.invuln = 0.7; G.bossShotCD = 1.7; G.enemyShotCD = 0.11; G.seCD = 0.2;
+    const h2 = runOnce();
+    assert(h1 === h2, 'seeded launch diverged on an aged page (' + h1 + ' vs ' + h2 + ')');
+    return 'same-seed launch bit-identical after page aging + dirtied clocks';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
