@@ -1670,6 +1670,74 @@ window.requestAnimationFrame = function () { return 0; };
     return 'ladder mirrored: opening→core→coda · clocks close per beat · ledger stamped · trial jump synced';
   });
 
+  // AFT-020 Phase 2: THE GALE RELAY — the first non-ladder finale. One storm
+  // core, carrier-only damage feeding a pass meter, a wind corridor, the
+  // Sovereign descending into the running encounter, and a bloom coda
+  // instead of a third health bar.
+  test('AFT-020 P2: the GALE RELAY — carrier passes, corridor, coda reward', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(6, true, { seed: 'RELAY1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const F = G.finale, R = F && F.relay;
+    assert(F && F.format === 'relay' && R && F.beatKey === 'relay', 'relay arms on the region-2 finale');
+    assert(G.bricks.filter(b => b.relayVow).length === 3, 'three Vows carry the relay flag');
+    await runFrames(20);
+    assert(relayLane() && relayLane().w > 0, 'the wind corridor is live');
+    // a non-carrier hit deflects: no meter credit, no hp loss
+    const vows = () => G.bricks.filter(b => b.relayVow && !b.dead && !b.crosser);
+    const nonCar = vows().find(v => v !== relayCarrierBrick());
+    const hpBefore = nonCar.hp;
+    damageBrick(nonCar, 3, nonCar.bx, nonCar.by, null, { source: 'bolt' });
+    assert(nonCar.hp === hpBefore && R.dealt === 0, 'non-carrier hits are turned by the wind');
+    // carrier damage fills the meter; passHp worth completes a CLEAN pass
+    const car1 = relayCarrierBrick();
+    damageBrick(car1, R.passHp, car1.bx, car1.by, null, { source: 'bolt' });
+    assert(R.passes === 1 && R.cleanPasses === 1 && car1.hp === car1.maxHp,
+      'pass 1 complete + clean, carrier HP untouched (got passes ' + R.passes + ')');
+    assert(relayCarrierBrick() !== car1, 'the core moved to the next Vow');
+    // an expired carry window rotates the carrier and voids the clean credit
+    R.carryT = R.carryDur + 0.1;
+    await runFrames(2);
+    assert(R.rotSincePass === true, 'timer rotation marks the pass unclean');
+    const car2 = relayCarrierBrick();
+    damageBrick(car2, R.passHp, car2.bx, car2.by, null, { source: 'bolt' });
+    assert(R.passes === 2 && R.cleanPasses === 1, 'pass 2 complete but not clean');
+    const car3 = relayCarrierBrick();
+    damageBrick(car3, R.passHp, car3.bx, car3.by, null, { source: 'bolt' });
+    // three passes: Vows disperse as crossers, the Sovereign descends
+    assert(R.passes === 3 && G.gauntlet.phase === 1 && F.beatKey === 'descent',
+      'three passes wake the Sovereign into the running encounter');
+    assert(G.bricks.filter(b => b.relayVow).length === 0
+      && !G.bricks.some(b => !b.dead && b.subBoss), 'the Vows dispersed — no health bars were emptied');
+    assert(F.mastery.countered === true, 'one clean pass = the signature answer countered');
+    await runFrames(30);
+    const boss = G.bricks.find(b => !b.dead && b.isBoss && !b.mythic);
+    assert(boss && !boss.dormant, 'the Sovereign is live');
+    // fell the Sovereign (+wings) → the coda: blooms, a presence, NO mythic bar
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(40);
+    assert(F.beatKey === 'coda' && F.codaHold === true, 'coda opens and holds the clear');
+    assert(!G.bricks.some(b => !b.dead && b.isBoss && b.mythic), 'no hostile mythic spawned');
+    assert(G.bricks.some(b => !b.dead && b.crosser && b.poke && b.poke.id === genFor(6).gauntlet.myth[0]),
+      'the coda presence drifts through as a crosser');
+    await runFrames(200);
+    assert(G.powerups.some(pu => pu.p.key === 'bloom') || (F.coda && F.coda.spawned > 0),
+      'blooms spawn during the coda');
+    // catch one bloom through the real pickup path
+    const bloom = G.powerups.find(pu => pu.p.key === 'bloom');
+    if (bloom) { applyPower(bloom.p); }
+    assert((F.mastery.counters.blooms || 0) >= 1, 'a gathered bloom counts toward mastery');
+    // run the coda out; the wave clears and the ledger carries the relay
+    await runFrames(1400, () => (G.state !== 'play' ? false : undefined));
+    assert(G.state !== 'play', 'the coda releases the clear (state ' + G.state + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 6);
+    assert(L && L.finaleFormat === 'relay' && L.finaleBeatT && L.finaleBeatT.relay != null,
+      'ledger records the relay format + beat clocks');
+    SETTINGS.autoFire = false;
+    return '3 carrier passes (1 clean) · corridor live · Vows disperse unbroken · Sovereign mid-flow · bloom coda, no third bar';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2216,14 +2284,24 @@ window.requestAnimationFrame = function () { return 0; };
       assert(legend && legend.phaseCount === 2, GENS[region].name + ' legendary is not two phases');
       legendStyles.add(G.gauntlet.entry?.style);
       for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+      G.gauntlet.entry = null; // isolate the summon's own entrance (if any)
       gauntletSummonMythic(false);
-      const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
-      assert(myth && myth.phaseCount === 3, GENS[region].name + ' mythical is not three phases');
-      mythStyles.add(G.gauntlet.entry?.style);
+      const fmtR = (finaleProfile(region) || {}).format || 'ladder';
+      if (fmtR === 'relay') {
+        // AFT-020: a relay's third beat is a REWARD CODA, not a mythic bar
+        assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead),
+          GENS[region].name + ' relay coda must not spawn a hostile mythic');
+        assert(G.finale && G.finale.codaHold, GENS[region].name + ' relay coda must hold the clear');
+      } else {
+        const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
+        assert(myth && myth.phaseCount === 3, GENS[region].name + ' mythical is not three phases');
+        mythStyles.add(G.gauntlet.entry?.style);
+      }
     }
+    const fightMyths = GENS.filter((g, r) => ((finaleProfile(r) || {}).format || 'ladder') !== 'relay').length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
     assert(legendStyles.size === 9, 'legendary entrances are not unique across all generations');
-    assert(mythStyles.size === 9, 'mythical entrances are not unique across all generations');
+    assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
 
     trialSel.region = 0; trialSel.stage = 2; trialSel.round = 3;
     const layout = trialLayout();
@@ -2234,7 +2312,7 @@ window.requestAnimationFrame = function () { return 0; };
       'direct trial did not launch three-phase Mew VMAX');
     assert(G.gauntlet.entry && G.gauntlet.entry.style === 'maxrift', 'direct secret trial skipped the MAX RIFT entrance');
 
-    resetRun(6, true, { seed: 'phase-thresholds' });
+    resetRun(9, true, { seed: 'phase-thresholds' }); // Hoenn — a fighting mythic (Johto's coda is a reward event)
     G.starter = null;
     for (const b of G.bricks) if (b.subBoss) b.dead = true;
     gauntletWake();
@@ -3894,9 +3972,10 @@ window.requestAnimationFrame = function () { return 0; };
       { lvl: 3,  id: 151, mon: 'MEW',     turn: 'bubbleTurn', flag: 'feather', count: 3,
         flavor: s => s.every(x => x.feather && x.feather.sway > 1),           // HIGH sway
         chName: 'GENESIS WAVE',     pattern: 'rain',    cols: 6 },
-      { lvl: 6,  id: 251, mon: 'CELEBI',  turn: 'podTurn',    flag: 'gear',    count: 2,
-        flavor: s => s.every(x => x.gear && x.kind === 'seed' && x.gear.beat === 0), // gear beat / seed drip
-        chName: 'LEAF STORM',       pattern: 'pincer',  cols: 4 },
+      // CELEBI's mythic duel is RETIRED BY DESIGN (AFT-020): the region-2
+      // finale is THE GALE RELAY and its coda is a reward event, not a third
+      // health bar. The BLOOM PODS/LEAF STORM kit stays as engine data; the
+      // relay's own contract is covered by 'AFT-020 P2: the GALE RELAY'.
       { lvl: 9,  id: 385, mon: 'JIRACHI', turn: 'wishTurn',   flag: 'orbit',   count: 3,
         flavor: s => s.every(x => x.orbit && x.orbit.launchType === 'column' && x.orbit.stationary), // column launch
         chName: 'MILLENNIUM COMET', pattern: 'columns', cols: 5 },
@@ -4233,21 +4312,22 @@ window.requestAnimationFrame = function () { return 0; };
       assert(bossMusicHeat() === 0, 'a live phase-1 legendary (no Mega) should read heat 0');
       G.megaT = 1; assert(bossMusicHeat() === 1, 'Mega over a live boss should lift heat to 1'); G.megaT = 0;
       // --- MYTHIC (3 phases): phase 2 → heat 1, phase 3 → heat 2 ---
-      resetRun(6, true, { seed: 'phase-jump-myth2' });
+      // (Hoenn since AFT-020 — Johto's third beat is the relay's reward coda)
+      resetRun(9, true, { seed: 'phase-jump-myth2' });
       paused = false; G.freeze = 0; G.megaT = 0;
       jumpToGauntletRound(2, 2);
       let myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
       assert(myth && bossPhaseCount(myth) === 3, 'round-2 jump did not summon a 3-phase mythic');
       assert(myth.phase === 2 && Math.abs(myth.hp / myth.maxHp - 0.5) < 0.03, 'mythic phase-2 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
       assert(bossMusicHeat() === 1, 'mythic phase 2 (not last stand) should read heat 1');
-      resetRun(6, true, { seed: 'phase-jump-myth3' });
+      resetRun(9, true, { seed: 'phase-jump-myth3' });
       paused = false; G.freeze = 0; G.megaT = 0;
       jumpToGauntletRound(2, 3);
       myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
       assert(myth.phase === 3 && Math.abs(myth.hp / myth.maxHp - 1 / 6) < 0.03, 'mythic phase-3 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
       assert(bossMusicHeat() === 2, 'mythic phase 3 (last stand) should read heat 2');
       // --- CLAMP (dev path parity): requesting phase 9 pins to phaseCount ---
-      resetRun(6, true, { seed: 'phase-clamp' });
+      resetRun(9, true, { seed: 'phase-clamp' });
       paused = false; G.freeze = 0; G.megaT = 0;
       jumpToGauntletRound(2, 9);
       const clamped = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);

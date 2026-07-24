@@ -2744,6 +2744,72 @@ function drawRallyZone() {
 }
 
 // warning lines before enemy fire + Zekrom/Eternatus column beams
+// AFT-020 THE GALE RELAY: the wind corridor (two dashed rails + downwind
+// chevrons — shape and motion, never color alone) and the carrier read
+// (bright core orb on the carrier, dashed gray shimmer on the other Vows).
+// Strokes and fills only — nothing here allocates gradients or shadowBlur.
+function drawRelayFx() {
+  const F = G.finale;
+  if (!F || !F.relay || F.beat !== 0 || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const rl = relayLane();
+  if (rl) {
+    const x0 = rl.x - rl.w / 2, x1 = rl.x + rl.w / 2;
+    const yTop = SAFE_T + 92;
+    const yBot = G.mode === 'junkie' ? shipY() + 44 : PADDLE_Y() - 6;
+    ctx.save();
+    ctx.setLineDash([10, 8]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(128,216,255,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(x0, yTop); ctx.lineTo(x0, yBot);
+    ctx.moveTo(x1, yTop); ctx.lineTo(x1, yBot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // downwind chevrons OUTSIDE the lane — they travel with the gale
+    ctx.strokeStyle = 'rgba(197,225,235,0.42)';
+    ctx.lineWidth = 1.6;
+    const span = Math.max(1, yBot - yTop - 80);
+    for (let i = 0; i < 5; i++) {
+      const yy = yTop + 40 + (i * span) / 4;
+      const sway = ((G.time * 90 + i * 37) % 64);
+      for (const side of [-1, 1]) {
+        const bx = rl.x + side * (rl.w / 2 + 30) + rl.dir * sway * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(bx - rl.dir * 8, yy - 5);
+        ctx.lineTo(bx, yy);
+        ctx.lineTo(bx - rl.dir * 8, yy + 5);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  const car = relayCarrierBrick();
+  for (const v of relayAliveVows()) {
+    const vx2 = v.bx + G.fx, vy2 = v.by + G.fy;
+    const r = Math.max(v.w, v.h) * 0.6;
+    ctx.save();
+    if (v === car) {
+      const pulse = 0.75 + 0.25 * Math.sin(G.time * 5);
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = 'rgba(64,196,255,' + (0.55 + 0.3 * pulse) + ')';
+      ctx.beginPath(); ctx.arc(vx2, vy2, r + 6, 0, Math.PI * 2); ctx.stroke();
+      // the storm core itself rides above the carrier
+      const oy = vy2 - v.h * 0.78;
+      ctx.beginPath(); ctx.arc(vx2, oy, 7 * pulse + 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(64,196,255,0.85)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(vx2, oy, 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff'; ctx.fill();
+    } else {
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = 'rgba(176,190,197,0.55)';
+      ctx.beginPath(); ctx.arc(vx2, vy2, r + 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+}
 function drawTelegraphs() {
   for (const tg of G.telegraphs) {
     if (tg.br.dead) continue;
@@ -3579,6 +3645,21 @@ function drawPowerups() {
       ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(1, 8); ctx.lineTo(16, -4); ctx.moveTo(1, 8); ctx.lineTo(-13, 12); ctx.stroke();
       ctx.globalAlpha = 1;
       drawGlyph(ctx, 'fairy', 1, 3, 5.5, '#ffffff');
+    } else if (pu.p.key === 'bloom') {
+      // AFT-020 relay coda: a soft five-petal bloom of rewound time —
+      // strokes + fills only, gentle pulse, reads on bright and dark skies
+      const pulse = 0.82 + 0.18 * Math.sin(G.time * 4 + pu.x * 0.05);
+      for (let i = 0; i < 5; i++) {
+        const a = (i * Math.PI * 2) / 5 + pu.rot * 0.4;
+        ctx.beginPath();
+        ctx.ellipse(Math.cos(a) * 8, Math.sin(a) * 8, 7, 4, a, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(185,246,202,0.85)';
+        ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(0, 0, 5 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd54f'; ctx.fill();
+      ctx.lineWidth = 1.4; ctx.strokeStyle = '#e8f5e9';
+      ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.stroke();
     } else if (pu.p.key === 'element') {
       // element orb: small glassy sphere holding a type symbol
       const col = TYPE_COLORS[pu.p.t];
@@ -4754,8 +4835,46 @@ function drawBrickBehaviorLegend() {
 // OBJECTIVE BANNER (Milestone 3 Round B) — a compact top strip naming the
 // live in-wave objective with a progress readout, so a survive/escort goal
 // is understandable from a UI cue, not just from the announce card.
+// AFT-020: the finale's shared meter rides the SAME banner surface as the
+// wave objectives — one pill, one containment authority, no new lane.
+function drawFinaleMeterBanner() {
+  const F = G.finale;
+  if (!F || !F.meter || F.mastery.clear || (G.state !== 'play' && G.state !== 'serve')) return;
+  const M = F.meter;
+  const short = W < 560;
+  let label = M.label || 'FINALE';
+  let progress = Math.max(0, Math.min(1, (M.value || 0) / (M.max || 1)));
+  let readout = '';
+  if (F.format === 'relay' && F.relay && F.beat === 0) {
+    readout = 'PASS ' + Math.min(F.relay.need, F.relay.passes + 1) + '/' + F.relay.need;
+  } else if (F.beat === 2 && F.coda) {
+    readout = (F.mastery.counters.blooms || 0) + '/' + M.max;
+  } else if (F.beat === 1) return; // the boss beat reads from the HUD dock, not a meter
+  const y = SAFE_T + (short ? 44 : 52);
+  const w = Math.min(W * 0.72, (short ? 220 : 300));
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  roundRect(W / 2 - w / 2, y, w, short ? 26 : 30, (short ? 26 : 30) / 2);
+  ctx.fillStyle = 'rgba(5,8,22,0.9)'; ctx.fill();
+  ctx.lineWidth = 1.4; ctx.strokeStyle = '#80d8ff'; ctx.stroke();
+  if (progress > 0) {
+    ctx.save();
+    roundRect(W / 2 - w / 2, y, w, short ? 26 : 30, (short ? 26 : 30) / 2); ctx.clip();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#80d8ff';
+    ctx.fillRect(W / 2 - w / 2, y, w * progress, short ? 26 : 30);
+    ctx.restore();
+  }
+  ctx.font = `900 ${short ? 9.5 : 11}px Orbitron, sans-serif`;
+  let line = '◈ ' + label + (readout ? '  ·  ' + readout : '');
+  if (readout && ctx.measureText(line).width > w - 20) line = '◈ ' + label;
+  fitLabel(line, W / 2, y + (short ? 13.5 : 15.5),
+    { size: short ? 9.5 : 11, min: 8.5, weight: 900, color: '#b3e5fc', maxW: w - 20, zone: 'banner' });
+  ctx.restore();
+}
 function drawObjectiveBanner() {
   const O = G.objective;
+  if (!O && G.finale && G.finale.meter) { drawFinaleMeterBanner(); return; }
   // a FAILED objective draws nothing — the banner vanishing is the tell (the
   // strip notice already named the fall), and the wave is a normal clear now.
   if (!O || O.done || O.failed || (G.state !== 'play' && G.state !== 'serve')) return;
@@ -8948,6 +9067,7 @@ function render() {
     drawDangerLine();
     drawRallyZone();
     drawTelegraphs();
+    drawRelayFx(); // AFT-020: the gale-relay corridor + carrier cues (under the sprites)
     drawBricks();
     drawFragments();
     drawShield();

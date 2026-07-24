@@ -655,6 +655,27 @@
       { key: 'coda', label: B.myth[0].toUpperCase(), work: 0.82 },
     ],
   }));
+  // Realm 2 — THE GALE RELAY (AFT-020 Phase 2): one continuous pursuit. The
+  // three Vows pass ONE storm core; only the carrier takes real damage and
+  // the wind defines the true-aim corridor. Zephyrion descends into the
+  // still-running encounter; Verdandi's coda REWINDS the storm into
+  // Hourseed blooms — a reward event, not another health bar.
+  finaleProfiles[1] = {
+    format: 'relay',
+    title: FINALE_TITLES[1],
+    beats: [
+      { key: 'relay', label: 'THE THREE VOWS', work: 0.42,
+        tip: 'ONLY THE CORE CARRIER TAKES REAL DAMAGE · FIRE FROM INSIDE THE WIND CORRIDOR' },
+      { key: 'descent', label: REALM_BOSSES[1].leg[0].toUpperCase(), work: 1.0,
+        tip: 'THE WARDEN ABSORBS THE CORE — THE GALE IS HIS NOW' },
+      { key: 'coda', label: 'THE HOURSEED REWIND', work: 0,
+        tip: 'THE STORM REWINDS INTO BLOOMS — GATHER THEM' },
+    ],
+    relay: {
+      coreName: 'STORM CORE', meterLabel: 'STORM CORE',
+      bloomName: 'HOURSEED BLOOM', deflectWord: 'THE WIND TURNS IT',
+    },
+  };
 
   // ---------- assembly ----------
   Object.assign(AF, {

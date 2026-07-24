@@ -640,7 +640,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // like SHELL ARMOR — inside damageBrick, so the combat ledger stays honest
   // (no new loseLife path). STRICTLY gated on subBoss: it never touches
   // legendaries or mythics.
-  if (br.subBoss) {
+  if (br.subBoss && !br.relayVow) { // relay Vows own ONE defensive rule (the core), never the guard too
     if ((br.openT || 0) > 0) {
       if (!br.openHit) { br.openHit = true; dmg *= 1.2; } // window's first strike rewarded
     } else {
@@ -652,6 +652,14 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
   }
   statsDmgCat('guard', dmg - dPreGuard);
+  // THE GALE RELAY (AFT-020): Vows never lose HP to damage — a carrier hit
+  // feeds the pass meter (real, ledgered work); a non-carrier hit is turned
+  // by the wind (a readable deflect cue, no hidden progress). Direct kills
+  // (practice jumps, tests) still work: they bypass damageBrick entirely.
+  if (br.relayVow && G.finale && G.finale.relay && G.finale.beat === 0) {
+    relayVowHit(br, dmg, sx, sy, meta);
+    return;
+  }
   statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
   br.hp -= dmg;
   if (dmg < 90 && G.secretUpg.echo && !meta.secretEcho) {
@@ -3042,7 +3050,8 @@ function updateReveal(dt) {
   // reveal DELIVERED the boss card's content), arm the restart grace
   G.reveal = null;
   if (r.kind !== 'sentinels') {
-    G.revealDock = r.ids[0];
+    // a coda presence is not a fight — no HP lane docks for it
+    if (!(G.finale && G.finale.codaHold)) G.revealDock = r.ids[0];
     // the DOCK BEAT: one readable impact pop where the portrait landed —
     // strokes + glints only (ringFx/sparkle honor the effects ladder), so
     // the moment reads on every rung and reduced-effects stays calm
@@ -3116,8 +3125,174 @@ function completeFinale() {
   F.beatClocks[F.beatKey] = +(((F.beatClocks[F.beatKey] || 0) + F.beatT)).toFixed(1);
   F.beatT = 0;
   F.mastery.clear = true;
+  // per-format mastery resolution — 'countered' is the signature answer done
+  // once; 'mastered' is every authored major-beat counter
+  if (F.format === 'relay' && F.relay) {
+    F.mastery.countered = F.mastery.countered || (F.relay.cleanPasses >= 1);
+    F.mastery.mastered = F.relay.cleanPasses >= F.relay.need
+      && (F.mastery.counters.blooms || 0) >= 4;
+  }
   const L = statsCur();
-  if (L) { L.finaleFormat = F.format; L.finaleBeatT = { ...F.beatClocks }; }
+  if (L) {
+    L.finaleFormat = F.format;
+    L.finaleBeatT = { ...F.beatClocks };
+    L.finaleCounters = { ...F.mastery.counters };
+    L.finaleMastery = F.mastery.mastered ? 'mastered' : F.mastery.countered ? 'countered' : 'clear';
+  }
+}
+// ---- THE GALE RELAY (AFT-020 Phase 2 — the first non-ladder format) ----
+// Beat 0: the three Vows pass ONE storm core. Only the carrier takes real
+// damage (it feeds the PASS METER — 3 × 0.14 BE); the other two turn hits
+// aside and the wind holds a TRUE-AIM CORRIDOR over the carrier's lane —
+// bolts (and the classic ball's calm air) fly straight inside it, drift
+// outside it. Beat 1: the Sovereign descends with its own storm kit.
+// Beat 2: the coda REWINDS the storm into blooms — a reward event.
+function relayAliveVows() {
+  const out = [];
+  for (const b of G.bricks) if (b.relayVow && !b.dead && !b.crosser) out.push(b);
+  return out;
+}
+function relayCarrierBrick() {
+  const R = G.finale && G.finale.relay;
+  if (!R) return null;
+  const vows = relayAliveVows();
+  return vows.find(v => v.subIdx === R.carrier) || vows[0] || null;
+}
+// the corridor: live during the relay beat only — {x, w, dir}
+function relayLane() {
+  const F = G.finale;
+  if (!F || !F.relay || F.beat !== 0 || F.mastery.clear || G.state !== 'play') return null;
+  const R = F.relay;
+  if (R.laneX == null) R.laneX = W / 2;
+  return { x: R.laneX, w: R.laneW, dir: (Math.floor(F.beatT / 6) % 2) ? 1 : -1 };
+}
+function relayVowHit(br, dmg, sx, sy, meta) {
+  const F = G.finale, R = F.relay;
+  br.flash = 1; // keeps the pierce i-frame honest
+  if (br !== relayCarrierBrick()) {
+    // turned by the wind — a readable "not the target" cue, throttled
+    if ((R.deflectCD || 0) <= 0) {
+      R.deflectCD = 0.8;
+      const word = (F.profile && F.profile.relay && F.profile.relay.deflectWord) || 'DEFLECTED';
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, word, '#b0bec5', 11);
+      ringFx(br.bx + G.fx, br.by + G.fy, '#b0bec5', 4, 40, 2, 0.3);
+    }
+    return;
+  }
+  statsDmgOut(meta.source || 'other', dmg); // carrier work is REAL work
+  R.dealt += dmg;
+  R.carrierHits = (R.carrierHits || 0) + 1;
+  F.meter.value = R.passes + Math.min(1, R.dealt / R.passHp);
+  burst(sx, sy, '#80d8ff', 6, 160, 0.35);
+  if (R.dealt >= R.passHp) relayCompletePass();
+}
+function relayCompletePass() {
+  const F = G.finale, R = F.relay;
+  const from = relayCarrierBrick();
+  R.passes++;
+  const clean = !R.rotSincePass;
+  if (clean) R.cleanPasses++;
+  F.mastery.counters.cleanPasses = R.cleanPasses;
+  R.dealt = 0; R.carryT = 0; R.rotSincePass = false;
+  F.meter.value = R.passes;
+  if (from) {
+    addFloater(from.bx + G.fx, from.by + G.fy - from.h / 2 - 18,
+      'PASS ' + Math.min(R.passes, R.need) + '/' + R.need + (clean ? ' · CLEAN!' : ''),
+      clean ? '#ffd54f' : '#80d8ff', 15);
+    ringFx(from.bx + G.fx, from.by + G.fy, '#80d8ff', 8, 120, 4, 0.5);
+  }
+  SFX.wall();
+  if (R.passes >= R.need) {
+    F.mastery.countered = R.cleanPasses >= 1; // the signature answer, done at least once
+    relayDisperseVows();
+    gauntletWake(); // the Sovereign descends into the STILL-RUNNING encounter
+    return;
+  }
+  relayRotateCarrier();
+}
+function relayRotateCarrier() {
+  const R = G.finale.relay;
+  const vows = relayAliveVows();
+  if (vows.length <= 1) return;
+  const cur = relayCarrierBrick();
+  const next = vows[(vows.indexOf(cur) + 1) % vows.length];
+  R.carrier = next.subIdx;
+  if (cur && next) {
+    ringFx(cur.bx + G.fx, cur.by + G.fy, '#40c4ff', 6, 70, 3, 0.4);
+    ringFx(next.bx + G.fx, next.by + G.fy, '#40c4ff', 10, 90, 4, 0.5);
+    sparkle(next.bx + G.fx, next.by + G.fy, 6);
+  }
+}
+function relayDisperseVows() {
+  // the Vows flee as crossers — outside every formation/clear system
+  for (const b of G.bricks) {
+    if (!b.relayVow || b.dead) continue;
+    b.subBoss = false; b.relayVow = false; b.bare = true;
+    b.hp = b.maxHp = 1;
+    b.crosser = { vx: (b.bx < W / 2 ? -1 : 1) * 300, bobPh: (b.subIdx || 0) * 2.1 };
+  }
+}
+function relayBeginCoda(gen2) {
+  const F = G.finale;
+  const fp = F.profile;
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  F.coda = { t: 0, dur: 14, spawned: 0, blooms: 6 };
+  F.codaHold = true;
+  if (mid) {
+    // the Hourseed drifts serenely across the healed sky — present, never hostile
+    const vw2 = Math.min(120, W * 0.16);
+    const verd = {
+      bx: -vw2, by: Math.max(140, H * 0.24), hx: -vw2, hy: Math.max(140, H * 0.24),
+      row: -3, col: 0, w: vw2, h: vw2 * 0.9, hp: 1, maxHp: 1,
+      bare: true, poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      crosser: { vx: Math.max(46, W / 13), bobPh: 0 }, flash: 0, wobble: 0,
+    };
+    G.bricks.push(verd);
+    getSprite(mid[0]);
+    beginBossReveal('mythic', [verd]); // her portrait deserves the scene — nothing hostile resumes after
+  }
+  const label = (fp && fp.beats[2] && fp.beats[2].label) || 'THE REWIND';
+  const tip = (fp && fp.beats[2] && fp.beats[2].tip) || 'GATHER THE BLOOMS';
+  setAnnounce('leaf', '#b9f6ca', label, tip, 3.4, null, null, false, true, 'boss');
+  F.meter = { value: 0, max: F.coda.blooms, label: (fp && fp.relay && fp.relay.bloomName) || 'BLOOM' };
+}
+function updateRelayCoda(dt) {
+  const F = G.finale, C = F.coda;
+  if (!C) return;
+  C.t += dt;
+  const due = Math.min(C.blooms, Math.floor(C.t / (C.dur / C.blooms)) + 1);
+  while (C.spawned < due) {
+    C.spawned++;
+    const margin = Math.max(60, W * 0.14);
+    G.powerups.push({
+      x: margin + gameRand() * (W - margin * 2), y: -18, vy: 66,
+      p: { key: 'bloom', name: (F.profile && F.profile.relay && F.profile.relay.bloomName) || 'BLOOM' },
+      rot: 0, hint: C.spawned === 1,
+    });
+  }
+  if (C.t >= C.dur && C.spawned >= C.blooms) F.codaHold = false; // falling pickups still hold the clear
+}
+function updateFinaleDirector(dt) {
+  const F = G.finale;
+  if (!F || G.state !== 'play' || G.reveal) return;
+  if (F.format === 'relay' && F.relay) {
+    const R = F.relay;
+    if (R.deflectCD > 0) R.deflectCD -= dt;
+    if (F.beat === 0) {
+      const car = relayCarrierBrick();
+      if (car) {
+        // the corridor eases onto the carrier's live lane
+        if (R.laneX == null) R.laneX = W / 2;
+        R.laneX += ((car.bx + G.fx) - R.laneX) * Math.min(1, dt * 2.2);
+        R.carryT += dt;
+        if (R.carryT >= R.carryDur) { // the core moves on — unfinished work carries over
+          R.carryT = 0; R.rotSincePass = true;
+          relayRotateCarrier();
+        }
+      }
+    }
+    if (F.beat === 2) updateRelayCoda(dt);
+  }
 }
 function gauntletWake() {
   const gj = G.gauntlet;
@@ -3154,6 +3329,12 @@ function gauntletSummonMythic(forceSecret = false) {
   gj.phase = 2;
   startFinaleBeat(2); // covers both the mythic and the secret replacement
   const gen2 = genFor(G.level);
+  // THE GALE RELAY's coda is a REWARD EVENT, not another health bar — the
+  // storm rewinds into blooms and the Hourseed drifts through, unfought.
+  if (G.finale && G.finale.format === 'relay') {
+    relayBeginCoda(gen2);
+    return;
+  }
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
   if (riftOpen) {
     const vw = Math.min(300, Math.max(170, W * 0.38));
@@ -3798,6 +3979,7 @@ function update(dt) {
   // the legendary summons the MYTHICAL — smaller, faster, wilder.
   // the finale beat clock excludes reveal freezes — beat time is combat time
   if (G.finale && G.state === 'play' && !G.reveal) G.finale.beatT += dt;
+  updateFinaleDirector(dt);
   if (G.gauntlet && G.state === 'play') {
     const gj = G.gauntlet;
     if (gj.phase === 0 && !G.bricks.some(b => !b.dead && b.subBoss)) {
@@ -4337,7 +4519,13 @@ function update(dt) {
     th.x = b.x; th.y = b.y;
     b.trail.unshift(th);
     if (b.trail.length > tl) b.trail.length = tl;
-    if (windy) b.vx += Math.sin(G.time * 1.6 + b.y * 0.012) * (G.gustT > 0 ? 320 : 230) * dt;
+    {
+      // THE GALE RELAY in classic: the whole sky is windy EXCEPT the calm
+      // corridor over the carrier — the same rule the shooter modes read
+      const rl = relayLane();
+      const laneCalm = rl && Math.abs(b.x - rl.x) < rl.w / 2;
+      if ((windy || rl) && !laneCalm) b.vx += Math.sin(G.time * 1.6 + b.y * 0.012) * (G.gustT > 0 ? 320 : 230) * dt;
+    }
     // endgame aim-assist: gently steer rising balls toward the last few bricks
     if (aliveCnt > 0 && aliveCnt <= 4 && b.vy < 0) {
       const tgt = nearestBrick(b.x, b.y);
@@ -4585,6 +4773,12 @@ function update(dt) {
     // TAILWIND CURRENT (Lugia): the pilot's bolts drift downwind in shooter
     // modes — aim upwind to hit. Accumulates a lateral vx, integrated below.
     if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) L.vx = (L.vx || 0) + G.gustDir * 150 * dt;
+    // THE GALE RELAY corridor: bolts fired OUTSIDE the wind lane drift with
+    // the gale; inside it they fly true — fight from the corridor
+    if (G.mode !== 'classic') {
+      const rl = relayLane();
+      if (rl && Math.abs(L.x - rl.x) > rl.w / 2) L.vx = (L.vx || 0) + rl.dir * 190 * dt;
+    }
     if (L.vx) L.x += L.vx * ts * dt;
     // bolts intercept enemy fire — shoot the shots down!
     // (Interceptor upgrade lets one bolt take out several shots)
@@ -5542,7 +5736,8 @@ function update(dt) {
   compactInPlace(G.powerups, p => !p.dead);
 
   // ---- level clear → reinforcements first, then draft and move on ----
-  if (G.state === 'play' && G.dramaticT <= 0 && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly)) {
+  if (G.state === 'play' && G.dramaticT <= 0 && !(G.finale && G.finale.codaHold)
+    && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly)) {
     // an active objective holds the wave open — SURVIVE outlasts the timer,
     // ESCORT/DEFEND protects the friendly. A FAILED objective releases the
     // wave to a normal attrition clear (losing the bonus is the only cost).

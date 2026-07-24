@@ -696,6 +696,17 @@ function applyPower(p, srcType) {
     case 'magnet': bump('fx_magnet', 12); break;
     case 'star':   bump('fx_score', 15); break;
     case 'draco':  bump('fx_draco', 10); break;
+    case 'bloom': { // AFT-020 relay coda: a gathered bloom — score + mastery
+      G.score += Math.round(200 * scoreMult());
+      if (G.finale) {
+        G.finale.mastery.counters.blooms = (G.finale.mastery.counters.blooms || 0) + 1;
+        if (G.finale.meter) G.finale.meter.value = G.finale.mastery.counters.blooms;
+      }
+      sparkle(G.paddle.x, shipY() - 24, 8, true);
+      addFloater(G.paddle.x, shipY() - 44, (p.name || 'BLOOM') + ' +200', '#b9f6ca', 13);
+      SFX.power();
+      return; // its floater is the whole read — no announce card, no element
+    }
     case 'shield':
       G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + 1);
       statsShieldGain('drop');
@@ -1043,20 +1054,18 @@ function buildLevel(lvl) {
       legend.bx = legend.hx = -2000; // parked off-stage until round 2
       G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp, subT: 0, subAbilityCD: 4, entry: null };
       G.sentinelGuardTaught = false; // the guard/opening strip teaches once per wave
-      // AFT-020 Phase 1: the finale DIRECTOR arms alongside the gauntlet
-      // (adapter mode — the gauntlet still drives combat; the director
-      // records format, beat, clocks and mastery so Trial, presentation
-      // and the ledger read ONE contract in every realm).
-      {
-        const fp = finaleProfile(rIdx);
-        const fmt = (fp && fp.format) || 'ladder';
-        G.finale = {
-          realm: rIdx, format: fmt, profile: fp || null,
-          beat: 0, beatKey: (FINALE_FORMATS[fmt] || FINALE_FORMATS.ladder).beats[0], beatT: 0,
-          beatClocks: {},
-          mastery: { clear: false, countered: false, mastered: false, counters: {} },
-        };
-      }
+      // AFT-020: the finale DIRECTOR arms alongside the gauntlet (the
+      // gauntlet remains the round adapter; the director owns format, beat,
+      // clocks and mastery so Trial, presentation and the ledger read ONE
+      // contract in every realm — and, for non-ladder formats, the rules).
+      const fp = finaleProfile(rIdx);
+      const fmt = (fp && fp.format) || 'ladder';
+      G.finale = {
+        realm: rIdx, format: fmt, profile: fp || null,
+        beat: 0, beatKey: (FINALE_FORMATS[fmt] || FINALE_FORMATS.ladder).beats[0], beatT: 0,
+        beatClocks: {},
+        mastery: { clear: false, countered: false, mastered: false, counters: {} },
+      };
       const subs = gen.gauntlet.subs;
       const subHp = Math.max(5, Math.round(bossHp * (subs.length === 1 ? 0.85 : 0.42)));
       for (let i = 0; i < subs.length; i++) {
@@ -1073,10 +1082,29 @@ function buildLevel(lvl) {
         getSprite(sid);
       }
       getSprite(gen.gauntlet.myth[0]);
-      setAnnounce('alert', gen.accent, 'THE ' + gen.name + ' GAUNTLET',
-        'ROUND 1 — THE SENTINELS: ' + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
-        (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
-          'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true, 'boss');
+      // THE GALE RELAY (format 'relay'): the trio carries ONE storm core.
+      // Vows never fall to damage — carrier hits feed the PASS METER
+      // (3 passes × 0.14 BE of real work); the other two mark the wind
+      // corridor. The round controller's all-dead check stays as the
+      // practice-jump fallback, so trials and direct kills still advance.
+      // (Flagged HERE, after the sentinel push above put the Vows on board.)
+      if (fmt === 'relay') {
+        for (const v of G.bricks) if (v.subBoss && !v.dead) v.relayVow = true;
+        G.finale.relay = {
+          carrier: 0, passes: 0, need: 3,
+          passHp: Math.max(3, Math.round(bossHp * 0.14)), dealt: 0,
+          carryT: 0, carryDur: 11, cleanPass: true, cleanPasses: 0,
+          laneW: Math.max(120, W * 0.15),
+        };
+        G.finale.meter = { value: 0, max: 3, label: (fp.relay && fp.relay.meterLabel) || 'CORE' };
+      }
+      setAnnounce('alert', gen.accent, (fp && fp.title) || ('THE ' + gen.name + ' GAUNTLET'),
+        ((fp && fp.beats[0].label) || 'ROUND 1 — THE SENTINELS') + ': '
+          + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
+        (fp && fp.beats[0].tip)
+          ? fp.beats[0].tip
+          : (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
+            'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true, 'boss');
       // AFT-002: the round-1 reveal — the sentinel trio, one shared contract
       beginBossReveal('sentinels', G.bricks.filter(b => b.subBoss && !b.dead));
     } else G.gauntlet = null;

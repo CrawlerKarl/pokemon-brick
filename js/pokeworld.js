@@ -594,6 +594,27 @@ const FINALE_PROFILES = GENS.map(g => ({
       work: 0.82 },
   ],
 }));
+// AFT-020 Phase 2 — region 2 runs THE GALE RELAY (engine format 'relay'; the
+// mechanics are shared, the words are this skin's): the legendary beasts
+// pass one storm core, Lugia descends into the running encounter, and
+// Celebi's coda rewinds the storm into TIME BLOSSOMS instead of a third
+// health bar.
+FINALE_PROFILES[1] = {
+  format: 'relay',
+  title: 'THE JOHTO GALE RELAY',
+  beats: [
+    { key: 'relay', label: 'THE ROAMING BEASTS', work: 0.42,
+      tip: 'ONLY THE CORE CARRIER TAKES REAL DAMAGE · FIRE FROM INSIDE THE WIND CORRIDOR' },
+    { key: 'descent', label: 'LUGIA', work: 1.0,
+      tip: 'THE STORM GUARDIAN ABSORBS THE CORE — THE GALE IS ITS NOW' },
+    { key: 'coda', label: 'THE TIME BLOSSOMS', work: 0,
+      tip: 'THE STORM REWINDS INTO BLOSSOMS — GATHER THEM' },
+  ],
+  relay: {
+    coreName: 'STORM CORE', meterLabel: 'STORM CORE',
+    bloomName: 'TIME BLOSSOM', deflectWord: 'THE WIND TURNS IT',
+  },
+};
 
 assembleSkins({
   names: NAMES, gens: GENS, habitatPacks: HABITAT_PACKS, typeClusters: TYPE_CLUSTERS,
