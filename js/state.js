@@ -584,12 +584,17 @@ function buildStageResults() {
   const topFam = Object.entries(L.dmgInBy || {}).sort((a, b) => b[1] - a[1])[0];
   return {
     lvl, region: genFor(lvl).name, stage: SKIN.stageNames[stageIdx(lvl)],
+    stageTitle: stageTitle(lvl), // the authored display name (subtitle keeps the structure)
     nextName: lvl >= 27 ? null
       : stageIdx(lvl) === 2 ? genFor(lvl + 1).name + ' · ' + SKIN.stageNames[0]
         : genFor(lvl).name + ' · ' + SKIN.stageNames[stageIdx(lvl) + 1],
     t: L.t || 0, kills: L.kills || 0, score: G.score,
     hitsTaken, topFam: topFam ? topFam[0] : null,
     objective: L.objective || null, objectiveDone: !!L.objectiveDone,
+    // AFT-020: the finale names what the player mastered (never a rank)
+    finaleMastery: (G.finale && stageIdx(lvl) === 2 && G.finale.mastery.clear)
+      ? (G.finale.mastery.mastered ? 'mastered' : G.finale.mastery.countered ? 'countered' : 'clear') : null,
+    finaleTitle: (G.finale && G.finale.profile && stageIdx(lvl) === 2) ? G.finale.profile.title : null,
     shotsN: L.shotsN || 0, shotsC: L.shotsC || 0,
     overheats: L.overheats || 0, megas: L.megas || 0,
     catches: G.caughtRun, medalsSaved: !G.trial && !G.daily && !G.cheated,
@@ -1145,6 +1150,20 @@ function buildLevel(lvl) {
         };
         G.finale.meter = { value: 0, max: 1, label: (fp.raid && fp.raid.meterLabel) || 'BREAK' };
       }
+      // AFT-020 PREPARATION spend: the banked Challenge benefit arrives as a
+      // readied defense — a shield if there's room, else a Surge head start.
+      // Never over cap, never an extra offer, never a skipped teach.
+      if (G.prep && G.prep.realm === rIdx && !G.trial && !G.daily) {
+        G.prep = null;
+        if (G.shieldCharges < shieldCap()) {
+          G.shieldCharges++;
+          statsShieldGain('prep');
+          setAnnounce('shield', '#a5d6a7', 'PREPARATION', 'YOUR READIED DEFENSE HOLDS — +1 SHIELD', 2.4);
+        } else {
+          gainMega(0.12, 'prep');
+          setAnnounce('mega', '#a5d6a7', 'PREPARATION', lex('SHIELDS FULL — +12% MEGA BANKED'), 2.4);
+        }
+      }
       setAnnounce('alert', gen.accent, (fp && fp.title) || ('THE ' + gen.name + ' GAUNTLET'),
         ((fp && fp.beats[0].label) || 'ROUND 1 — THE SENTINELS') + ': '
           + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
@@ -1622,7 +1641,8 @@ function buildLevel(lvl) {
     setAnnounce(m.icon, m.color, m.name, m.desc, 3.2,
       [gen.name + ' 2/3', form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '), null, false, false, 'region');
   } else {
-    setAnnounce(null, gen.accent, gen.name, 'STAGE 2/3 — CHALLENGE', 2.4,
+    setAnnounce(null, gen.accent, stageTitle(lvl) || gen.name,
+      stageTitle(lvl) ? gen.name + ' · STAGE 2/3 — CHALLENGE' : 'STAGE 2/3 — CHALLENGE', 2.4,
       [form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '), null, false, false, 'region');
   }
   // hard readability cap: random form-skips + stream squads can land the
@@ -1647,6 +1667,15 @@ function buildLevel(lvl) {
   // threat multiplier. Boss stages keep their gauntlet choreography.
   G.director = null;
   G.objective = null;
+  // AFT-020: the wardbreak/lanes identities run in EVERY mode — outsmarting
+  // the wave is a cross-mode idea. The older families (survive/escort/
+  // defend) and the beat director remain STARFIGHTER's.
+  if (!hasBoss && G.mode !== 'junkie') {
+    const oX = encounterObjective(lvl);
+    if (oX && (oX.type === 'wardbreak' || oX.type === 'lanes')) {
+      G.objective = { ...oX, t: 0, done: false, failed: false, progress: 0 };
+    }
+  }
   if (G.mode === 'junkie' && !hasBoss) {
     const beats = encounterScript(lvl).map(b => ({ ...b, fired: false }));
     G.director = { beats, baseline: G.bricks.filter(b => !b.dead && !b.barrier).length,
@@ -1717,6 +1746,34 @@ function buildLevel(lvl) {
   // the guardian and chorus get their one proc back, the squadron stands down
   G.reactorUsed = false; G.vortexes = []; G.meteorRain = null;
   G.guardPulsedWave = false; G.chorusUsed = false; G.squadT = 0; G.lanceT = 0;
+  // AFT-020: non-attrition objectives mark their targets HERE, once the
+  // full population exists (the junkie flyer block adds its flock late).
+  // Ward sources are the flock's ANCHORS: spread deterministically across
+  // the formation, capped at 1.25× their own HP (the plan's anchor ceiling).
+  if (G.objective && !G.objective.marked) {
+    const O = G.objective;
+    O.marked = true;
+    const pool = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser && !b.friendly
+      && !b.isBoss && !b.subBoss);
+    if (O.type === 'wardbreak' && pool.length) {
+      const sorted = pool.slice().sort((a, b) => a.bx - b.bx || a.by - b.by);
+      const picks = [];
+      for (const idx of [0, Math.floor(sorted.length / 2), sorted.length - 1]) {
+        const b = sorted[Math.max(0, Math.min(sorted.length - 1, idx))];
+        if (b && !picks.includes(b)) picks.push(b);
+      }
+      for (const b of picks) {
+        b.wardSrc = true; b.role = 'anchor';
+        const bump = Math.max(b.hp, Math.round(b.maxHp * 1.25));
+        b.hp = b.maxHp = bump;
+      }
+      O.total = picks.length; O.left = picks.length;
+    }
+    if (O.type === 'lanes') {
+      O.laneX = W / 2; O.laneW = Math.max(130, W * 0.17);
+      O.laneT = 0; O.laneSlot = 1; O.hits = 0;
+    }
+  }
   // AFT-008: stamp the wave's WORK reference on the ledger record — total
   // live enemy HP at build, plus the region's Sovereign HP as the
   // Boss-Equivalent unit (same formula as the finale boss above). Stamped

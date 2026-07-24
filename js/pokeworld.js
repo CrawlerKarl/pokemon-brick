@@ -556,6 +556,12 @@ const STAGE_FLAVOR = {
 // update.js; HUD: drawObjectiveBanner, render.js). Keyed region:stage,
 // junkie non-boss stages only. More families (escort/capture/…) join later.
 const ENCOUNTER_OBJECTIVES = {
+  // AFT-020 non-attrition identities (engine types wardbreak/lanes; this
+  // skin's words): Viridian's warded route, Aspertia's live traffic lanes.
+  '0:1': { type: 'wardbreak', count: 3, name: 'BREAK THE ROUTE WARD',
+    tip: 'DOWN THE THREE WARD KEEPERS — THE FLOCK SCATTERS' },
+  '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
+    tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
   '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
     tip: "OUTLAST THE SWARM — YOU DON'T HAVE TO KILL THEM ALL" },
   // ESCORT (Sinnoh arrival): a friendly TOGEPI crosses the combat zone
@@ -637,9 +643,24 @@ FINALE_PROFILES[7] = {
   },
 };
 
+// AFT-020: per-stage display titles — this skin's region-flavored names.
+// Finale slots reuse the finale profile titles (one name per encounter).
+const STAGE_TITLES = [
+  ['PALLET LAUNCH', 'VIRIDIAN CROSSFIRE', FINALE_PROFILES[0].title],
+  ['NEWBARK WINDS', 'ECRUTEAK VIGIL', FINALE_PROFILES[1].title],
+  ['LITTLEROOT TIDES', 'THE GREAT MIGRATION', FINALE_PROFILES[2].title],
+  ['TWINLEAF CROSSING', "THE COURIER'S RUN", FINALE_PROFILES[3].title],
+  ['ASPERTIA LIGHTS', 'THE LIVE LANES', FINALE_PROFILES[4].title],
+  ['VANIVILLE GALLERIES', 'BEACON WATCH', FINALE_PROFILES[5].title],
+  ['MELEMELE SHALLOWS', 'ECLIPSE TIDE', FINALE_PROFILES[6].title],
+  ['THE UNDERCARD', "CHALLENGER'S GAUNTLET", FINALE_PROFILES[7].title],
+  ['MESAGOZA ROAD', 'ECHOES OF EIGHT REGIONS', FINALE_PROFILES[8].title],
+];
+
 assembleSkins({
   names: NAMES, gens: GENS, habitatPacks: HABITAT_PACKS, typeClusters: TYPE_CLUSTERS,
   finaleProfiles: FINALE_PROFILES,
+  stageTitles: STAGE_TITLES,
   starterMon: STARTER_MON, regionIntros: REGION_INTROS, stageFlavor: STAGE_FLAVOR,
   stageNames: STAGE_NAMES, acts: ACTS, junkieItems: JUNKIE_ITEMS,
   dexRewards: DEX_REWARDS, cheatItems: CHEAT_ITEMS,

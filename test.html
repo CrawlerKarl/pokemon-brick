@@ -1807,6 +1807,122 @@ window.requestAnimationFrame = function () { return 0; };
     return 'Sovereign live behind the crown · owner-weighted break meter · fired/torn/broken segments · bound mythic freed · ×1.35 window · no cleanup round';
   });
 
+  // AFT-020 Phase 3: authored stage titles everywhere, the VICTORY DRAFT's
+  // mastery-sized hands (4 base / 5 countered / pinned mastered reroll —
+  // never an extra rank), and the Challenge→finale PREPARATION benefit.
+  test('AFT-020 P3: stage titles + Victory Draft hands + Preparation', async () => {
+    await resetBetween();
+    for (let lvl = 1; lvl <= 27; lvl++) {
+      assert(typeof stageTitle(lvl) === 'string' && stageTitle(lvl).length > 2, 'title missing at L' + lvl);
+    }
+    assert(SKINS.aetherfall.stageTitles && SKINS.aetherfall.stageTitles.length === 9
+      && SKINS.aetherfall.stageTitles.every(r => r.length === 3), 'aetherfall titles are 9×3');
+    assert(SKINS.aetherfall.stageTitles[0][0] === 'HEDGEROW AWAKENING', 'aetherfall authors its own titles');
+    // ---- hand sizes ----
+    SETTINGS.mode = 'junkie';
+    resetRun(3, true, { seed: 'HAND1' });
+    G.state = 'play';
+    const bigN = () => G.upgradeChoices.filter(c => c.webKind === 'fusion' || c.webKind === 'apex').length;
+    G.clearedStage = 0;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.length === 3, 'an ordinary clear stays a 3-hand');
+    G.clearedStage = 2;
+    G.finale.mastery.clear = true;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.length === 4 && bigN() <= 1,
+      'a finale clear deals 4 offers, one special max (got ' + G.upgradeChoices.length + '/' + bigN() + ')');
+    G.finale.mastery.countered = true;
+    rollUpgradeChoices();
+    assert(G.upgradeChoices.length === 5 && bigN() <= 1,
+      'countered reveals a FIFTH offer, still one special max');
+    // mastered: the reroll pins the best offer instead of discarding the hand
+    G.finale.mastery.mastered = true;
+    G.rerolled = false;
+    rollUpgradeChoices();
+    const rank = c => c.webKind === 'apex' ? 5 : c.webKind === 'fusion' ? 4 : c.webKind === 'bridge' ? 3
+      : c.pathKey ? (c.tierIdx === 3 ? 2 : 1) : 0;
+    const keyOf = c => c.pathKey ? 'p:' + c.pathKey : c.web ? 'w:' + c.web.key : 's:' + (c.stack && c.stack.key);
+    const best = G.upgradeChoices.slice().sort((a, b) => rank(b) - rank(a))[0];
+    rerollDraft();
+    assert(G.upgradeChoices.some(c => keyOf(c) === keyOf(best)), 'a mastered reroll pins the best offer');
+    assert(bigN() <= 1, 'the pin cannot smuggle a second fusion/apex into the hand');
+    // ---- PREPARATION: challenge objective → one temporary finale benefit ----
+    resetRun(8, false, { seed: 'PREP1' }); // realm 3's SURVIVE challenge, real-run rules
+    G.cheated = true; // keeps this synthetic run out of medal storage
+    G.state = 'play'; paused = false; G.freeze = 0;
+    statsObjective('survive', true);
+    if (G.objective) G.objective.done = true;
+    await runFrames(600, () => {
+      for (const b of G.bricks) if (!b.dead && !b.barrier && !b.crosser && !b.friendly) b.dead = true;
+      for (const pu of G.powerups) pu.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state === 'results', 'challenge cleared (state ' + G.state + ')');
+    assert(G.prep && G.prep.realm === 2, 'preparation banked from the completed challenge objective');
+    G.stateT = 1; // clear the results dwell gate
+    advanceResults();
+    assert(G.state === 'upgrade', 'results advance to the draft');
+    const shieldsBefore = G.shieldCharges;
+    pickUpgrade(0); // installs + builds the finale
+    assert(G.level === 9 && G.prep === null, 'preparation spent (never outlives the build)');
+    assert(G.shieldCharges === shieldsBefore + 1 || G.mega > 0,
+      'the readied defense arrived (shield or banked overdrive)');
+    SETTINGS.starter = 'none'; G.starter = null;
+    return '27 titles × 2 skins · hands 3/4/5 · pinned mastered reroll · preparation banked + spent';
+  });
+
+  // AFT-020 Phase 3: the two new NON-ATTRITION stage identities, cross-mode.
+  // WARDBREAK (Greenspell challenge): three linked sources — break them and
+  // the whole wave stands down. LANES (Chrome challenge): the marked target
+  // only yields from inside the moving live lane.
+  test('AFT-020 P3: wardbreak + live lanes — non-attrition wins in any mode', async () => {
+    await resetBetween();
+    // ---- WARDBREAK in CLASSIC (the wall collapses) ----
+    SETTINGS.mode = 'classic';
+    resetRun(2, true, { seed: 'WARD1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const O = G.objective;
+    assert(O && O.type === 'wardbreak' && O.total === 3, 'ward objective arms in CLASSIC');
+    const srcs = G.bricks.filter(b => b.wardSrc && !b.dead);
+    assert(srcs.length === 3 && srcs.every(s => s.role === 'anchor'), 'three anchor-role ward sources');
+    assert(G.bricks.filter(b => !b.dead && !b.barrier).length > srcs.length + 2,
+      'the wall is bigger than its sources (a real shortcut)');
+    for (const s of srcs) { s.hp = 0.5; damageBrick(s, 2, s.bx, s.by, null, { source: 'ball' }); }
+    assert(O.done === true, 'three source kills cleanse the ward');
+    assert(!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser), 'classic: the warded wall collapsed');
+    await runFrames(700, () => {
+      for (const pu of G.powerups) pu.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state !== 'play', 'the non-attrition clear proceeds (state ' + G.state + ')');
+    // ---- LIVE LANES in STARFIGHTER (marked target, moving lane) ----
+    SETTINGS.mode = 'junkie';
+    resetRun(14, true, { seed: 'LANE1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const O2 = G.objective;
+    assert(O2 && O2.type === 'lanes' && O2.count === 4, 'lanes objective arms on the Chrome challenge');
+    await runFrames(30);
+    let mk = G.bricks.find(b => !b.dead && b.laneMark);
+    assert(mk, 'one marked target is maintained');
+    G.paddle.x = Math.min(W - 10, O2.laneX + O2.laneW); // OUTSIDE the lane
+    const hp0 = mk.hp;
+    damageBrick(mk, 1, mk.bx, mk.by, null, { source: 'bolt' });
+    assert(mk.hp === hp0, 'outside the lane the mark holds (deflect cue)');
+    for (let k = 0; k < 4; k++) {
+      await runFrames(4);
+      const m2 = G.bricks.find(b => !b.dead && b.laneMark);
+      if (!m2) break;
+      G.paddle.x = O2.laneX; // inside
+      m2.hp = 0.5;
+      damageBrick(m2, 2, m2.bx, m2.by, null, { source: 'bolt' });
+    }
+    assert(O2.done === true && (O2.hits || 0) >= 4,
+      'four in-lane mark kills run the circuit (hits ' + (O2.hits || 0) + ')');
+    assert(!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser && !b.friendly),
+      'the flock dispersed — no attrition epilogue');
+    return 'wardbreak collapses the classic wall · lanes gate damage by position · both end the wave without a grind';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {

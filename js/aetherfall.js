@@ -461,6 +461,13 @@
 
   // ---- objective families: species remapped into this id space
   const encounterObjectives = {
+    // AFT-020 non-attrition identities: break the three linked ward sources
+    // and the whole flock scatters (Greenspell), or ride the moving live
+    // lane — the marked target is only vulnerable from inside it (Chrome).
+    '0:1': { type: 'wardbreak', count: 3, name: 'CLEANSE THE WARD',
+      tip: 'BREAK THE THREE WARD SOURCES — THE FLOCK SCATTERS' },
+    '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
+      tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
     '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
       tip: "OUTLAST THE SWARM — YOU DON'T HAVE TO KILL THEM ALL" },
     '3:0': { type: 'escort', name: 'ESCORT THE COURIER', species: 401, speciesT: 'steel', path: 'cross',
@@ -702,9 +709,27 @@
     },
   };
 
+  // ---------- AFT-020 stage titles ----------
+  // Every one of the 27 stages carries its own name (the structural
+  // ARRIVAL / CHALLENGE / finale subtitle stays for orientation). Finale
+  // slots reuse the authored finale titles so Trial, results and the HUD
+  // all speak one name per encounter.
+  const stageTitles = [
+    ['HEDGEROW AWAKENING', 'WARDSTORM', FINALE_TITLES[0]],
+    ['THE CARILLON ROADS', 'CROSSWIND VIGIL', FINALE_TITLES[1]],
+    ['THE SALT MEADOWS', 'THE GREAT MIGRATION', FINALE_TITLES[2]],
+    ['EMBERLINE CROSSING', "THE COURIER'S RUN", FINALE_TITLES[3]],
+    ['NEON FRONTAGE', 'THE LIVE LANES', FINALE_TITLES[4]],
+    ['THE MIRROR GALLERIES', 'BEACON WATCH', FINALE_TITLES[5]],
+    ['THE LEY SHALLOWS', 'ECLIPSE TIDE', FINALE_TITLES[6]],
+    ['THE UNDERCARD', "CHALLENGER'S GAUNTLET", FINALE_TITLES[7]],
+    ['THE SUNDERED ROAD', 'ECHOES OF EIGHT REALMS', FINALE_TITLES[8]],
+  ];
+
   // ---------- assembly ----------
   Object.assign(AF, {
     finaleProfiles,
+    stageTitles,
     typeNames,
     edition: 'AETHERFALL EDITION',
     affinities: true, // unlocks the LIGHT/DARK setup pick (Round S6)

@@ -677,6 +677,19 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
     return;
   }
+  // LIVE LANES: the marked target only yields to a player standing INSIDE
+  // the lane — an outside hit is turned aside with an honest cue
+  if (br.laneMark && G.objective && G.objective.type === 'lanes'
+    && !G.objective.done && !G.objective.failed && G.objective.laneX != null
+    && Math.abs(G.paddle.x - G.objective.laneX) > (G.objective.laneW || 140) / 2) {
+    br.flash = 1;
+    const O = G.objective;
+    if ((O.deflectCD || 0) <= 0) {
+      O.deflectCD = 0.9;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, 'ENTER THE LANE', '#ffd54f', 11);
+    }
+    return;
+  }
   // THE GALE RELAY (AFT-020): Vows never lose HP to damage — a carrier hit
   // feeds the pass meter (real, ledgered work); a non-carrier hit is turned
   // by the wind (a readable deflect cue, no hidden progress). Direct kills
@@ -817,6 +830,21 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (br.reinf) statsKillRenew(); // renewable-population kill (AFT-008 farm audit)
     // RAID: the last vine down frees the bound mythic (optional risk/reward)
     if (br.raidVine && raidState() && !G.bricks.some(b => b.raidVine && !b.dead && b !== br)) raidFreeBound();
+    // AFT-020 non-attrition objectives: source and marked-target kills
+    if (br.wardSrc && G.objective && G.objective.type === 'wardbreak' && !G.objective.done) {
+      const O = G.objective;
+      O.left = Math.max(0, (O.left || 0) - 1);
+      O.progress = O.total ? 1 - O.left / O.total : 0;
+      if (O.left > 0) setCombatNotice('WARD SOURCE DOWN — ' + O.left + ' LEFT', '#9CFF57', 1.4);
+      else completeNonAttrition(O, O.name || 'WARD CLEANSED');
+    }
+    if (br.laneMark && G.objective && G.objective.type === 'lanes' && !G.objective.done && !G.objective.failed) {
+      const O = G.objective;
+      O.hits = (O.hits || 0) + 1;
+      O.progress = O.hits / O.count;
+      if (O.hits < O.count) setCombatNotice('MARK DOWN — ' + O.hits + '/' + O.count, '#ffd54f', 1.4);
+      else completeNonAttrition(O, O.name || 'LANES RUN');
+    }
     if (br.isBoss) statsBossPhaseMark(br, br.phase); // close the final phase clock
     if (G.runStats) {
       G.runStats.bricksBroken++;
@@ -1947,6 +1975,13 @@ function bossAbility(boss) {
 // drafts gain pity weight; mastery satellites only fill EMPTY slots — never
 // crowding out an authored node — capped-wedge satellites first.
 function rollUpgradeChoices() {
+  // AFT-020 VICTORY DRAFT: a finale clear deals a wider hand — FOUR offers
+  // base, FIVE once the signature answer was COUNTERED. Mastery changes
+  // VISIBILITY and reroll control only, never rank count, and the
+  // one-fusion/apex-per-hand rule holds at every hand size (only the
+  // EXPLORE slot ever deals a web special).
+  const handN = (G.clearedStage === 2 && G.finale && G.finale.mastery && G.finale.mastery.clear)
+    ? (G.finale.mastery.countered ? 5 : 4) : 3;
   const rerolledFrom = G.rerolled ? (G.lastOfferKeys || []) : [];
   const bridges = WEB_BRIDGES.filter(bridgeEligible);
   const fusions = WEB_FUSIONS.filter(fusionEligible);
@@ -1998,13 +2033,13 @@ function rollUpgradeChoices() {
     const has = picked.some(k => (PATHS[k].family === 'offense') === wantOffense);
     const avail = rankedCont.some(k => !used.has(k) && (PATHS[k].family === 'offense') === wantOffense);
     if (!has && avail) {
-      if (picked.length + webPicked.length >= 3 && picked.length) { used.delete(picked[picked.length - 1]); picked.pop(); }
+      if (picked.length + webPicked.length >= handN && picked.length) { used.delete(picked[picked.length - 1]); picked.pop(); }
       takeCont(k => (PATHS[k].family === 'offense') === wantOffense);
     }
   }
   // top up: remaining continuations, then bridges — never a SECOND fusion or
   // apex in the same hand (the plan's one-per-hand rule)
-  while (picked.length + webPicked.length < 3) {
+  while (picked.length + webPicked.length < handN) {
     if (takeCont()) continue;
     const b2 = bridges.find(b => !webPicked.some(w => w.def.key === b.key));
     if (b2) { webPicked.push({ def: b2, kind: 'bridge' }); continue; }
@@ -2041,13 +2076,13 @@ function rollUpgradeChoices() {
   }
   // mastery satellites fill EMPTY slots only — capped home wedges first, so
   // the late run always has a useful pick without burying authored content
-  if (choices.length < 3) {
+  if (choices.length < handN) {
     // one seeded draw per satellite, THEN sort by the precomputed key —
     // gameRand() inside a comparator consumes an engine-defined number of
     // draws and desyncs seeded runs across browsers
     const sats = activeSatellites().map(sat => ({ sat, item: stackItem(sat.stackKey), r: gameRand() }))
       .sort((a, b) => ((pathLvl(b.sat.path) >= 4 ? 1 : 0) - (pathLvl(a.sat.path) >= 4 ? 1 : 0)) || (a.r - b.r));
-    for (const { item } of sats) if (choices.length < 3) choices.push({ stack: item });
+    for (const { item } of sats) if (choices.length < handN) choices.push({ stack: item });
   }
   // pity + reroll memory: every eligible node not in this hand ages a draft
   const handKeys = choices.map(c => c.pathKey ? contKey(c.pathKey) : c.web ? c.web.key : 'stack:' + c.stack.key);
@@ -2894,9 +2929,62 @@ function friendlyFaints(fr) {
     null, null, false, false, 'objective');
   SFX.hit(0); haptic('hit');
 }
+// AFT-020: complete a non-attrition objective — the remaining ordinary
+// population stands down. Shooter modes disperse the flock into fleeing
+// crossers; classic's warded wall collapses (a card-shatter cascade).
+function completeNonAttrition(O, name) {
+  O.done = true;
+  O.progress = 1;
+  statsObjective(O.type, true);
+  G.score += Math.round(600 * scoreMult());
+  if (G.mode === 'classic') {
+    for (const b of G.bricks) {
+      if (b.dead || b.barrier || b.isBoss || b.subBoss || b.crosser || b.friendly) continue;
+      shatterBrick(b, b.bx + G.fx, b.by + G.fy, bareMon(b));
+      b.dead = true;
+    }
+  } else disperseSwarm();
+  G.reinforce = 0; // outsmarting the wave ENDS it — never a grind epilogue
+  setAnnounce('star', '#9CFF57', name, '+600 — THE WAVE STANDS DOWN', 2.6);
+  SFX.stageClear();
+}
 function updateObjective(dt) {
   const O = G.objective;
-  if (!O || G.mode !== 'junkie' || G.state !== 'play' || O.done || O.failed) return;
+  if (!O || G.state !== 'play' || O.done || O.failed) return;
+  // wardbreak/lanes run in EVERY mode; the older families stay junkie-only
+  const crossMode = O.type === 'wardbreak' || O.type === 'lanes';
+  if (G.mode !== 'junkie' && !crossMode) return;
+  // WARDBREAK: the kill hook counts sources; attrition still resolves it
+  // (every source death decrements, however it happened)
+  if (O.type === 'wardbreak') return;
+  // LANES: the safe lane cycles between three slots; ONE marked target at a
+  // time is vulnerable only from inside the lane
+  if (O.type === 'lanes') {
+    if (O.deflectCD > 0) O.deflectCD -= dt;
+    O.laneT = (O.laneT || 0) + dt;
+    if (O.laneT >= 7) { O.laneT = 0; O.laneSlot = ((O.laneSlot || 0) + 1) % 3; }
+    const slots = [W * 0.26, W * 0.5, W * 0.74];
+    const targetX = slots[O.laneSlot || 0];
+    O.laneX = (O.laneX == null ? W / 2 : O.laneX) + (targetX - O.laneX) * Math.min(1, dt * 3);
+    if (!G.bricks.some(b => !b.dead && b.laneMark)) {
+      const pool = G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser && !b.friendly
+        && !b.isBoss && !b.subBoss && !b.entry);
+      if (pool.length) {
+        let best = pool[0], bd = Infinity;
+        for (const b of pool) {
+          const d2 = Math.abs(b.bx + G.fx - O.laneX);
+          if (d2 < bd) { bd = d2; best = b; }
+        }
+        best.laneMark = true;
+      } else {
+        // nothing left to mark — the circuit can't finish: revert to attrition
+        O.failed = true;
+        statsObjective(O.type, false);
+      }
+    }
+    O.progress = (O.hits || 0) / O.count;
+    return;
+  }
   // PROTECT: while the friendly lives, hold the swarm's pressure and read out
   // its progress. Its faint (fhp→0) is handled at the enemy-shot collision.
   if (O.type === 'escort' || O.type === 'defend') {
@@ -5961,6 +6049,19 @@ function update(dt) {
     const clearedStage = stageIdx(G.level);
     const secretVictory = !!(G.secret.vmax && clearedStage === 2);
     statsEndLevel();
+    if (clearedStage === 2) completeFinale(); // resolve mastery BEFORE results read it
+    // AFT-020 PREPARATION: completing the Challenge stage's realm objective
+    // banks ONE temporary benefit for the finale — spent at the finale
+    // build, expired at its clear, never a permanent pick or extra offer.
+    {
+      const Lc = statsCur();
+      if (clearedStage === 1 && Lc && Lc.objectiveDone && !G.trial && !G.daily) {
+        G.prep = { realm: regionIdx(G.level) };
+        setAnnounce('shield', '#a5d6a7', 'PREPARATION SECURED',
+          'THE FINALE OPENS WITH A READIED DEFENSE', 2.8);
+      }
+      if (clearedStage === 2) G.prep = null; // preparation never outlives its finale
+    }
     G.score += Math.round((300 + clearedStage * 250) * (G.fx_score ? 2 : 1));
     // ---- STAGE RESULTS (Milestone 1): every clear pauses on a one-tap
     // interstitial — score, the combat ledger, and mastery objectives —

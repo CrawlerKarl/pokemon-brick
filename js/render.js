@@ -2813,6 +2813,65 @@ function drawRelayFx() {
     ctx.restore();
   }
 }
+// AFT-020 non-attrition objective reads: the ward triangle linking its
+// three sources (wardbreak) and the live lane's rails + the marked target's
+// diamond (lanes). Shape and motion cues, strokes only.
+function drawObjectiveFx() {
+  const O = G.objective;
+  if (!O || O.done || O.failed || (G.state !== 'play' && G.state !== 'serve')) return;
+  if (O.type === 'wardbreak') {
+    const srcs = G.bricks.filter(b => !b.dead && b.wardSrc);
+    if (!srcs.length) return;
+    ctx.save();
+    ctx.setLineDash([8, 7]);
+    ctx.lineDashOffset = -(G.time * 26) % 15;
+    ctx.strokeStyle = 'rgba(156,255,87,0.45)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    for (let i = 0; i < srcs.length; i++) {
+      const a = srcs[i], b = srcs[(i + 1) % srcs.length];
+      if (srcs.length === 1) break;
+      ctx.moveTo(a.bx + G.fx, a.by + G.fy);
+      ctx.lineTo(b.bx + G.fx, b.by + G.fy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const s2 of srcs) {
+      const r = Math.max(s2.w, s2.h) * 0.62;
+      const pulse = 0.7 + 0.3 * Math.sin(G.time * 4 + s2.bx * 0.01);
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = 'rgba(156,255,87,' + (0.4 + 0.4 * pulse) + ')';
+      ctx.beginPath(); ctx.arc(s2.bx + G.fx, s2.by + G.fy, r + 5, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  if (O.type === 'lanes' && O.laneX != null) {
+    const x0 = O.laneX - O.laneW / 2, x1 = O.laneX + O.laneW / 2;
+    const yTop = SAFE_T + 92;
+    const yBot = G.mode === 'junkie' ? shipY() + 44 : PADDLE_Y() + 20;
+    ctx.save();
+    ctx.setLineDash([12, 9]);
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = 'rgba(255,213,79,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(x0, yTop); ctx.lineTo(x0, yBot);
+    ctx.moveTo(x1, yTop); ctx.lineTo(x1, yBot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const mk = G.bricks.find(b => !b.dead && b.laneMark);
+    if (mk) {
+      const mx = mk.bx + G.fx, my = mk.by + G.fy - mk.h / 2 - 14 - Math.sin(G.time * 5) * 3;
+      ctx.fillStyle = '#ffd54f';
+      ctx.beginPath();
+      ctx.moveTo(mx, my); ctx.lineTo(mx + 7, my - 9); ctx.lineTo(mx, my - 18); ctx.lineTo(mx - 7, my - 9);
+      ctx.closePath(); ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,213,79,0.8)';
+      ctx.beginPath(); ctx.arc(mx, mk.by + G.fy, Math.max(mk.w, mk.h) * 0.62 + 4, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
 // AFT-020 THE SERAPH RAID: crown segments assemble on visible arcs over the
 // Sovereign; each live segment shows BOTH clocks (outer sweep = assembly
 // danger, inner bright fill = break progress) and a dashed TETHER to the
@@ -4834,7 +4893,7 @@ function drawHUD() {
   const span0 = narrow ? 12 : 150, span1 = narrow ? W - 12 : hbLeft - 10;
   const waveY = narrow ? 48 : (G.modifier ? 22 : 28);
   const waveText = G.secret.vmax ? 'SECRET RIFT · ' + SKIN.secret.name
-    : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + SKIN.stageNames[stg];
+    : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + (stageTitle(G.level) || SKIN.stageNames[stg]);
   fitLabel(waveText, (span0 + span1) / 2, waveY,
     { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
   // AFT-001: the modifier chip is SECONDARY copy — it yields its row to a
@@ -4932,6 +4991,9 @@ function drawHUD() {
 }
 function drawBrickBehaviorLegend() {
   if (G.mode !== 'classic' || stageIdx(G.level) === 2 || (G.state !== 'play' && G.state !== 'serve')) return;
+  // AFT-001: the region rule is SECONDARY copy — it yields its band to a
+  // live objective banner (the win condition outranks the flavor rule)
+  if (G.objective && !G.objective.done && !G.objective.failed) return;
   const key = BRICK_BEHAVIOR_ORDER[Math.min(BRICK_BEHAVIOR_ORDER.length - 1, regionIdx(G.level))];
   const info = BRICK_BEHAVIORS[key];
   if (!info) return;
@@ -5007,6 +5069,8 @@ function drawObjectiveBanner() {
   if (O.type === 'survive') readout = Math.max(0, Math.ceil(O.dur - O.t)) + 's';
   else if (O.type === 'defend') readout = Math.max(0, Math.ceil(O.dur - O.t)) + 's';
   else if (O.type === 'escort') readout = Math.round((O.progress || 0) * 100) + '%';
+  else if (O.type === 'wardbreak') readout = ((O.total || 0) - (O.left || 0)) + '/' + (O.total || 0);
+  else if (O.type === 'lanes') readout = (O.hits || 0) + '/' + O.count;
   // PROTECT objectives inline the friendly's remaining heart pips
   const fr = O.friendly;
   if (fr && !fr.dead) label += '  ·  ' + '♥'.repeat(Math.max(0, fr.fhp));
@@ -6954,7 +7018,8 @@ function drawTrial() {
     ctx.lineWidth = sel ? 2 : 1;
     ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.22)';
     ctx.stroke();
-    fitLabel((i + 1) + '/3 ' + SKIN.stageNames[i], r.x + r.w / 2, r.y + r.h / 2 + 1,
+    fitLabel((i + 1) + '/3 ' + (stageTitle(trialSel.region * STAGES + i + 1) || SKIN.stageNames[i]),
+      r.x + r.w / 2, r.y + r.h / 2 + 1,
       { size: Math.min(11, r.w / 10), min: 7.5, weight: 900, color: sel ? '#ffd54f' : '#cfd8dc', maxW: r.w - 8 });
   }
   // LEGENDARY stage → pick a gauntlet round. STARFIGHTER Kanto also exposes
@@ -7424,7 +7489,8 @@ function drawFullUpgradeTree() {
   const buildLine = T.compact
     ? 'BUILD ' + ownedN + '/50 · ' + activeN + ' PATHS · ONLY OPTION TAGS INSTALL'
     : 'BUILD ' + ownedN + '/50 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
-      ' · ONLY THE THREE WHITE OPTION TAGS CAN BE INSTALLED THIS STAGE';
+      ' · ONLY THE ' + (['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][(G.upgradeChoices || []).length - 1] || 'WHITE') +
+      ' WHITE OPTION TAGS CAN BE INSTALLED THIS STAGE';
   ctx.fillText(buildLine, p.x + p.w / 2, p.y + (T.compact ? 37 : 45), p.w - 96);
 
   if (!treeSel.kind) treeSel.kind = 'tier';
@@ -8532,7 +8598,10 @@ function drawResults() {
   title('STAGE CLEAR!', topY, short ? 30 : Math.min(46, W / 14), accent);
   ctx.font = '700 ' + (short ? 12 : 15) + 'px Orbitron, sans-serif';
   ctx.fillStyle = '#cfd8dc';
-  ctx.fillText(R.region + ' · ' + R.stage + '  —  STAGE ' + (stageIdx(R.lvl) + 1) + '/3', W / 2, topY + (short ? 26 : 40));
+  // both names: the authored stage title leads, the structural label orients
+  fitLabel((R.stageTitle ? R.stageTitle + '  ·  ' : '') + R.region + ' · ' + R.stage
+    + '  —  STAGE ' + (stageIdx(R.lvl) + 1) + '/3', W / 2, topY + (short ? 26 : 40),
+  { size: short ? 12 : 15, min: 9, weight: 700, color: '#cfd8dc', maxW: W * 0.92, zone: 'results' });
   // combat readout: two compact rows straight from the balance ledger
   const rowY = topY + (short ? 48 : 74);
   const rowGap = short ? 20 : 26;
@@ -8556,9 +8625,24 @@ function drawResults() {
     ctx.fillText('OBJECTIVE: ' + R.objective.toUpperCase() + ' — ' + (R.objectiveDone ? 'COMPLETE' : 'FAILED'),
       W / 2, rowY + rowGap * 2, W * 0.92);
   }
+  // AFT-020: a finale clear names the MASTERY the encounter taught —
+  // countered (the signature answered) or mastered (every major beat)
+  if (R.finaleMastery) {
+    ctx.fillStyle = R.finaleMastery === 'mastered' ? '#ffd54f'
+      : R.finaleMastery === 'countered' ? '#80d8ff' : '#b0bec5';
+    ctx.font = bodyFont(short ? 11 : 13, 700);
+    fitLabel((R.finaleTitle ? R.finaleTitle + ' — ' : '')
+      + (R.finaleMastery === 'mastered' ? '★ MASTERED — YOUR REROLL WILL PIN ITS BEST OFFER'
+        : R.finaleMastery === 'countered' ? 'SIGNATURE COUNTERED — A FIFTH OFFER AWAITS'
+          : 'CLEARED — COUNTER THE SIGNATURE FOR A WIDER DRAFT'),
+    W / 2, rowY + rowGap * (R.objective ? 3 : 2),
+    { size: short ? 11 : 13, min: 9, weight: 700,
+      color: R.finaleMastery === 'mastered' ? '#ffd54f' : R.finaleMastery === 'countered' ? '#80d8ff' : '#b0bec5',
+      maxW: W * 0.92, zone: 'results' });
+  }
   // objectives — the mastery list with medal states (pushed down one row when
   // the encounter-objective line above is present, so they never collide)
-  const objY = rowY + rowGap * (short ? 2.2 : 2.7) + (R.objective ? rowGap : 0);
+  const objY = rowY + rowGap * (short ? 2.2 : 2.7) + (R.objective ? rowGap : 0) + (R.finaleMastery ? rowGap : 0);
   // narrow phones stack name+badge over the description, so the row is taller
   const objH = narrow ? (short ? 42 : 54) : (short ? 30 : 40);
   const panelW = Math.min(W * 0.92, 640);
@@ -9192,6 +9276,7 @@ function render() {
     drawTelegraphs();
     drawRelayFx(); // AFT-020: the gale-relay corridor + carrier cues (under the sprites)
     drawRaidFx();  // AFT-020: the raid's crown arcs, tethers + binding read
+    drawObjectiveFx(); // AFT-020: ward triangle + live-lane rails/marks
     drawBricks();
     drawFragments();
     drawShield();

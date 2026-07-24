@@ -203,6 +203,7 @@ const SCENES = [
   { name: 'boss-combat', js: `revealSkip(); for(let i=0;i<220;i++)update(1/60);` },
   { name: 'relay-finale', js: `DEV.launch({level:6,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<180;i++)update(1/60);` },
   { name: 'raid-finale', js: `DEV.launch({level:24,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<200;i++)update(1/60);` },
+  { name: 'lanes-objective', js: `DEV.launch({level:14,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<120;i++)update(1/60);` },
   { name: 'draft', js: `G.state='upgrade'; G.stateT=1; if(!G.upgradeChoices) rollUpgradeChoices();` },
   { name: 'web', js: `upgradeTreeOpen=true;` },
   { name: 'results', js: `upgradeTreeOpen=false; DEV.launch({level:2,mode:'classic',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(const b of G.bricks){b.dead=true;} for(let i=0;i<80;i++)update(1/60);` },
