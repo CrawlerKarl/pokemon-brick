@@ -711,6 +711,28 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
   }
   statsDmgCat('guard', dmg - dPreGuard);
+  // THE LIVE GRID: the first Paladin struck becomes THE DUEL (its siblings
+  // stand down as neutral terminals in the same breath)
+  if (br.paladin && !br.paladinDuel && !br.gridTerminal && circuitState()
+    && !circuitState().chosen && G.finale.beat === 0) {
+    circuitChooseDuel(br);
+  }
+  // neutral terminals: hits only matter on the CHARGED node mid-illumination
+  if (br.gridTerminal) {
+    br.flash = 1;
+    const C2 = circuitState();
+    if (C2 && C2.active && C2.active.node === br && !C2.active.fired) {
+      C2.active.hits = (C2.active.hits || 0) + 1;
+      burst(sx, sy, '#ffd166', 8, 180, 0.4);
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12,
+        'CHARGE ' + C2.active.hits + '/' + C2.active.need, '#ffd166', 11);
+      if (C2.active.hits >= C2.active.need) circuitRedirect();
+    } else if (C2 && (C2.termCD || 0) <= 0) {
+      C2.termCD = 1.1;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, 'A NEUTRAL TERMINAL', '#b0bec5', 10);
+    }
+    return;
+  }
   // THE FRACTURED HOUR: the out-of-hour actor is a pale past — untouchable
   // until the hours trade back (its ONE defensive rule)
   if (br.hourOut) {
@@ -3383,6 +3405,11 @@ function completeFinale() {
     F.mastery.mastered = (F.mastery.counters.sibyls || 0) >= 3
       && G.bricks.filter(b => b.sibylAwake && !b.dead).length >= 3;
   }
+  if (F.format === 'circuit' && F.circuit) {
+    // countered = one redirect turned home; mastered = three, plus glory
+    // (the flame's wake ridden long enough to matter)
+    F.mastery.mastered = (F.circuit.redirects || 0) >= 3 && (F.circuit.flameT || 0) >= 5;
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3668,6 +3695,16 @@ function updateFinaleDirector(dt) {
   if (F.format === 'raid' && F.raid) updateRaid(dt);
   if (F.format === 'siege' && F.siege) updateSiege(dt);
   if (F.format === 'hourglass' && F.hourglass) updateHourglass(dt);
+  if (F.format === 'circuit' && F.circuit) {
+    const C = F.circuit;
+    if (C.termCD > 0) C.termCD -= dt;
+    // the duel meter reads the chosen Paladin's remaining fight
+    if (F.beat === 0 && C.chosen != null && F.meter) {
+      const duel = G.bricks.find(b => b.paladinDuel && !b.dead);
+      if (duel) F.meter.value = 1 - duel.hp / duel.maxHp;
+    }
+    updateCircuit(dt);
+  }
   if (F.format === 'ladder' && F.memory) updateLadderMemory(dt);
   if (F.format === 'relay' && F.relay) {
     const R = F.relay;
@@ -3728,6 +3765,155 @@ function updateLadderMemory(dt) {
       continue;
     }
     G.columnStrikes.push({ x: m.x, w: 74, warn: 1.2, strike: 0.45, color: '#ec407a', echo: true });
+  }
+}
+// ---- TRIAL OF THE LIVE GRID (AFT-020 Phase 5, realm 5) ----
+function circuitState() { return (G.finale && G.finale.format === 'circuit' && G.finale.circuit) || null; }
+function circuitWord(k, fallback) {
+  const F = G.finale;
+  return (F && F.profile && F.profile.circuit && F.profile.circuit[k]) || fallback;
+}
+// the FIRST Paladin struck becomes the duel; the others stand down into
+// neutral terminals (excluded from fire, clear, and the hostile systems)
+function circuitChooseDuel(br) {
+  const F = G.finale, C = F.circuit;
+  C.chosen = br.subIdx || 0;
+  C.grammar = C.chosen; // 0 fast · 1 heavy · 2 growing — all sidegrades
+  br.paladinDuel = true;
+  br.hp = br.maxHp = Math.max(3, Math.round((G.gauntlet ? G.gauntlet.legendHp : 20) * 0.3));
+  F.meter = { value: 0, max: 1, label: (br.poke.n || 'THE DUEL').toUpperCase() };
+  for (const b of G.bricks) {
+    if (!b.paladin || b === br || b.dead) continue;
+    b.subBoss = false; b.gridTerminal = true;
+    b.hp = b.maxHp = 999;
+    b.openT = 0;
+  }
+  setCombatNotice(circuitWord('duelWord', 'THE DUEL IS CHOSEN') + ' · '
+    + circuitWord('standWord', 'THE OTHERS STAND DOWN'), '#ffd166', 2.4);
+  ringFx(br.bx + G.fx, br.by + G.fy, '#ffd166', 8, 120, 4, 0.5);
+  SFX.roar();
+}
+function circuitArm() {
+  const F = G.finale, C = F.circuit;
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  const terms = G.bricks.filter(b => b.gridTerminal && !b.dead);
+  if (!boss || !terms.length) return;
+  // deterministic terminal pick: alternate; the LATER grid includes the
+  // player's position as the final node — bait and move
+  C.armN = (C.armN || 0) + 1;
+  const term = terms[C.armN % terms.length];
+  const late = bossLastStand(boss);
+  const grammarIllum = [1.4, 2.2, 1.7][C.grammar] || 1.7;
+  C.active = {
+    t: 0, illum: grammarIllum, fired: false, hits: 0, need: 3,
+    from: { x: boss.bx + G.fx, y: boss.by + G.fy },
+    node: term,
+    endX: late ? G.paddle.x : term.bx + G.fx, // late circuits hunt where you STOOD
+    w: C.grammar === 1 ? 130 : 90,
+  };
+  setCombatNotice(circuitWord('tipWord', 'THE ROUTE LIGHTS — BREAK THE CHARGED TERMINAL'), '#ffd166', 1.4);
+}
+function circuitRedirect() {
+  const F = G.finale, C = F.circuit;
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  C.active = null;
+  C.redirects++;
+  C.relit++;
+  F.mastery.counters.redirects = C.redirects;
+  F.mastery.countered = true;
+  if (boss) {
+    // the jolt turns home: a scripted 6% proc under its own boss coefficient
+    damageBrick(boss, Math.max(1, boss.maxHp * 0.06), boss.bx + G.fx, boss.by + G.fy, null,
+      { source: 'other', noMega: true });
+    boss.flash = 1;
+    ringFx(boss.bx + G.fx, boss.by + G.fy, '#ffd166', 10, 150, 5, 0.6);
+  }
+  setCombatNotice(circuitWord('redirectWord', 'REDIRECTED!') + ' · '
+    + circuitWord('relitWord', 'A DISTRICT RELIGHTS'), '#9CFF57', 1.8);
+  SFX.mega();
+}
+function circuitBeginCoda(gen2) {
+  const F = G.finale;
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  F.coda = { t: 0, dur: 16, passes: 0 };
+  F.codaHold = true;
+  if (mid) {
+    const vw2 = Math.min(110, W * 0.15);
+    const flame = {
+      bx: -vw2, by: Math.max(170, H * 0.3), hx: -vw2, hy: Math.max(170, H * 0.3),
+      row: -3, col: 0, w: vw2, h: vw2 * 0.9, hp: 1, maxHp: 1,
+      bare: true, victoryFlame: true, poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      crosser: { vx: Math.max(120, W / 6), bobPh: 0 }, flash: 0, wobble: 0,
+    };
+    G.bricks.push(flame);
+    getSprite(mid[0]);
+    beginBossReveal('mythic', [flame]);
+  }
+  const label = (F.profile && F.profile.beats[2] && F.profile.beats[2].label) || 'THE VICTORY FLAME';
+  const tip = (F.profile && F.profile.beats[2] && F.profile.beats[2].tip) || 'RIDE THE WAKE';
+  setAnnounce('fire', '#ffd166', label, tip, 3.2, null, null, false, true, 'boss');
+  F.meter = { value: 0, max: 5, label: circuitWord('flameWord', 'RIDE THE WAKE') };
+}
+function updateCircuit(dt) {
+  const F = G.finale, C = F.circuit;
+  if (F.beat === 2 && F.coda) {
+    F.coda.t += dt;
+    // the flame sweeps back and forth; riding its wake pays score + mastery
+    const flame = G.bricks.find(b => b.victoryFlame && !b.dead);
+    if (flame) {
+      // relaunch the crosser for three total passes
+      if (flame.crosser && ((flame.crosser.vx > 0 && flame.bx > W + flame.w) || (flame.crosser.vx < 0 && flame.bx < -flame.w))) {
+        F.coda.passes++;
+        if (F.coda.passes < 3) {
+          flame.crosser.vx *= -1;
+          flame.bx = flame.crosser.vx > 0 ? -flame.w : W + flame.w;
+          flame.dead = false;
+        }
+      }
+      if (Math.abs(G.paddle.x - (flame.bx + G.fx)) < Math.max(120, W * 0.14)) {
+        C.flameT += dt;
+        F.mastery.counters.flameT = +C.flameT.toFixed(1);
+        if (F.meter) F.meter.value = Math.min(5, C.flameT);
+        if ((C.scoreCD || 0) <= 0) {
+          C.scoreCD = 0.5;
+          G.score += Math.round(60 * scoreMult());
+          addFloater(G.paddle.x, shipY() - 40, '+60 GLORY', '#ffd166', 11);
+        }
+      }
+      if (C.scoreCD > 0) C.scoreCD -= dt;
+    }
+    if ((F.coda.passes >= 3 || F.coda.t >= F.coda.dur) && F.codaHold) {
+      F.codaHold = false;
+      if (C.flameT >= 5 && !F.wish) F.wish = 'commit'; // glory leans the draft
+    }
+    return;
+  }
+  if (F.beat !== 1) return;
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  if (!boss) return;
+  if (!C.active) {
+    C.armT -= dt;
+    if (C.armT <= 0) {
+      C.armT = [7, 11, 9][C.grammar] || 9;
+      circuitArm();
+    }
+    return;
+  }
+  const A = C.active;
+  A.t += dt;
+  if (A.node && A.node.dead) { C.active = null; return; } // its terminal fell — the route dies
+  if (!A.fired && A.t >= A.illum) {
+    A.fired = true;
+    // the electricity moves: ONE warned lane at the illuminated endpoint —
+    // never in classic (the calm contract clears lane strikes there anyway)
+    if (G.mode !== 'classic') {
+      G.columnStrikes.push({ x: Math.max(50, Math.min(W - 50, A.endX)), w: A.w, warn: 0.9, strike: 0.45, color: '#ffd166' });
+    }
+    // the VERDANT grammar grows: a second, narrower echo lane late
+    if (C.grammar === 2 && bossLastStand(boss) && G.mode !== 'classic') {
+      G.columnStrikes.push({ x: Math.max(50, Math.min(W - 50, W - A.endX)), w: 60, warn: 1.3, strike: 0.4, color: '#ffd166' });
+    }
+    C.active = null;
   }
 }
 // ---- THE FRACTURED HOUR (AFT-020 Phase 5, realm 4) ----
@@ -4046,6 +4232,11 @@ function gauntletSummonMythic(forceSecret = false) {
   // the SIEGE's coda: three falling wishes shape the Victory Draft
   if (G.finale && G.finale.format === 'siege') {
     siegeBeginCoda(gen2);
+    return;
+  }
+  // the LIVE GRID's coda: a ridden Victory Flame, never a fight
+  if (G.finale && G.finale.format === 'circuit') {
+    circuitBeginCoda(gen2);
     return;
   }
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
@@ -6028,6 +6219,7 @@ function update(dt) {
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && !b.crosser && !b.friendly
           && !b.raidVine && !(b.raidBound && !b.raidFreed) // bound actors and props never fire
+          && !b.gridTerminal // stood-down Paladins are neutral hardware
           && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
           && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
             && G.encounter.squads[b.flight.sq].silenceT > 0));
@@ -6516,7 +6708,7 @@ function update(dt) {
 
   // ---- level clear → reinforcements first, then draft and move on ----
   if (G.state === 'play' && G.dramaticT <= 0 && !(G.finale && G.finale.codaHold)
-    && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly)) {
+    && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly || b.gridTerminal)) {
     // an active objective holds the wave open — SURVIVE outlasts the timer,
     // ESCORT/DEFEND protects the friendly. A FAILED objective releases the
     // wave to a normal attrition clear (losing the bonus is the only cost).

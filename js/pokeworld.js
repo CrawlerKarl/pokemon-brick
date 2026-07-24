@@ -665,6 +665,27 @@ FINALE_PROFILES[3] = {
     forgeWord: 'TIME FLOWS', stillWord: 'THE DARK HOUR',
   },
 };
+// AFT-020 Phase 5 — region 5 runs the LIVE GRID (engine format 'circuit'):
+// pick one sword to duel, the others become neutral terminals; Zekrom's
+// circuits light their full route first and can be redirected home;
+// Victini closes as a ridden VICTORY FLAME, never a fight.
+FINALE_PROFILES[4] = {
+  format: 'circuit',
+  title: 'THE UNOVA LIVE GRID',
+  beats: [
+    { key: 'duel', label: 'THE SWORDS OF JUSTICE', work: 0.30,
+      tip: 'THE FIRST SWORD YOU STRIKE IS YOUR DUEL — THE OTHERS STAND DOWN' },
+    { key: 'grid', label: 'ZEKROM', work: 1.0,
+      tip: 'THE ROUTE LIGHTS BEFORE THE JOLT — BREAK THE CHARGED TERMINAL TO TURN IT HOME' },
+    { key: 'victoryFlame', label: 'THE VICTORY FLAME', work: 0,
+      tip: 'RIDE ITS WAKE FOR GLORY — OR STAND CLEAR AND KEEP IT' },
+  ],
+  circuit: {
+    duelWord: 'THE DUEL IS CHOSEN', standWord: 'THE OTHERS STAND DOWN',
+    redirectWord: 'REDIRECTED — THE GRID BITES BACK', relitWord: 'A DISTRICT RELIGHTS',
+    flameWord: 'RIDE THE WAKE',
+  },
+};
 // AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
 // Eternatus hangs over the arena assembling a crown-lance, the Galar
 // regis each power a segment, and Zarude begins bound in the arena vines.

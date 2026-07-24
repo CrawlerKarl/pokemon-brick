@@ -1190,6 +1190,19 @@ function buildLevel(lvl) {
         };
         G.finale.meter = { value: 0, max: 3, label: fp.beats[0].label || 'SIBYLS' };
       }
+      // TRIAL OF THE LIVE GRID (format 'circuit'): the first Paladin the
+      // player strikes becomes THE DUEL (0.3 BE); the others stand down as
+      // neutral grid terminals. The grid beat's circuits illuminate their
+      // whole route first and can be REDIRECTED through the charged
+      // terminal. The coda is a ridden Victory Flame, never a fight.
+      if (fmt === 'circuit') {
+        for (const v of G.bricks) if (v.subBoss && !v.dead) v.paladin = true;
+        G.finale.circuit = {
+          chosen: null, redirects: 0, relit: 0,
+          active: null, armT: 6, grammar: 0, flameT: 0,
+        };
+        G.finale.meter = { value: 0, max: 1, label: fp.beats[0].label || 'DUEL' };
+      }
       // SIEGE OF THE DEEP CURRENT (format 'siege'): the Sovereign circles
       // from the opening behind the PRESSURE SEAL (×0.12 damage while any
       // Colossus stands). The three Colossi are order-choice stations at

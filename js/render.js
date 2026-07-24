@@ -2844,6 +2844,63 @@ function drawWardFx() {
   ctx.setLineDash([]);
   ctx.restore();
 }
+// AFT-020 THE LIVE GRID: the circuit's COMPLETE route illuminates before
+// any electricity moves — a dashed polyline from the Sovereign through the
+// charged terminal to the endpoint lane, with the terminal's charge ring
+// filling as it's struck. The coda's Victory Flame trails a warm wake band.
+function drawCircuitFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'circuit' || !F.circuit || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const C = F.circuit;
+  const A = C.active;
+  if (F.beat === 1 && A && !A.fired && A.node && !A.node.dead) {
+    const nx = A.node.bx + G.fx, ny = A.node.by + G.fy;
+    const prog = Math.min(1, A.t / A.illum);
+    ctx.save();
+    ctx.setLineDash([10, 8]);
+    ctx.lineDashOffset = -(G.time * 60) % 18; // the power FLOWS along the route
+    ctx.lineWidth = 2.6;
+    ctx.strokeStyle = 'rgba(255,209,102,' + (0.35 + 0.4 * prog) + ')';
+    ctx.beginPath();
+    ctx.moveTo(A.from.x, A.from.y);
+    ctx.lineTo(nx, ny);
+    ctx.lineTo(A.endX, Math.min(H - 60, ny + (H - ny) * 0.9));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // the charged terminal: a filling charge ring — break it to redirect
+    const pulse = 0.75 + 0.25 * Math.sin(G.time * 8);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,209,102,' + (0.5 + 0.4 * pulse) + ')';
+    ctx.beginPath();
+    ctx.arc(nx, ny, Math.max(A.node.w, A.node.h) * 0.62 + 6, -Math.PI / 2,
+      -Math.PI / 2 + Math.PI * 2 * ((A.hits || 0) / A.need));
+    ctx.stroke();
+    ctx.setLineDash([4, 5]);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(nx, ny, Math.max(A.node.w, A.node.h) * 0.62 + 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // the endpoint lane preview (the strike itself is a warned columnStrike)
+    ctx.globalAlpha = 0.3 + 0.3 * prog;
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(A.endX - A.w / 2, H - 46, A.w, 8);
+    ctx.restore();
+  }
+  if (F.beat === 2) {
+    const flame = G.bricks.find(b => b.victoryFlame && !b.dead);
+    if (flame) {
+      const fx2 = flame.bx + G.fx, fy2 = flame.by + G.fy;
+      const bandW = Math.max(120, W * 0.14);
+      ctx.save();
+      ctx.globalAlpha = 0.14 + 0.05 * Math.sin(G.time * 5);
+      ctx.fillStyle = '#ffd166';
+      ctx.fillRect(fx2 - bandW, fy2 - 20, bandW * 2, Math.max(60, H * 0.5));
+      ctx.restore();
+    }
+  }
+}
 // AFT-020 THE FRACTURED HOUR: the ring read (a golden arc over whichever
 // woken clock is RINGING — the Regent's open window), pale pre-echo rings
 // where a replay is about to fire, and the hour banner colors.
@@ -9447,6 +9504,7 @@ function render() {
     drawSiegeFx();     // AFT-020: seal tethers + the current trail
     drawWardFx();      // AFT-020: the Triune Ward between the Heralds
     drawHourglassFx(); // AFT-020: ring windows + replay pre-echoes
+    drawCircuitFx();   // AFT-020: the illuminated route + the flame's wake
     drawBricks();
     drawFragments();
     drawShield();

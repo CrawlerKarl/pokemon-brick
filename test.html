@@ -444,10 +444,16 @@ window.requestAnimationFrame = function () { return 0; };
     // exercised — a dumb AI sinking the literal last flyer was flaky. Killing
     // the bricks routes through the same level-clear code the game uses.
     if (!reachedUpgrade) {
-      if (G.state === 'serve') fireAction();
       G.reinforce = 0;
       for (const b of G.bricks) b.dead = true;
-      await runFrames(400, () => { skipResults(); return G.state === 'upgrade' ? false : undefined; });
+      // classic has NO gun — fireAction() cannot serve there, and a wave
+      // whose ball dropped at exactly this moment sat in 'serve' forever
+      // (the long-standing unseeded flake). Serve properly, every frame.
+      await runFrames(400, () => {
+        if (G.state === 'serve') { if (mode === 'classic') serve(); else fireAction(); }
+        skipResults();
+        return G.state === 'upgrade' ? false : undefined;
+      });
     }
     // the upgrade draft must be usable
     assert(G.state === 'upgrade', "expected 'upgrade' state, got '" + G.state + "'");
@@ -2173,6 +2179,81 @@ window.requestAnimationFrame = function () { return 0; };
     return '3 Sibyls woken unharmed · ring-gated Regent · pale replays · a mid-fight invader trading hours · no cleanup round';
   });
 
+  // AFT-020 Phase 5: THE LIVE GRID — the first Paladin struck is the chosen
+  // duel (the others stand down as neutral terminals), circuits light their
+  // FULL route before striking and redirect home through the charged
+  // terminal, and the coda is a ridden Victory Flame, never a fight.
+  test('AFT-020 P5: the LIVE GRID — chosen duel, illuminated circuits, redirects, the flame', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(15, true, { seed: 'GRID1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    G.lives = 99; // the probe tests rules, not dodging (the smoke precedent)
+    const F = G.finale, C = F && F.circuit;
+    assert(F && F.format === 'circuit' && C && F.beatKey === 'duel', 'the circuit arms on the region-5 finale');
+    const pals = () => G.bricks.filter(b => b.paladin && !b.dead);
+    assert(pals().length === 3, 'three Paladins hold the gate');
+    // the FIRST one struck becomes the duel; the others stand down at once
+    const target = pals()[1];
+    damageBrick(target, 1, target.bx, target.by, null, { source: 'bolt' });
+    assert(C.chosen === target.subIdx && target.paladinDuel === true, 'the struck Paladin is the chosen duel');
+    assert(G.bricks.filter(b => b.gridTerminal && !b.dead).length === 2, 'the other two stand down as terminals');
+    assert(target.maxHp <= Math.round(G.gauntlet.legendHp * 0.3) + 1, 'the duel is a short 0.3 BE fight');
+    // terminals are neutral — ordinary hits slide off
+    const term = G.bricks.find(b => b.gridTerminal && !b.dead);
+    const thp = term.hp;
+    damageBrick(term, 3, term.bx, term.by, null, { source: 'bolt' });
+    assert(term.hp === thp, 'a neutral terminal takes no ordinary damage');
+    // fell the duel → the grid beat
+    target.hp = 0.5;
+    damageBrick(target, 2, target.bx, target.by, null, { source: 'bolt' });
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'grid', 'the grid beat opens');
+    if (G.gauntlet) G.gauntlet.entry = null;
+    G.bossIntro = 0;
+    // a circuit ARMS: full route lit, the charged terminal named
+    C.armT = 0.01;
+    await runFrames(3);
+    assert(C.active && C.active.node && !C.active.fired, 'the circuit illuminates its complete route first');
+    // three strikes on the charged terminal REDIRECT the jolt home
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+    const bhp = boss.hp;
+    for (let k = 0; k < 3; k++) damageBrick(C.active ? C.active.node : term, 1, term.bx, term.by, null, { source: 'bolt' });
+    assert(C.redirects === 1 && C.active === null, 'the charged terminal redirects the circuit');
+    assert(boss.hp < bhp, 'the jolt turns home into the Sovereign');
+    assert(F.mastery.countered === true, 'a redirect is the signature answer');
+    // an unanswered circuit fires ONE warned lane at the lit endpoint
+    C.armT = 0.01;
+    await runFrames(3);
+    G.columnStrikes.length = 0;
+    C.active.t = C.active.illum + 0.01;
+    await runFrames(2);
+    assert(G.columnStrikes.length >= 1, 'an unanswered circuit strikes its lit endpoint');
+    G.columnStrikes.length = 0; G.enemyShots = []; G.invuln = 99999; // the coda ride must not eat a stray strike
+    // fell the Sovereign → the flame coda: ridden, never fought
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(40);
+    assert(F.beatKey === 'victoryFlame' && F.codaHold === true, 'the flame coda holds the clear');
+    assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead), 'the flame is never a health bar');
+    const flame = G.bricks.find(b => b.victoryFlame && !b.dead);
+    assert(flame && flame.crosser, 'the Victory Flame sweeps as a crosser');
+    // riding the wake pays glory + mastery time
+    await runFrames(120, () => { G.paddle.x = flame.bx + G.fx; mouseX = G.paddle.x; });
+    assert((C.flameT || 0) > 0.5, 'riding the wake accrues glory (' + (C.flameT || 0).toFixed(1) + 's)');
+    F.coda.t = 99; F.coda.passes = 3;
+    await runFrames(400, () => {
+      for (const pu of G.powerups) pu.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state !== 'play', 'the circuit clears (state ' + G.state + ' · KOs ' + (G.runStats && G.runStats.knockouts) + ' · hold ' + F.codaHold
+      + ' · live ' + G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser && !b.friendly && !b.gridTerminal)
+        .map(b => (b.poke && b.poke.id) + (b.victoryFlame ? ':flame' : b.isBoss ? ':boss' : ':?')).join(',') + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 15);
+    assert(L && L.finaleFormat === 'circuit' && L.finaleCounters.redirects === 1,
+      'ledger: circuit format + the redirect');
+    return 'first-strike duel · neutral terminals · full-route illumination · a redirect that bites back · a ridden flame coda';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2731,9 +2812,9 @@ window.requestAnimationFrame = function () { return 0; };
       G.gauntlet.entry = null; // isolate the summon's own entrance (if any)
       gauntletSummonMythic(false);
       const fmtR = (finaleProfile(region) || {}).format || 'ladder';
-      if (fmtR === 'relay' || fmtR === 'siege') {
+      if (fmtR === 'relay' || fmtR === 'siege' || fmtR === 'circuit') {
         // AFT-020: these formats' third beat is a REWARD CODA (blooms /
-        // falling wishes), never a mythic health bar
+        // falling wishes / a ridden flame), never a mythic health bar
         assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead),
           GENS[region].name + ' coda must not spawn a hostile mythic');
         assert(G.finale && G.finale.codaHold, GENS[region].name + ' coda must hold the clear');
@@ -2747,7 +2828,7 @@ window.requestAnimationFrame = function () { return 0; };
     // raid Sovereigns never wake (live from build); siege wakes ride the
     // seal-fall beat with no entrance flight of their own
     const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid' && fmtOf(r) !== 'siege').length;
-    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege'].includes(fmtOf(r))).length;
+    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit'].includes(fmtOf(r))).length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
     assert(legendStyles.size === wakingLegends, 'legendary entrances are not unique across the waking finales');
     assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
@@ -4443,9 +4524,12 @@ window.requestAnimationFrame = function () { return 0; };
       { lvl: 12, id: 491, mon: 'DARKRAI', turn: 'hauntTurn',  flag: 'feather', count: 3,
         flavor: s => s.every(x => x.feather && x.feather.home === true),      // homing stalk
         chName: 'DARK VOID',        pattern: 'pincer',  cols: 6 },
-      { lvl: 15, id: 494, mon: 'VICTINI', turn: 'sparkTurn',  flag: 'orbit',   count: 3,
-        flavor: s => s.every(x => x.orbit && x.orbit.launchAt === 3.5 && !x.orbit.stationary), // aimed launch
-        chName: 'V-CREATE',         pattern: 'sweep',   cols: 6 },
+      // VICTINI's mythic duel is RETIRED BY DESIGN (AFT-020): the region-5
+      // finale is the LIVE GRID and Victini closes it as the ridden VICTORY
+      // FLAME — never a health bar. Its V-SPARKS kit stays as engine data.
+      /* { lvl: 15, id: 494, mon: 'VICTINI', turn: 'sparkTurn',  flag: 'orbit',   count: 3,
+        flavor: s => s.every(x => x.orbit && x.orbit.launchAt === 3.5 && !x.orbit.stationary),
+        chName: 'V-CREATE',         pattern: 'sweep',   cols: 6 }, */
     ];
     try {
       SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';

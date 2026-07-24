@@ -733,6 +733,30 @@
       forgeWord: 'FORGE HOUR', stillWord: 'STILL HOUR',
     },
   };
+  // Realm 5 — TRIAL OF THE LIVE GRID (AFT-020 Phase 5): power follows a
+  // circuit that can be REDIRECTED. The player CHOOSES a Paladin duel (the
+  // first one struck); the other two stand down into neutral grid
+  // terminals. Voltrex's circuits illuminate their COMPLETE route before
+  // any electricity moves; striking the charged terminal mid-illumination
+  // redirects the jolt into Voltrex and relights a district. Ignivar
+  // arrives in the coda as a moving VICTORY FLAME — ridden, never fought.
+  finaleProfiles[4] = {
+    format: 'circuit',
+    title: FINALE_TITLES[4],
+    beats: [
+      { key: 'duel', label: 'THE PALADIN GATE', work: 0.30,
+        tip: 'THE FIRST PALADIN YOU STRIKE IS YOUR DUEL — THE OTHERS STAND DOWN' },
+      { key: 'grid', label: REALM_BOSSES[4].leg[0].toUpperCase(), work: 1.0,
+        tip: 'THE ROUTE LIGHTS BEFORE THE JOLT — BREAK THE CHARGED TERMINAL TO TURN IT HOME' },
+      { key: 'victoryFlame', label: 'THE VICTORY FLAME', work: 0,
+        tip: 'RIDE ITS WAKE FOR GLORY — OR STAND CLEAR AND KEEP IT' },
+    ],
+    circuit: {
+      duelWord: 'THE DUEL IS CHOSEN', standWord: 'THE OTHERS STAND DOWN',
+      redirectWord: 'REDIRECTED — THE GRID BITES BACK', relitWord: 'A DISTRICT RELIGHTS',
+      flameWord: 'RIDE THE WAKE',
+    },
+  };
   // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
   // raid. Omega Seraph hangs overhead from the first second, assembling a
   // crown-lance from arena segments; the three captains each power one.
