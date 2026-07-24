@@ -2845,6 +2845,66 @@ function drawWardFx() {
   ctx.setLineDash([]);
   ctx.restore();
 }
+// AFT-020 THE ECLIPSE RITE: each totem wears its rite (the rotating
+// opening's gap, the pulse flash, the growing root bar), the moon state
+// reads as a FILLED vs HOLLOW crescent by the banner, and the thief
+// carries the stolen power as a visible violet charge.
+function drawRiteFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'rite' || !F.rite || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const R = F.rite;
+  ctx.save();
+  if (F.beat === 0) {
+    for (const b of G.bricks) {
+      if (b.dead || !b.totem) continue;
+      const bx2 = b.bx + G.fx, by2 = b.by + G.fy;
+      const r = Math.max(b.w, b.h) * 0.66;
+      if (b.riteKind === 'opening') {
+        const gapA = (G.time * 0.9) % (Math.PI * 2);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(90,255,195,0.6)';
+        ctx.beginPath();
+        ctx.arc(bx2, by2, r + 6, gapA + 0.55, gapA - 0.55 + Math.PI * 2);
+        ctx.stroke();
+      } else if (b.riteKind === 'pulse') {
+        const on = ((F.beatT + (b.subIdx || 0)) % 1.4) < 0.38;
+        ctx.lineWidth = on ? 3.4 : 1.6;
+        ctx.strokeStyle = on ? 'rgba(90,255,195,0.85)' : 'rgba(90,255,195,0.3)';
+        ctx.beginPath(); ctx.arc(bx2, by2, r + 6 + (on ? 3 : 0), 0, Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.fillStyle = 'rgba(124,179,66,0.8)';
+        ctx.fillRect(bx2 - r, by2 + r + 6, r * 2 * Math.min(1, b.riteRoot || 0), 5);
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = 'rgba(124,179,66,0.7)';
+        ctx.strokeRect(bx2 - r, by2 + r + 6, r * 2, 5);
+      }
+    }
+  } else {
+    // the moon: FILLED crescent = bright rules; HOLLOW = dark rules
+    const mx = W / 2, my = SAFE_T + 86;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = R.moon === 'bright' ? '#ffe082' : '#b388ff';
+    ctx.beginPath(); ctx.arc(mx, my, 10, Math.PI * 0.35, Math.PI * 1.65); ctx.stroke();
+    if (R.moon === 'bright') {
+      ctx.fillStyle = '#ffe082';
+      ctx.beginPath();
+      ctx.arc(mx, my, 10, Math.PI * 0.35, Math.PI * 1.65);
+      ctx.arc(mx + 5, my, 7, Math.PI * 1.5, Math.PI * 0.5, true);
+      ctx.fill();
+    }
+    const u = G.bricks.find(b => b.umbrix && !b.dead);
+    if (u && R.stolen > 0) {
+      const pulse = 0.7 + 0.3 * Math.sin(G.time * 6);
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = 'rgba(179,136,255,' + (0.45 + 0.35 * pulse) + ')';
+      ctx.beginPath(); ctx.arc(u.bx + G.fx, u.by + G.fy, Math.max(u.w, u.h) * 0.66 + 5, 0, Math.PI * 2); ctx.stroke();
+      fitLabel('+' + Math.round(R.stolen * 100) + '%', u.bx + G.fx, u.by + G.fy - u.h * 0.75,
+        { size: 10, min: 8.5, weight: 900, color: '#b388ff', maxW: 60 });
+    }
+  }
+  ctx.restore();
+}
 // AFT-020 THE FALSE FOUNDATION: glass cells (solid truths vs dashed lies),
 // the closing wing-shaped shadow sector, and the prison facet.
 function drawHuntFx() {
@@ -9583,6 +9643,7 @@ function render() {
     drawHourglassFx(); // AFT-020: ring windows + replay pre-echoes
     drawCircuitFx();   // AFT-020: the illuminated route + the flame's wake
     drawHuntFx();      // AFT-020: the closing shadow sector
+    drawRiteFx();      // AFT-020: totem rites + the moon + the thief's charge
     drawBricks();
     drawFragments();
     drawShield();

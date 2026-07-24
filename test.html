@@ -446,11 +446,13 @@ window.requestAnimationFrame = function () { return 0; };
     if (!reachedUpgrade) {
       G.reinforce = 0;
       for (const b of G.bricks) b.dead = true;
-      // classic has NO gun — fireAction() cannot serve there, and a wave
-      // whose ball dropped at exactly this moment sat in 'serve' forever
-      // (the long-standing unseeded flake). Serve properly, every frame.
+      // fireAction() LAUNCHES a racked serve in every mode (classic's serve
+      // branch releases the stuck ball) — but the old code only called it
+      // once BEFORE the loop, so a ball dropped mid-finish left the wave in
+      // 'serve' forever (the long-standing unseeded flake). Re-launch every
+      // frame instead.
       await runFrames(400, () => {
-        if (G.state === 'serve') { if (mode === 'classic') serve(); else fireAction(); }
+        if (G.state === 'serve') fireAction();
         skipResults();
         return G.state === 'upgrade' ? false : undefined;
       });
@@ -2331,6 +2333,91 @@ window.requestAnimationFrame = function () { return 0; };
     return 'reflections are lies · the serpent flees unbeaten · sectors drink then stop · a rescued prism, not a third bar';
   });
 
+  // AFT-020 Phase 6: THE ECLIPSE RITE — non-HP totem rites earn marks, the
+  // moon decides which crescent gates fire (marks keep lanes dark), and the
+  // saboteur steals banked Surge until tagged back into the Sovereign.
+  test('AFT-020 P6: the ECLIPSE RITE — totem rites, moon gates, the stolen shadow', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(21, true, { seed: 'RITE1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    G.lives = 99;
+    const F = G.finale, R = F && F.rite;
+    assert(F && F.format === 'rite' && R && F.beatKey === 'rites', 'the rite arms on the region-7 finale');
+    const totems = () => G.bricks.filter(b => b.totem && !b.dead);
+    assert(totems().length === 3
+      && new Set(totems().map(t => t.riteKind)).size === 3, 'three totems, three distinct rites');
+    // PULSE: hits only count on the beat
+    const pulseT = totems().find(t => t.riteKind === 'pulse');
+    F.beatT = ((pulseT.subIdx || 0) === 0 ? 0.1 : 1.4 - (pulseT.subIdx || 0) + 0.1); // inside its window
+    const canQualify = ((F.beatT + (pulseT.subIdx || 0)) % 1.4) < 0.38;
+    if (!canQualify) F.beatT += 1.4 - ((F.beatT + (pulseT.subIdx || 0)) % 1.4) + 0.05;
+    const php2 = pulseT.hp;
+    damageBrick(pulseT, 1, pulseT.bx, pulseT.by, null, { source: 'bolt' });
+    assert(pulseT.riteHits === 1 && pulseT.hp === php2, 'an on-beat strike IS the rite, never the wound');
+    damageBrick(pulseT, 1, pulseT.bx, pulseT.by, null, { source: 'bolt' });
+    assert(R.marks === 1 && pulseT.crosser && !pulseT.subBoss, 'the pulse rite completes — the totem departs marked');
+    // ROOT: three strikes before it closes; closing resets progress
+    const rootT = totems().find(t => t.riteKind === 'root');
+    rootT.riteHits = 2; rootT.riteRoot = 0.99;
+    await runFrames(12); // the root closes
+    assert(rootT.riteHits === 0, 'a closed root resets the rite (it resists)');
+    for (let k = 0; k < 3; k++) damageBrick(rootT, 1, rootT.bx, rootT.by, null, { source: 'bolt' });
+    assert(R.marks === 2, 'three timely strikes break the root');
+    // OPENING: only through the rotating gap; killing markless still works
+    const openT = totems().find(t => t.riteKind === 'opening');
+    const ohp = openT.hp;
+    // stand OPPOSITE the gap: pick a paddle x so the angle misses the gap
+    const gapA = (G.time * 0.9) % (Math.PI * 2);
+    G.paddle.x = openT.bx + G.fx + Math.cos(gapA + Math.PI) * 200;
+    damageBrick(openT, 2, openT.bx, openT.by, null, { source: 'bolt' });
+    assert(openT.hp < ohp && R.marks === 2, 'a missed opening trickles ×0.25 attrition, no mark');
+    openT.hp = 0.5;
+    damageBrick(openT, 2, openT.bx, openT.by, null, { source: 'bolt' });
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'eclipse', 'the eclipse opens (marks 2/3 — one rite failed to a kill)');
+    if (G.gauntlet) G.gauntlet.entry = null;
+    G.bossIntro = 0; G.invuln = 99999;
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+    // moon gates: bright fires wide lanes MINUS the marks' safe stars
+    R.moon = 'bright'; R.gateCD = 0.01;
+    G.columnStrikes.length = 0;
+    await runFrames(3);
+    assert(G.columnStrikes.length === Math.max(1, 2 - R.marks),
+      'bright gates fire minus the safe stars (got ' + G.columnStrikes.length + ')');
+    G.columnStrikes.length = 0;
+    // the moon trades rule on its clock
+    R.moonT = R.moonEvery + 0.01;
+    await runFrames(3);
+    assert(R.moon === 'dark', 'the crescents trade rule');
+    // the FULL ECLIPSE: the thief drinks banked Surge; three tags reclaim it
+    G.mega = 0.8; G.megaT = 0;
+    R.stealCD = 0.01;
+    await runFrames(3);
+    const u = G.bricks.find(b => b.umbrix && !b.dead);
+    assert(u && R.stolen > 0.2 && G.mega < 0.6 && F.beatKey === 'reclaim',
+      'the thief drinks a quarter of the bank (stolen ' + R.stolen.toFixed(2) + ')');
+    const bhp2 = boss.hp;
+    for (let k = 0; k < 3; k++) {
+      R.tagCD = 0;
+      damageBrick(u, 1, u.bx, u.by, null, { source: 'bolt' });
+    }
+    assert(R.reclaimed === true && G.mega > 0.6, 'three tags take the power back');
+    assert(boss.hp < bhp2, 'the reclaimed power strikes the Sovereign');
+    assert(!G.bricks.some(b => b.umbrix && !b.dead), 'the thief flees empty-handed');
+    // fell the Sovereign — no round 3, the saboteur was the third act
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(500, () => {
+      for (const pu of G.powerups) pu.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state !== 'play', 'the rite clears (state ' + G.state + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 21);
+    assert(L && L.finaleFormat === 'rite' && L.finaleCounters.reclaimed === 1
+      && L.finaleCounters.marks === 2, 'ledger: rite format, marks + the reclaim');
+    return 'three distinct non-HP rites · marks darken gate lanes · moon by shape · a thief tagged into the moon · no third bar';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2889,11 +2976,11 @@ window.requestAnimationFrame = function () { return 0; };
       G.gauntlet.entry = null; // isolate the summon's own entrance (if any)
       gauntletSummonMythic(false);
       const fmtR = (finaleProfile(region) || {}).format || 'ladder';
-      if (fmtR === 'hunt') {
+      if (fmtR === 'hunt' || fmtR === 'rite') {
         // AFT-020: the HUNT has no third round at all — its mythic is a
         // RESCUE inside the shadow fight, so the summon is a silent no-op
         assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead),
-          GENS[region].name + ' hunt must not spawn a mythic bar');
+          GENS[region].name + ' hunt/rite must not spawn a mythic bar');
         continue;
       }
       if (fmtR === 'relay' || fmtR === 'siege' || fmtR === 'circuit') {
@@ -2912,7 +2999,7 @@ window.requestAnimationFrame = function () { return 0; };
     // raid Sovereigns never wake (live from build); siege wakes ride the
     // seal-fall beat with no entrance flight of their own
     const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid' && fmtOf(r) !== 'siege').length;
-    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit', 'hunt'].includes(fmtOf(r))).length;
+    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit', 'hunt', 'rite'].includes(fmtOf(r))).length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
     assert(legendStyles.size === wakingLegends, 'legendary entrances are not unique across the waking finales');
     assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
@@ -4721,8 +4808,12 @@ window.requestAnimationFrame = function () { return 0; };
       /* { lvl: 18, id: 719,  mon: 'DIANCIE',   turn: 'jewelTurn', flag: 'conduit', count: 2,
         flavor: s => s.every(x => x.conduit && x.kind === 'crystal'),
         chName: 'MOONBLAST',       pattern: 'rain',   cols: 5 }, */
-      { lvl: 21, id: 802,  mon: 'MARSHADOW', rush: true,                             // SHADOW SNEAK afterimage rider
-        chName: 'SPECTRAL THIEF',  pattern: 'clock',  cols: 6 },
+      // MARSHADOW's mythic duel is RETIRED BY DESIGN (AFT-020): the region-7
+      // finale is the ECLIPSE RITE and Marshadow is its SABOTEUR — the
+      // stolen-shadow tag target inside the Sovereign fight, never a third
+      // bar. Its SHADOW SNEAK kit stays as engine data.
+      /* { lvl: 21, id: 802,  mon: 'MARSHADOW', rush: true,
+        chName: 'SPECTRAL THIEF',  pattern: 'clock',  cols: 6 }, */
       // ZARUDE's mythic duel is RETIRED BY DESIGN (AFT-020): the region-8
       // finale is THE SERAPH RAID and Zarude begins BOUND in the arena
       // vines — a freed menace, never a third health bar. Its POWER WHIP

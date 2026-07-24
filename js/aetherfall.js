@@ -781,6 +781,30 @@
       freeWord: 'LUCERNA IS FREE — HER PRISM BURNS THE SHADOW',
     },
   };
+  // Realm 7 — THE ECLIPSE RITE (AFT-020 Phase 6): ritual tests flowing into
+  // a Sovereign fight with a SABOTEUR. Each Totem conducts a brief non-HP
+  // rite (a rotating opening, a pulse to match, a root to break); every
+  // completed mark keeps one safe star lit in the climax. The Pale Eclipse
+  // alternates bright and dark crescent gates (shape, not color alone),
+  // and during the full eclipse Umbrix STEALS banked Surge — tag it three
+  // times to take everything back into the Sovereign's face.
+  finaleProfiles[6] = {
+    format: 'rite',
+    title: FINALE_TITLES[6],
+    beats: [
+      { key: 'rites', label: 'THE THREE TOTEMS', work: 0.30,
+        tip: 'EACH TOTEM ASKS A RITE — AN OPENING, A PULSE, A ROOT' },
+      { key: 'eclipse', label: REALM_BOSSES[6].leg[0].toUpperCase(), work: 1.0,
+        tip: 'THE MOON DECIDES WHICH GATES ARE REAL — READ THE SHAPE' },
+      { key: 'reclaim', label: 'THE STOLEN SHADOW', work: 0.35,
+        tip: 'UMBRIX HOLDS YOUR POWER — TAG IT THRICE TO TAKE IT BACK' },
+    ],
+    rite: {
+      markWord: 'A TOTEM MARK IS YOURS', failWord: 'THE RITE RESISTS',
+      brightWord: 'THE BRIGHT CRESCENT RULES', darkWord: 'THE DARK CRESCENT RULES',
+      stealWord: 'UMBRIX DRINKS YOUR SURGE', tagWord: 'TAGGED', reclaimWord: 'YOUR POWER RETURNS — IT STRIKES THE ECLIPSE',
+    },
+  };
   // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
   // raid. Omega Seraph hangs overhead from the first second, assembling a
   // crown-lance from arena segments; the three captains each power one.

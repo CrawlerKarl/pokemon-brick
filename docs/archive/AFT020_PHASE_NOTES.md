@@ -87,6 +87,38 @@ mechanics in this phase (the new Greenspell attack rules are Phase 4).
    play time, trial chapter labels resolve in both skins, and the Rift
    secret (round-3 replacement) still records `beatKey 'coda'`.
 
+## CONTINUATION STATE (2026-07-24, mid-Phase-6)
+
+Shipped & committed (all gate-green): Phase 0 baseline+schemas+fixtures
+(`e603088`,`d796973`), P1 director (`85d5bf9`), P2 relay (`4f66efd`) +
+raid (`6d4b610`), P3 titles/drafts/prep/wardbreak+lanes (`1e6638e`), P4
+siege (`5de5dc6`) + covenant/bells/conditions (`c9bedb0`), P5 hourglass
+(`29ed521`) + circuit (`2b46434`) + hunt+Act-II conditions (`b9d8dfa`).
+Suite is at 99 invariants. Established per-finale pattern: profile (both
+skins) → build block in buildLevel's gauntlet section → director fns in
+update.js (+dispatch in updateFinaleDirector) → damageBrick gates in the
+tail (one rule per actor) → kill hooks at statsKill block → summon
+override in gauntletSummonMythic → drawXxxFx strokes in render (called
+near drawTelegraphs) → per-format mastery in completeFinale → a P-test in
+test.html + retire/adapt legacy consumers (junkie-finales loop fmt sets,
+mythic duel spec comments, jump targets → realm 1).
+
+REMAINING: Phase 6 = Atolls RITE (totem rites → crescent-gate eclipse →
+Umbrix steal/tag reclaim), Crucible UNDERCARD objective ('7:1' crowd
+meter), Cradle CHASE (route choice → lock-breaking charges + puppets →
+chained linked climax straight into beginEnding, no draft), Act-III
+conditions (idx 6/7/8), Time Spiral remixes (cycle>0: shorter tells ×0.9,
+one extra remix — keep counters). Phase 7 = Section-9 corrections
+(Stormbinder table numbers in data.js:385-390 → 1.15/1.25/1.4 dmg etc.;
+aegisX region-life → restore-not-grow at update.js clearedStage===2
+block + regen → active-threat clock (tActive) + 3/stage ceiling; One
+Life preset → bossHp 1.35/shotRate 1.8 in config.js PRESETS.nuzlocke;
+stack diminishing in the damageBrick stack lines + drop-flood audit) +
+re-run npm run baseline vs docs/baselines + regression fixtures as suite
+tests. Phase 8 = crest persistence (storeKey('crests')), results polish,
+log/backlog/handoff/README updates. Phase 9 = full gate → push → Pages
+build → build-dist → aetherfall repo push + Pages → completion report.
+
 ## Phase 2 sketch (relay + raid — the format proof)
 
 - The director OWNS these two realms end-to-end (`G.gauntlet` still

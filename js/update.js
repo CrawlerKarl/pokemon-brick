@@ -665,7 +665,51 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // like SHELL ARMOR — inside damageBrick, so the combat ledger stays honest
   // (no new loseLife path). STRICTLY gated on subBoss: it never touches
   // legendaries or mythics.
-  if (br.subBoss && !br.relayVow && !br.raidCaptain) { // relay Vows / raid captains own ONE rule each — never the guard too
+  // THE ECLIPSE RITE: a totem answers only its OWN rite — qualified hits
+  // ARE the rite (no wound), unqualified ones trickle ×0.25 attrition
+  if (br.totem && riteState() && G.finale.beat === 0 && dmg < 90) {
+    const R = G.finale.rite;
+    let qualified = false;
+    if (br.riteKind === 'opening') {
+      const gapA = (G.time * 0.9) % (Math.PI * 2);
+      const toPlayer = Math.atan2(shipY() - (br.by + G.fy), G.paddle.x - (br.bx + G.fx));
+      let dd2 = gapA - toPlayer;
+      while (dd2 > Math.PI) dd2 -= Math.PI * 2;
+      while (dd2 < -Math.PI) dd2 += Math.PI * 2;
+      qualified = Math.abs(dd2) < 0.55;
+    } else if (br.riteKind === 'pulse') {
+      qualified = ((G.finale.beatT + (br.subIdx || 0)) % 1.4) < 0.38;
+    } else qualified = br.riteRoot < 1;
+    if (qualified) {
+      br.riteHits = (br.riteHits || 0) + 1;
+      br.flash = 1;
+      const need = br.riteKind === 'root' ? 3 : 2;
+      if (br.riteHits >= need) { riteMark(br); return; }
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12,
+        'RITE ' + br.riteHits + '/' + need, '#5affc3', 11);
+      return; // the qualified strike IS the rite, never the wound
+    }
+    dmg *= 0.25;
+    if ((R.failCD || 0) <= 0) {
+      R.failCD = 1.1;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, riteWord('failWord', 'THE RITE RESISTS'), '#b0bec5', 10);
+    }
+  }
+  // UMBRIX holds your power — hits TAG it (three take everything back)
+  if (br.umbrix && riteState()) {
+    br.flash = 1;
+    const R = G.finale.rite;
+    if ((R.tagCD || 0) <= 0) {
+      R.tagCD = 0.4;
+      R.tags++;
+      G.finale.mastery.counters.tags = R.tags;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12,
+        riteWord('tagWord', 'TAGGED') + ' ' + Math.min(3, R.tags) + '/3', '#5affc3', 12);
+      if (R.tags >= 3 && !R.reclaimed) riteReclaim();
+    }
+    return;
+  }
+  if (br.subBoss && !br.relayVow && !br.raidCaptain && !br.totem) { // relay Vows / raid captains / totems own ONE rule each — never the guard too
     if ((br.openT || 0) > 0) {
       if (!br.openHit) { br.openHit = true; dmg *= 1.2; } // window's first strike rewarded
       // THE FRACTURED HOUR: open-window strikes AWAKEN a Sibyl instead of
@@ -3432,6 +3476,11 @@ function completeFinale() {
     // sector ever closing on the vessel
     F.mastery.mastered = !!F.hunt.freed && (F.hunt.sectorHits || 0) === 0;
   }
+  if (F.format === 'rite' && F.rite) {
+    // countered = the stolen power reclaimed; mastered = reclaimed with
+    // every totem's mark earned
+    F.mastery.mastered = !!F.rite.reclaimed && (F.rite.marks || 0) >= 3;
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3718,6 +3767,7 @@ function updateFinaleDirector(dt) {
   if (F.format === 'siege' && F.siege) updateSiege(dt);
   if (F.format === 'hourglass' && F.hourglass) updateHourglass(dt);
   if (F.format === 'hunt' && F.hunt) updateHunt(dt);
+  if (F.format === 'rite' && F.rite) updateRite(dt);
   if (F.format === 'circuit' && F.circuit) {
     const C = F.circuit;
     if (C.termCD > 0) C.termCD -= dt;
@@ -3788,6 +3838,135 @@ function updateLadderMemory(dt) {
       continue;
     }
     G.columnStrikes.push({ x: m.x, w: 74, warn: 1.2, strike: 0.45, color: '#ec407a', echo: true });
+  }
+}
+// ---- THE ECLIPSE RITE (AFT-020 Phase 6, realm 7) ----
+function riteState() { return (G.finale && G.finale.format === 'rite' && G.finale.rite) || null; }
+function riteWord(k, fallback) {
+  const F = G.finale;
+  return (F && F.profile && F.profile.rite && F.profile.rite[k]) || fallback;
+}
+function riteMark(br) {
+  const F = G.finale, R = F.rite;
+  R.marks++;
+  F.mastery.counters.marks = R.marks;
+  if (F.meter) F.meter.value = R.marks;
+  br.subBoss = false; br.totem = false;
+  br.crosser = { vx: (br.bx < W / 2 ? -1 : 1) * 300, bobPh: (br.subIdx || 0) * 1.9 };
+  setCombatNotice(riteWord('markWord', 'A MARK IS YOURS') + ' — ' + R.marks + '/3', '#5affc3', 2);
+  ringFx(br.bx + G.fx, br.by + G.fy, '#5affc3', 8, 120, 4, 0.55);
+  sparkle(br.bx + G.fx, br.by + G.fy, 10, true);
+  SFX.mega();
+}
+function riteUmbrixSteal() {
+  const F = G.finale, R = F.rite;
+  const gen2 = genFor(G.level);
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  if (!mid || R.reclaimed) return;
+  const amt = Math.min(G.mega, 0.25);
+  if (amt < 0.1) return; // nothing worth drinking
+  G.mega -= amt;
+  R.stolen += amt;
+  if (F.beat === 1) startFinaleBeat(2);
+  let u = G.bricks.find(b => b.umbrix && !b.dead);
+  if (!u) {
+    const uw = Math.min(84, W * 0.12);
+    u = {
+      bx: W * 0.5, by: Math.max(160, H * 0.28), hx: W * 0.5, hy: Math.max(160, H * 0.28),
+      row: -7, col: 0, w: uw, h: uw * 0.95, hp: 999, maxHp: 999,
+      bare: true, umbrix: true, poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      flash: 0, wobble: 0.9,
+    };
+    G.bricks.push(u);
+    getSprite(mid[0]);
+  }
+  setCombatNotice(riteWord('stealWord', 'IT DRINKS YOUR POWER'), '#b388ff', 2.2);
+  burst(G.paddle.x, shipY(), '#b388ff', 24, 300, 0.6);
+  SFX.hit(0);
+}
+function riteReclaim() {
+  const F = G.finale, R = F.rite;
+  R.reclaimed = true;
+  F.mastery.counters.reclaimed = 1;
+  F.mastery.countered = true;
+  gainMega(R.stolen, 'reclaim');
+  R.stolen = 0;
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  if (boss) {
+    damageBrick(boss, Math.max(1, boss.maxHp * 0.08), boss.bx + G.fx, boss.by + G.fy, null,
+      { source: 'other', noMega: true });
+    ringFx(boss.bx + G.fx, boss.by + G.fy, '#5affc3', 10, 170, 5, 0.65);
+  }
+  const u = G.bricks.find(b => b.umbrix && !b.dead);
+  if (u) { u.umbrix = false; u.crosser = { vx: (u.bx < W / 2 ? -1 : 1) * 340, bobPh: 0 }; }
+  setAnnounce('star', '#5affc3', riteWord('reclaimWord', 'YOUR POWER RETURNS'), null, 2.8);
+  SFX.mega();
+}
+function updateRite(dt) {
+  const F = G.finale, R = F.rite;
+  if (R.failCD > 0) R.failCD -= dt;
+  if (R.tagCD > 0) R.tagCD -= dt;
+  if (F.beat === 0) {
+    // the growing roots: closing resets that rite's progress, loudly
+    for (const b of G.bricks) {
+      if (b.dead || !b.totem || b.riteKind !== 'root') continue;
+      b.riteRoot += dt / 9;
+      if (b.riteRoot >= 1) {
+        b.riteRoot = 0;
+        if (b.riteHits > 0) {
+          b.riteHits = 0;
+          setCombatNotice(riteWord('failWord', 'THE RITE RESISTS'), '#b0bec5', 1.4);
+        }
+      }
+    }
+    return;
+  }
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  if (!boss || boss.dead) {
+    // the moon has set — the saboteur keeps nothing and holds nothing
+    const u = G.bricks.find(b => b.umbrix && !b.dead);
+    if (u) { u.umbrix = false; u.crosser = { vx: (u.bx < W / 2 ? -1 : 1) * 340, bobPh: 0 }; }
+    return;
+  }
+  // the MOON STATE: bright and dark crescents trade rule on a slow clock
+  R.moonT += dt;
+  if (R.moonT >= R.moonEvery) {
+    R.moonT = 0;
+    R.moon = R.moon === 'bright' ? 'dark' : 'bright';
+    setCombatNotice(R.moon === 'bright'
+      ? riteWord('brightWord', 'THE BRIGHT CRESCENT RULES')
+      : riteWord('darkWord', 'THE DARK CRESCENT RULES'),
+    R.moon === 'bright' ? '#ffe082' : '#b388ff', 1.6);
+  }
+  // the umbrix patrol weaves while it holds your power
+  const u = G.bricks.find(b => b.umbrix && !b.dead);
+  if (u) {
+    u.bx = W / 2 + Math.sin(G.time * 0.9) * W * 0.3;
+    u.by = Math.max(150, H * 0.26) + Math.sin(G.time * 1.7) * 30;
+    u.hx = u.bx; u.hy = u.by;
+  }
+  // crescent GATES: the active moon's set fires — bright is two WIDE slow
+  // lanes, dark is three NARROW quick ones (shape, never color alone), and
+  // every totem MARK keeps one lane dark (the safe stars)
+  if (G.mode !== 'classic') {
+    R.gateCD -= dt;
+    if (R.gateCD <= 0) {
+      R.gateCD = R.moon === 'bright' ? 8 : 6;
+      const lanes = R.moon === 'bright' ? [0.3, 0.7] : [0.22, 0.5, 0.78];
+      const wCol = R.moon === 'bright' ? 110 : 62;
+      const warn = R.moon === 'bright' ? 1.5 : 1.1;
+      const fireN = Math.max(1, lanes.length - R.marks);
+      for (let i = 0; i < fireN; i++) {
+        G.columnStrikes.push({ x: W * lanes[i], w: wCol, warn: warn + i * 0.2, strike: 0.4,
+          color: R.moon === 'bright' ? '#ffe082' : '#b388ff' });
+      }
+    }
+    // the FULL ECLIPSE: the saboteur drinks on its own slow clock
+    R.stealCD -= dt;
+    if (R.stealCD <= 0) {
+      R.stealCD = 20;
+      if (G.megaT <= 0 && !R.reclaimed) riteUmbrixSteal();
+    }
   }
 }
 // ---- THE FALSE FOUNDATION (AFT-020 Phase 5, realm 6) ----
@@ -4374,6 +4553,8 @@ function gauntletSummonMythic(forceSecret = false) {
   // the HUNT has no third round at all — the rescue happened (or was
   // missed) INSIDE the shadow fight; the fall of the Sovereign is the end
   if (G.finale && G.finale.format === 'hunt') return;
+  // the RITE's saboteur lives INSIDE the Sovereign fight — no round 3
+  if (G.finale && G.finale.format === 'rite') return;
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
   if (riftOpen) {
     const vw = Math.min(300, Math.max(170, W * 0.38));
@@ -6354,7 +6535,7 @@ function update(dt) {
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && !b.crosser && !b.friendly
           && !b.raidVine && !(b.raidBound && !b.raidFreed) // bound actors and props never fire
-          && !b.gridTerminal // stood-down Paladins are neutral hardware
+          && !b.gridTerminal && !b.umbrix // stood-down Paladins / the thief are outside the pool
           && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
           && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
             && G.encounter.squads[b.flight.sq].silenceT > 0));

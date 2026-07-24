@@ -1232,6 +1232,27 @@ function buildLevel(lvl) {
         };
         G.finale.meter = { value: 0, max: 2, label: fp.beats[0].label || 'CELLS' };
       }
+      // THE ECLIPSE RITE (format 'rite'): each Totem asks a brief NON-HP
+      // rite keyed by its slot — a rotating OPENING to strike through, a
+      // PULSE to hit on the beat, a growing ROOT to break in time. A
+      // completed mark keeps one safe star lit in the climax; killing a
+      // Totem the old way resolves its rite markless.
+      if (fmt === 'rite') {
+        let ri2 = 0;
+        for (const v of G.bricks) {
+          if (!v.subBoss || v.dead) continue;
+          v.totem = true;
+          v.riteKind = ['opening', 'pulse', 'root'][ri2 % 3];
+          v.riteHits = 0;
+          v.riteRoot = 0;
+          ri2++;
+        }
+        G.finale.rite = {
+          marks: 0, resolved: 0, moon: 'bright', moonT: 0, moonEvery: 7,
+          steal: null, stolen: 0, tags: 0, reclaimed: false, gateCD: 3.5, stealCD: 14,
+        };
+        G.finale.meter = { value: 0, max: 3, label: fp.beats[0].label || 'RITES' };
+      }
       // SIEGE OF THE DEEP CURRENT (format 'siege'): the Sovereign circles
       // from the opening behind the PRESSURE SEAL (×0.12 damage while any
       // Colossus stands). The three Colossi are order-choice stations at

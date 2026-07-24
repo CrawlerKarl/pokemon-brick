@@ -707,6 +707,26 @@ FINALE_PROFILES[5] = {
     freeWord: 'DIANCIE IS FREE — HER PRISM BURNS THE SHADOW',
   },
 };
+// AFT-020 Phase 6 — region 7 runs the RITE (engine format 'rite'): the
+// tapu totems ask non-HP rites, Lunala's moon decides which crescent
+// gates are real, and Marshadow steals banked Mega until tagged back.
+FINALE_PROFILES[6] = {
+  format: 'rite',
+  title: 'THE ALOLA ECLIPSE RITE',
+  beats: [
+    { key: 'rites', label: 'THE ISLAND TOTEMS', work: 0.30,
+      tip: 'EACH TOTEM ASKS A RITE — AN OPENING, A PULSE, A ROOT' },
+    { key: 'eclipse', label: 'LUNALA', work: 1.0,
+      tip: 'THE MOON DECIDES WHICH GATES ARE REAL — READ THE SHAPE' },
+    { key: 'reclaim', label: 'THE STOLEN SHADOW', work: 0.35,
+      tip: 'MARSHADOW HOLDS YOUR POWER — TAG IT THRICE TO TAKE IT BACK' },
+  ],
+  rite: {
+    markWord: 'A TOTEM MARK IS YOURS', failWord: 'THE RITE RESISTS',
+    brightWord: 'THE BRIGHT CRESCENT RULES', darkWord: 'THE DARK CRESCENT RULES',
+    stealWord: 'MARSHADOW DRINKS YOUR MEGA', tagWord: 'TAGGED', reclaimWord: 'YOUR POWER RETURNS — IT STRIKES THE MOON',
+  },
+};
 // AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
 // Eternatus hangs over the arena assembling a crown-lance, the Galar
 // regis each power a segment, and Zarude begins bound in the arena vines.
