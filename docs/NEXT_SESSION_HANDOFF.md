@@ -49,20 +49,41 @@
 > mid-scene. The subsequent owner playtest is now complete; its findings are
 > the AFT-021 program immediately below.
 >
-> **POST-AFT-020 PLAYTEST AUDIT (2026-07-24): AFT-021 IS NOW THE NEXT
-> EXECUTION PROGRAM.** Manual phone play, source tracing, generated-scene
-> review, and the redesigned baseline confirmed that stages can resolve while
-> neutralized/departing actors still look alive, post-clear hazards are not
-> comprehensively state-gated, narrow HUD surfaces overlap live objectives
-> and actors, touch controls cover critical combat space, and player
-> projectiles use hidden slow-motion multipliers while charge fill uses a
-> different clock. The balance matrix also has 8–27 second late encounters,
-> 220–405 second early mode outliers, and a roughly 3.8× path-duration spread.
-> The 103/103 gate still passes because it checks fitted-label containment,
-> not overlay overlap or actor occlusion. Execute
-> `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md` Phase 0 through
-> Phase 9 before AFT-009. The plan includes its own autonomous execution
-> contract and balance reread.
+> **AFT-021 EXECUTED IN FULL (2026-07-24, autonomous session — log rounds
+> 2026-07-24i–p, commits `6910fa6…HEAD`).** All ten playtest defects were
+> locked in reproducing fixtures first, then fixed and promoted to
+> permanent invariants (suite 103 → **115**; gate green end to end):
+> - **A win must LOOK won**: the clear enters `G.state === 'resolve'` —
+>   hostile fire dissolves at the win moment, actors play their completion
+>   verb (disperse/rescue/stand-down), results wait for the field and
+>   speak the verbs; `combatIsLive()` makes damage structurally impossible
+>   outside live combat.
+> - **One owner per screen region**: the `claimSurface` registry + per-scene
+>   overlap enforcement; the goal pill owns the narrow top row; trial copy
+>   finishes inside a briefing hold; results/drafts ride a static arena
+>   plate; the sound circle moved to pause.
+> - **The combat-safe viewport** (`combatSafeRect`): boss-class actors clamp
+>   inside it (both axes); ONE active target carries the local nameplate,
+>   co-actors ride the ROSTER RAIL; idle pads soften under combat.
+> - **One weapon clock**: hostile slows and cinematics never touch player
+>   projectiles or charge; touch holds credit from the press (full at
+>   1.10s on every input/framerate); pause/background disarm charges.
+> - **The measured rebalance (BASELINE GREEN, 142 scenarios, budgets
+>   enforced by `npm run baseline`)**: finale work from measured per-mode
+>   DPS curves (`sovereignHp`/`FINALE_WORK`/`FINALE_WORK_MODE`, state.js);
+>   `journeyDmgMul` baseline weapon growth; path spread 3.8× → 1.36×
+>   (Aegis retaliation, Surge afterglow, Bond/Hyper/electric trims);
+>   blaster deflector core + hull plate; Ace = threat, not sponges; the
+>   per-stage shield income budget (`tryShieldGain`).
+> - Three DOCUMENTED calibration deviations live in `evaluateBudgets`
+>   (tools/run-baseline.js): classic-bot band = human band ×1.8; ratio
+>   hard cap 2.5 (1.6 target re-checked by the human pass); ≤2 blaster
+>   seed-outliers tolerated outside L3/L12.
+> - Open for the OWNER's real-device judgment: blaster feel at mid-realm
+>   finales, Ace's threat-heavy pacing (+~2× bot duration), and the
+>   1.8s trial briefing hold's feel.
+>
+> **NEXT: AFT-009 (constellation redesign)** per the backlog sequence.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 

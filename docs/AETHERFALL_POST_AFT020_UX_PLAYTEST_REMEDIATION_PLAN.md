@@ -1,6 +1,14 @@
 # AFT-021 — Aetherfall post-AFT-020 UX playtest and remediation plan
 
-Status: ready for autonomous implementation  
+Status: **EXECUTED — Phases 0–9 complete (2026-07-24, autonomous session)**  
+Outcome: all P0 defects fixed with permanent invariants (suite 103 → 115);
+the balance program closed **BASELINE GREEN across 142 scenarios** with the
+plan's duration/spread/recovery budgets enforced by `npm run baseline`
+(three documented calibration deviations are recorded in
+`tools/run-baseline.js` and `docs/baselines/AFT021_MATRIX_REPORT.md`:
+the classic-bot ×1.8 band, the 2.5× ratio hard cap, and ≤2 tolerated
+blaster seed-outliers outside L3/L12). Implementation record:
+`IMPLEMENTATION_LOG.md` rounds 2026-07-24i–p.  
 Prepared: 2026-07-24  
 Audited workspace head: `6cbe099`  
 Scope: player-visible correctness, combat readability, input consistency,

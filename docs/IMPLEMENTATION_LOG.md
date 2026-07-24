@@ -5,6 +5,35 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24p — AFT-021 Phase 9: the release pass
+
+- **The full matrix re-ran green at the release source** (142 scenarios,
+  0 budget violations, determinism PASS) and the complete gate is green:
+  suite 115/115, both skins + dist boot, RESIDUE: none, 44 mobile scenes
+  proving their named states under the overlap/label contracts, storms in
+  budget.
+- **The real-browser playtest** (phone portrait, short landscape, desktop)
+  walked: a fresh Starfighter realm-1 flow (briefing hold → live combat →
+  charge arc → dispersal win → RESOLVE beat → verb results → draft), the
+  Seraph Raid at 667×375 (roster rail + active captain ring + pad fade),
+  a Blaster finale opening (hull plate ×2; pause disarms a held charge
+  with no stray release), and the Breaker covenant ladder (sentinel
+  guard/opening rhythm, calm contract). It caught and fixed one more real
+  defect: **the danger line judged non-marching finale actors** — raid
+  captains/props "below the line" on a 375-tall landscape spammed
+  warnings and took phantom lives; the line now judges only the marching
+  wall (row ≥ 0). Also hardened: a null-sprite guard in the menu
+  starfighter rig.
+- Docs updated: the plan is stamped EXECUTED, the backlog row shipped,
+  README carries the AFT-021 systems section, and this handoff points at
+  AFT-009. `AFT021_MATRIX_REPORT.md` + `aft021-campaign.json` are the
+  committed post-remediation fixtures (the old-campaign and redesigned
+  closeout fixtures remain untouched history).
+- Owner-judgment items (real device): blaster feel at mid-realm finales,
+  Ace's threat-heavy pacing, the 1.8s trial briefing hold.
+
+---
+
 ## 2026-07-24o — AFT-021 Phase 8: verbs, thumbs, and a narration channel
 
 - **Each completion verb has a voice**: rescues chime upward, dispersals

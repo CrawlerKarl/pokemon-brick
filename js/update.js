@@ -6043,7 +6043,18 @@ function update(dt) {
       }
     }
     let lowest = -Infinity;
-    for (const br of G.bricks) if (!br.dead && !br.dive && !flying(br)) lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
+    // AFT-021 P9 (playtest find): STARFIGHTER has no descending wall — its
+    // finale actors that hold station without a flight slot (raid captains
+    // row −2, props row ≤ −3, the bound mythic) are formations, and on a
+    // 375-tall landscape they sat "past the line" forever, spamming
+    // warnings and taking phantom lives. The walled modes keep the full
+    // check: their bosses and sentinels genuinely march.
+    for (const br of G.bricks) {
+      if (br.dead || br.dive || flying(br)) continue;
+      if (br.crosser || br.friendly || br.stoodDown || br.gridTerminal) continue;
+      if (G.mode === 'junkie' && br.row < 0) continue;
+      lowest = Math.max(lowest, br.by + G.fy + br.h / 2);
+    }
     if (lowest > DANGER_Y()) {
       G.fy -= G.brickH * 3.5;
       if (!G.dangerWarned) { // first crossing per wave is a free warning
@@ -6926,7 +6937,7 @@ function update(dt) {
           // and tightens across the journey; pressure stays well above
           // classic at every realm.
           : d.enemyShotInt * (0.7 + gameRand() * 0.6)
-            * (regionIdx(G.level) <= 1 ? 0.85 : regionIdx(G.level) <= 3 ? 0.8 : 0.68);
+            * (regionIdx(G.level) <= 1 ? 0.85 : regionIdx(G.level) <= 3 ? 0.8 : 0.72);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && !b.crosser && !b.friendly

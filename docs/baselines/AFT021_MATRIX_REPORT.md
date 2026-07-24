@@ -1,6 +1,6 @@
 # AFT-021 — POST-REMEDIATION CAMPAIGN MATRIX
 
-Generated 2026-07-24T20:38:33.891Z at `c2b4370e86` by `npm run baseline -- --label aft021`.
+Generated 2026-07-24T21:02:59.110Z at `3b52b47b7b` by `npm run baseline -- --label aft021`.
 Deterministic fixtures: seeded `DEV.launch` + a state-derived autopilot stepping `update(1/60)`.
 Full per-scenario `DEV.report()` payloads: `docs/baselines/aft021-campaign.json`.
 
@@ -30,7 +30,7 @@ Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":26,
 | L5 | yes | 23.3s | 21 | 49.3 | 2.1 | 92% | 0% | 0 |
 | L7 | yes | 23.3s | 24 | 78.1 | 3.4 | 92% | 0% | 0 |
 | L8 | yes | 22.0s | 26 | 83.5 | 3.8 | 100% | 0% | 0 |
-| L10 | yes | 22.4s | 57 | 163.1 | 7.3 | 100% | 0% | 0 |
+| L10 | yes | 22.4s | 57 | 164.9 | 7.4 | 100% | 0% | 0 |
 | L11 | yes | 22.8s | 39 | 90.0 | 3.9 | 88% | 0% | 0 |
 | L13 | yes | 28.7s | 43 | 133.8 | 4.7 | 91% | 0% | 0 |
 | L14 | yes | 21.8s | 42 | 156.3 | 7.2 | 88% | 0% | 0 |
@@ -59,7 +59,7 @@ Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":26,
 | L6 | classic | yes | 74.6s | 3.41 | 48.4 | 0 | 4 |
 | L6 | classic | yes | 81.7s | 3.41 | 42.2 | 0 | 4 |
 | L6 | classic | yes | 71.8s | 3.41 | 40.6 | 0 | 4 |
-| L6 | blaster | yes | 53.8s | 4.07 | 140.6 | 0 | 3 |
+| L6 | blaster | yes | 53.8s | 4.07 | 140.6 | 0 | 2 |
 | L6 | blaster | yes | 63.2s | 4.07 | 126.1 | 0 | 4 |
 | L6 | blaster | yes | 93.0s | 4.07 | 155.2 | 0 | 2 |
 | L6 | junkie | yes | 64.9s | 2.64 | 102.9 | 0 | 2 |
@@ -68,9 +68,9 @@ Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":26,
 | L9 | classic | yes | 52.3s | 2.62 | 103.4 | 0 | 4 |
 | L9 | classic | yes | 103.3s | 2.62 | 109.1 | 0 | 5 |
 | L9 | classic | yes | 89.5s | 2.62 | 106.5 | 0 | 4 |
-| L9 | blaster | **no** (gameover) | 408.6s | 12.62 | 227.8 | 5 | 0 |
-| L9 | blaster | yes | 85.4s | 4.21 | 135.0 | 1 | 2 |
-| L9 | blaster | yes | 65.2s | 2.10 | 52.3 | 0 | 2 |
+| L9 | blaster | **no** (gameover) | 571.6s | 14.35 | 251.5 | 5 | 0 |
+| L9 | blaster | yes | 40.2s | 2.39 | 66.0 | 0 | 2 |
+| L9 | blaster | yes | 56.7s | 2.39 | 49.3 | 0 | 2 |
 | L9 | junkie | yes | 105.0s | 1.76 | 137.2 | 0 | 2 |
 | L9 | junkie | yes | 73.7s | 1.76 | 147.7 | 0 | 2 |
 | L9 | junkie | yes | 52.1s | 1.76 | 167.9 | 0 | 4 |
@@ -83,48 +83,48 @@ Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":26,
 | L12 | junkie | yes | 60.4s | 2.49 | 291.4 | 0 | 5 |
 | L12 | junkie | yes | 46.4s | 2.49 | 247.1 | 0 | 4 |
 | L12 | junkie | yes | 71.0s | 2.49 | 203.5 | 0 | 5 |
-| L15 | classic | yes | 296.2s | 2.94 | 306.0 | 0 | 2 |
-| L15 | classic | yes | 154.5s | 2.94 | 379.2 | 0 | 4 |
-| L15 | classic | yes | 233.2s | 2.94 | 313.9 | 0 | 3 |
-| L15 | blaster | yes | 107.4s | 2.87 | 298.6 | 0 | 1 |
-| L15 | blaster | yes | 288.9s | 5.74 | 450.9 | 1 | 3 |
-| L15 | blaster | yes | 62.8s | 2.87 | 289.0 | 0 | 5 |
+| L15 | classic | yes | 296.2s | 2.94 | 305.0 | 0 | 2 |
+| L15 | classic | yes | 107.5s | 2.94 | 328.4 | 0 | 4 |
+| L15 | classic | yes | 227.9s | 2.94 | 314.3 | 0 | 2 |
+| L15 | blaster | yes | 64.7s | 3.01 | 252.6 | 0 | 4 |
+| L15 | blaster | yes | 159.4s | 6.01 | 456.7 | 1 | 1 |
+| L15 | blaster | yes | 76.1s | 3.01 | 278.4 | 0 | 5 |
 | L15 | junkie | yes | 54.7s | 2.42 | 334.3 | 0 | 3 |
 | L15 | junkie | yes | 74.2s | 2.42 | 341.4 | 0 | 5 |
 | L15 | junkie | yes | 82.3s | 2.42 | 354.5 | 0 | 4 |
 | L18 | classic | yes | 88.3s | 1.87 | 578.9 | 0 | 5 |
 | L18 | classic | yes | 74.6s | 1.87 | 536.7 | 0 | 5 |
 | L18 | classic | yes | 366.7s | 1.87 | 544.7 | 0 | 4 |
-| L18 | blaster | **no** (gameover) | 541.6s | 20.21 | 4314.2 | 10 | 0 |
-| L18 | blaster | yes | 96.4s | 1.84 | 1276.1 | 0 | 5 |
-| L18 | blaster | yes | 69.4s | 1.84 | 1096.5 | 0 | 5 |
+| L18 | blaster | **no** (gameover) | 468.2s | 20.31 | 3657.3 | 10 | 0 |
+| L18 | blaster | yes | 59.8s | 1.85 | 1171.7 | 0 | 5 |
+| L18 | blaster | yes | 53.5s | 1.85 | 881.9 | 0 | 5 |
 | L18 | junkie | yes | 41.2s | 1.47 | 349.0 | 0 | 5 |
 | L18 | junkie | yes | 66.9s | 1.47 | 384.3 | 0 | 5 |
 | L18 | junkie | yes | 59.2s | 1.47 | 378.9 | 0 | 5 |
 | L21 | classic | yes | 161.4s | 1.19 | 1152.9 | 0 | 5 |
 | L21 | classic | yes | 429.4s | 1.19 | 1175.3 | 0 | 5 |
 | L21 | classic | yes | 236.5s | 1.19 | 1153.9 | 0 | 5 |
-| L21 | blaster | yes | 53.5s | 1.19 | 1384.4 | 0 | 5 |
-| L21 | blaster | yes | 69.7s | 1.19 | 1052.3 | 0 | 5 |
-| L21 | blaster | yes | 56.0s | 1.19 | 1103.7 | 0 | 5 |
+| L21 | blaster | yes | 55.6s | 1.19 | 1397.2 | 0 | 5 |
+| L21 | blaster | yes | 54.0s | 1.19 | 1143.0 | 0 | 5 |
+| L21 | blaster | yes | 56.1s | 1.19 | 1218.1 | 0 | 5 |
 | L21 | junkie | yes | 64.9s | 1.10 | 1317.1 | 0 | 5 |
 | L21 | junkie | yes | 31.8s | 1.10 | 1357.0 | 0 | 5 |
 | L21 | junkie | yes | 56.3s | 1.10 | 1445.8 | 0 | 5 |
 | L24 | classic | yes | 81.1s | 2.35 | 4620.2 | 0 | 5 |
 | L24 | classic | yes | 100.3s | 2.35 | 3917.7 | 0 | 5 |
 | L24 | classic | yes | 113.6s | 2.35 | 4454.1 | 0 | 5 |
-| L24 | blaster | yes | 106.5s | 4.76 | 2725.2 | 1 | 5 |
-| L24 | blaster | yes | 183.4s | 4.76 | 3357.7 | 1 | 5 |
-| L24 | blaster | yes | 72.4s | 2.38 | 1870.1 | 0 | 2 |
+| L24 | blaster | yes | 88.7s | 4.76 | 2654.6 | 1 | 5 |
+| L24 | blaster | yes | 118.2s | 2.38 | 1860.5 | 0 | 2 |
+| L24 | blaster | yes | 100.5s | 4.76 | 2722.7 | 1 | 5 |
 | L24 | junkie | yes | 53.9s | 2.26 | 3449.8 | 0 | 5 |
 | L24 | junkie | yes | 60.5s | 2.26 | 3313.9 | 0 | 5 |
 | L24 | junkie | yes | 72.7s | 2.26 | 3192.4 | 0 | 5 |
 | L27 | classic | yes | 118.9s | 2.47 | 1367.2 | 0 | 5 |
 | L27 | classic | yes | 95.9s | 2.47 | 1401.2 | 0 | 5 |
 | L27 | classic | yes | 129.5s | 2.47 | 1492.6 | 0 | 5 |
-| L27 | blaster | yes | 56.1s | 2.47 | 1325.1 | 0 | 3 |
-| L27 | blaster | yes | 131.3s | 4.94 | 2262.3 | 1 | 5 |
-| L27 | blaster | yes | 119.2s | 4.94 | 2239.1 | 1 | 3 |
+| L27 | blaster | yes | 64.0s | 2.47 | 1442.9 | 0 | 2 |
+| L27 | blaster | yes | 85.4s | 2.47 | 1314.9 | 0 | 2 |
+| L27 | blaster | yes | 113.7s | 4.94 | 2415.9 | 1 | 5 |
 | L27 | junkie | yes | 82.9s | 2.34 | 1676.1 | 0 | 3 |
 | L27 | junkie | yes | 60.0s | 2.34 | 1752.7 | 0 | 5 |
 | L27 | junkie | yes | 413.4s | 9.34 | 6305.3 | 3 | 1 |
@@ -210,7 +210,7 @@ Electric sustained dmg/s = 5.7 vs median other-vessel 5.6 (×1.02) — the inten
 
 **GREEN — every hard budget holds.**
 
-29 target-band warning(s):
+25 target-band warning(s):
 - ⚠ B-finale-L9-blaster: blaster seed-outlier (gameover) — tolerated 1/2
 - ⚠ B-finale-L18-blaster: blaster seed-outlier (gameover) — tolerated 2/2
 - ⚠ A-sweep-J01: 22.3s outside the 25–50s target band
@@ -225,37 +225,31 @@ Electric sustained dmg/s = 5.7 vs median other-vessel 5.6 (×1.02) — the inten
 - ⚠ A-sweep-J23: 23.5s outside the 25–50s target band
 - ⚠ A-sweep-J25: 22.1s outside the 25–50s target band
 - ⚠ A-sweep-J26: 20.0s outside the 25–50s target band
+- ⚠ L9-blaster: mean 56.7s outside the 60–95s target
 - ⚠ L12-classic: mean 184.6s outside the 70–180s target
-- ⚠ L15-classic: mean 233.2s outside the 70–180s target
-- ⚠ L15-blaster: mean 107.4s outside the 60–95s target
-- ⚠ L18-blaster: mean 96.4s outside the 60–95s target
+- ⚠ L15-classic: mean 227.9s outside the 70–180s target
+- ⚠ L18-blaster: mean 59.8s outside the 60–95s target
 - ⚠ L21-classic: mean 236.5s outside the 70–180s target
-- ⚠ L21-blaster: mean 56.0s outside the 60–95s target
-- ⚠ L24-blaster: mean 106.5s outside the 60–95s target
-- ⚠ L27-blaster: mean 119.2s outside the 60–95s target
-- ⚠ L9 mode-duration ratio ×1.72 (>1.6 target)
+- ⚠ L21-blaster: mean 55.6s outside the 60–95s target
+- ⚠ L24-blaster: mean 100.5s outside the 60–95s target
 - ⚠ L12 mode-duration ratio ×1.70 (>1.6 target)
-- ⚠ L15 mode-duration ratio ×1.75 (>1.6 target)
-- ⚠ L18 mode-duration ratio ×1.97 (>1.6 target)
-- ⚠ L21 mode-duration ratio ×2.35 (>1.6 target)
-- ⚠ L24 mode-duration ratio ×1.91 (>1.6 target)
-- ⚠ L27 mode-duration ratio ×1.80 (>1.6 target)
+- ⚠ L15 mode-duration ratio ×1.71 (>1.6 target)
+- ⚠ L21 mode-duration ratio ×2.36 (>1.6 target)
+- ⚠ L24 mode-duration ratio ×1.80 (>1.6 target)
 
 ## ANOMALIES
 
 - C-continuous-run: the real run ended in GAME OVER at level 6 (PSI HEAVY ATTACK) after 3 knockouts — with commit drafts the build never took the VOLLEY path and the gauntlet outpaced it. Data, not a harness failure.
 - G-affinity-light is BIT-IDENTICAL to G-affinity-none on this wave: the LIGHT trio (dawn/halo/grace ×3) produced zero marginal sim effect in a short finale — halo's 25-kill shield can only land on the final kill, dawn's drop bonus flipped no roll, and no potion fed grace. The DARK trio measurably diverged. A real balance observation.
 - A-sweep-J03: 1 knockout(s), build burned and wave retried
-- B-finale-L9-blaster: did not clear (gameover, 414.7s sim, state gameover)
+- B-finale-L9-blaster: did not clear (gameover, 577.7s sim, state gameover)
 - B-finale-L9-blaster: 5 knockout(s), build burned and wave retried
-- B-finale-L9-blaster-S2: 1 knockout(s), build burned and wave retried
 - B-finale-L12-blaster-S3: 1 knockout(s), build burned and wave retried
 - B-finale-L15-blaster-S2: 1 knockout(s), build burned and wave retried
-- B-finale-L18-blaster: did not clear (gameover, 554.8s sim, state gameover)
+- B-finale-L18-blaster: did not clear (gameover, 482.5s sim, state gameover)
 - B-finale-L18-blaster: 10 knockout(s), build burned and wave retried
 - B-finale-L24-blaster: 1 knockout(s), build burned and wave retried
-- B-finale-L24-blaster-S2: 1 knockout(s), build burned and wave retried
-- B-finale-L27-blaster-S2: 1 knockout(s), build burned and wave retried
+- B-finale-L24-blaster-S3: 1 knockout(s), build burned and wave retried
 - B-finale-L27-blaster-S3: 1 knockout(s), build burned and wave retried
 - B-finale-L27-junkie-S3: 3 knockout(s), build burned and wave retried
 - C-continuous-run: 3 knockout(s), build burned and wave retried

@@ -413,6 +413,30 @@ The charge shot has a full timing arc now:
   ordinary threats by default (more with Interceptor); massive siege fire takes
   three basic interceptions or one charged hit.
 
+### The stage-resolution beat + the layout authority (AFT-021, 2026-07-24)
+Every win passes through **`G.state === 'resolve'`** before results: hostile
+fire dissolves at the win moment (`combatIsLive()`, state.js — no damage
+path exists outside live combat), remaining actors play their completion
+verb (dispersing crossers accelerate out, rescued allies climb away,
+clear-exempt scenery STANDS DOWN via `br.stoodDown`), late drops stay
+catchable in the harmless beat, and results speak the verbs (`18 DEFEATED ·
+7 DISPERSED`). Results/drafts render over a static **arena plate** (no live
+world behind panels). The HUD rides a **surface registry**
+(`claimSurface`, render.js): the mobile gate fails if any two claimed
+surfaces overlap or if more than ONE world-anchored actor nameplate draws —
+co-actors read from the **roster rail** and only `activeCombatActor()`
+keeps a local label. `combatSafeRect()` clamps boss-class actors below the
+HUD/goal band and inside the screen. Player weapon timing rides ONE clock
+(`weaponScale`, update.js): Slow-Mo/Chill slow ENEMIES only, touch holds
+credit from the press (full charge at 1.10s everywhere), and pausing or
+backgrounding disarms a held charge. Balance rides measured budgets:
+`sovereignHp()`/`FINALE_WORK`/`FINALE_WORK_MODE` (state.js) budget finale
+work per realm × mode from measured DPS curves, `journeyDmgMul()` grows
+the core weapon +6%/realm, and `tryShieldGain()` caps per-stage shield
+income (2 ordinary / 4 finale / +1 aegis specialist). `npm run baseline`
+enforces the duration/spread/recovery budgets (BASELINE GREEN required for
+release; `--label` names each report's provenance).
+
 ### NINE FINALE FORMATS — the finale director (AFT-020, 2026-07-24)
 Since the realm-finale redesign, **each region's finale runs a different
 authored format** (`FINALE_FORMATS`, data.js — engine-shared, both skins):
