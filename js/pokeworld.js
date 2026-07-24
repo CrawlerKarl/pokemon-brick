@@ -686,6 +686,27 @@ FINALE_PROFILES[4] = {
     flameWord: 'RIDE THE WAKE',
   },
 };
+// AFT-020 Phase 5 — region 6 runs the HUNT (engine format 'hunt'): Zygarde
+// sheds real cells among reflections and flees unbeaten; Yveltal's closing
+// shadow sectors drain and feed; Diancie waits imprisoned in a jewel
+// facet — shatter it and her prism opens the final window.
+FINALE_PROFILES[5] = {
+  format: 'hunt',
+  title: 'THE KALOS FALSE FOUNDATION',
+  beats: [
+    { key: 'shedding', label: 'THE CELL SHEDDING', work: 0.30,
+      tip: 'BREAK THE REAL CELLS — REFLECTIONS SHATTER LIKE LIES' },
+    { key: 'shadow', label: 'YVELTAL', work: 1.0,
+      tip: 'LEAVE A CLOSING SHADOW SECTOR — IT DRINKS WHAT IT CATCHES' },
+    { key: 'rescue', label: 'FREE DIANCIE', work: 0.35,
+      tip: 'SHATTER THE PRISON — HER PRISM OPENS THE FINAL WINDOW' },
+  ],
+  hunt: {
+    realWord: 'A TRUE CELL BREAKS', falseWord: 'ONLY A REFLECTION',
+    fleeWord: 'ZYGARDE SLIPS AWAY', sectorWord: 'THE SHADOW DRINKS',
+    freeWord: 'DIANCIE IS FREE — HER PRISM BURNS THE SHADOW',
+  },
+};
 // AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
 // Eternatus hangs over the arena assembling a crown-lance, the Galar
 // regis each power a segment, and Zarude begins bound in the arena vines.
@@ -727,11 +748,14 @@ assembleSkins({
   finaleProfiles: FINALE_PROFILES,
   stageTitles: STAGE_TITLES,
   // AFT-020: Act-I challenge stages run authored conditions (this skin's words)
-  conditionAuthored: { 0: 'winds', 1: 'ambush', 2: 'swift' },
+  conditionAuthored: { 0: 'winds', 1: 'ambush', 2: 'swift', 3: 'swift', 4: 'bounty', 5: 'winds' },
   conditionNames: {
     0: { winds: { name: 'ROUTE WARDLIGHT', desc: 'STRAY WARDLIGHT BENDS EVERY FLIGHT PATH' } },
     1: { ambush: { name: 'ECRUTEAK CROSSWINDS', desc: 'THE GALE CARRIES THEIR FIRE IN EARLY AND OFTEN' } },
     2: { swift: { name: 'RISING TIDE', desc: 'THE SEA PRESSES IN — EVERYTHING MOVES FASTER' } },
+    3: { swift: { name: 'GEAR SHIFT', desc: 'TIME RUNS HOT — EVERYTHING MOVES FASTER' } },
+    4: { bounty: { name: 'CITY LIGHTS', desc: 'THE GRID PAYS DOUBLE — AND FIRES FOR IT' } },
+    5: { winds: { name: 'PANE REFLECTIONS', desc: 'THE GALLERY GLASS BENDS EVERY FLIGHT PATH' } },
   },
   starterMon: STARTER_MON, regionIntros: REGION_INTROS, stageFlavor: STAGE_FLAVOR,
   stageNames: STAGE_NAMES, acts: ACTS, junkieItems: JUNKIE_ITEMS,

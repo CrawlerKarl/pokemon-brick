@@ -1203,6 +1203,35 @@ function buildLevel(lvl) {
         };
         G.finale.meter = { value: 0, max: 1, label: fp.beats[0].label || 'DUEL' };
       }
+      // THE FALSE FOUNDATION (format 'hunt'): the solo Serpent sheds four
+      // glass cells — TWO real (solid, 3 HP), TWO reflections (dashed,
+      // 1 HP, harmless lies). Both real cells broken → the Serpent FLEES
+      // unbeaten and the shadow wakes. Deep in that fight the mythic waits
+      // IMPRISONED — its facet is the rescue, never a fourth health bar.
+      if (fmt === 'hunt') {
+        for (const v of G.bricks) if (v.subBoss && !v.dead) {
+          v.serpent = true;
+          v.hp = v.maxHp = Math.max(4, Math.round(bossHp * 0.3));
+        }
+        const cellY = Math.max(190, H * 0.3);
+        for (let ci = 0; ci < 4; ci++) {
+          const real = ci < 2;
+          const cx2 = W * (0.2 + 0.2 * ci) + (real ? 0 : 8);
+          G.bricks.push({
+            bx: cx2, by: cellY + (ci % 2) * 46, hx: cx2, hy: cellY + (ci % 2) * 46,
+            row: -6, col: ci, w: 30, h: 42,
+            hp: real ? 3 : 1, maxHp: real ? 3 : 1,
+            bare: true, barrier: true, glassCell: true, reflection: !real,
+            poke: { id: 0, t: 'fairy', n: real ? 'GLASS CELL' : 'REFLECTION' },
+            flash: 0, wobble: ci * 1.3,
+          });
+        }
+        G.finale.hunt = {
+          realBroken: 0, sectors: 0, sectorHits: 0, freed: false,
+          sector: null, sectorCD: 6, prison: false,
+        };
+        G.finale.meter = { value: 0, max: 2, label: fp.beats[0].label || 'CELLS' };
+      }
       // SIEGE OF THE DEEP CURRENT (format 'siege'): the Sovereign circles
       // from the opening behind the PRESSURE SEAL (×0.12 damage while any
       // Colossus stands). The three Colossi are order-choice stations at
@@ -1484,7 +1513,7 @@ function buildLevel(lvl) {
     // stay compositionally tethered to it — they compress and reform through
     // teleports, exchange sides in phase 2, and become counter-rotating
     // orbits in the last stand (see the guard controller in update.js).
-    G.bricks = G.bricks.filter(b2 => b2.isBoss || b2.subBoss || b2.raidBound || b2.raidVine);
+    G.bricks = G.bricks.filter(b2 => b2.isBoss || b2.subBoss || b2.raidBound || b2.raidVine || b2.glassCell);
     const raidWave = !!(G.finale && G.finale.format === 'raid');
     const nG = raidWave ? 0 : Math.min(12, 10 + (regionsIn >= 5 ? 2 : 0)); // the raid's captains ARE the escort
     const perWing = nG / 2;

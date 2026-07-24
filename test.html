@@ -2254,6 +2254,83 @@ window.requestAnimationFrame = function () { return 0; };
     return 'first-strike duel · neutral terminals · full-route illumination · a redirect that bites back · a ridden flame coda';
   });
 
+  // AFT-020 Phase 5: THE FALSE FOUNDATION — break the REAL cells among the
+  // reflections and the Serpent flees unbeaten; the shadow's closing wing
+  // sectors drain and feed; the imprisoned mythic is a RESCUE whose prism
+  // opens the final window. One hunt, one boss, one rescue.
+  test('AFT-020 P5: the FALSE FOUNDATION — real cells, fleeing serpent, sectors, the rescue', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(18, true, { seed: 'HUNT1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    G.lives = 99;
+    const F = G.finale, HT = F && F.hunt;
+    assert(F && F.format === 'hunt' && HT && F.beatKey === 'shedding', 'the hunt arms on the region-6 finale');
+    const cells = G.bricks.filter(b => b.glassCell && !b.dead);
+    assert(cells.length === 4 && cells.filter(c => c.reflection).length === 2,
+      'four shed cells — two true, two reflections');
+    const serp = G.bricks.find(b => b.serpent && b.subBoss && !b.dead);
+    assert(serp, 'the solo Serpent hunts alongside its cells');
+    // a reflection shatters like a lie; a real cell counts
+    const refl = cells.find(c => c.reflection);
+    refl.hp = 0.5;
+    damageBrick(refl, 1, refl.bx, refl.by, null, { source: 'bolt' });
+    assert(refl.dead && HT.realBroken === 0, 'a reflection is harmless glass');
+    for (const c of cells.filter(c2 => !c2.reflection && !c2.dead)) {
+      c.hp = 0.5;
+      damageBrick(c, 1, c.bx, c.by, null, { source: 'bolt' });
+    }
+    assert(HT.realBroken === 2 && HT.fled === true, 'both true cells end the hunt');
+    assert(!G.bricks.some(b => b.subBoss && !b.dead) && serp.crosser && !serp.dead,
+      'the Serpent flees UNBEATEN as a crosser');
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'shadow', 'the shadow beat opens');
+    if (G.gauntlet) G.gauntlet.entry = null;
+    G.bossIntro = 0;
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+    // a sector casts, closes, and DRINKS what it catches (clamped feed)
+    HT.sectorCD = 0.01;
+    await runFrames(3);
+    assert(HT.sector, 'a wing-shaped sector casts toward the vessel');
+    G.mega = 0.6;
+    boss.hp = Math.round(boss.maxHp * 0.7);
+    const bhp = boss.hp;
+    G.paddle.x = HT.sector.cx + Math.cos(HT.sector.ang) * 60; // stand INSIDE it
+    HT.sector.t = HT.sector.dur - 0.01;
+    await runFrames(3);
+    assert(HT.sectorHits === 1 && G.mega < 0.6 && boss.hp > bhp,
+      'a closed sector drains Surge and feeds the shadow');
+    // the prison appears at the last stand — its fall frees the mythic
+    boss.hp = Math.round(boss.maxHp * 0.45);
+    boss.phase = 2;
+    await runFrames(5);
+    assert(HT.prison === true && F.beatKey === 'rescue', 'the rescue beat opens at the last stand');
+    const prison = G.bricks.find(b => b.lucPrison && !b.dead);
+    assert(prison, 'the prison facet is visible and breakable');
+    prison.hp = 0.5;
+    damageBrick(prison, 1, prison.bx, prison.by, null, { source: 'bolt' });
+    assert(HT.freed === true && F.mastery.countered === true, 'the prisoner is FREED');
+    assert(boss.prismMark === true, 'her prism marks the shadow');
+    assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead), 'the mythic is a rescue, never a health bar');
+    const php = boss.hp;
+    damageBrick(boss, 2, boss.bx, boss.by, null, { source: 'bolt' });
+    assert(Math.abs((php - boss.hp) - 2.7) < 0.05, 'the prism window amplifies ×1.35');
+    HT.sectorCD = 0.01;
+    await runFrames(5);
+    assert(!HT.sector, 'no sector may cast once she is free');
+    // fell the Sovereign — the hunt ends with no cleanup round
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(500, () => {
+      for (const pu of G.powerups) pu.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state !== 'play', 'the hunt clears (state ' + G.state + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 18);
+    assert(L && L.finaleFormat === 'hunt' && L.finaleCounters.freed === 1,
+      'ledger: hunt format + the rescue');
+    return 'reflections are lies · the serpent flees unbeaten · sectors drink then stop · a rescued prism, not a third bar';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2812,6 +2889,13 @@ window.requestAnimationFrame = function () { return 0; };
       G.gauntlet.entry = null; // isolate the summon's own entrance (if any)
       gauntletSummonMythic(false);
       const fmtR = (finaleProfile(region) || {}).format || 'ladder';
+      if (fmtR === 'hunt') {
+        // AFT-020: the HUNT has no third round at all — its mythic is a
+        // RESCUE inside the shadow fight, so the summon is a silent no-op
+        assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead),
+          GENS[region].name + ' hunt must not spawn a mythic bar');
+        continue;
+      }
       if (fmtR === 'relay' || fmtR === 'siege' || fmtR === 'circuit') {
         // AFT-020: these formats' third beat is a REWARD CODA (blooms /
         // falling wishes / a ridden flame), never a mythic health bar
@@ -2828,7 +2912,7 @@ window.requestAnimationFrame = function () { return 0; };
     // raid Sovereigns never wake (live from build); siege wakes ride the
     // seal-fall beat with no entrance flight of their own
     const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid' && fmtOf(r) !== 'siege').length;
-    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit'].includes(fmtOf(r))).length;
+    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit', 'hunt'].includes(fmtOf(r))).length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
     assert(legendStyles.size === wakingLegends, 'legendary entrances are not unique across the waking finales');
     assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
@@ -4631,9 +4715,12 @@ window.requestAnimationFrame = function () { return 0; };
     const oldPreset = SETTINGS.preset;
     const mono = a => a.length < 2 || a.every((v, i) => i === 0 || v > a[i - 1]) || a.every((v, i) => i === 0 || v < a[i - 1]);
     const specs = [
-      { lvl: 18, id: 719,  mon: 'DIANCIE',   turn: 'jewelTurn', flag: 'conduit', count: 2,
-        flavor: s => s.every(x => x.conduit && x.kind === 'crystal'),               // crystal turret node
-        chName: 'MOONBLAST',       pattern: 'rain',   cols: 5 },
+      // DIANCIE's mythic duel is RETIRED BY DESIGN (AFT-020): the region-6
+      // finale is the HUNT and Diancie is its imprisoned RESCUE — never a
+      // third health bar. Its JEWEL TURRETS kit stays as engine data.
+      /* { lvl: 18, id: 719,  mon: 'DIANCIE',   turn: 'jewelTurn', flag: 'conduit', count: 2,
+        flavor: s => s.every(x => x.conduit && x.kind === 'crystal'),
+        chName: 'MOONBLAST',       pattern: 'rain',   cols: 5 }, */
       { lvl: 21, id: 802,  mon: 'MARSHADOW', rush: true,                             // SHADOW SNEAK afterimage rider
         chName: 'SPECTRAL THIEF',  pattern: 'clock',  cols: 6 },
       // ZARUDE's mythic duel is RETIRED BY DESIGN (AFT-020): the region-8

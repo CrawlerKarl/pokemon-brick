@@ -1242,9 +1242,10 @@ function drawBricks() {
     const col = TYPE_COLORS[br.poke.t];
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
     const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
-    // AFT-020 raid props carry no sprite id — they draw procedurally
+    // AFT-020 raid/hunt props carry no sprite id — they draw procedurally
     if (br.raidVine) { drawRaidVine(br, x, y); continue; }
     if (br.raidCover) { drawRaidCover(br, x, y); continue; }
+    if (br.glassCell || br.lucPrison) { drawGlassCell(br, x, y); continue; }
     // NB: br.flash is decayed in update() (dt-scaled) — render only READS it.
     // ---- FREE-FLYING ALIEN: broke out of its box — just the Pokémon,
     // banking through its pattern with a type-colored aura underneath.
@@ -2842,6 +2843,82 @@ function drawWardFx() {
   }
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.restore();
+}
+// AFT-020 THE FALSE FOUNDATION: glass cells (solid truths vs dashed lies),
+// the closing wing-shaped shadow sector, and the prison facet.
+function drawHuntFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'hunt' || !F.hunt || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const HT = F.hunt;
+  const S = HT.sector;
+  if (S) {
+    const prog = Math.min(1, S.t / S.dur);
+    ctx.save();
+    // the wing: a wedge whose EDGES sweep closed — shape and motion cue
+    const sweep = S.spread * (1 - prog * 0.55);
+    ctx.globalAlpha = 0.12 + 0.16 * prog;
+    ctx.fillStyle = '#7c4dff';
+    ctx.beginPath();
+    ctx.moveTo(S.cx, S.cy);
+    ctx.arc(S.cx, S.cy, S.rad, S.ang - sweep, S.ang + sweep);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 0.55 + 0.3 * prog;
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = '#b388ff';
+    ctx.setLineDash([8, 7]);
+    ctx.beginPath();
+    ctx.moveTo(S.cx, S.cy);
+    ctx.lineTo(S.cx + Math.cos(S.ang - sweep) * S.rad, S.cy + Math.sin(S.ang - sweep) * S.rad);
+    ctx.moveTo(S.cx, S.cy);
+    ctx.lineTo(S.cx + Math.cos(S.ang + sweep) * S.rad, S.cy + Math.sin(S.ang + sweep) * S.rad);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+// procedural glass props: a TRUE cell is solid with a bright core; a
+// REFLECTION is a dashed shell with an inverted hairline (the tell); the
+// prison is a larger facet holding a warm inner light.
+function drawGlassCell(br, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  const w2 = br.w / 2, h2 = br.h / 2;
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(0, -h2); ctx.lineTo(w2, -h2 * 0.3); ctx.lineTo(w2 * 0.7, h2);
+    ctx.lineTo(-w2 * 0.7, h2); ctx.lineTo(-w2, -h2 * 0.3); ctx.closePath();
+  };
+  if (br.lucPrison) {
+    path();
+    ctx.fillStyle = 'rgba(255,158,203,0.3)'; ctx.fill();
+    ctx.lineWidth = 2.4; ctx.strokeStyle = '#ff9ecb'; ctx.stroke();
+    const pulse = 0.6 + 0.4 * Math.sin(G.time * 4);
+    ctx.beginPath(); ctx.arc(0, 0, 7 * pulse + 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,236,179,0.9)'; ctx.fill();
+  } else if (br.reflection) {
+    ctx.setLineDash([5, 5]);
+    path();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(207,216,220,0.7)'; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(w2 * 0.4, -h2 * 0.5); ctx.lineTo(-w2 * 0.2, h2 * 0.5); // the INVERTED hairline
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.stroke();
+  } else {
+    path();
+    ctx.fillStyle = 'rgba(178,235,242,0.35)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#b2ebf2'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 3.4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-w2 * 0.4, -h2 * 0.5); ctx.lineTo(w2 * 0.2, h2 * 0.5);
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.stroke();
+  }
+  if (br.flash > 0) {
+    ctx.globalAlpha = br.flash * 0.7;
+    ctx.lineWidth = 2; ctx.strokeStyle = '#fff';
+    path(); ctx.stroke();
+  }
   ctx.restore();
 }
 // AFT-020 THE LIVE GRID: the circuit's COMPLETE route illuminates before
@@ -9505,6 +9582,7 @@ function render() {
     drawWardFx();      // AFT-020: the Triune Ward between the Heralds
     drawHourglassFx(); // AFT-020: ring windows + replay pre-echoes
     drawCircuitFx();   // AFT-020: the illuminated route + the flame's wake
+    drawHuntFx();      // AFT-020: the closing shadow sector
     drawBricks();
     drawFragments();
     drawShield();

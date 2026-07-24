@@ -656,6 +656,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   }
   statsDmgCat('matchup', dmg - dPreMatch);
   const dPreGuard = dmg;
+  // LUCERNA'S PRISM: the freed mythic holds the final window open
+  if (br.prismMark && dmg < 90) dmg *= 1.35;
   // SENTINEL GUARD / OPENING (round-1 gauntlet). Sentinels hold a guard that
   // halves incoming damage until they commit to their OWN special; the opening
   // it leaves (br.openT, set in subAbility, decayed in updateSentinels) takes
@@ -925,6 +927,21 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (br.raidVine && raidState() && !G.bricks.some(b => b.raidVine && !b.dead && b !== br)) raidFreeBound();
     // SIEGE: a fallen Colossus is the player's ORDER choice landing
     if (br.siegeColossus && siegeState()) siegeColossusDown(br);
+    // THE HUNT: real cells count, reflections shatter like lies; the
+    // prison's fall frees the imprisoned mythic
+    if (br.glassCell && huntState()) {
+      const HT = G.finale.hunt;
+      if (br.reflection) {
+        G.score += Math.round(50 * scoreMult());
+        setCombatNotice(huntWord('falseWord', 'ONLY A REFLECTION'), '#b0bec5', 1.2);
+      } else {
+        HT.realBroken++;
+        G.finale.mastery.counters.cells = HT.realBroken;
+        setCombatNotice(huntWord('realWord', 'A TRUE CELL BREAKS') + ' — ' + HT.realBroken + '/2', '#9CFF57', 1.6);
+        if (HT.realBroken >= 2 && !HT.fled) huntSerpentFlees();
+      }
+    }
+    if (br.lucPrison && huntState()) huntFreeMythic();
     // THE TRIUNE WARD: a fallen Herald leaves a PERMANENT gap
     if (br.subBoss && G.finale && G.finale.ward) {
       G.finale.ward.fallen++;
@@ -3410,6 +3427,11 @@ function completeFinale() {
     // (the flame's wake ridden long enough to matter)
     F.mastery.mastered = (F.circuit.redirects || 0) >= 3 && (F.circuit.flameT || 0) >= 5;
   }
+  if (F.format === 'hunt' && F.hunt) {
+    // countered = the prisoner freed; mastered = freed with not one shadow
+    // sector ever closing on the vessel
+    F.mastery.mastered = !!F.hunt.freed && (F.hunt.sectorHits || 0) === 0;
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3695,6 +3717,7 @@ function updateFinaleDirector(dt) {
   if (F.format === 'raid' && F.raid) updateRaid(dt);
   if (F.format === 'siege' && F.siege) updateSiege(dt);
   if (F.format === 'hourglass' && F.hourglass) updateHourglass(dt);
+  if (F.format === 'hunt' && F.hunt) updateHunt(dt);
   if (F.format === 'circuit' && F.circuit) {
     const C = F.circuit;
     if (C.termCD > 0) C.termCD -= dt;
@@ -3765,6 +3788,115 @@ function updateLadderMemory(dt) {
       continue;
     }
     G.columnStrikes.push({ x: m.x, w: 74, warn: 1.2, strike: 0.45, color: '#ec407a', echo: true });
+  }
+}
+// ---- THE FALSE FOUNDATION (AFT-020 Phase 5, realm 6) ----
+function huntState() { return (G.finale && G.finale.format === 'hunt' && G.finale.hunt) || null; }
+function huntWord(k, fallback) {
+  const F = G.finale;
+  return (F && F.profile && F.profile.hunt && F.profile.hunt[k]) || fallback;
+}
+function huntSerpentFlees() {
+  const F = G.finale, HT = F.hunt;
+  for (const b of G.bricks) {
+    if (b.dead) continue;
+    if (b.serpent && b.subBoss) {
+      // the hunt ends with the Serpent UNBEATEN — it slips away as a
+      // crosser and the round controller wakes the shadow
+      b.subBoss = false; b.serpent = false;
+      b.crosser = { vx: (b.bx < W / 2 ? -1 : 1) * 340, bobPh: 0 };
+    }
+    if (b.glassCell && !b.dead) { b.dead = true; shatterBrick(b, b.bx + G.fx, b.by + G.fy, true); }
+  }
+  HT.fled = true;
+  setCombatNotice(huntWord('fleeWord', 'THE SERPENT FLEES'), '#ff9ecb', 2.2);
+  SFX.roar();
+}
+function huntFreeMythic() {
+  const F = G.finale, HT = F.hunt;
+  if (HT.freed) return;
+  HT.freed = true;
+  F.mastery.counters.freed = 1;
+  F.mastery.countered = true;
+  const gen2 = genFor(G.level);
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  if (mid) {
+    const vw2 = Math.min(100, W * 0.14);
+    G.bricks.push({
+      bx: W * 0.85, by: Math.max(160, H * 0.26), hx: W * 0.85, hy: Math.max(160, H * 0.26),
+      row: -3, col: 0, w: vw2, h: vw2 * 0.9, hp: 1, maxHp: 1,
+      bare: true, poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      crosser: { vx: -Math.max(30, W / 22), bobPh: 0 }, flash: 0, wobble: 0,
+    });
+    getSprite(mid[0]);
+  }
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  if (boss) {
+    boss.prismMark = true; // her prism holds the final window open
+    ringFx(boss.bx + G.fx, boss.by + G.fy, '#ff9ecb', 10, 170, 5, 0.65);
+  }
+  setAnnounce('star', '#ff9ecb', huntWord('freeWord', 'THE PRISONER IS FREE'), null, 3, null, null, false, true, 'boss');
+  sparkle(W * 0.85, Math.max(160, H * 0.26), 12, true);
+  SFX.mega();
+}
+function updateHunt(dt) {
+  const F = G.finale, HT = F.hunt;
+  if (F.meter && F.beat === 0) F.meter.value = HT.realBroken;
+  if (F.beat !== 1 && F.beat !== 2) return;
+  if (F.meter) F.meter = null; // the shadow beats read from the HUD dock
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  if (!boss) return;
+  // deep in the shadow fight the prison APPEARS — the rescue beat
+  if (!HT.prison && bossLastStand(boss)) {
+    HT.prison = true;
+    startFinaleBeat(2);
+    G.bricks.push({
+      bx: W * 0.85, by: Math.max(170, H * 0.3), hx: W * 0.85, hy: Math.max(170, H * 0.3),
+      row: -6, col: 9, w: 40, h: 52, hp: 3, maxHp: 3,
+      bare: true, barrier: true, lucPrison: true,
+      poke: { id: 0, t: 'fairy', n: 'THE PRISON' },
+      flash: 0, wobble: 0.7,
+    });
+    setCombatNotice((F.profile && F.profile.beats[2] && F.profile.beats[2].tip) || 'SHATTER THE PRISON', '#ff9ecb', 2.4);
+  }
+  // WING-SHAPED SHADOW SECTORS: cast toward the player, closing on a clock.
+  // Caught at the close: Surge drains and the shadow FEEDS (clamped at the
+  // phase's entry line — progress is never stolen back). Freed = no more.
+  if (G.mode === 'classic' || HT.freed) return;
+  if (HT.sector) {
+    const S = HT.sector;
+    S.t += dt;
+    if (S.t >= S.dur) {
+      HT.sector = null;
+      const px = G.paddle.x, py = shipY();
+      const ang = Math.atan2(py - S.cy, px - S.cx);
+      const d2 = Math.hypot(px - S.cx, py - S.cy);
+      let dd = ang - S.ang;
+      while (dd > Math.PI) dd -= Math.PI * 2;
+      while (dd < -Math.PI) dd += Math.PI * 2;
+      if (Math.abs(dd) < S.spread && d2 <= S.rad + 30) {
+        HT.sectorHits++;
+        F.mastery.counters.sectorHits = HT.sectorHits;
+        G.mega = Math.max(0, G.mega - 0.25);
+        const cap = boss.maxHp * (bossLastStand(boss) ? 0.5 : 1);
+        boss.hp = Math.min(cap, boss.hp + boss.maxHp * 0.04);
+        setCombatNotice(huntWord('sectorWord', 'THE SHADOW DRINKS'), '#b388ff', 1.8);
+        burst(px, py, '#b388ff', 22, 300, 0.6);
+        SFX.hit(0);
+      }
+    }
+  } else {
+    HT.sectorCD -= dt;
+    if (HT.sectorCD <= 0) {
+      HT.sectorCD = bossLastStand(boss) ? 6.5 : 8;
+      HT.sectors++;
+      const cx2 = boss.bx + G.fx, cy2 = boss.by + G.fy;
+      HT.sector = {
+        cx: cx2, cy: cy2, t: 0, dur: 2.2,
+        ang: Math.atan2(shipY() - cy2, G.paddle.x - cx2),
+        spread: 0.45, rad: Math.hypot(shipY() - cy2, G.paddle.x - cx2) + 60,
+      };
+    }
   }
 }
 // ---- TRIAL OF THE LIVE GRID (AFT-020 Phase 5, realm 5) ----
@@ -4239,6 +4371,9 @@ function gauntletSummonMythic(forceSecret = false) {
     circuitBeginCoda(gen2);
     return;
   }
+  // the HUNT has no third round at all — the rescue happened (or was
+  // missed) INSIDE the shadow fight; the fall of the Sovereign is the end
+  if (G.finale && G.finale.format === 'hunt') return;
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
   if (riftOpen) {
     const vw = Math.min(300, Math.max(170, W * 0.38));

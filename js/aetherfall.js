@@ -757,6 +757,30 @@
       flameWord: 'RIDE THE WAKE',
     },
   };
+  // Realm 6 — THE FALSE FOUNDATION (AFT-020 Phase 5): hunt and rescue. The
+  // Foundation Serpent sheds glass cells into mirrored routes — break the
+  // REAL ones among the reflections and it flees unbeaten. Nyxharrow casts
+  // closing wing-shaped shadow sectors that drain Surge and feed it; deep
+  // in the fight Lucerna is VISIBLE, imprisoned in a glass facet — shatter
+  // the prison and her prism opens the final window. One hunt, one boss,
+  // one rescue — never a solo-trio ladder.
+  finaleProfiles[5] = {
+    format: 'hunt',
+    title: FINALE_TITLES[5],
+    beats: [
+      { key: 'shedding', label: 'THE GLASS SHEDDING', work: 0.30,
+        tip: 'BREAK THE REAL CELLS — REFLECTIONS SHATTER LIKE LIES' },
+      { key: 'shadow', label: REALM_BOSSES[5].leg[0].toUpperCase(), work: 1.0,
+        tip: 'LEAVE A CLOSING SHADOW SECTOR — IT DRINKS WHAT IT CATCHES' },
+      { key: 'rescue', label: 'FREE LUCERNA', work: 0.35,
+        tip: 'SHATTER THE PRISON — HER PRISM OPENS THE FINAL WINDOW' },
+    ],
+    hunt: {
+      realWord: 'A TRUE CELL BREAKS', falseWord: 'ONLY A REFLECTION',
+      fleeWord: 'THE SERPENT FLEES THE LIGHT', sectorWord: 'THE SHADOW DRINKS',
+      freeWord: 'LUCERNA IS FREE — HER PRISM BURNS THE SHADOW',
+    },
+  };
   // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
   // raid. Omega Seraph hangs overhead from the first second, assembling a
   // crown-lance from arena segments; the three captains each power one.
@@ -803,11 +827,14 @@
   // ---------- AFT-020 realm-authored conditions (Act I) ----------
   // Same engine physics, this realm's WORDS — and a Challenge stage runs
   // its realm's authored condition every time (identity, not dice).
-  const conditionAuthored = { 0: 'winds', 1: 'ambush', 2: 'swift' };
+  const conditionAuthored = { 0: 'winds', 1: 'ambush', 2: 'swift', 3: 'swift', 4: 'bounty', 5: 'winds' };
   const conditionNames = {
     0: { winds: { name: 'WANDERING WARDS', desc: 'LOOSE WARDLIGHT BENDS EVERY FLIGHT PATH' } },
     1: { ambush: { name: 'BELLTOWER CROSSWINDS', desc: 'THE GALE CARRIES THEIR FIRE IN EARLY AND OFTEN' } },
     2: { swift: { name: 'RISING CURRENT', desc: 'THE DEEP PRESSES IN — EVERYTHING MOVES FASTER' } },
+    3: { swift: { name: 'CONVEYOR SHIFT', desc: 'THE FORGE LINES RUN HOT — EVERYTHING MOVES FASTER' } },
+    4: { bounty: { name: 'GRID SURGE', desc: 'THE LIVE GRID PAYS DOUBLE — AND FIRES FOR IT' } },
+    5: { winds: { name: 'PANE REFLECTIONS', desc: 'THE GALLERY GLASS BENDS EVERY FLIGHT PATH' } },
   };
 
   // ---------- assembly ----------
