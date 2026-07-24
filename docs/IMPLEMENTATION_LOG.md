@@ -5,6 +5,82 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24c — AFT-020 Phase 2: THE GALE RELAY + THE SERAPH RAID
+
+The two OPPOSITE finale formats that prove the director, per the plan's
+"prove relay and raid before building nine" rule. Both ride shared engine
+rules with skin-authored words; both verified by screenshot in junkie AND
+classic; both have permanent gate scenes and dedicated invariants.
+
+- **Realm 2 — THE GALE RELAY** (`4f66efd`): one continuous pursuit. The
+  Vows pass ONE storm core — carrier-only damage fills a three-pass meter
+  (0.42 BE total, no health bars emptied), non-carrier hits deflect with a
+  cue, and a wind corridor holds true aim over the carrier's lane (bolts
+  drift outside it; the classic ball's air is calm only inside it). Three
+  passes disperse the Vows unbroken as the Sovereign descends into the
+  still-running fight. The coda is a REWARD EVENT: Hourseed blooms
+  (catchable pickups, mastery-counted) + a drifting presence — no third
+  bar, no HP dock. Retired by design: Celebi's mythic duel; region-2
+  phase-jump consumers moved to Hoenn.
+- **Realm 8 — THE SERAPH RAID** (`6d4b610`): no rounds at all. The
+  Sovereign is live overhead from second one behind the crown shield
+  (×0.25 + honest cue); captains power crown segments on visible assembly
+  clocks with flowing tethers; owner-weighted damage fills the BREAK
+  meter (full vs 35%); broken segments drop temporary cover, unbroken
+  ones fire ONE lane punish, a dead owner fizzles its own. The mythic
+  begins BOUND in destructible vines — freeing it tears the open segment
+  and turns it loose (in Breaker it tears and leaves). All three resolved
+  → the weapon fails: lanes clear, heat vents, 6s ×1.35 window; the
+  Sovereign's fall ends the encounter with the survivors fleeing.
+  Retired by design: Zarude's mythic duel; the Eternatus duel test drives
+  the kit crown-failed; Trial/DEV treat the raid as one continuous launch.
+- Engine spine shipped with them: `relayVowHit`/`raidCaptainHit` damage
+  routing, `updateFinaleDirector` beat drive, the shared finale METER on
+  the objective-banner surface, `G.finale.codaHold` clear guard, the
+  raid's round-controller/clear-guard bypasses, and format-aware Trial
+  rows (relay hides the coda's phase row; raid shows one launch).
+
+Gate: full `npm test` green in 32s, 92/92, RESIDUE none, 34 scenes.
+
+---
+
+## 2026-07-24b — AFT-020 Phase 1: the finale director arms in every realm
+
+`G.finale` mirrors the gauntlet as its adapter (`85d5bf9`): format, named
+beats, per-beat combat clocks (reveal freezes excluded), a mastery card
+(clear/countered/mastered), and a ledger stamp on every finale clear.
+Both skins declare `SKIN.finaleProfiles` — AETHERFALL's nine finales
+carry their authored chapter titles from day one; Trial round chips read
+as named chapters; `DEV.finale()` launches exact beats. No combat change.
+
+---
+
+## 2026-07-24a — AFT-008 baseline: the ledger grows up, fixtures saved
+
+- **Ledger extensions** (`6afe327`): meaningful-progress + active-threat
+  clocks, per-wave Boss-Equivalent work stamps, damage attributed by
+  multiplier category and Surge window, Surge gain by source with
+  overflow waste, shield/life gains by source, post-remap drop counts,
+  renewable-population kills, channel open/break, dealt draft hands —
+  aggregated by `DEV.report()` v2. Locked the AFT-020 engine schemas
+  (FINALE_FORMATS, attack states, counter verbs, budget shapes,
+  `G.finale`/`G.prep`, `stageTitle()`).
+- **Cross-skin perk bug fixed** (`17992d4`): fighting/ground/dark/poison
+  vessel perks gated on pokemon ability-name strings and silently never
+  fired on AETHERFALL. Type-keyed now; pokemon bit-identical; suite 88.
+- **`npm run baseline`** (`e603088`): 69 deterministic headless scenarios
+  (27-stage sweep, finales × 3 modes, a continuous run, vessel/path/
+  fusion/apex/difficulty/affinity probes) → `docs/baselines/`. Headlines:
+  finales 2.5–3.2 BE; electric ×1.29 the median vessel; 23–28% heat
+  lockout without arsenal; channel interrupts rarely used (2/0 per
+  finale); classic 2–3× slower at finales.
+- **Determinism family closed** (`d796973`): `resetRun` now resets
+  `G.time` + every fire/invuln cooldown (the `G.splashCD` class); a new
+  invariant ages the page, dirties every clock, and proves same-seed
+  launches bit-identical.
+
+---
+
 ## 2026-07-23f — Five owner reports: the darkening flicker, courier variety, item fairness, the trio frame
 
 - **The rhythmic screen-darkening (level 1, ~1s, repeating)** was the
