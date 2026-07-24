@@ -1421,7 +1421,7 @@ function buildLevel(lvl) {
   G.maneuver = null; G.maneuverCD = 8;
   G.deathsThisWave = 0;
   G.dangerWarned = false;
-  G.heat = 0; G.overheat = 0;
+  G.heat = 0; G.overheat = 0; G.shieldRegenN = 0;
   statsBeginLevel(lvl); // one balance record per wave ATTEMPT (retries too)
   G.highGroundDone = false; G.waveFirstKill = false; G.elementOrbCD = 9;
   // motionTier drives the boss guard-ring shimmer (mt>=1, regions 3+).
@@ -1951,6 +1951,7 @@ function buildLevel(lvl) {
       let work = 0;
       for (const b of G.bricks) {
         if (b.dead || b.barrier || b.crosser || b.friendly) continue;
+        if ((b.hp || 0) >= 900) continue; // unkillable-prop convention — presence, not work
         work += Math.max(0, b.hp || 0);
       }
       L.workHp = work;

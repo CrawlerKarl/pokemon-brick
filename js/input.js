@@ -1414,7 +1414,9 @@ function fireAction(auto = false) {
   // basic fire reaches overheat in about seven seconds; tapping with pauses
   // remains comfortably sustainable.
   const torrent = starterMod('heat', 1);
-  const masteryCool = Math.pow(0.94, G.stacks.ice || 0);
+  // §9.9: mastery cooling diminishes past five stacks and never drops heat
+  // generation below ~55% of its pre-mastery value
+  const masteryCool = Math.max(0.55, Math.pow(0.94, effStacks(G.stacks.ice || 0)));
   // HYPER CYCLE also runs the barrel cooler — without this, sustained fire is
   // heat-limited well below the faster cadence and the capstone adds no DPS
   const hyperCool = upgN('hyper') ? 0.85 : 1;
@@ -1509,7 +1511,7 @@ function fireCharge(c, resonant = false) {
   // bar, so leaning on the charge (or chaining them) really can overheat you.
   // WAR MACHINE spends banked rail pressure to run the shot far cooler.
   const wmSpend = upgN('warmachine') ? G.railPressure : 0;
-  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.pow(0.94, G.stacks.ice || 0) * starterMod('heat', 1)
+  const heatMods = (1 - 0.25 * upgN('coolant')) * Math.max(0.55, Math.pow(0.94, effStacks(G.stacks.ice || 0))) * starterMod('heat', 1)
     * (1 - 0.45 * wmSpend);
   addWeaponHeat((0.30 + 0.30 * c) * heatMods * (resonant ? 0.7 : 1));
   G.muzzle = 0.18;

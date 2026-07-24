@@ -382,12 +382,15 @@ const STARTER_KIT = {
         'WATER OFFENSE/DEFENSE · SHOTS BUILD 28% LESS HEAT',
       ],
     }),
+  // AFT-008 §9.4: the electric line is FAST CHAIN/SURGE TEMPO now, not raw
+  // supremacy — the old 2.2×/0.58-cadence/75%-Surge inheritance defined the
+  // whole campaign's ceiling before any path or matchup. Identity kept.
   electric: starterKit([
-      '+50% DAMAGE · 35% MEGA · CHAIN EVERY 6 HITS',
-      '+80% DAMAGE · 55% MEGA · CHAIN 2',
-      '+120% DAMAGE · 75% MEGA · CHAIN 3',
+      '+15% DAMAGE · FASTER FIRE · 20% MEGA · CHAIN EVERY 8 HITS',
+      '+25% DAMAGE · FASTER FIRE · 35% MEGA · CHAIN EVERY 7',
+      '+40% DAMAGE · RAPID FIRE · 50% MEGA · CHAIN 2 EVERY 6',
     ],
-    { damage: [1.5, 1.8, 2.2], megaStart: [0.35, 0.55, 0.75], megaPassive: [0.012, 0.02, 0.03], fireRate: [0.82, 0.7, 0.58], chainEvery: [6, 5, 4], chainTargets: [1, 2, 3] }),
+    { damage: [1.15, 1.25, 1.4], megaStart: [0.2, 0.35, 0.5], megaPassive: [0.006, 0.01, 0.015], fireRate: [0.95, 0.9, 0.82], chainEvery: [8, 7, 6], chainTargets: [1, 1, 2] }),
   grass: starterKit(['+20% DROPS · EXPANDED CATCH', '+35% DROPS · WIDER CATCH', '+50% DROPS · WIDEST CATCH'],
     { drop: [1.2, 1.35, 1.5], catchReach: [16, 22, 28] }),
   ice: starterKit(['EVERY 10 KOS SLOWS TIME 3s', 'EVERY 8 KOS SLOWS TIME 4s', 'EVERY 6 KOS SLOWS TIME 5s'],
@@ -602,7 +605,7 @@ const PATHS = {
       visual: 'SEGMENTED GREEN ARMOR PLATES WIDEN THE SHIELD ARC' },
     { key: 'wide',      icon: 'wide',   name: 'LONG FRAME',   desc: 'PADDLE PERMANENTLY 18% WIDER',
       sdesc: 'CATCH REACH +18% · YOUR HURTBOX STAYS SMALL', visual: 'GREEN SIDE WINGS EXTEND YOUR COLLECTION REACH' },
-    { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS · +1 LIFE NOW AND EVERY REGION CLEARED',
+    { key: 'aegisX',    icon: 'shield', name: 'SUPER SHIELD', desc: 'A SHIELD CHARGE REGROWS EVERY 10 SECONDS · +1 MAX LIFE NOW · A MISSING SEGMENT RESTORED EACH REGION',
       visual: 'A ROTATING REGENERATOR MARK TRAVELS THE SHIELD CROWN' },
   ]},
   surge: { name: 'SURGE', role: 'MEGA TEMPO', family: 'tempo', color: '#ffd54f',
@@ -941,6 +944,13 @@ function webBridge(key) { return WEB_BRIDGES.find(b => b.key === key) || null; }
 function webFusion(key) { return WEB_FUSIONS.find(f => f.key === key) || null; }
 function webApex(key) { return WEB_APEXES.find(x => x.key === key) || null; }
 function satelliteForPath(pk) { return WEB_SATELLITES.find(s => s.path === pk) || null; }
+// AFT-008 §9.9: forever-stacks keep their stored integers but their
+// EFFECTIVE value diminishes — full value for five, half for the next
+// five, nothing beyond ten. Combat math reads through this everywhere.
+function effStacks(n) {
+  n = Math.max(0, n | 0);
+  return Math.min(5, n) + Math.max(0, Math.min(10, n) - 5) * 0.5;
+}
 function stackItem(stackKey) { return STACK_ITEMS.find(s => s.key === stackKey) || null; }
 // the pilot's evolution Form (1-3) — the web's ring gate. NO PARTNER's drone
 // and every starter line advance G.starterLvl on the journey's act boundaries
@@ -1066,7 +1076,7 @@ function advancePath(p) {
   G.upg[tier.key] = 1;
   // AFT-007: the extra-life perk lives on the AEGIS capstone now (the old
   // `revive` key is the CROWNED RELIC weapon tier and grants no life)
-  if (tier.key === 'aegisX') { G.lives++; statsLifeGain('aegisX'); }
+  if (tier.key === 'aegisX') { G.livesMax++; G.lives++; statsLifeGain('aegisX'); } // +1 MAX once, restored once (§9.7)
   return tier;
 }
 function regressPath(p) {

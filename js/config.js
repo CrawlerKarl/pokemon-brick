@@ -6,7 +6,10 @@ const PRESETS = {
   easy:     { label: 'EASY',     descent: 0.42, shotRate: 0.5,  shotSpeed: 0.65, bossHp: 0.68, brickHp: 0.9,  ballSpeed: 0.85, lives: 5, starThreat: 0.72, heatBuild: 0.39, heatCool: 0.29 },
   normal:   { label: 'NORMAL',   descent: 0.9,  shotRate: 1.0,  shotSpeed: 0.9,  bossHp: 1.12, brickHp: 1.15, ballSpeed: 0.95, lives: 4, starThreat: 1.0,  heatBuild: 0.42, heatCool: 0.28 },
   hard:     { label: 'HARD',     descent: 1.42, shotRate: 1.85, shotSpeed: 1.18, bossHp: 1.45, brickHp: 1.38, ballSpeed: 1.1,  lives: 3, starThreat: 1.24, heatBuild: 0.44, heatCool: 0.27 },
-  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 2.35, shotSpeed: 1.3,  bossHp: 1.65, brickHp: 1.55, ballSpeed: 1.18, lives: 1, starThreat: 1.36, heatBuild: 0.44, heatCool: 0.27 },
+  // AFT-008 §9.10: ONE LIFE's identity is the one-hit/tree-burn stake — it
+  // no longer ALSO runs the longest bars and fastest fire (the old
+  // 1.65×/2.35× triple penalty). Ace-like patterns, one-life stakes.
+  nuzlocke: { label: 'NUZLOCKE', descent: 1.68, shotRate: 1.8, shotSpeed: 1.24, bossHp: 1.35, brickHp: 1.45, ballSpeed: 1.18, lives: 1, starThreat: 1.3,  heatBuild: 0.44, heatCool: 0.27 },
 };
 const DIFFICULTY_UI = {
   easy: { name: 'SCENIC', tone: 'FORGIVING', desc: 'MORE HEALTH · GENTLER FIRE' },
@@ -117,7 +120,7 @@ function diff() {
       // AFT-007: FORTUNE's +50% moved to RESEARCH — each claimed research
       // reward tier improves field yields by +10% (all five = the old cap)
       * (G.daily ? 1 : 1 + 0.1 * SKIN.dexRewards.filter(r => DEX.size >= r.at).length)
-      * (1 + 0.08 * stackN('dawn')), // DAWNLIGHT CHARM (light affinity)
+      * Math.min(2.2, 1 + 0.08 * effStacks(stackN('dawn'))), // DAWNLIGHT CHARM — §9.9 keeps the final chance ≤ ~13%
     catchChance: 0.07 * (!G.daily && dexRewardActive('lucky') ? 1.25 : 1) * starterMod('catch', 1),
   };
 }

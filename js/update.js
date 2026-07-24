@@ -160,7 +160,10 @@ function modePower(p) {
   // a MULTIBALL instead (fun, calm, and on-theme for the ball-first game).
   const out = (() => {
     if (G.mode === 'classic') return p.key === 'laser' ? POWERS.multi : p;
-    const swap = { multi: regionIdx(G.level) >= 1 ? 'draco' : 'star', magnet: 'shield', warp: 'star' };
+    // §9.9 drop audit: ghost/dark/poison ALL feed `multi`, and multi→draco
+  // alone flooded whole acts (57% of Act II drops in the closeout matrix).
+  // Alternating the remap by region halves the family's share.
+  const swap = { multi: regionIdx(G.level) >= 1 ? (regionIdx(G.level) % 2 ? 'draco' : 'star') : 'star', magnet: 'shield', warp: 'star' };
     return swap[p.key] ? POWERS[swap[p.key]] : p;
   })();
   // AFT-008: every type-keyed drop routes through here — record the POST-remap
@@ -572,9 +575,9 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // AFT-008: dPre* checkpoints attribute the damage each multiplier CATEGORY
   // adds (or removes) — the ledger's per-category breakdown rides the deltas.
   const dPreStacks = dmg;
-  if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
-  if (dmg < 90 && stackN('fang')) dmg *= 1 + 0.07 * stackN('fang'); // VOID FANG (dark affinity)
-  if (dmg < 90 && meta.source === 'charge' && stackN('hex')) dmg *= 1 + 0.09 * stackN('hex'); // UMBRAL HEX
+  if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * effStacks(G.stacks.orb);
+  if (dmg < 90 && stackN('fang')) dmg *= 1 + 0.07 * effStacks(stackN('fang')); // VOID FANG (dark affinity)
+  if (dmg < 90 && meta.source === 'charge' && stackN('hex')) dmg *= 1 + 0.09 * effStacks(stackN('hex')); // UMBRAL HEX
   if (dmg < 90 && G.secretUpg.lens) dmg *= 1.15;
   statsDmgCat('stacks', dmg - dPreStacks);
   const dPreWindow = dmg;
@@ -1079,12 +1082,15 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     // RALLY MASTER's shooter translation: kills are the only tempo there, so
     // they charge much harder (×2.5 total) — mega lands roughly every 2 waves
     const rallyKill = upgN('rally') ? (br.isBoss ? 0.04 : (G.mode !== 'classic' ? 0.012 : 0.004)) : 0;
-    if (G.megaT <= 0) {
+    // §9.6: an endlessly-renewed add (objective reinforcements) feeds NO
+    // kill economy — budgeted kills keep paying as before
+    const renewableKill = br.reinf && G.objective && !G.objective.done && !G.objective.failed;
+    if (G.megaT <= 0 && !renewableKill) {
       gainMega((br.isBoss ? 0.12 : 0.008) + rallyKill, 'kills');
       gainMega(0.009 * stackN('tithe'), 'tithe'); // BLOOD TITHE (dark affinity)
     }
     // HALO WARD (light affinity): a kill-count rhythm that raises a shield
-    if (stackN('halo')) {
+    if (stackN('halo') && !renewableKill) {
       G.haloKills = (G.haloKills || 0) + 1;
       const need = Math.max(9, 25 - 4 * (stackN('halo') - 1));
       if (G.haloKills >= need) {
@@ -1521,7 +1527,7 @@ function collectPickup(pu) {
   if (pu.p && pu.p.key === 'heal') webGuardianCharge();
   // GRACE LIGHT (light affinity): mending also banks Mega
   if (pu.p && pu.p.key === 'heal' && stackN('grace') && G.megaT <= 0) {
-    gainMega(0.15 * stackN('grace'), 'grace');
+    gainMega(Math.min(0.4, 0.15 * effStacks(stackN('grace'))), 'grace'); // §9.9: one potion banks ≤40% Surge
   }
   if (pu.secretShard || pu.p.key === 'riftShard') {
     const i = Math.max(0, Math.min(2, pu.shardIndex || 0));
@@ -3159,10 +3165,29 @@ function updateObjective(dt) {
   if (G.mode !== 'junkie' && !crossMode) return;
   // WARDBREAK: the kill hook counts sources; attrition still resolves it
   // (every source death decrements, however it happened)
+  if (O.type === 'undercard'
+    && !G.bricks.some(b => !b.dead && !b.barrier && !b.crosser && !b.friendly)) {
+    // no crowd left to please — revert to the ordinary clear
+    O.failed = true;
+    statsObjective(O.type, false);
+    return;
+  }
   if (O.type === 'wardbreak' || O.type === 'undercard') return; // kill hooks own their progress
   // BELLS: cross the three zones IN ORDER, holding each until it rings —
   // pure positioning, works identically in every mode
   if (O.type === 'bells') {
+    // an EMPTIED board never waits forever: ten seconds of victory-lap
+    // grace to ring the rest, then the objective stands down and the
+    // ordinary clear proceeds (the no-hostage contract)
+    if (!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser && !b.friendly)) {
+      O.graceT = (O.graceT || 0) + dt;
+      if (O.graceT >= 10) {
+        O.failed = true;
+        statsObjective(O.type, false);
+        setCombatNotice('THE BELLS FALL SILENT — MOVE ON', '#b0bec5', 1.8);
+        return;
+      }
+    }
     const zx = O.zones[Math.min(O.rung, O.zones.length - 1)];
     if (Math.abs(G.paddle.x - zx) < O.zoneW / 2) {
       O.dwellT += dt;
@@ -5036,8 +5061,9 @@ function update(dt) {
     const active = G.mode === 'classic'
       ? G.balls.length > 0
       : (hostileAlive || G.enemyShots.length > 0);
+    G.threatActive = active; // §9.6: survival clocks advance on THREAT time
     statsClockTick(dt, prog, active);
-  }
+  } else G.threatActive = false;
   // ---- shooter modes (BLASTER / SPACE JUNKIE): hold FIRE to build a heavy
   // shot, release to fire. While a hold is pending or charging, normal fire
   // pauses so no stray bolt leaks out before the charged shot.
@@ -5081,11 +5107,16 @@ function update(dt) {
   else if (autoFiring && !charging && !chargedThisFrame && !touchChargeIntent && G.state === 'play') fireAction(true);
   // SUPER SHIELD capstone: a floor-shield charge regrows on a timer.
   // IMMORTAL REACTOR's counterburst stalls regrowth briefly (its limiter).
-  if (G.state === 'play' && upgN('aegisX') && G.regenLockT <= 0) {
+  // AFT-008 §9.7: the capstone regen counts ACTIVE-THREAT seconds only and
+  // regrows at most three charges per stage — reveal freezes, route choices
+  // and cleared boards no longer manufacture shields
+  if (G.state === 'play' && upgN('aegisX') && G.regenLockT <= 0
+    && G.threatActive && (G.shieldRegenN || 0) < 3) {
     if (G.shieldCharges < shieldCap()) {
       G.shieldRegenT -= dt;
       if (G.shieldRegenT <= 0) {
         G.shieldRegenT = 10;
+        G.shieldRegenN = (G.shieldRegenN || 0) + 1;
         G.shieldCharges++;
         SFX.shield();
         // capstone proc reads on the SHIP, not just as text: the bubble
@@ -7293,10 +7324,12 @@ function update(dt) {
     if (G.deathsThisWave === 0) G.adapt = Math.min(1.15, G.adapt * 1.04); // flawless → push back
     // AFT-007: the region-clear life rides the AEGIS capstone now (the old
     // `revive` key is the CROWNED RELIC weapon tier)
-    if (clearedStage === 2 && upgN('aegisX')) {
+    // AFT-008 §9.7: the realm reward RESTORES a missing segment — it never
+    // grows the maximum again (the +1 max lives on acquisition, once)
+    if (clearedStage === 2 && upgN('aegisX') && G.lives < Math.max(1, G.livesMax)) {
       G.lives++;
       statsLifeGain('aegisX');
-      addFloater(W / 2, H * 0.42, PATHS.aegis.tiers[3].name + ' — +1 LIFE', '#66bb6a', 20);
+      addFloater(W / 2, H * 0.42, PATHS.aegis.tiers[3].name + ' — SEGMENT RESTORED', '#66bb6a', 20);
     }
     // draft: advance one of up to three paths (skip maxed ones)
     rollUpgradeChoices();
