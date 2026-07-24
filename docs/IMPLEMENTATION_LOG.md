@@ -5,6 +5,47 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24j — AFT-021 Phase 1: the stage-resolution beat — a win must LOOK won
+
+The clear no longer teleports into the results panel. The win condition now
+enters **`G.state === 'resolve'`** (`beginStageResolution` → `updateResolve`
+→ `settleStageResolution`, update.js), a short harmless beat that plays the
+completion verb before any panel appears:
+
+- **Nothing can hurt the player after the win.** `combatIsLive()` (state.js)
+  is the one authority — `loseLife()` and `spawnEnemyShot()` dead-end
+  outside live combat, and resolution entry dissolves every enemy shot,
+  telegraph, and column strike with a spark. The Phase-0 fixtures
+  (post-clear hazard, loseLife-in-every-state) are promoted to permanent
+  invariants.
+- **Every remaining actor resolves its verb**: dispersing crossers
+  accelerate out with a departure trail, rescued friendlies climb to
+  safety, clear-exempt terminals/scenery STAND DOWN (`br.stoodDown` — the
+  dimmed silhouette keeps continuity; every enemy affordance is gone).
+  Results open only when the field is visually finished, or the 1.1s
+  safety timeout force-retires stragglers. Departing actors grant NOTHING
+  — no kills, drops, catches, Surge, or relic procs.
+- **The catch window rides the harmless beat**: falling drops stay
+  catchable during resolution (gently accelerated, hard-bounded at 6s) —
+  the old in-combat pickup hold, during which a lingering volley could
+  kill you after the win, is gone.
+- **Finale mastery reads the WIN-moment field**: `completeFinale()` now
+  runs at resolution entry, before departures mutate actors (the
+  hourglass's woken clocks were being counted after they flew away).
+- **Results speak the verbs**: `18 DEFEATED · 7 DISPERSED · 1 RESCUED · 2
+  NEUTRALIZED` — a non-attrition win reads as an achievement, not as kills
+  the player missed. Clear confetti fires at resolution entry, over the
+  live departures, never frozen behind a panel.
+- Legacy consumers updated deliberately: 16 suite wave-finish loops step
+  through resolve; the L27 clear and the chase finale pass through the
+  beat INTO the Ninefold Dawn (hostiles guaranteed gone before the
+  cinematic); the baseline autopilot needed no change. A permanent
+  `resolve` mobile scene captures the beat (40 gate scenes now).
+
+Gate green 113/113 · quick baseline determinism PASS.
+
+---
+
 ## 2026-07-24i — AFT-021 Phase 0: every playtest defect locked in a failing fixture
 
 The remediation program opens by making each confirmed defect REPRODUCIBLE

@@ -336,6 +336,8 @@ const G = {
   trial: false, daily: false, runSeed: null,
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
   results: null, // stage-results interstitial payload (buildStageResults)
+  resolve: null, // AFT-021 P1: the stage-resolution beat between the win and results
+  arenaPlate: null, // AFT-021 P2: static backdrop snapshot for results/draft panels
   director: null, // encounter director: the stage's authored beat script (Milestone 3)
   objective: null, // live in-wave objective (survive/…) — Milestone 3 Round B
   uiTouchPulse: null, shareToast: 0,
@@ -642,6 +644,15 @@ const ballSp = () => diff().ballSpeed * (G.mode === 'classic' && upgN('coolant')
 // STARFIGHTER) are always armed — firing IS their game.
 function blasterArmed() {
   return G.mode !== 'classic';
+}
+
+// AFT-021 P1 — the ONE authority on whether damage can exist. Every path
+// that can cost a life, spawn hostile fire, or land a strike must pass this
+// gate: live combat is the 'play' state with no reveal holding the frame.
+// The resolution beat, results, drafts, ceremonies, menus, and the ending
+// are all structurally incapable of hurting the player.
+function combatIsLive() {
+  return G.state === 'play' && !G.reveal;
 }
 
 function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
@@ -1021,6 +1032,7 @@ function buildLevel(lvl) {
   // a rebuilt wave never inherits a reveal or a docked HP lane — a knockout
   // retry was showing the PREVIOUS attempt's boss bar over round one
   G.reveal = null; G.revealDock = null;
+  G.resolve = null; G.arenaPlate = null; // AFT-021: a fresh wave never inherits a resolution beat
   G.gustT = 0; G.timeWarpT = 0; G.timeWarpClock = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
@@ -2051,6 +2063,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.fx_fire = G.fx_laser = G.fx_wide = G.fx_slow = G.fx_magnet = G.fx_score = G.fx_draco = null;
   G.shieldCharges = 0; G.shieldFlash = 0; G.surgeFlash = 0; G.hurtHud = 0; G.announce = null; G.announceQueue = []; G.combatNotice = null;
   G.reveal = null; G.revealDock = null;
+  G.resolve = null; G.arenaPlate = null;
   G.upg = {}; G.path = {}; G.catchBonus = 0; G.upgradeChoices = null;
   G.calibReturns = 0; G.calibShots = 0; G.lensKills = 0; G.vortexes = [];
   G.salvageCount = 0; G.salvageStored = 0; G.rescueN = 0; G.reactiveCD = 0; G.reactorUsed = false;

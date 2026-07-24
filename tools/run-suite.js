@@ -226,6 +226,8 @@ const SCENES = [
     expect: `G.state==='upgrade' && !!G.upgradeChoices` },
   { name: 'web', js: `upgradeTreeOpen=true;`,
     expect: `G.state==='upgrade' && upgradeTreeOpen===true` },
+  { name: 'resolve', js: `upgradeTreeOpen=false; DEV.launch({level:5,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<30;i++)update(1/60); G.objective=null; G.reinforce=0; G.powerups.length=0; const lv=G.bricks.filter(b=>!b.dead&&!b.crosser&&!b.friendly&&!b.barrier); lv.slice(4).forEach(b=>{b.dead=true;}); disperseSwarm(); for(let i=0;i<14;i++){paused=false;G.freeze=0;update(1/60);}`,
+    expect: `G.state==='resolve' && G.enemyShots.length===0 && G.columnStrikes.length===0` },
   { name: 'results', js: `upgradeTreeOpen=false; DEV.launch({level:5,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<10;i++)update(1/60); G.objective=null; G.reinforce=0; G.powerups.length=0; for(const b of G.bricks){if(!b.dead)b.dead=true;} for(let i=0;i<600 && G.state!=='results';i++){paused=false; G.freeze=0; update(1/60);} for(let i=0;i<45;i++){paused=false; G.freeze=0; update(1/60);} upgradeTreeOpen=false;`,
     expect: `G.state==='results' && !!G.results && G.stateT>0.5` },
   { name: 'trial-picker', js: `G.state='menu'; trialOpen=true; trialSel.region=0; trialSel.stage=2; trialSel.round=1; trialSel.phase=1;`,

@@ -377,7 +377,7 @@ window.requestAnimationFrame = function () { return 0; };
       resetRun(27);
       G.trial = false; G.lives = 99;
       let guard = 0;
-      while (G.state === 'play' && guard++ < 4000) {
+      while ((G.state === 'play' || G.state === 'resolve') && guard++ < 4000) {
         paused = false; G.freeze = 0;
         for (const b of G.bricks) if (!b.dead && !b.dormant && !b.barrier) damageBrick(b, 9999, b.bx + G.fx, b.by + G.fy);
         update(1 / 60);
@@ -400,7 +400,7 @@ window.requestAnimationFrame = function () { return 0; };
       // trials keep their existing flow: clearing 27 in a trial still loops
       resetRun(27, true);
       G.lives = 99; guard = 0;
-      while ((G.state === 'play' || G.state === 'results') && guard++ < 4000) {
+      while ((G.state === 'play' || G.state === 'resolve' || G.state === 'results') && guard++ < 4000) {
         paused = false; G.freeze = 0;
         skipResults();
         for (const b of G.bricks) if (!b.dead && !b.dormant && !b.barrier) damageBrick(b, 9999, b.bx + G.fx, b.by + G.fy);
@@ -1079,9 +1079,12 @@ window.requestAnimationFrame = function () { return 0; };
     G.powerups = [{ x: W / 2, y: 60, vy: 300, p: POWERS.star, rot: 0 }];
     paused = false; G.freeze = 0;
     update(1 / 60);
-    assert(G.state === 'play', 'the clear did not wait for the falling item');
-    for (let i = 0; i < 900 && G.state === 'play'; i++) update(1 / 60);
-    assert(G.state !== 'play', 'the wave never cleared after the item fell out');
+    // AFT-021 P1: the win enters the HARMLESS resolution beat immediately;
+    // the drop stays catchable there — combat is over as a matter of state
+    assert(G.state === 'resolve', 'the win must enter the resolution beat (state ' + G.state + ')');
+    assert(G.powerups.length === 1, 'the falling drop vanished at the win moment');
+    for (let i = 0; i < 900 && G.state === 'resolve'; i++) { paused = false; G.freeze = 0; update(1 / 60); }
+    assert(G.state !== 'play' && G.state !== 'resolve', 'the resolution never settled after the item resolved (state ' + G.state + ')');
     // an active item clock freezes outside play — it survives to the next level
     G.fx_score = { t: 6, tier: 1 };
     for (let i = 0; i < 120; i++) update(1 / 60);
@@ -1671,7 +1674,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.gauntlet.phase === 2 && G.finale.beat === 2 && G.finale.beatKey === 'coda',
       'summon advances to the coda beat');
     for (const b of G.bricks) if (!b.dead) b.dead = true;
-    await runFrames(260, () => (G.state !== 'play' ? false : undefined));
+    await runFrames(260, () => ((G.state !== 'play' && G.state !== 'resolve') ? false : undefined));
     const L = (G.runStats.levels || []).find(l => l.lv === 3);
     assert(L && L.finaleFormat === 'ladder' && L.finaleBeatT && L.finaleBeatT.coda != null,
       'clear stamps format + beat clocks on the ledger');
@@ -1744,7 +1747,7 @@ window.requestAnimationFrame = function () { return 0; };
     if (bloom) { applyPower(bloom.p); }
     assert((F.mastery.counters.blooms || 0) >= 1, 'a gathered bloom counts toward mastery');
     // run the coda out; the wave clears and the ledger carries the relay
-    await runFrames(1400, () => (G.state !== 'play' ? false : undefined));
+    await runFrames(1400, () => ((G.state !== 'play' && G.state !== 'resolve') ? false : undefined));
     assert(G.state !== 'play', 'the coda releases the clear (state ' + G.state + ')');
     const L = (G.runStats.levels || []).find(l => l.lv === 6);
     assert(L && L.finaleFormat === 'relay' && L.finaleBeatT && L.finaleBeatT.relay != null,
@@ -1814,7 +1817,7 @@ window.requestAnimationFrame = function () { return 0; };
     // fell the Sovereign → optional actors disperse, the wave clears
     seraph.hp = 0.5;
     damageBrick(seraph, 2, seraph.bx, seraph.by, null, { source: 'bolt' });
-    await runFrames(500, () => (G.state !== 'play' ? false : undefined));
+    await runFrames(500, () => ((G.state !== 'play' && G.state !== 'resolve') ? false : undefined));
     assert(G.state !== 'play', 'the raid clears once the Sovereign falls (state ' + G.state + ')');
     const L = (G.runStats.levels || []).find(l => l.lv === 24);
     assert(L && L.finaleFormat === 'raid' && L.finaleCounters && L.finaleCounters.segmentsBroken === 1
@@ -1870,7 +1873,7 @@ window.requestAnimationFrame = function () { return 0; };
     await runFrames(600, () => {
       for (const b of G.bricks) if (!b.dead && !b.barrier && !b.crosser && !b.friendly) b.dead = true;
       for (const pu of G.powerups) pu.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state === 'results', 'challenge cleared (state ' + G.state + ')');
     assert(G.prep && G.prep.realm === 2, 'preparation banked from the completed challenge objective');
@@ -1907,7 +1910,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser), 'classic: the warded wall collapsed');
     await runFrames(700, () => {
       for (const pu of G.powerups) pu.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state !== 'play', 'the non-attrition clear proceeds (state ' + G.state + ')');
     // ---- LIVE LANES in STARFIGHTER (marked target, moving lane) ----
@@ -1996,7 +1999,7 @@ window.requestAnimationFrame = function () { return 0; };
     applyPower(wishPu.p);
     assert(F.wish === 'explore' && F.codaHold === false, 'ONE caught wish leans the draft + releases the clear');
     assert(!G.powerups.some(pu => !pu.dead && pu.p.key === 'wish'), 'the unchosen wishes fade');
-    await runFrames(400, () => (G.state !== 'play' ? false : undefined));
+    await runFrames(400, () => ((G.state !== 'play' && G.state !== 'resolve') ? false : undefined));
     assert(G.state !== 'play', 'the siege clears (state ' + G.state + ')');
     const L = (G.runStats.levels || []).find(l => l.lv === 9);
     assert(L && L.finaleFormat === 'siege' && L.finaleCounters && L.finaleCounters.stations === 3,
@@ -2179,7 +2182,7 @@ window.requestAnimationFrame = function () { return 0; };
     await runFrames(500, () => {
       for (const pu of G.powerups) pu.dead = true;
       for (const b of G.bricks) if (!b.dead && b.guard) b.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state !== 'play', 'the hourglass clears once both actors fall (state ' + G.state + ')');
     const L = (G.runStats.levels || []).find(l => l.lv === 12);
@@ -2252,7 +2255,7 @@ window.requestAnimationFrame = function () { return 0; };
     F.coda.t = 99; F.coda.passes = 3;
     await runFrames(400, () => {
       for (const pu of G.powerups) pu.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state !== 'play', 'the circuit clears (state ' + G.state + ' · KOs ' + (G.runStats && G.runStats.knockouts) + ' · hold ' + F.codaHold
       + ' · live ' + G.bricks.filter(b => !b.dead && !b.barrier && !b.crosser && !b.friendly && !b.gridTerminal)
@@ -2331,7 +2334,7 @@ window.requestAnimationFrame = function () { return 0; };
     for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
     await runFrames(500, () => {
       for (const pu of G.powerups) pu.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state !== 'play', 'the hunt clears (state ' + G.state + ')');
     const L = (G.runStats.levels || []).find(l => l.lv === 18);
@@ -2416,7 +2419,7 @@ window.requestAnimationFrame = function () { return 0; };
     for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
     await runFrames(500, () => {
       for (const pu of G.powerups) pu.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state !== 'play', 'the rite clears (state ' + G.state + ')');
     const L = (G.runStats.levels || []).find(l => l.lv === 21);
@@ -2493,7 +2496,7 @@ window.requestAnimationFrame = function () { return 0; };
     for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) { b.hp = 0.5; damageBrick(b, 99, b.bx, b.by, null, { source: 'bolt' }); }
     await runFrames(400, () => {
       for (const pu of G.powerups) pu.dead = true;
-      return G.state !== 'play' ? false : undefined;
+      return (G.state !== 'play' && G.state !== 'resolve') ? false : undefined;
     });
     assert(G.state === 'ending', 'the last collision cracks the seam into the ending (state ' + G.state + ')');
     assert(G.upgradeChoices == null, 'no draft stands before the Ninefold Dawn');
@@ -3732,6 +3735,7 @@ window.requestAnimationFrame = function () { return 0; };
     SETTINGS.mode = 'classic'; resetRun(1, true, { seed: 'summary' });
     G.score = 4321; G.lives = 1; G.bestRally = 8; G.maxCombo = 11; G.caughtRun = 2;
     G.runStats = { bricksBroken: 19, bossesDefeated: 0, itemsCaught: 4, damageTaken: 0 };
+    G.state = 'play'; // AFT-021: a real death only exists in live combat
     loseLife('TEST FINAL CAUSE');
     assert(G.state === 'gameover' && G.runSummary, 'game over did not create summary');
     assert(G.runSummary.cause === 'TEST FINAL CAUSE' && G.runSummary.bricks === 19 && G.runSummary.items === 4,
@@ -4103,7 +4107,7 @@ window.requestAnimationFrame = function () { return 0; };
         G.powerups = []; // falling drops legitimately hold a clear now — this
         // test is about CROSSERS, so keep the item rule out of its way
         for (const b of G.bricks) if (!b.dead && !b.crosser) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
-        return G.state === 'play' ? undefined : false;
+        return (G.state === 'play' || G.state === 'resolve') ? undefined : false;
       });
       assert(G.state === 'results', 'a live crosser blocked the stage clear');
       skipResults();
@@ -4179,7 +4183,7 @@ window.requestAnimationFrame = function () { return 0; };
       assert(G.reinforce === 0 && G.bricks.some(b => b.crosser && !b.dead),
         'the swarm did not disperse into fleeing crossers on survival');
       // the dispersed swarm clears the wave (crosser-exempt) → results
-      await runFrames(60 * 8, () => G.state === 'play' ? undefined : false);
+      await runFrames(60 * 8, () => (G.state === 'play' || G.state === 'resolve') ? undefined : false);
       assert(G.state === 'results', 'surviving the migration did not clear the stage');
       skipResults();
       return 'survive: no clear-by-attrition; outlast the swarm → it disperses → stage clears';
@@ -5428,7 +5432,7 @@ window.requestAnimationFrame = function () { return 0; };
       assert(G.objective.done, 'the traveler reaching the exit did not complete the escort');
       assert(G.score - sc0 >= 600, 'escort completion did not pay the +600');
       assert(G.reinforce === 0 && G.bricks.some(b => b.crosser && !b.dead), 'the swarm did not disperse on escort completion');
-      await runFrames(60 * 8, () => G.state === 'play' ? undefined : false);
+      await runFrames(60 * 8, () => (G.state === 'play' || G.state === 'resolve') ? undefined : false);
       assert(G.state === 'results', 'completing the escort did not clear the stage');
       assert(G.results && G.results.objective === 'escort' && G.results.objectiveDone === true, 'ledger did not record the escort as complete');
       skipResults();
@@ -5444,7 +5448,7 @@ window.requestAnimationFrame = function () { return 0; };
       await runFrames(60 * 8, () => {
         G.reinforce = 0;
         for (const b of G.bricks) if (!b.dead && !b.crosser && !b.friendly) damageBrick(b, 9999, 0, 0, null, { ignorePhaseGate: true });
-        return G.state === 'play' ? undefined : false;
+        return (G.state === 'play' || G.state === 'resolve') ? undefined : false;
       });
       assert(G.state === 'results', 'a FAILED escort did not revert to a normal attrition clear');
       assert(G.results.objective === 'escort' && G.results.objectiveDone === false, 'ledger did not record the escort as failed');
@@ -5495,7 +5499,7 @@ window.requestAnimationFrame = function () { return 0; };
       update(1 / 60);
       assert(G.objective.done, 'holding the relay for the timer did not complete the defend');
       assert(G.reinforce === 0 && G.bricks.some(b => b.crosser && !b.dead), 'the relay defense did not disperse the swarm');
-      await runFrames(60 * 8, () => G.state === 'play' ? undefined : false);
+      await runFrames(60 * 8, () => (G.state === 'play' || G.state === 'resolve') ? undefined : false);
       assert(G.state === 'results', 'completing the defend did not clear the stage');
       assert(G.results && G.results.objective === 'defend' && G.results.objectiveDone === true, 'ledger did not record objectiveDone for the defend');
       skipResults();
@@ -5519,7 +5523,7 @@ window.requestAnimationFrame = function () { return 0; };
       && (b.by + G.fy) > -50 && (b.by + G.fy) < H + 50);
   }
 
-  xtest('AFT-021 P0: visible clear — results never opens with enemy-shaped actors on screen', async () => {
+  test('AFT-021 P0: visible clear — results never opens with enemy-shaped actors on screen', async () => {
     SETTINGS.preset = 'normal';
     DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-CLEAR' });
     paused = false; G.freeze = 0;
@@ -5538,7 +5542,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'the departure resolves before the results panel appears';
   });
 
-  xtest('AFT-021 P0: clear-exempt terminals stand down before results', async () => {
+  test('AFT-021 P0: clear-exempt terminals stand down before results', async () => {
     DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-TERM' });
     paused = false; G.freeze = 0;
     await runFrames(30);
@@ -5558,7 +5562,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'neutral scenery loses its enemy presentation at the clear';
   });
 
-  xtest('AFT-021 P0: no damage can land after the clear condition is met', async () => {
+  test('AFT-021 P0: no damage can land after the clear condition is met', async () => {
     DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-DMG' });
     paused = false; G.freeze = 0;
     await runFrames(20);
@@ -5584,7 +5588,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'the win moment dissolves every hostile projectile and beam';
   });
 
-  xtest('AFT-021 P0: loseLife is inert outside live combat', async () => {
+  test('AFT-021 P0: loseLife is inert outside live combat', async () => {
     DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-LL' });
     paused = false; G.freeze = 0;
     await runFrames(10);

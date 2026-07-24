@@ -1255,6 +1255,23 @@ function drawBricks() {
     if (br.raidVine) { drawRaidVine(br, x, y); continue; }
     if (br.raidCover) { drawRaidCover(br, x, y); continue; }
     if (br.glassCell || br.lucPrison) { drawGlassCell(br, x, y); continue; }
+    // AFT-021 P1: a STOOD-DOWN actor is scenery, not an enemy — the dimmed
+    // silhouette stays for continuity, but every enemy affordance (aura,
+    // bars, rings, guard tells, targeting) is gone. It cannot be mistaken
+    // for something left to fight.
+    if (br.stoodDown) {
+      const img0 = getSprite(br.poke.id, br.shiny);
+      if (img0.complete && img0.naturalWidth) {
+        ctx.save();
+        ctx.globalAlpha = 0.32;
+        const s0 = Math.min(br.w, br.h * 1.15) * 1.1;
+        ctx.drawImage(img0, x - s0 / 2, y - s0 / 2, s0, s0);
+        ctx.globalAlpha = 0.5;
+        drawGlyph(ctx, 'shield', x, y + s0 * 0.62, 5, '#78909c');
+        ctx.restore();
+      }
+      continue;
+    }
     // NB: br.flash is decayed in update() (dt-scaled) — render only READS it.
     // ---- FREE-FLYING ALIEN: broke out of its box — just the Pokémon,
     // banking through its pattern with a type-colored aura underneath.
@@ -9072,9 +9089,19 @@ function drawResults() {
   const rowGap = short ? 20 : 26;
   ctx.font = bodyFont(short ? 12 : 14, 700);
   ctx.fillStyle = '#e3f2fd';
-  ctx.fillText(
-    'TIME ' + Math.round(R.t) + 'S   ·   DEFEATED ' + R.kills + '   ·   SCORE ' + R.score.toLocaleString(),
-    W / 2, rowY, W * 0.9);
+  // AFT-021 P1: the row speaks the completion VERBS — a non-attrition win
+  // (dispersed, rescued, neutralized) reads as an achievement, never as
+  // kills the player somehow missed.
+  {
+    const oc = R.outcomes || {};
+    const parts = ['TIME ' + Math.round(R.t) + 'S', R.kills + ' DEFEATED'];
+    if (oc.dispersed) parts.push(oc.dispersed + ' DISPERSED');
+    if (oc.rescued) parts.push(oc.rescued + ' RESCUED');
+    if (oc.neutralized) parts.push(oc.neutralized + ' NEUTRALIZED');
+    parts.push('SCORE ' + R.score.toLocaleString());
+    fitLabel(parts.join('   ·   '), W / 2, rowY,
+      { size: short ? 12 : 14, min: 9.5, weight: 700, family: 'Verdana, sans-serif', color: '#e3f2fd', maxW: W * 0.92, zone: 'results' });
+  }
   ctx.fillStyle = '#90a4ae';
   ctx.font = bodyFont(short ? 11 : 13, 600);
   const hitLine = R.hitsTaken === 0 ? 'NO HITS TAKEN'
@@ -9190,6 +9217,12 @@ function drawOverlays() {
   if (G.state === 'menu') { drawMenu(); }
   else if (G.state === 'ending') { drawEnding(); }
   else if (G.state === 'dex') { drawDex(); }
+  else if (G.state === 'resolve' && !paused) {
+    // AFT-021 P1: the resolution beat — the win reads on the FIELD (exits,
+    // stand-downs, the catch window); one quiet pulse names it. The results
+    // panel waits until the screen has visibly finished.
+    if (G.stateT > 0.2) pulse('STAGE CLEAR', H * 0.56);
+  }
   else if (G.state === 'serve' && !paused) {
     // The stage card owns the centre first; controls arrive immediately after
     // it clears. This turns the opening into a sequence instead of a text pile.

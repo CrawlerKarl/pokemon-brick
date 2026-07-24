@@ -186,6 +186,7 @@ function nextEnemyVolley() {
 function enemyShotClass(key) { return SHOT_CLASSES[key] || SHOT_CLASSES.standard; }
 function spawnEnemyShot(opts = {}) {
   if (G.mode === 'classic') return null; // BREAKER is calm — no enemy fire ever
+  if (!combatIsLive()) return null; // AFT-021 P1: hostile fire exists only in live combat
   if (G.enemyShots.length >= 140) return null; // mobile-safe hard ceiling
   const classKey = opts.classKey || (opts.heavy ? 'heavy' : 'standard');
   const C = enemyShotClass(classKey);
@@ -2707,6 +2708,12 @@ function finalizeRun() {
 // shot: the enemy-shot object that landed (when one did) — carries the
 // kind/class/type/species family data the balance report attributes hits to
 function loseLife(cause = 'MISSED BALL', shot = null) {
+  // AFT-021 P1 — the combat-state safety contract: NOTHING can cost a life
+  // outside live combat. A stray projectile surviving into the resolution
+  // beat, a strike landing behind a results panel, a collision branch missed
+  // by a state check — all dead-end here. This is the one gate the property
+  // test drives through every non-combat state.
+  if (!combatIsLive()) return;
   const dodge = starterMod('dodge', 0);
   if (dodge && gameRand() < dodge) {
     G.invuln = Math.max(G.invuln, 1.1);
@@ -5005,6 +5012,7 @@ function update(dt) {
   }
   if (G.state === 'menu' || G.state === 'gameover' || G.state === 'dex') return;
   if (paused) return;
+  if (G.state === 'resolve') { updateResolve(dt); return; } // AFT-021 P1: the harmless post-win beat
   if (G.state === 'results') return; // static interstitial: no simulation
   if (G.state === 'upgrade') {
     // no draftable upgrades left → brief breather, then straight on
@@ -7215,55 +7223,20 @@ function update(dt) {
   compactInPlace(G.enemyShots, s => !s.dead);
 
   // ---- falling pickups (power-ups + pokéballs + element orbs) ----
-  for (const pu of G.powerups) {
-    pu.y += pu.vy * ts * dt; pu.rot += dt * 3;
-    if (pu.orb) pu.x += Math.sin(pu.rot * 0.9) * 26 * dt; // orbs waft down gently
-    if (pu.secretShard) {
-      pu.secretT -= dt;
-      if (pu.swift) {
-        // classic's ONE-PASS shard: fast, swaying, never homing — get the
-        // paddle under it or the rift closes when it drops past the floor
-        pu.x += Math.sin(pu.rot * 1.35) * 46 * dt;
-      } else {
-        // a shard freed from a downed courier is generous: the shoot-down was
-        // the test, so this catch bends toward the player on a long window
-        pu.x += (G.paddle.x - pu.x) * Math.min(1, dt * 2.6);
-        pu.vy = pu.y > shipY() - 120 ? 48 : 72;
-      }
-    }
-    { // AFT-007: the item magnet is BASELINE phone QoL now — every build gets
-      // the drift (the old `magnetize` key is the RELIC GLAIVE weapon tier)
-      const dx = G.paddle.x - pu.x;
-      pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 60) * dt;
-    }
-    const pw = paddleW(), py = shipY(); // the ship catches wherever it flies
-    // Overgrowth widens the pickup catch envelope at each evolution.
-    const reach = 18 + starterMod('catchReach', 0);
-    if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + reach) {
-      pu.dead = true;
-      collectPickup(pu);
-    }
-    if (!pu.dead && pu.secretShard && (pu.secretT <= 0 || pu.y > H + 30)) {
-      pu.dead = true;
-      if (G.secret.pendingShard === pu.shardIndex) G.secret.pendingShard = null;
-      setAnnounce('alert', '#78909c', 'THE RIFT CLOSED',
-        'SHARD ' + (pu.shardIndex + 1) + '/3 WAS LEFT BEHIND', 2.5,
-        SKIN.secret.missWarn || 'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
-    } else if (!pu.dead && pu.y > H + 30) pu.dead = true;
-  }
-  compactInPlace(G.powerups, p => !p.dead);
+  // AFT-021 P1: extracted into advancePickups so the RESOLUTION beat can keep
+  // the fair catch window alive after combat ends.
+  advancePickups(dt, ts);
 
-  // ---- level clear → reinforcements first, then draft and move on ----
+  // ---- level clear → reinforcements first, then the RESOLUTION beat, then
+  // results (AFT-021 P1). The screen must visibly resolve the completion verb
+  // — defeat, dispersal, rescue, stand-down — before any panel appears, and
+  // nothing may damage the player once the win condition is met.
   if (G.state === 'play' && G.dramaticT <= 0 && !(G.finale && G.finale.codaHold)
     && G.bricks.every(b => b.dead || b.barrier || b.crosser || b.friendly || b.gridTerminal)) {
     // an active objective holds the wave open — SURVIVE outlasts the timer,
     // ESCORT/DEFEND protects the friendly. A FAILED objective releases the
     // wave to a normal attrition clear (losing the bonus is the only cost).
     if (G.objective && !G.objective.done && !G.objective.failed) return;
-    // FALLING ITEMS hold it open too (owner request, 2026-07-23): a drop
-    // earned on the kill shot must be catchable — the stage waits until
-    // every pickup is caught or falls off-screen (gravity bounds the wait)
-    if (G.powerups.length) return;
     // the enemies are gone — any ROCK TOMB barriers crumble on their own
     for (const b of G.bricks) if (!b.dead && b.barrier) { b.dead = true; burst(b.bx + G.fx, b.by + G.fy, '#a1887f', 12, 180, 0.5); }
     if (G.reinforce > 0) {
@@ -7283,20 +7256,122 @@ function update(dt) {
       return;
     }
     if (G.secret.pendingShard != null) return;
+    // The win is decided THIS FRAME. Everything after this line is
+    // presentation: hostile fire dissolves, remaining actors resolve their
+    // exits, late pickups get a harmless catch window — then results.
+    beginStageResolution();
+    return;
+  }
+}
+
+// ── AFT-021 P1: THE STAGE-RESOLUTION BEAT ──────────────────────────────────
+// A short authored state between the win condition and the results panel.
+// On entry the fight is OVER as a matter of state: the ledger closes, every
+// hostile projectile/telegraph/beam dissolves, weapons disarm, and each
+// remaining actor is classified by its completion verb. The beat then plays
+// the exits — dispersed actors accelerate out, rescued friendlies fly to
+// safety, neutralized scenery powers down — and settles into results only
+// when the screen is visually resolved (or the 1.1s safety timeout retires
+// the stragglers). Departing actors grant NOTHING: no kills, drops, catches,
+// Surge, or relic procs — they retire silently, outside every kill hook.
+function beginStageResolution() {
+  statsEndLevel(); // combat time ends at the win moment, not at the panel
+  // finale mastery reads the WIN-MOMENT field — evaluate before departures
+  // and stand-downs mutate it (completeFinale is idempotent; the settle
+  // calls become confirmations)
+  if (stageIdx(G.level) === 2) completeFinale();
+  const R = { t: 0, minHold: 0.65, timeout: 1.1, outcomes: { dispersed: 0, rescued: 0, neutralized: 0 } };
+  // hostile presence dissolves NOW — a soft spark where each shot was
+  let sparks = 0;
+  for (const s of G.enemyShots) {
+    if (!s.dead && sparks < 10) { burst(s.x, s.y, '#b0bec5', 5, 120, 0.3); sparks++; }
+  }
+  G.enemyShots.length = 0;
+  G.telegraphs.length = 0;
+  G.columnStrikes.length = 0;
+  G.invuln = Math.max(G.invuln, 2); // belt-and-braces under the combatIsLive() gate
+  // weapons disarm: a held charge releases harmlessly, touch intent clears
+  chargeHeld = false; chargeTouchId = null; touchFirePendingId = null;
+  G.charge = 0; G.chargeFullT = 0;
+  // classify every remaining actor by its completion verb
+  for (const b of G.bricks) {
+    if (b.dead) continue;
+    if (b.friendly) {
+      R.outcomes.rescued++;
+      b.resolveOut = 'rescued';
+    } else if (b.gridTerminal || b.hp >= 900) {
+      // persistent scenery: stays, but powers down — no bars, rings, or
+      // targeting may survive on it (render reads stoodDown)
+      R.outcomes.neutralized++;
+      b.stoodDown = true;
+    } else if (b.crosser) {
+      R.outcomes.dispersed++;
+      b.resolveOut = 'dispersed';
+    } else {
+      // anything else the clear guard exempted resolves as a dispersal
+      R.outcomes.dispersed++;
+      b.resolveOut = 'dispersed';
+      if (!b.crosser) b.crosser = { vx: ((b.bx + G.fx) < W / 2 ? -1 : 1) * Math.max(160, W * 0.22), bobPh: Math.random() * 6 };
+    }
+  }
+  G.resolve = R;
+  G.state = 'resolve'; G.stateT = 0;
+  // the clear celebration plays over the departures, not behind a panel
+  const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];
+  for (let i = 0; i < 6; i++) {
+    burst(W * (0.15 + Math.random() * 0.7), H * (0.2 + Math.random() * 0.3),
+      palette[i % palette.length], 14, 280, 1.2);
+  }
+}
+function updateResolve(dt) {
+  const R = G.resolve;
+  if (!R) { settleStageResolution(); return; }
+  R.t += dt;
+  let visible = 0;
+  for (const b of G.bricks) {
+    if (b.dead || b.stoodDown || b.dormant) continue;
+    const x = b.bx + G.fx, y = b.by + G.fy;
+    const on = x > -60 && x < W + 60 && y > -60 && y < H + 60;
+    if (b.resolveOut === 'rescued') {
+      b.by -= (170 + R.t * 260) * dt; // the ally climbs to safety
+      if (Math.random() < 0.25) sparkle(x, y + 14, 1, false);
+    } else if (b.crosser) {
+      // dispersal: the exit accelerates, with a shared departure trail
+      const accel = 1 + Math.min(2.4, R.t * 2.6);
+      b.bx += b.crosser.vx * accel * dt;
+      b.by += Math.sin(G.time * 4 + (b.crosser.bobPh || 0)) * 24 * dt;
+      if (Math.random() < 0.3) burst(x - Math.sign(b.crosser.vx) * 14, y, '#90a4ae', 1, 60, 0.25);
+    }
+    if (!on) { b.dead = true; continue; } // silently retired — no kill hooks, no rewards
+    visible++;
+  }
+  if (R.t >= R.timeout && visible > 0) {
+    // the safety timeout force-retires stragglers so results can never hang
+    for (const b of G.bricks) if (!b.dead && !b.stoodDown && !b.dormant) b.dead = true;
+    visible = 0;
+  }
+  // the fair catch window rides the HARMLESS beat now: late drops fall (a
+  // touch faster each second) and remain catchable; gravity bounds the wait
+  advancePickups(dt, 1, 1 + Math.min(1.6, R.t * 0.5));
+  const pickupsLeft = G.powerups.length > 0;
+  if (R.t >= R.minHold && visible === 0 && (!pickupsLeft || R.t >= 6)) settleStageResolution();
+}
+function settleStageResolution() {
+  const R = G.resolve || { outcomes: {} };
+  G.resolve = null;
+  {
     // ---- THE NINEFOLD DAWN: clearing stage 27 on a real journey ENDS the
     // campaign — it must never silently roll into a harder Kanto loop. The
     // old loop survives as TIME SPIRAL, an explicit choice on the ending's
     // final beat. Trials and dailies keep their existing flow.
     if (G.level === 27 && !G.trial && !G.daily) {
       G.score += Math.round((300 + 2 * 250) * (G.fx_score ? 2 : 1));
-      statsEndLevel();
       completeFinale(); // the final chase resolves its mastery INTO the Dawn
       beginEnding();
       return;
     }
     const clearedStage = stageIdx(G.level);
     const secretVictory = !!(G.secret.vmax && clearedStage === 2);
-    statsEndLevel();
     if (clearedStage === 2) completeFinale(); // resolve mastery BEFORE results read it
     // AFT-020 PREPARATION: completing the Challenge stage's realm objective
     // banks ONE temporary benefit for the finale — spent at the finale
@@ -7316,6 +7391,9 @@ function update(dt) {
     // BEFORE the draft. Built while statsCur() still points at the
     // cleared level and G.level is pre-increment.
     G.results = buildStageResults();
+    // AFT-021 P1: results speak the completion VERBS — what was defeated,
+    // what fled, who was saved, what powered down (drawResults reads it)
+    G.results.outcomes = R.outcomes || {};
     G.announce = null; G.announceQueue = []; // stale clear-time cards would overlap the panel
     G.level++;
     G.state = 'results'; G.stateT = 0;
@@ -7378,11 +7456,49 @@ function update(dt) {
       G.ceremony = { act: actIdx(G.level), t: 0, evo, burst1: false, burst2: false };
     }
     SFX.levelUp();
-    // confetti!
-    const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];
-    for (let i = 0; i < 6; i++) {
-      burst(W * (0.15 + Math.random() * 0.7), H * (0.2 + Math.random() * 0.3),
-        palette[i % palette.length], 14, 280, 1.2);
-    }
+    // (the clear confetti fires at RESOLUTION entry now — celebration plays
+    // over the live departures, never frozen behind a panel)
   }
+}
+// falling pickups (power-ups + pokéballs + element orbs) — shared by live
+// combat and the resolution beat (AFT-021 P1). fallMul gently speeds late
+// drops during resolution so the catch window stays fair but bounded.
+function advancePickups(dt, ts, fallMul = 1) {
+  for (const pu of G.powerups) {
+    pu.y += pu.vy * ts * dt * fallMul; pu.rot += dt * 3;
+    if (pu.orb) pu.x += Math.sin(pu.rot * 0.9) * 26 * dt; // orbs waft down gently
+    if (pu.secretShard) {
+      pu.secretT -= dt;
+      if (pu.swift) {
+        // classic's ONE-PASS shard: fast, swaying, never homing — get the
+        // paddle under it or the rift closes when it drops past the floor
+        pu.x += Math.sin(pu.rot * 1.35) * 46 * dt;
+      } else {
+        // a shard freed from a downed courier is generous: the shoot-down was
+        // the test, so this catch bends toward the player on a long window
+        pu.x += (G.paddle.x - pu.x) * Math.min(1, dt * 2.6);
+        pu.vy = pu.y > shipY() - 120 ? 48 : 72;
+      }
+    }
+    { // AFT-007: the item magnet is BASELINE phone QoL now — every build gets
+      // the drift (the old `magnetize` key is the RELIC GLAIVE weapon tier)
+      const dx = G.paddle.x - pu.x;
+      pu.x += Math.sign(dx) * Math.min(Math.abs(dx) * 2, 60) * dt;
+    }
+    const pw = paddleW(), py = shipY(); // the ship catches wherever it flies
+    // Overgrowth widens the pickup catch envelope at each evolution.
+    const reach = 18 + starterMod('catchReach', 0);
+    if (pu.y > py - 20 && pu.y < py + 24 && Math.abs(pu.x - G.paddle.x) < pw / 2 + reach) {
+      pu.dead = true;
+      collectPickup(pu);
+    }
+    if (!pu.dead && pu.secretShard && (pu.secretT <= 0 || pu.y > H + 30)) {
+      pu.dead = true;
+      if (G.secret.pendingShard === pu.shardIndex) G.secret.pendingShard = null;
+      setAnnounce('alert', '#78909c', 'THE RIFT CLOSED',
+        'SHARD ' + (pu.shardIndex + 1) + '/3 WAS LEFT BEHIND', 2.5,
+        SKIN.secret.missWarn || 'MISS ANY PIECE AND KANTO KEEPS ITS NORMAL MEW FINALE');
+    } else if (!pu.dead && pu.y > H + 30) pu.dead = true;
+  }
+  compactInPlace(G.powerups, p => !p.dead);
 }
