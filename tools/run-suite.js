@@ -222,6 +222,10 @@ const SCENES = [
     expect: `G.state==='play' && G.objective && G.objective.type==='lanes'` },
   { name: 'siege-finale', js: `DEV.launch({level:9,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(const b of G.bricks) if(b.siegeColossus&&!b.dead){b.hp=0.5; damageBrick(b,2,b.bx,b.by,null,{source:'bolt'});} for(let i=0;i<300;i++)update(1/60);`,
     expect: `G.finale && G.finale.format==='siege'` },
+  { name: 'hourglass-finale', js: `DEV.launch({level:12,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<200;i++)update(1/60);`,
+    expect: `G.finale && G.finale.format==='hourglass' && G.state==='play'` },
+  { name: 'chase-finale', js: `DEV.launch({level:27,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<200;i++)update(1/60);`,
+    expect: `G.finale && G.finale.format==='chase' && G.state==='play'` },
   { name: 'draft', js: `G.state='upgrade'; G.stateT=1; if(!G.upgradeChoices) rollUpgradeChoices();`,
     expect: `G.state==='upgrade' && !!G.upgradeChoices` },
   { name: 'web', js: `upgradeTreeOpen=true;`,
@@ -289,7 +293,10 @@ async function runScenes(cdp, port) {
             const a = claims[i], b = claims[j];
             if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) olp.push(a.name + '×' + b.name);
           }
-          return JSON.stringify({ ok: true, expectOk, meta, out, olp, w: W, h: H });
+          // AFT-021 P3: at most ONE world-anchored actor nameplate per frame —
+          // co-actors read from the roster rail, never a label pileup
+          const lblN = (actorLabelLog || []).length;
+          return JSON.stringify({ ok: true, expectOk, meta, out, olp, lblN, w: W, h: H });
         } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 120) }); }
       })()`).then(JSON.parse).catch(e => ({ ok: false, err: e.message }));
       if (!res.ok) { failures.push(sc.name + '@' + vw + 'x' + vh + ': ' + res.err); continue; }
@@ -301,6 +308,7 @@ async function runScenes(cdp, port) {
       }
       if (res.out.length) failures.push(sc.name + '@' + vw + 'x' + vh + ': labels out of viewport — ' + res.out.slice(0, 3).join(' · '));
       if (res.olp && res.olp.length) failures.push(sc.name + '@' + vw + 'x' + vh + ': overlapping surfaces — ' + res.olp.slice(0, 4).join(' · '));
+      if (res.lblN > 1) failures.push(sc.name + '@' + vw + 'x' + vh + ': ' + res.lblN + ' world-anchored actor labels (max 1)');
       if (res.meta) {
         fs.writeFileSync(path.join(shotsDir, sc.name + '-' + vw + 'x' + vh + '.json'),
           JSON.stringify({ scene: sc.name, viewport: vw + 'x' + vh, expect: sc.expect || null, expectOk: res.expectOk, ...res.meta }, null, 1));

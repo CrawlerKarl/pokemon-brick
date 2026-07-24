@@ -5625,7 +5625,7 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { ZONE_DEBUG = oldZ; zoneLog = null; }
   });
 
-  xtest('AFT-021 P0: multi-actor fights label one active target, not a pileup', async () => {
+  test('AFT-021 P0: multi-actor fights label one active target, not a pileup', async () => {
     DEV.finale(2, 0, { mode: 'junkie', diff: 'normal', seed: 'AFT021-RELAY' });
     paused = false; G.freeze = 0;
     await runFrames(50);
@@ -5653,7 +5653,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'trial copy finishes inside the pre-engage hold';
   });
 
-  xtest('AFT-021 P0: a combat-safe viewport authority exists and holds', async () => {
+  test('AFT-021 P0: a combat-safe viewport authority exists and holds', async () => {
     assert(typeof combatSafeRect === 'function',
       'combatSafeRect() does not exist — no combat-safe viewport authority yet');
     forceViewport(667, 375);
@@ -5663,7 +5663,23 @@ window.requestAnimationFrame = function () { return 0; };
     const R = combatSafeRect();
     assert(R && (R.x1 - R.x0) > W * 0.5 && (R.y1 - R.y0) > 120,
       'combat-safe rect degenerate: ' + JSON.stringify(R));
-    return 'the combat field is derived from HUD, insets and control geometry';
+    assert(R.y0 >= SAFE_T + 56, 'the safe field starts above the HUD bar');
+    // actors clamp to it: on the tightest landscape, every settled boss-class
+    // actor's core rides at or below the safe top after motion runs
+    while (G.reveal) { revealSkip(); update(0.5); }
+    await runFrames(240);
+    const low = G.bricks.filter(b => !b.dead && !b.dormant
+      && (b.isBoss || b.subBoss || b.mythic) && !b.gauntletEntering && !b.entry
+      && !(b.flight && b.flight.entering)
+      && (b.by + G.fy - b.h * 0.5) < R.y0 - 1);
+    assert(low.length === 0, low.length + ' boss-class actor(s) settled above the combat-safe top');
+    // the ship's default settle sits clear of the control rectangles
+    const ships = { x: G.paddle.x, y: shipY() };
+    for (const c of R.controls) {
+      const inside = ships.x > c.x && ships.x < c.x + c.w && ships.y > c.y && ships.y < c.y + c.h;
+      assert(!inside, 'the ship auto-settled underneath a control pad');
+    }
+    return 'the combat field is derived from HUD, insets and control geometry — and actors respect it';
   });
 
   xtest('AFT-021 P0: player bolts ignore hostile/cinematic slows; charge and travel share the settings clock', async () => {

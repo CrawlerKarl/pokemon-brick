@@ -5957,6 +5957,22 @@ function update(dt) {
   }
 
   // every system that writes positions has run — settle the sprite kinematics
+  // AFT-021 P3: bosses, sentinels and mythics live inside the COMBAT-SAFE
+  // viewport, not raw W×H — the fight can never sit under the HUD bar or
+  // the goal-pill band (the 375-tall landscape audit finding). Applied
+  // after all motion each frame, so authored patterns keep their shape and
+  // simply ride a floored ceiling. Entrances/reveal flights are exempt
+  // (they may sweep in from anywhere; the clamp owns them once they land).
+  if ((G.state === 'play' || G.state === 'serve') && typeof combatSafeRect === 'function') {
+    const safeTop = combatSafeRect().y0;
+    for (const br of G.bricks) {
+      if (br.dead || br.dormant || br.crosser) continue;
+      if (!(br.isBoss || br.subBoss || br.mythic || br.secretBoss)) continue;
+      if (br.gauntletEntering || br.entry || (br.flight && br.flight.entering)) continue;
+      const minY = safeTop - G.fy + br.h * 0.5;
+      if (br.by < minY) br.by = minY;
+    }
+  }
   if (G.state === 'play' || G.state === 'serve') updateSpriteKinematics(dt * ts);
 
   // ---- balls ----

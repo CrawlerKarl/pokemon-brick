@@ -5,6 +5,35 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24l — AFT-021 Phase 3: the combat-safe viewport + the active target
+
+- **`combatSafeRect()`** (render.js): the rectangle combat may OWN — below
+  the HUD + goal-pill band, inside the safe-area insets, above the floor,
+  with the touch-control rectangles reported alongside. Boss-class actors
+  (Sovereigns, sentinels, mythics, the secret) CLAMP to its top after all
+  motion each frame — authored patterns keep their shape and ride a floored
+  ceiling, so a 375-tall landscape can never park a boss under the health
+  bar again. Entrances/reveal flights stay exempt until they land.
+- **THE ACTIVE TARGET** (`activeCombatActor`): one actor owns the local
+  nameplate + bar — the relay carrier, the marked lane target, else the
+  highest-ranked/nearest boss-class actor. Co-actors keep silhouette/aura
+  identity and read from the new **ROSTER RAIL**: compact type-colored pips
+  with hp arcs under the boss lane, the attackable one ringed white. The
+  Phase-0 label-pileup fixture is a permanent invariant, and every gate
+  scene now fails on >1 world-anchored actor label.
+- **Idle pads soften under combat**: when a shot or actor passes behind an
+  unengaged FIRE/MEGA pad it fades to half presence — movement stays
+  readable; engaged states (charging, hot, Surge-ready) keep full weight;
+  no mandatory tell relies on the fade (strike lanes render full-height).
+- The generic movement hint yields to any live goal (it was opening finale
+  trials lying across the vows) and both tutorial pills claim surfaces.
+- New gate scenes: hourglass + chase finales at both phone viewports (44
+  scenes total), all under the overlap + single-label contracts.
+
+Gate green 114/114.
+
+---
+
 ## 2026-07-24k — AFT-021 Phase 2: one owner per screen region
 
 The combat UI has a layout AUTHORITY now, not just containment:

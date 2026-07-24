@@ -1053,29 +1053,36 @@ function drawBossMon(br, x, y) {
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = lastStand ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-  if (G.revealDock !== br.poke.id) { // AFT-002: a docked boss reads from the HUD lane
+  // AFT-002: a docked boss reads from the HUD lane; AFT-021 P3: in a
+  // multi-actor fight only the ACTIVE target keeps its floating plate
+  if (G.revealDock !== br.poke.id && (br === frameActiveActor || frameActiveActor == null)) {
     fitLabel((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''),
       x, y - hh - 26, { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(160, br.w * 1.5)), zone: 'field' });
     if (actorLabelLog) actorLabelLog.push({ x, y: y - hh - 26, w: Math.max(160, br.w * 1.5), name: br.poke.n, kind: 'boss' });
   }
   ctx.shadowBlur = 0;
-  const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
-  roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
-  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
-  if (frac > 0) {
-    roundRect(x - bw2 / 2, y - hh - 16, bw2 * frac, 8, 4);
-    const hg = ctx.createLinearGradient(x - bw2 / 2, 0, x + bw2 / 2, 0);
-    hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
-    ctx.fillStyle = hg; ctx.fill();
-  }
-  // phase notches and pips mirror this boss's authored phase count.
-  ctx.fillStyle = 'rgba(6,9,24,0.9)';
-  for (let i = 1; i < phases; i++) ctx.fillRect(x - bw2 / 2 + bw2 * i / phases - 1, y - hh - 16, 2, 8);
-  for (let i = 0; i < phases; i++) {
-    ctx.beginPath();
-    ctx.arc(x - (phases - 1) * 8 + i * 16, y - hh - 3, 3.4, 0, Math.PI * 2);
-    ctx.fillStyle = i < ph ? phCol : 'rgba(255,255,255,0.2)';
-    ctx.fill();
+  // AFT-021 P3: the local bar follows the same active-target rule as the
+  // name — an inactive co-actor keeps silhouette identity only, and its
+  // health reads from the roster rail pips instead
+  if (br === frameActiveActor || frameActiveActor == null || G.revealDock === br.poke.id) {
+    const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
+    roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
+    if (frac > 0) {
+      roundRect(x - bw2 / 2, y - hh - 16, bw2 * frac, 8, 4);
+      const hg = ctx.createLinearGradient(x - bw2 / 2, 0, x + bw2 / 2, 0);
+      hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
+      ctx.fillStyle = hg; ctx.fill();
+    }
+    // phase notches and pips mirror this boss's authored phase count.
+    ctx.fillStyle = 'rgba(6,9,24,0.9)';
+    for (let i = 1; i < phases; i++) ctx.fillRect(x - bw2 / 2 + bw2 * i / phases - 1, y - hh - 16, 2, 8);
+    for (let i = 0; i < phases; i++) {
+      ctx.beginPath();
+      ctx.arc(x - (phases - 1) * 8 + i * 16, y - hh - 3, 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = i < ph ? phCol : 'rgba(255,255,255,0.2)';
+      ctx.fill();
+    }
   }
   ctx.restore();
 }
@@ -1237,9 +1244,11 @@ function drawBossBrick(br, x, y) {
   ctx.restore();
 }
 
+let frameActiveActor = null; // AFT-021 P3: computed once per frame in drawBricks
 function drawBricks() {
   const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant) || G.bricks.find(b => b.isBoss);
   const introOff = G.bossIntro > 0 ? -Math.pow(G.bossIntro / 1.6, 2) * (H * 0.4) : 0;
+  frameActiveActor = activeCombatActor();
   for (const br of G.bricks) {
     if (br.dead || br.dormant) continue;
     const x = br.bx + G.fx;
@@ -1373,10 +1382,11 @@ function drawBricks() {
           drawGlyph(ctx, 'heart', x + (i - (pips - 1) / 2) * pw, py2, 4, '#ff80ab');
         }
       }
-      // Sentinel bosses always carry a named bar; ordinary tough flyers use a
-      // compact ring once damaged. This creates a clear health hierarchy:
-      // player rail → sentinel bar → legendary phase bar → elite rings.
-      if (br.subBoss && br.hp > 0) {
+      // Sentinel bosses carry a named bar — but only the ACTIVE TARGET keeps
+      // its local label in multi-actor fights (AFT-021 P3): the rest keep
+      // ring/aura identity and read from the roster rail, so three vows can
+      // never stack three nameplates over the formation.
+      if (br.subBoss && br.hp > 0 && br === frameActiveActor) {
         const frac = Math.max(0, br.hp / br.maxHp);
         const sbw = Math.max(78, s2 * 1.45), sby = yb - s2 * 0.67;
         ctx.font = '800 8px Orbitron, sans-serif';
@@ -4772,6 +4782,7 @@ function drawShootHint() {
     ctx.font = '800 15px Orbitron, sans-serif';
     const tw2 = Math.min(W - 24, ctx.measureText(txt).width + 44); // AFT-001: viewport cap
     const hy2 = H * 0.62;
+    claimSurface('chargeTutor', W / 2 - tw2 / 2, hy2 - 19, tw2, 38);
     ctx.globalAlpha = pa;
     ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 18;
     roundRect(W / 2 - tw2 / 2, hy2 - 19, tw2, 38, 19);
@@ -4790,6 +4801,10 @@ function drawShootHint() {
   if (G.state !== 'play' || G.playT > (autoTutor ? 9 : 20) || (!autoTutor && G.shotsFired >= 3)) return;
   // CLASSIC has no blaster until it's earned — don't prompt the player to shoot
   if (G.mode === 'classic' && !blasterArmed()) return;
+  // AFT-021 P3: the generic movement hint is FLAVOR-priority — it yields to
+  // any live objective or finale meter (finale trials were opening with this
+  // pill sitting across the vows)
+  if (goalSurfaceLive()) return;
   const a = Math.min(1, G.playT / 0.6) * (0.55 + 0.35 * Math.sin(G.time * 5));
   const text = G.mode === 'junkie'
     ? (IS_TOUCH ? (SETTINGS.autoFire ? 'DRAG TO FLY · AUTO-FIRE ON · HOLD = BIG ATTACK' : 'DRAG TO FLY · TAP ATTACK · HOLD = BIG ATTACK') : 'MOVE TO FLY · CLICK TO ATTACK · RIGHT-CLICK/SHIFT CHARGES')
@@ -4803,6 +4818,7 @@ function drawShootHint() {
   const x = IS_TOUCH ? W / 2 : G.paddle.x;
   const y = IS_TOUCH ? FLOOR() - 168 : shipY() - (G.mode === 'junkie' ? 96 : 72);
   const tw = Math.min(W - 24, ctx.measureText(text).width + 26);
+  claimSurface('moveHint', x - tw / 2, y - 15, tw, 30);
   roundRect(x - tw / 2, y - 15, tw, 30, 15);
   ctx.fillStyle = 'rgba(8,12,30,0.75)'; ctx.fill();
   ctx.strokeStyle = '#80d8ff'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -5385,6 +5401,7 @@ function drawHUD() {
   }
   drawPlayerHealthBar();
   drawBossLane(); // AFT-002: the docked boss name/health lane
+  drawRosterRail(); // AFT-021 P3: compact pips for every co-actor in a multi-actor fight
   ctx.restore(); // end of the top-anchored, safe-area-shifted cluster
   drawBrickBehaviorLegend();
   drawCombatNotice();
@@ -5667,8 +5684,25 @@ function drawHurtHealth() {
 function drawTouchControls() {
   const B = touchButtons();
   ctx.save();
-  ctx.globalAlpha = SETTINGS.buttonOpacity == null ? 0.85 : SETTINGS.buttonOpacity;
+  const baseA = SETTINGS.buttonOpacity == null ? 0.85 : SETTINGS.buttonOpacity;
+  ctx.globalAlpha = baseA;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // AFT-021 P3: when live combat passes BEHIND an idle pad, the pad softens
+  // so movement stays readable — engaged states (charging, hot, Surge-ready)
+  // keep full presence, and no mandatory tell ever RELIES on this fade
+  // (strike lanes render full-height beside the pads).
+  const padBusy = (b) => {
+    if (!b) return false;
+    const m = b.r + 18;
+    for (const s of G.enemyShots) {
+      if (!s.dead && Math.abs(s.x - b.x) < m && Math.abs(s.y - b.y) < m) return true;
+    }
+    for (const br of G.bricks) {
+      if (br.dead || br.dormant || (!br.flight && !br.dive && !br.bare && !br.isBoss && !br.subBoss)) continue;
+      if (Math.abs(br.bx + G.fx - b.x) < m && Math.abs(br.by + G.fy - b.y) < m) return true;
+    }
+    return false;
+  };
   // FIRE — absent in CLASSIC until the blaster is earned (touchButtons). In the
   // shooter modes this one pad also CHARGES: holding winds up a big
   // shot, shown here as a cyan ring filling inside the heat arc.
@@ -5676,6 +5710,7 @@ function drawTouchControls() {
   const f = B.fire;
   if (f) {
     const charging = G.charge > 0.02, full = G.charge >= 1;
+    if (!charging && !hot && padBusy(f)) ctx.globalAlpha = baseA * 0.5;
     // near the heat limit (amber) the pad WARNS before it ever locks out
     const heatWarn = !hot && !charging && G.heat > 0.7;
     ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
@@ -5742,8 +5777,10 @@ function drawTouchControls() {
     }
   }
   // MEGA — the button IS the meter (fills as a ring)
+  ctx.globalAlpha = baseA;
   const m = B.mega;
   const ready = G.mega >= 1 && G.megaT <= 0;
+  if (!ready && G.megaT <= 0 && padBusy(m)) ctx.globalAlpha = baseA * 0.5;
   const mfrac = G.megaT > 0 ? G.megaT / megaDur() : G.mega;
   ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(10,16,38,0.72)'; ctx.fill();
@@ -5773,6 +5810,7 @@ function drawTouchControls() {
   // ONE 44px pause target under the lives — the sound toggle lives on the
   // pause screen now (AFT-021 P2: no second circle over the formation)
   {
+    ctx.globalAlpha = baseA;
     const b = B.pause;
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(10,16,38,0.6)'; ctx.fill();
@@ -5849,6 +5887,42 @@ function announceLive() { return !!G.announce; }
 // once and quieted; the panels then draw over this STATIC plate instead of
 // re-rendering the combat object graph every frame. Nothing live can read
 // through a card, and the panels stop paying for a world they don't show.
+// ── AFT-021 P3: THE COMBAT-SAFE VIEWPORT ────────────────────────────────────
+// The rectangle combat is allowed to OWN: below the HUD + goal-pill band,
+// inside the safe-area insets, above the floor. Touch-control geometry is
+// reported alongside so spawn/settle logic can keep actors and mandatory
+// tells from living underneath the pads. Bosses, sentinels, objective
+// actors and docked art clamp to this — not to raw W × H.
+function combatSafeRect() {
+  const goalBand = (G.state === 'play' || G.state === 'serve') ? 34 : 0;
+  const y0 = SAFE_T + 56 + goalBand;
+  const r = { x0: SAFE_L + 10, y0, x1: W - SAFE_R - 10, y1: FLOOR() - 6, controls: [] };
+  if (IS_TOUCH && (G.state === 'play' || G.state === 'serve')) {
+    const B = touchButtons();
+    for (const b of [B.fire, B.mega, B.pause]) {
+      if (b) r.controls.push({ x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 });
+    }
+  }
+  return r;
+}
+// AFT-021 P3: THE ACTIVE TARGET — the one actor whose local nameplate and
+// bar may draw. Everyone else keeps silhouette/aura identity and reads from
+// the compact roster rail instead of stacking world-space labels.
+function activeCombatActor() {
+  const live = G.bricks.filter(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss) && !b.stoodDown);
+  if (!live.length) return null;
+  const F = G.finale;
+  if (F && F.relay && F.beat === 0 && F.relay.carrier != null) {
+    const c = live.find(v => v.subIdx === F.relay.carrier);
+    if (c) return c;
+  }
+  const mark = live.find(b => b.laneMark);
+  if (mark) return mark;
+  const rank = b => (b.secretBoss ? 6 : b.mythic ? 5 : b.isBoss ? 4 : (b.hourOut ? 0 : 0) + (b.openT > 0 ? 2 : 1));
+  live.sort((a, b) => rank(b) - rank(a)
+    || Math.abs(a.bx + G.fx - G.paddle.x) - Math.abs(b.bx + G.fx - G.paddle.x));
+  return live[0];
+}
 let PLATE_RENDER = false; // render() draws WORLD ONLY while set (no HUD/overlays/text)
 function captureArenaPlate() {
   try {
@@ -6112,6 +6186,48 @@ function drawBossLane() {
     roundRect(x1 - barW, y + 8, Math.max(3, barW * frac), 6, 3);
     ctx.fillStyle = ph >= pc ? '#ff5252' : '#ff8a65'; ctx.fill();
   }
+}
+// AFT-021 P3: THE ROSTER RAIL — when a fight has two or more labeled actors
+// (relay vows, raid court, siege colossi, twin timelines), only the active
+// target keeps a world-space nameplate; everyone is represented HERE as a
+// compact pip (type color + hp arc, the active one ringed white). Identity
+// comes from ring color + the actor's own aura, never from stacked labels.
+function drawRosterRail() {
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const live = G.bricks.filter(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss) && !b.stoodDown);
+  if (live.length < 2) return;
+  const narrow = W < 560;
+  // below the docked lane when one exists; on narrow screens below the goal
+  // pill band (the title/pill own rows one and two)
+  const y = G.revealDock ? (narrow ? 88 : 72) : (narrow ? 84 : 52);
+  const r = 7, gap = 20;
+  const n = Math.min(live.length, 7);
+  // touch: the pause circle owns the right corner — the rail slides left of it
+  const x1 = W - 20 - (IS_TOUCH && !SETTINGS.leftHanded ? 48 : 0);
+  claimSurface('rosterRail', x1 - n * gap, y - r - 2, n * gap + 4, r * 2 + 4, { bg: false });
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const b = live[i];
+    const cx = x1 - (n - 1 - i) * gap - r;
+    const col = TYPE_COLORS[b.poke.t] || '#90a4ae';
+    const frac = Math.max(0, b.hp / b.maxHp);
+    ctx.beginPath(); ctx.arc(cx, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(8,12,28,0.7)'; ctx.fill();
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.beginPath(); ctx.arc(cx, y, r, 0, Math.PI * 2); ctx.stroke();
+    if (frac > 0) {
+      ctx.strokeStyle = col;
+      ctx.beginPath(); ctx.arc(cx, y, r, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); ctx.stroke();
+    }
+    if (b === frameActiveActor) { // the attackable one — ringed bright
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(cx, y, r + 3.4, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 // The title is the start of a journey, not a dim pause screen. A painted route
 // crosses nine colourful regions behind the mode cards while a warm morning
