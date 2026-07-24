@@ -140,8 +140,8 @@ renderer), and `assets/fonts/` (vendored Orbitron).
 | `build-aetherfall-art-manifest.js` | Derives the art manifest (the id/slug contract for image generation) straight from `aetherfall.js` — no DOM, no game load |
 | `build-aetherfall-dist.js` | Generates the pokemon-free standalone into `dist-aetherfall/`; prints a franchise-term RESIDUE report (a release requires **none**) |
 | `build-aetherfall-reveals.py` | 512px boss-reveal portraits for the 43 boss-class ids (same chroma + framing rules as the previews) |
-| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 103-check suite headless → both-skin + dist boot smokes → vocabulary scan → 38 mobile scenes with fitted-label assertions + screenshots → wave and boss artifact-storm benchmarks. ~30–35s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
-| `run-baseline.js` | **The campaign matrix (`npm run baseline`)**: 69 deterministic autopilot scenarios (~31s) producing the AFT-008 ledger report — modes × difficulties × affinities × vessels × builds, plus full-campaign runs. Committed snapshots live in `docs/baselines/` (old campaign + redesigned-campaign closeout) |
+| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 115-check suite headless → both-skin + dist boot smokes → vocabulary scan → 44 mobile scenes that each PROVE their named state (`expect` + metadata sidecars) under the AFT-021 overlap and single-actor-label contracts → wave and boss artifact-storm benchmarks. ~30–35s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
+| `run-baseline.js` | **The campaign matrix (`npm run baseline`)**: 142 deterministic autopilot scenarios (~70–90s) — all 27 stages, all nine finales × three modes × three seeds, paths/fusions/apexes, vessels, difficulties (+ drift-policy variants), affinities, the AEGIS economy — with the AFT-021 duration/spread/recovery BUDGETS enforced (red exit on violation). `--label` names each report's provenance (`aft021`, `redesigned-campaign`, …); `BASE_ONLY=<substring>` filters scenarios for tuning loops (always pair it with `--label` or you'll overwrite the committed old-campaign fixtures). Committed snapshots in `docs/baselines/` |
 
 **`art/aetherfall-production/`** — the production art. `sprites/final/` (128px
 runtime sprites) and `sprites/preview/` (320px portraits) and `weapons/final/`
@@ -1013,9 +1013,11 @@ viewports` test — keep it green when adding menu items.
 
 ## Verifying changes
 
-**`npm test` is the release gate.** It runs syntax + asset checks, 103 headless
+**`npm test` is the release gate.** It runs syntax + asset checks, 115 headless
 invariants, both-edition boot smokes, the standalone build and vocabulary
-scan, 38 mobile reference scenes with fitted-label containment assertions,
+scan, 44 mobile reference scenes (22 scenes × 2 viewports, each proving its
+named state via an `expect` assertion, with metadata sidecars) under the
+fitted-label containment, surface-overlap, and single-actor-label contracts,
 and both wave and boss artifact-storm benchmarks. A full run is currently
 about 30–35s; `npm test -- --fast` is about 15s and
 `npm test -- --suite` is about 12–18s. Results and performance ledgers land in

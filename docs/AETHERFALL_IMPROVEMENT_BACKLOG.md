@@ -16,10 +16,12 @@
 >
 > **The live plan is the P1 track**: ~~AFT-007 (ORBITAL RELIC)~~ **shipped
 > 2026-07-23e** → ~~AFT-008 baseline + AFT-020 realm finales + closeout~~
-> **shipped 2026-07-24** → **AFT-021 post-ship UX stabilization and balance
-> reread (NEXT)** → AFT-009 (constellation) → AFT-019 → AFT-010 → AFT-011
-> → AFT-012. The executable AFT-021 spec is
-> `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`.
+> **shipped 2026-07-24** → ~~AFT-021 post-ship UX stabilization and balance
+> reread~~ **shipped 2026-07-24 (Phases 0–9 executed; suite 115/115,
+> baseline 142 scenarios GREEN)** → **AFT-009 (constellation) (NEXT)** →
+> AFT-019 → AFT-010 → AFT-011 → AFT-012. The executed AFT-021 spec is
+> `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its matrix
+> evidence is `baselines/AFT021_MATRIX_REPORT.md`.
 
 
 Last reviewed: 2026-07-24 post-AFT-020 UX playtest audit (workspace head
@@ -66,10 +68,13 @@ items have since shipped.
   codex full-size sprite gallery, neutral-until-sworn selection, and
   per-channel `OATH_CH` evolution curves for tint, rim, aura, fittings,
   radiant blend, and runes.
-- The release gate passes 103/103 invariants and runs headlessly via `npm test`
+- The release gate passes 115/115 invariants (AFT-021 added the combat-state
+  safety, visible-clear, overlay-collision, charge/projectile-time, and
+  verb-results contracts) and runs headlessly via `npm test`
   in about 30–35s. It also verifies assets, both editions, the standalone
-  distribution, vocabulary/RESIDUE, 38 mobile scenes, and wave + boss stress
-  ledgers.
+  distribution, vocabulary/RESIDUE, 44 state-proving mobile scenes, and wave +
+  boss stress ledgers. `npm run baseline` replays 142 deterministic campaign
+  scenarios with the AFT-021 duration/spread/recovery budgets enforced.
 - The standalone runtime payload is about 37.4 MiB excluding its nested Git
   metadata, with about 36.1 MiB under `dist-aetherfall/art/`.
 - The constellation has six paths and only two direct weapon identities:

@@ -107,9 +107,11 @@ suite test guards every rect across six sizes.
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 19 mobile scenes
-at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (38
-screenshots → `.gate-shots/`) → the WAVE and BOSS artifact-storm benchmarks
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 22 mobile scenes
+at two phone viewports (44 screenshots + metadata sidecars → `.gate-shots/`),
+each PROVING its named state via an `expect` assertion, under FITTED-LABEL
+CONTAINMENT plus the AFT-021 overlap and single-actor-label contracts → the
+WAVE and BOSS artifact-storm benchmarks
 (ms/frame plus machine-portable per-frame gradient/blur budgets, recorded in
 `.gate-report.json` every run). `--fast` skips the
 dist/scene/storm steps (~15s); `--suite` runs the invariants alone (~12–18s). Any
@@ -143,13 +145,27 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 103 checks; `window.TEST_RESULTS` at
-  completion. Keep it green. Two overlap invariants:
+  fronted (slow — legacy path). 115 checks; `window.TEST_RESULTS` at
+  completion. Keep it green. New defect fixtures start as `xtest`
+  (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
+  at completion is a red flag, never a resting state. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
   sprites is not a blob, and chasing a literal 0 across random patterns is a
   losing battle). The flyer tests pick patterns randomly — re-run a couple of
   times before trusting a pass.
+- **`npm run baseline` is the balance gate (AFT-008 → AFT-021):** 142
+  deterministic autopilot scenarios (~70–90s; tools/run-baseline.js) with
+  ENFORCED budgets (`evaluateBudgets`: per-mode finale duration bands, mode
+  ratios, path spread, vessel cap, shield income, heat, difficulty drift
+  separation, clear rules) — violations exit red. Run it after any balance
+  edit. Always pass `--label <provenance>`; `BASE_ONLY=<substring>` filters
+  scenarios for tuning loops but an UNLABELED filtered run overwrites the
+  committed old-campaign fixtures in `docs/baselines/` (they are history —
+  `git checkout --` them back, never regenerate over them). Three
+  calibration deviations are documented in-code (classic-bot band = human
+  band ×1.8; ratio hard cap 2.5; ≤2 blaster seed-outliers) — don't "fix"
+  them without new evidence.
 - `npm run check` (syntax all modules), `npm run verify-assets` (every roster id
   is named + has a local sprite). Run after roster/data changes.
 - Test mobile with `?touch` in the URL. Serve locally: `node serve.js`
@@ -423,15 +439,52 @@ phone — flag anything only verifiable there.
   spirit flyers) punishes charge-spraying — charged bolts phase THROUGH
   the shimmer (no damage, no pierce spent) while basic fire always lands.
   Keep both alive so neither weapon dominates a mixed wave.
-- **Every stage clear passes through RESULTS (M1).** `G.state ===
-  'results'` sits between the wave clear and the draft: ledger readout +
-  mastery objectives + medals, ONE tap to continue (`advanceResults`,
+- **A win must LOOK won: every clear passes through RESOLUTION → RESULTS
+  (AFT-021 → M1).** The clear enters `G.state === 'resolve'`
+  (`beginStageResolution`, update.js): hostile shots/telegraphs/strikes
+  dissolve at the win moment, weapons disarm, survivors play a completion
+  VERB (disperse / rescue / stand-down), pickups accelerate home, and the
+  beat settles (`settleStageResolution`) only when the field is visibly
+  empty (min hold 0.65s; 1.1s force-retire). `combatIsLive()` (state.js)
+  is the structural guard — `loseLife` and `spawnEnemyShot` no-op outside
+  live combat, so damage after a clear is IMPOSSIBLE, not just unlikely.
+  `completeFinale()` and `statsEndLevel` run at the win moment (resolution
+  entry), never at settle — hourglass mastery once evaporated because
+  sibyls were counted after they flew away. Then `G.state === 'results'`:
+  ledger readout + mastery objectives + medals over the captured ARENA
+  PLATE (`captureArenaPlate` — a static, 0.6-dimmed world snapshot so
+  nothing moves behind menus), ONE tap to continue (`advanceResults`,
   input.js — mouse, touch, Space, Enter, Esc; a 0.45s dwell gate stops the
   killing blow from skipping it). A pending act ceremony chains AFTER
   results, then the draft. Tests that expect the draft right after a clear
-  must step through it (`skipResults()` in test.html). Medals persist in
-  `pkbrk-medals` for REAL journeys only — trials/dailies/cheated runs
-  evaluate and display but never save.
+  must step through BOTH states (`skipResults()` in test.html). Medals
+  persist in `pkbrk-medals` for REAL journeys only — trials/dailies/
+  cheated runs evaluate and display but never save.
+- **Screen surfaces have ONE owner (AFT-021).** Overlays register through
+  `claimSurface` (render.js); the gate's scenes enforce no-overlap and at
+  most ONE actor nameplate. `combatSafeRect()` is the combat viewport —
+  boss-class actors CLAMP inside it on both axes; `activeCombatActor()`
+  picks the single actor that carries the local nameplate/bar while
+  co-actors ride the ROSTER RAIL; sealed/bound/stood-down actors are never
+  "active" and never eat player fire. Shooter trials open under a 1.8s
+  `G.engageHold` briefing hold (enemy CDs floored) so the trial card is
+  READ, not shot through.
+- **Player-weapon time is ONE clock (AFT-021).** Named domains in
+  update.js: hostile slows (Chill/Slow-Mo/TIME DILATION) ride
+  `hostileScale`/`enemyShotTimeScale`, cinematics ride `cinematicScale`,
+  and `weaponScale()` == `settingsScale()` — nothing hostile or cinematic
+  may EVER scale player projectiles or charge. Touch charge credits from
+  the PRESS (`TOUCH_CHARGE_HOLD_MS` promotion back-credits the hold), full
+  charge lands at 1.10s on every input and frame rate, and pause/
+  visibility-loss DISARM a held charge (`inputNow()`, input.js).
+- **Finale/boss work is MEASURED, not guessed (AFT-021).** `sovereignHp()`
+  (state.js) composes `FINALE_WORK[region]` × `FINALE_WORK_MODE[mode]` —
+  the two vectors MULTIPLY, so retune them together, never one alone.
+  Boss-class actors (`isBoss/subBoss/mythic/secretBoss`) are EXEMPT from
+  the hp≥900 unkillable-scenery convention. `journeyDmgMul()` grows the
+  baseline weapon with the journey so late finales price against real
+  DPS. Any new shield source must route `tryShieldGain(source)` (per-stage
+  income budget; denials convert to score) or it escapes the economy.
 - **Sprite kinematics live in update(), never render.** `updateSpriteKinematics`
   smooths `vvx/vvy/bank/face/animPh` with dt (60 Hz == 120 Hz); facing flips
   only after ~150 ms; gaits come from species `MOTION_PROFILES` (data.js,

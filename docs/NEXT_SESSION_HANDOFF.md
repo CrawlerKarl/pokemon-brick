@@ -10,8 +10,8 @@
 > (baked hot loops + the adaptive effects budget), and AFT-005B mobile
 > scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 103/103. `npm test` (~30–35s headless) ran green before every
-> commit.** Production art: 259 base + 259 radiant + 54 previews +
+> **Suite: 115/115 (103 at this closeout; AFT-021 added 12 invariants).
+> `npm test` (~30–35s headless) ran green before every commit.** Production art: 259 base + 259 radiant + 54 previews +
 > **43 boss reveals** + 21 weapon sprites. Both sites live:
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
 > - dist `CrawlerKarl/aetherfall` → the standalone AETHERFALL build
@@ -92,15 +92,17 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 ## Read these first
 
 - `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md` — **AFT-021,
-  the current execution authority: post-clear correctness, combat
-  readability, charge/input timing, and campaign rebalance.**
+  EXECUTED 2026-07-24**: post-clear correctness, combat readability,
+  charge/input timing, and campaign rebalance. Still the reference for
+  what each fix guarantees; matrix evidence in
+  `baselines/AFT021_MATRIX_REPORT.md`.
 - `AETHERFALL_IMPROVEMENT_BACKLOG.md` — **the backlog. Start here.**
 - `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md` — **the new AFT-020
   execution plan: nine finale formats plus campaign-wide variety work.**
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
-  the reasoning behind it. Newest entries run through **2026-07-24h**.
+  the reasoning behind it. Newest entries run through **2026-07-24p**.
 - `FULL_GAME_ROADMAP.md` — milestone history (useful design context; the
   backlog wins on open items).
 - `archive/` — historical plan docs for shipped features (see its README).
@@ -303,7 +305,7 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 ✅ AFT-008 BASELINE + SCHEMA LOCK (docs/baselines/, npm run baseline)
 ✅ AFT-020 NINE REALM FINALES + CAMPAIGN VARIETY (all 10 phases)
 ✅ AFT-008 REDESIGNED-CAMPAIGN CLOSEOUT (Section-9 corrections + matrix)
-→ AFT-021 POST-AFT-020 UX STABILIZATION + BALANCE REREAD
+✅ AFT-021 POST-AFT-020 UX STABILIZATION + BALANCE REREAD (Phases 0–9)
 → AFT-009 constellation redesign
 → AFT-019 first-session phone pass
 → AFT-010 accessibility
@@ -311,12 +313,11 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 → AFT-012 visual pass
 ```
 
-1. **Execute AFT-021 autonomously from Phase 0 through Phase 9.** The owner
-   playtest has now supplied the gating input. The executable plan is
-   `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its P0 work
-   preempts feature expansion.
-2. **AFT-009 (constellation redesign)** follows once AFT-021's release
-   definition is satisfied —
+1. **AFT-021 is DONE** (Phases 0–9, log rounds 2026-07-24i–p). What remains
+   from it is OWNER JUDGMENT, not code: blaster feel at mid-realm finales,
+   Ace's threat-heavy pacing, and the 1.8s trial briefing hold — collect
+   real-device impressions before touching those numbers again.
+2. **AFT-009 (constellation redesign)** is the next build item —
    its acceptance criteria in the backlog are still the spec.
 3. **Cheap follow-ups spotted during the closeout** (noted, not started):
    - the ground vessel clears ~27% faster than the median vessel (matrix
@@ -331,14 +332,31 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 Notes so you don't redo finished work:
 
 - **`npm test` is the gate** (~30–35s full, `--fast` ~15s, `--suite` ~12–18s):
-  syntax → assets → 103 invariants headless → both-skin + dist boots →
-  vocabulary scan → RESIDUE → 19 mobile scenes × 2 viewports with
-  fitted-label assertions (38 screenshots → `.gate-shots/`) → the wave AND
-  boss storm ledgers (`.gate-report.json`). Run it before every commit.
-- **`npm run baseline`** replays 69 deterministic autopilot scenarios
-  (~31s) into a ledger report. The committed snapshots in `docs/baselines/`
-  (old campaign + redesigned closeout) are FIXTURES — regenerate to compare,
-  but `git checkout` the old pair back; never overwrite history.
+  syntax → assets → 115 invariants headless → both-skin + dist boots →
+  vocabulary scan → RESIDUE → 22 mobile scenes × 2 viewports (44 screenshots
+  → `.gate-shots/` + metadata sidecars) that each PROVE their named state via
+  `expect` assertions, under the overlap + single-actor-label contracts → the
+  wave AND boss storm ledgers (`.gate-report.json`). Run it before every
+  commit.
+- **`npm run baseline`** replays 142 deterministic autopilot scenarios
+  (~70–90s) and ENFORCES the AFT-021 budgets (finale duration bands ×
+  mode, mode ratios, path spread, vessel cap, shield income, heat,
+  difficulty drift separation, clear rules) — violations exit red. Always
+  pass `--label <provenance>`; `BASE_ONLY=<substring>` filters scenarios for
+  tuning loops, **but an unlabeled BASE_ONLY run writes over the committed
+  old-campaign fixtures** (this happened once — `git checkout --` restored
+  them). The committed snapshots in `docs/baselines/` (old campaign +
+  redesigned closeout + aft021) are FIXTURES: regenerate to compare, then
+  restore; never overwrite history.
+- **Tests that finish a wave must step through `G.state === 'resolve'`**
+  before expecting results/draft — the resolution beat sits between clear
+  and results in every mode (helpers in test.html already do this; new
+  tests should reuse them).
+- **`FINALE_WORK` × `FINALE_WORK_MODE` multiply** (state.js) — retune them
+  together, never one in isolation, and remember boss-class actors are
+  exempt from the hp≥900 unkillable-scenery convention. Any new shield
+  source must route through `tryShieldGain` or it escapes the income
+  budget.
 - **The per-finale implementation pattern is documented** in
   `docs/archive/AFT020_PHASE_NOTES.md` (skin profiles → buildLevel block →
   director fns → damageBrick tail gate → kill hooks → summon override →
