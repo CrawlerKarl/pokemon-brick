@@ -2418,6 +2418,90 @@ window.requestAnimationFrame = function () { return 0; };
     return 'three distinct non-HP rites · marks darken gate lanes · moon by shape · a thief tagged into the moon · no third bar';
   });
 
+  // AFT-020 Phase 6: THE FIRST FUSION — a chosen road, lock-shattering
+  // charges, a puppeteer chained to the Sovereign, and a linked climax
+  // that cracks straight into the Ninefold Dawn with no draft between.
+  test('AFT-020 P6: the FIRST FUSION — route, locks, chains, the linked pair, the Dawn', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    // the Dawn only opens on a REAL run (trials keep the classic loop) —
+    // guard the victory/checkpoint keys like the completion-branch test
+    const priorVictory = localStorage.getItem('pkbrk-victory');
+    const priorCkpt = localStorage.getItem('pkbrk-run');
+    try {
+    resetRun(27, false, { seed: 'FUSE1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    G.lives = 99;
+    const F = G.finale, C = F && F.chase;
+    assert(F && F.format === 'chase' && C && F.beatKey === 'route', 'the chase arms on the final realm');
+    const vessels = () => G.bricks.filter(b => b.vessel && !b.dead);
+    assert(vessels().length === 3, 'three Vessels seal the roads');
+    const road = vessels()[2];
+    damageBrick(road, 1, road.bx, road.by, null, { source: 'bolt' });
+    assert(C.chosen === road.subIdx && road.vesselRoute, 'the first struck Vessel opens the road');
+    const sealed = G.bricks.filter(b => b.vesselSealed && !b.dead);
+    assert(sealed.length === 2, 'the other two seal');
+    const shp3 = sealed[0].hp;
+    damageBrick(sealed[0], 3, sealed[0].bx, sealed[0].by, null, { source: 'bolt' });
+    assert(sealed[0].hp === shp3, 'a sealed road shrugs hits off');
+    road.hp = 0.5;
+    damageBrick(road, 2, road.bx, road.by, null, { source: 'bolt' });
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'pursuit', 'the pursuit opens');
+    if (G.gauntlet) G.gauntlet.entry = null;
+    G.bossIntro = 0;
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+    // a DODGED charge shatters a lock; three locks chain the pair
+    for (let k = 0; k < 3; k++) {
+      C.rushCD = 0.01; C.rush = null;
+      await runFrames(3);
+      assert(C.rush, 'the charge telegraphs (lock ' + k + ')');
+      G.paddle.x = 40; // stand clear — the vertical band check still misses on x
+      C.rush.t = C.rush.warn + 0.01; C.rush.fired = true; C.rush.x = C.rush.dir > 0 ? W + 100 : -100;
+      await runFrames(3);
+    }
+    assert(C.locks === 3 && C.linked === true && F.beatKey === 'fusion',
+      'three shattered locks chain the crown (locks ' + C.locks + ')');
+    const mar = G.bricks.find(b => b.chaseLinked && b.mythic && !b.dead);
+    assert(mar, 'the puppeteer is chained to the Sovereign');
+    assert(!G.bricks.some(b => b.vesselSealed && !b.dead), 'the puppets drop with their strings cut');
+    // the pair SHARES every wound
+    const bh = boss.hp, mh = mar.hp;
+    damageBrick(boss, 4, boss.bx, boss.by, null, { source: 'bolt' });
+    assert(bh - boss.hp >= 4 && Math.abs((mh - mar.hp) - 2) < 0.6,
+      'half of every wound mirrors to the partner (' + (mh - mar.hp).toFixed(1) + ')');
+    // a charge baited over the puppeteer breaks a chain and jolts BOTH
+    for (let k = 0; k < 3; k++) {
+      C.rushCD = 0.01; C.rush = null;
+      await runFrames(3);
+      C.rush.y = mar.by + G.fy; // the bait line runs over the puppeteer
+      G.paddle.x = 40;
+      C.rush.t = C.rush.warn + 0.01; C.rush.fired = true; C.rush.x = C.rush.dir > 0 ? W + 100 : -100;
+      await runFrames(3);
+    }
+    assert(C.chains === 3 && C.exposed === true && F.mastery.countered,
+      'three baited charges break the chains (chains ' + C.chains + ')');
+    assert(boss.prismMark && mar.prismMark, 'the exposed pair takes the final window');
+    // fell the pair — the final clear enters the NINEFOLD DAWN, no draft
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) { b.hp = 0.5; damageBrick(b, 99, b.bx, b.by, null, { source: 'bolt' }); }
+    await runFrames(400, () => {
+      for (const pu of G.powerups) pu.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state === 'ending', 'the last collision cracks the seam into the ending (state ' + G.state + ')');
+    assert(G.upgradeChoices == null, 'no draft stands before the Ninefold Dawn');
+    const L = (G.runStats.levels || []).find(l => l.lv === 27);
+    assert(L && L.finaleFormat === 'chase' && L.finaleCounters.chains === 3
+      && L.finaleMastery === 'mastered', 'ledger: chase, chains + locks mastered');
+    } finally {
+      if (priorVictory == null) localStorage.removeItem('pkbrk-victory');
+      else localStorage.setItem('pkbrk-victory', priorVictory);
+      if (priorCkpt == null) localStorage.removeItem('pkbrk-run');
+      else localStorage.setItem('pkbrk-run', priorCkpt);
+    }
+    return 'a chosen road · locks off dodged charges · a chained pair sharing one fate · the Dawn with no draft between';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2976,6 +3060,15 @@ window.requestAnimationFrame = function () { return 0; };
       G.gauntlet.entry = null; // isolate the summon's own entrance (if any)
       gauntletSummonMythic(false);
       const fmtR = (finaleProfile(region) || {}).format || 'ladder';
+      if (fmtR === 'chase') {
+        // AFT-020: the chase's mythic arrives CHAINED to the Sovereign (or
+        // alone-and-exposed if the Sovereign already fell) — a one-beat
+        // linked actor, never a 3-phase round
+        const mar3 = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
+        assert(mar3 && mar3.chaseLinked && mar3.phaseCount === 1,
+          GENS[region].name + ' chase mythic must be the linked one-beat actor');
+        continue;
+      }
       if (fmtR === 'hunt' || fmtR === 'rite') {
         // AFT-020: the HUNT has no third round at all — its mythic is a
         // RESCUE inside the shadow fight, so the summon is a silent no-op
@@ -2999,7 +3092,7 @@ window.requestAnimationFrame = function () { return 0; };
     // raid Sovereigns never wake (live from build); siege wakes ride the
     // seal-fall beat with no entrance flight of their own
     const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid' && fmtOf(r) !== 'siege').length;
-    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit', 'hunt', 'rite'].includes(fmtOf(r))).length;
+    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege', 'circuit', 'hunt', 'rite', 'chase'].includes(fmtOf(r))).length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
     assert(legendStyles.size === wakingLegends, 'legendary entrances are not unique across the waking finales');
     assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
@@ -4819,9 +4912,13 @@ window.requestAnimationFrame = function () { return 0; };
       // vines — a freed menace, never a third health bar. Its POWER WHIP
       // kit stays as engine data; the raid's own contract is covered by
       // 'AFT-020 P2: the SERAPH RAID'.
-      { lvl: 27, id: 1025, mon: 'PECHARUNT', turn: 'mochiTurn', flag: 'feather', count: 3,
-        flavor: s => s.every(x => x.feather && x.feather.fan === 3 && x.feather.swayAmp > 34), // heavy sway
-        chName: 'MALIGNANT CHAIN', pattern: 'rain',   cols: 7 },
+      // PECHARUNT's standalone duel is RETIRED BY DESIGN (AFT-020): the
+      // final realm is the CHASE and the puppeteer fights CHAINED to the
+      // Sovereign as a one-beat linked actor — never its own 3-phase bar.
+      // Its MOCHI PUPPETS kit stays as engine data.
+      /* { lvl: 27, id: 1025, mon: 'PECHARUNT', turn: 'mochiTurn', flag: 'feather', count: 3,
+        flavor: s => s.every(x => x.feather && x.feather.fan === 3 && x.feather.swayAmp > 34),
+        chName: 'MALIGNANT CHAIN', pattern: 'rain',   cols: 7 }, */
     ];
     try {
       SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';

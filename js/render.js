@@ -2845,6 +2845,68 @@ function drawWardFx() {
   ctx.setLineDash([]);
   ctx.restore();
 }
+// AFT-020 THE FIRST FUSION: the charge's warning band + runner streak, and
+// the chains binding the linked pair (each break leaves a visible stub).
+function drawChaseFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'chase' || !F.chase || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const C = F.chase;
+  const R = C.rush;
+  ctx.save();
+  if (R) {
+    if (!R.fired) {
+      const prog = Math.min(1, R.t / R.warn);
+      ctx.globalAlpha = 0.16 + 0.22 * prog;
+      ctx.fillStyle = '#ff8a80';
+      ctx.fillRect(0, R.y - 34, W, 68);
+      ctx.globalAlpha = 0.7;
+      ctx.setLineDash([12, 10]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ff8a80';
+      ctx.beginPath();
+      ctx.moveTo(0, R.y - 34); ctx.lineTo(W, R.y - 34);
+      ctx.moveTo(0, R.y + 34); ctx.lineTo(W, R.y + 34);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // the runner crouches at its entry edge
+      const ex = R.dir > 0 ? 18 : W - 18;
+      ctx.beginPath();
+      ctx.moveTo(ex, R.y - 12); ctx.lineTo(ex + R.dir * 22, R.y); ctx.lineTo(ex, R.y + 12);
+      ctx.closePath();
+      ctx.fillStyle = '#ff8a80'; ctx.globalAlpha = 0.5 + 0.4 * Math.sin(G.time * 10); ctx.fill();
+    } else if (R.x != null) {
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#ffcf5e';
+      ctx.beginPath();
+      ctx.moveTo(R.x, R.y - 16); ctx.lineTo(R.x + R.dir * 40, R.y); ctx.lineTo(R.x, R.y + 16);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(R.dir > 0 ? R.x - 160 : R.x, R.y - 5, 160, 10);
+    }
+  }
+  if (F.beat === 2) {
+    const pair = G.bricks.filter(b => b.chaseLinked && !b.dead);
+    if (pair.length === 2) {
+      const [a, b] = pair;
+      // the chains: three strands, broken ones hang as stubs
+      for (let i = 0; i < 3; i++) {
+        const off = (i - 1) * 14;
+        const broken = i < C.chains;
+        ctx.lineWidth = broken ? 1.4 : 2.6;
+        ctx.strokeStyle = broken ? 'rgba(176,190,197,0.3)' : 'rgba(255,207,94,0.7)';
+        ctx.setLineDash(broken ? [3, 9] : [9, 6]);
+        ctx.beginPath();
+        ctx.moveTo(a.bx + G.fx, a.by + G.fy + off);
+        if (broken) ctx.lineTo(a.bx + G.fx + (b.bx - a.bx) * 0.25, a.by + G.fy + off + 18);
+        else ctx.lineTo(b.bx + G.fx, b.by + G.fy + off);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+  }
+  ctx.restore();
+}
 // AFT-020 THE ECLIPSE RITE: each totem wears its rite (the rotating
 // opening's gap, the pulse flash, the growing root bar), the moon state
 // reads as a FILLED vs HOLLOW crescent by the banner, and the thief
@@ -5432,6 +5494,7 @@ function drawObjectiveBanner() {
   else if (O.type === 'wardbreak') readout = ((O.total || 0) - (O.left || 0)) + '/' + (O.total || 0);
   else if (O.type === 'lanes') readout = (O.hits || 0) + '/' + O.count;
   else if (O.type === 'bells') readout = (O.rung || 0) + '/' + O.count;
+  else if (O.type === 'undercard') readout = Math.round((O.crowd || 0) * 100) + '%';
   // PROTECT objectives inline the friendly's remaining heart pips
   const fr = O.friendly;
   if (fr && !fr.dead) label += '  ·  ' + '♥'.repeat(Math.max(0, fr.fhp));
@@ -9644,6 +9707,7 @@ function render() {
     drawCircuitFx();   // AFT-020: the illuminated route + the flame's wake
     drawHuntFx();      // AFT-020: the closing shadow sector
     drawRiteFx();      // AFT-020: totem rites + the moon + the thief's charge
+    drawChaseFx();     // AFT-020: the charge band + the pair's chains
     drawBricks();
     drawFragments();
     drawShield();

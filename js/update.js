@@ -665,6 +665,21 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // like SHELL ARMOR — inside damageBrick, so the combat ledger stays honest
   // (no new loseLife path). STRICTLY gated on subBoss: it never touches
   // legendaries or mythics.
+  // THE FIRST FUSION: the first Vessel struck opens the route; sealed
+  // roads shrug hits off; the linked pair SHARES every wound
+  if (br.vessel && !br.vesselRoute && !br.vesselSealed && chaseState()
+    && !chaseState().chosen && G.finale.beat === 0) {
+    chaseChooseRoute(br);
+  }
+  if (br.vesselSealed) {
+    br.flash = 1;
+    const C3 = chaseState();
+    if (C3 && (C3.sealCD || 0) <= 0) {
+      C3.sealCD = 1.1;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, chaseWord('sealWord', 'SEALED'), '#b0bec5', 10);
+    }
+    return;
+  }
   // THE ECLIPSE RITE: a totem answers only its OWN rite — qualified hits
   // ARE the rite (no wound), unqualified ones trickle ×0.25 attrition
   if (br.totem && riteState() && G.finale.beat === 0 && dmg < 90) {
@@ -839,6 +854,13 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   }
   statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
   br.hp -= dmg;
+  // THE FIRST FUSION: the chained pair SHARES every wound — half of any
+  // hit mirrors to the partner (one linked work budget, never two bars)
+  if (br.chaseLinked && !meta.chaseMirror && chaseState() && dmg < 90) {
+    const partner = G.bricks.find(b => b.chaseLinked && !b.dead && b !== br);
+    if (partner) damageBrick(partner, dmg * 0.5, partner.bx + G.fx, partner.by + G.fy, null,
+      { source: 'other', noMega: true, chaseMirror: true });
+  }
   // RAID captains: real HP damage AND Break-meter credit — the segment's
   // own captain credits in full, the others at 35% (target order is an
   // advantage, never a mandate)
@@ -998,6 +1020,12 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       O.progress = O.total ? 1 - O.left / O.total : 0;
       if (O.left > 0) setCombatNotice('WARD SOURCE DOWN — ' + O.left + ' LEFT', '#9CFF57', 1.4);
       else completeNonAttrition(O, O.name || 'WARD CLEANSED');
+    }
+    if (G.objective && G.objective.type === 'undercard' && !G.objective.done && !br.crosser && !br.friendly) {
+      const O2 = G.objective;
+      O2.crowd = Math.min(1, (O2.crowd || 0) + 0.055 + (G.combo >= 5 ? 0.02 : 0));
+      O2.progress = O2.crowd;
+      if (O2.crowd >= 1) completeNonAttrition(O2, O2.name || 'THE CROWD ROARS');
     }
     if (br.laneMark && G.objective && G.objective.type === 'lanes' && !G.objective.done && !G.objective.failed) {
       const O = G.objective;
@@ -3127,11 +3155,11 @@ function updateObjective(dt) {
   const O = G.objective;
   if (!O || G.state !== 'play' || O.done || O.failed) return;
   // wardbreak/lanes/bells run in EVERY mode; the older families stay junkie-only
-  const crossMode = O.type === 'wardbreak' || O.type === 'lanes' || O.type === 'bells';
+  const crossMode = ['wardbreak', 'lanes', 'bells', 'undercard'].includes(O.type);
   if (G.mode !== 'junkie' && !crossMode) return;
   // WARDBREAK: the kill hook counts sources; attrition still resolves it
   // (every source death decrements, however it happened)
-  if (O.type === 'wardbreak') return;
+  if (O.type === 'wardbreak' || O.type === 'undercard') return; // kill hooks own their progress
   // BELLS: cross the three zones IN ORDER, holding each until it rings —
   // pure positioning, works identically in every mode
   if (O.type === 'bells') {
@@ -3481,6 +3509,10 @@ function completeFinale() {
     // every totem's mark earned
     F.mastery.mastered = !!F.rite.reclaimed && (F.rite.marks || 0) >= 3;
   }
+  if (F.format === 'chase' && F.chase) {
+    // countered = one chain baited apart; mastered = every chain AND every lock
+    F.mastery.mastered = (F.chase.chains || 0) >= 3 && (F.chase.locks || 0) >= 3;
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3739,7 +3771,7 @@ function updateRaid(dt) {
   if (!owner) { raidResolveSegment('fizzled'); return; }
   if (S.state === 'assembling') {
     S.t += dt;
-    if (S.t >= RD.assembleDur) {
+    if (S.t >= RD.assembleDur * spiralTellMul()) {
       raidSegmentFires(S);
       raidResolveSegment('fired');
     }
@@ -3768,6 +3800,10 @@ function updateFinaleDirector(dt) {
   if (F.format === 'hourglass' && F.hourglass) updateHourglass(dt);
   if (F.format === 'hunt' && F.hunt) updateHunt(dt);
   if (F.format === 'rite' && F.rite) updateRite(dt);
+  if (F.format === 'chase' && F.chase) {
+    if (F.chase.sealCD > 0) F.chase.sealCD -= dt;
+    updateChase(dt);
+  }
   if (F.format === 'circuit' && F.circuit) {
     const C = F.circuit;
     if (C.termCD > 0) C.termCD -= dt;
@@ -3789,7 +3825,7 @@ function updateFinaleDirector(dt) {
         if (R.laneX == null) R.laneX = W / 2;
         R.laneX += ((car.bx + G.fx) - R.laneX) * Math.min(1, dt * 2.2);
         R.carryT += dt;
-        if (R.carryT >= R.carryDur) { // the core moves on — unfinished work carries over
+        if (R.carryT >= R.carryDur * spiralTellMul()) { // the core moves on — unfinished work carries over
           R.carryT = 0; R.rotSincePass = true;
           relayRotateCarrier();
         }
@@ -3838,6 +3874,156 @@ function updateLadderMemory(dt) {
       continue;
     }
     G.columnStrikes.push({ x: m.x, w: 74, warn: 1.2, strike: 0.45, color: '#ec407a', echo: true });
+  }
+}
+// ---- THE FIRST FUSION (AFT-020 Phase 6, realm 9) ----
+function chaseState() { return (G.finale && G.finale.format === 'chase' && G.finale.chase) || null; }
+function chaseWord(k, fallback) {
+  const F = G.finale;
+  return (F && F.profile && F.profile.chase && F.profile.chase[k]) || fallback;
+}
+function chaseChooseRoute(br) {
+  const F = G.finale, C = F.chase;
+  C.chosen = br.subIdx || 0;
+  br.vesselRoute = true;
+  br.hp = br.maxHp = Math.max(3, Math.round((G.gauntlet ? G.gauntlet.legendHp : 20) * 0.3));
+  F.meter = { value: 0, max: 1, label: (br.poke.n || 'THE ROUTE').toUpperCase() };
+  for (const b of G.bricks) {
+    if (!b.vessel || b === br || b.dead) continue;
+    b.subBoss = false; b.vesselSealed = true;
+    b.hp = b.maxHp = 999;
+    b.openT = 0;
+  }
+  setCombatNotice(chaseWord('routeWord', 'YOUR ROAD OPENS') + ' · '
+    + chaseWord('sealWord', 'THE OTHERS SEAL'), '#ffcf5e', 2.4);
+  ringFx(br.bx + G.fx, br.by + G.fy, '#ffcf5e', 8, 120, 4, 0.5);
+  SFX.roar();
+}
+function chaseBeginRush(boss) {
+  const F = G.finale, C = F.chase;
+  C.rush = {
+    t: 0, warn: 1.4 * spiralTellMul(), run: 0.8, fired: false,
+    y: G.mode === 'junkie' ? shipY() : PADDLE_Y() - 60,
+    dir: boss.bx + G.fx < W / 2 ? 1 : -1, hit: false,
+  };
+  setCombatNotice('THE CHARGE COMES — MOVE!', '#ff8a80', 1.2);
+  SFX.enrage();
+}
+function chaseResolveRush(boss) {
+  const F = G.finale, C = F.chase, R = C.rush;
+  C.rush = null;
+  if (R.hit) return; // a landed charge shatters nothing
+  if (F.beat === 1) {
+    C.locks = Math.min(3, C.locks + 1);
+    F.mastery.counters.locks = C.locks;
+    setCombatNotice(chaseWord('lockWord', 'A LOCK SHATTERS') + ' — ' + C.locks + '/3', '#ffcf5e', 1.8);
+    G.shake = 8;
+    if (C.locks >= 3) chaseLink(boss);
+    return;
+  }
+  // the CLIMAX: a missed charge that passed OVER the puppeteer breaks a chain
+  const mar = G.bricks.find(b => b.chaseLinked && b.mythic && !b.dead);
+  if (mar && Math.abs((mar.by + G.fy) - R.y) < 90) {
+    C.chains = Math.min(3, C.chains + 1);
+    F.mastery.counters.chains = C.chains;
+    F.mastery.countered = true;
+    const jolt = b2 => {
+      if (!b2 || b2.dead) return;
+      damageBrick(b2, Math.max(1, b2.maxHp * 0.08), b2.bx + G.fx, b2.by + G.fy, null,
+        { source: 'other', noMega: true });
+      ringFx(b2.bx + G.fx, b2.by + G.fy, '#ffcf5e', 8, 130, 4, 0.55);
+    };
+    jolt(boss); jolt(mar);
+    setCombatNotice(chaseWord('chainWord', 'A CHAIN BREAKS') + ' — ' + C.chains + '/3', '#9CFF57', 1.8);
+    if (C.chains >= 3 && !C.exposed) {
+      C.exposed = true;
+      for (const b2 of G.bricks) if (b2.chaseLinked && !b2.dead) b2.prismMark = true; // the exposure window
+      setAnnounce('alert', '#ffcf5e', chaseWord('exposedWord', 'THE PAIR IS EXPOSED'), null, 2.6);
+      SFX.mega();
+    }
+  }
+}
+function chaseLink(boss) {
+  const F = G.finale, C = F.chase;
+  if (C.linked) return;
+  C.linked = true;
+  if (G.gauntlet) G.gauntlet.phase = 2;
+  startFinaleBeat(2);
+  const gen2 = genFor(G.level);
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  if (boss) boss.chaseLinked = true;
+  if (mid) {
+    const mw = Math.min(140, Math.max(92, W * 0.15));
+    const mar = {
+      bx: W * 0.3, by: Math.max(170, H * 0.3), hx: W * 0.3, hy: Math.max(170, H * 0.3),
+      row: -1, col: 1, w: mw, h: mw * 0.92,
+      hp: Math.max(6, Math.round(G.gauntlet.legendHp * 0.45)),
+      maxHp: Math.max(6, Math.round(G.gauntlet.legendHp * 0.45)),
+      phase: 1, phaseCount: 1, isBoss: true, mythic: true, chaseLinked: true,
+      poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      flash: 0, wobble: 1.8,
+      abilityCD: (SKIN.mythicAbilities[mid[0]]?.cd || 5) * 0.9,
+    };
+    G.bricks.push(mar);
+    getSprite(mid[0]);
+    beginBossReveal('mythic', [mar]);
+  }
+  // the puppets drop with their strings cut — the stage belongs to the pair
+  for (const b of G.bricks) {
+    if (b.vesselSealed && !b.dead) {
+      b.vesselSealed = false;
+      b.crosser = { vx: (b.bx < W / 2 ? -1 : 1) * 300, bobPh: (b.subIdx || 0) * 1.7 };
+    }
+  }
+  setAnnounce('alert', '#ffcf5e',
+    (F.profile && F.profile.beats[2] && F.profile.beats[2].label) || 'THE CHAINED CROWN',
+    (F.profile && F.profile.beats[2] && F.profile.beats[2].tip) || '', 3,
+    null, null, false, true, 'boss');
+}
+function updateChase(dt) {
+  const F = G.finale, C = F.chase;
+  if (F.beat === 0 && C.chosen != null && F.meter) {
+    const duel = G.bricks.find(b => b.vesselRoute && !b.dead);
+    if (duel) F.meter.value = 1 - duel.hp / duel.maxHp;
+  }
+  if (F.beat !== 1 && F.beat !== 2) return;
+  if (F.meter) F.meter = null;
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+  if (!boss) return;
+  // the sealed Vessels dance as MARIONETTES through the pursuit — a slow
+  // puppet bob on invisible strings (their volleys stay in the fire pool)
+  for (const b of G.bricks) {
+    if (b.dead || !b.vesselSealed) continue;
+    b.by = b.hy + Math.sin(G.time * 1.3 + (b.subIdx || 0) * 2) * 22;
+    b.bx = b.hx + Math.sin(G.time * 0.8 + (b.subIdx || 0)) * 30;
+  }
+  // THE CHARGE: a warned horizontal rush through the vessel's own band —
+  // classic keeps its calm (the rush passes high, a pacing beat only)
+  if (C.rush) {
+    const R = C.rush;
+    R.t += dt;
+    if (!R.fired && R.t >= R.warn) {
+      R.fired = true;
+      R.x = R.dir > 0 ? -60 : W + 60;
+    }
+    if (R.fired) {
+      R.x += R.dir * (W + 120) / R.run * dt;
+      if (G.mode !== 'classic' && !R.hit && G.invuln <= 0
+        && Math.abs(R.x - G.paddle.x) < 46 && Math.abs(R.y - shipY()) < 40) {
+        R.hit = true;
+        if (!absorbHit(G.paddle.x, shipY())) {
+          G.invuln = 2;
+          loseLife('THE CHARGE');
+        }
+      }
+      if ((R.dir > 0 && R.x > W + 80) || (R.dir < 0 && R.x < -80)) chaseResolveRush(boss);
+    }
+    return;
+  }
+  C.rushCD -= dt;
+  if (C.rushCD <= 0) {
+    C.rushCD = F.beat === 2 ? 8 : 9;
+    chaseBeginRush(boss);
   }
 }
 // ---- THE ECLIPSE RITE (AFT-020 Phase 6, realm 7) ----
@@ -3930,7 +4116,7 @@ function updateRite(dt) {
   }
   // the MOON STATE: bright and dark crescents trade rule on a slow clock
   R.moonT += dt;
-  if (R.moonT >= R.moonEvery) {
+  if (R.moonT >= R.moonEvery * spiralTellMul()) {
     R.moonT = 0;
     R.moon = R.moon === 'bright' ? 'dark' : 'bright';
     setCombatNotice(R.moon === 'bright'
@@ -4114,7 +4300,7 @@ function circuitArm() {
   C.armN = (C.armN || 0) + 1;
   const term = terms[C.armN % terms.length];
   const late = bossLastStand(boss);
-  const grammarIllum = [1.4, 2.2, 1.7][C.grammar] || 1.7;
+  const grammarIllum = ([1.4, 2.2, 1.7][C.grammar] || 1.7) * spiralTellMul();
   C.active = {
     t: 0, illum: grammarIllum, fired: false, hits: 0, need: 3,
     from: { x: boss.bx + G.fx, y: boss.by + G.fy },
@@ -4339,7 +4525,7 @@ function updateHourglass(dt) {
     const noct = G.bricks.find(b => b.hourActor === 'noct' && !b.dead);
     if (regent && noct) {
       HG.hourT += dt;
-      if (HG.hourT >= HG.hourEvery) {
+      if (HG.hourT >= HG.hourEvery * spiralTellMul()) {
         HG.hourT = 0;
         HG.hour = HG.hour === 'forge' ? 'still' : 'forge';
         setCombatNotice(HG.hour === 'forge'
@@ -4440,7 +4626,7 @@ function updateSiege(dt) {
         (F.profile && F.profile.siege && F.profile.siege.trailWord) || 'THE TRAIL BURNS', '#ff8a80', 2);
     } else {
       S.flipT += dt;
-      const flipEvery = S.flipEvery * (bossLastStand(sov) ? 0.72 : 1); // the remix: faster turns
+      const flipEvery = S.flipEvery * (bossLastStand(sov) ? 0.72 : 1) * spiralTellMul(); // remix + spiral: faster turns
       if (S.flipT >= flipEvery) {
         S.flipT = 0;
         S.burns = !S.burns;
@@ -4555,6 +4741,18 @@ function gauntletSummonMythic(forceSecret = false) {
   if (G.finale && G.finale.format === 'hunt') return;
   // the RITE's saboteur lives INSIDE the Sovereign fight — no round 3
   if (G.finale && G.finale.format === 'rite') return;
+  // the CHASE: a Sovereign felled before the linkage still summons the
+  // puppeteer — alone, chainless, already exposed
+  if (G.finale && G.finale.format === 'chase') {
+    const C4 = G.finale.chase;
+    if (!C4.linked) {
+      const liveBoss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+      chaseLink(liveBoss || null);
+      const mar2 = G.bricks.find(b => b.chaseLinked && b.mythic && !b.dead);
+      if (mar2) { C4.exposed = true; mar2.prismMark = true; }
+    }
+    return;
+  }
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
   if (riftOpen) {
     const vw = Math.min(300, Math.max(170, W * 0.38));
@@ -7059,6 +7257,7 @@ function update(dt) {
     if (G.level === 27 && !G.trial && !G.daily) {
       G.score += Math.round((300 + 2 * 250) * (G.fx_score ? 2 : 1));
       statsEndLevel();
+      completeFinale(); // the final chase resolves its mastery INTO the Dawn
       beginEnding();
       return;
     }

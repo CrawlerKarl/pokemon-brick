@@ -470,6 +470,8 @@
       tip: 'CROSS THE THREE BELL ZONES IN ORDER — HOLD EACH UNTIL IT RINGS' },
     '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
       tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
+    '7:1': { type: 'undercard', name: 'WIN THE UNDERCARD',
+      tip: 'FILL THE CROWD METER — KILLS AND COMBOS ARE THE SHOW' },
     '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
       tip: "OUTLAST THE SWARM — YOU DON'T HAVE TO KILL THEM ALL" },
     '3:0': { type: 'escort', name: 'ESCORT THE COURIER', species: 401, speciesT: 'steel', path: 'cross',
@@ -805,6 +807,30 @@
       stealWord: 'UMBRIX DRINKS YOUR SURGE', tagWord: 'TAGGED', reclaimWord: 'YOUR POWER RETURNS — IT STRIKES THE ECLIPSE',
     },
   };
+  // Realm 9 — THE FIRST FUSION (AFT-020 Phase 6): a branching route, a
+  // moving chase, and a LINKED two-boss climax that cracks straight into
+  // the Ninefold Dawn. Choose one Vessel as the route in (the others seal);
+  // Aurelion hunts in telegraphed charges — every charge that MISSES
+  // shatters a Cradle lock; Marionne puppets the sealed Vessels mid-chase,
+  // then CHAINS itself to Aurelion: bait his charge over the puppeteer to
+  // break the chains, and fell the exposed pair as one linked fight.
+  finaleProfiles[8] = {
+    format: 'chase',
+    title: FINALE_TITLES[8],
+    beats: [
+      { key: 'route', label: 'THE SEALED ROADS', work: 0.30,
+        tip: 'THE FIRST VESSEL YOU STRIKE OPENS YOUR ROAD — THE OTHERS SEAL' },
+      { key: 'pursuit', label: REALM_BOSSES[8].leg[0].toUpperCase(), work: 0.85,
+        tip: 'DODGE THE CHARGE — EVERY MISS SHATTERS A CRADLE LOCK' },
+      { key: 'fusion', label: 'THE CHAINED CROWN', work: 0.55,
+        tip: 'BAIT THE CHARGE OVER THE PUPPETEER — BREAK THE CHAINS, FELL THE PAIR' },
+    ],
+    chase: {
+      routeWord: 'YOUR ROAD OPENS', sealWord: 'THE OTHER ROADS SEAL',
+      lockWord: 'A CRADLE LOCK SHATTERS', chainWord: 'A CHAIN BREAKS',
+      exposedWord: 'THE PAIR IS EXPOSED — END IT', linkWord: 'THEY SHARE ONE FATE',
+    },
+  };
   // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
   // raid. Omega Seraph hangs overhead from the first second, assembling a
   // crown-lance from arena segments; the three captains each power one.
@@ -851,7 +877,7 @@
   // ---------- AFT-020 realm-authored conditions (Act I) ----------
   // Same engine physics, this realm's WORDS — and a Challenge stage runs
   // its realm's authored condition every time (identity, not dice).
-  const conditionAuthored = { 0: 'winds', 1: 'ambush', 2: 'swift', 3: 'swift', 4: 'bounty', 5: 'winds' };
+  const conditionAuthored = { 0: 'winds', 1: 'ambush', 2: 'swift', 3: 'swift', 4: 'bounty', 5: 'winds', 6: 'winds', 7: 'bounty', 8: 'ambush' };
   const conditionNames = {
     0: { winds: { name: 'WANDERING WARDS', desc: 'LOOSE WARDLIGHT BENDS EVERY FLIGHT PATH' } },
     1: { ambush: { name: 'BELLTOWER CROSSWINDS', desc: 'THE GALE CARRIES THEIR FIRE IN EARLY AND OFTEN' } },
@@ -859,6 +885,9 @@
     3: { swift: { name: 'CONVEYOR SHIFT', desc: 'THE FORGE LINES RUN HOT — EVERYTHING MOVES FASTER' } },
     4: { bounty: { name: 'GRID SURGE', desc: 'THE LIVE GRID PAYS DOUBLE — AND FIRES FOR IT' } },
     5: { winds: { name: 'PANE REFLECTIONS', desc: 'THE GALLERY GLASS BENDS EVERY FLIGHT PATH' } },
+    6: { winds: { name: 'LEY CROSSWINDS', desc: 'THE LEY LINES BEND EVERY FLIGHT PATH' } },
+    7: { bounty: { name: 'CROWD DECREE', desc: 'THE CROWD PAYS DOUBLE — AND DEMANDS A SHOW' } },
+    8: { ambush: { name: 'FUSION INSTABILITY', desc: 'THE SUNDERED AIR SPITS FIRE EARLY AND OFTEN' } },
   };
 
   // ---------- assembly ----------

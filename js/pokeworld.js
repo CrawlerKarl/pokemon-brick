@@ -564,6 +564,8 @@ const ENCOUNTER_OBJECTIVES = {
     tip: 'CROSS THE THREE BELL ZONES IN ORDER — HOLD EACH UNTIL IT RINGS' },
   '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
     tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
+  '7:1': { type: 'undercard', name: 'WIN THE UNDERCARD',
+    tip: 'FILL THE CROWD METER — KILLS AND COMBOS ARE THE SHOW' },
   '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
     tip: "OUTLAST THE SWARM — YOU DON'T HAVE TO KILL THEM ALL" },
   // ESCORT (Sinnoh arrival): a friendly TOGEPI crosses the combat zone
@@ -727,6 +729,27 @@ FINALE_PROFILES[6] = {
     stealWord: 'MARSHADOW DRINKS YOUR MEGA', tagWord: 'TAGGED', reclaimWord: 'YOUR POWER RETURNS — IT STRIKES THE MOON',
   },
 };
+// AFT-020 Phase 6 — region 9 runs the CHASE (engine format 'chase'):
+// choose a treasure as the road in, dodge Koraidon's telegraphed charges
+// (every miss shatters a lock), and break Pecharunt's chains off its back
+// to fell the linked pair straight into the ending.
+FINALE_PROFILES[8] = {
+  format: 'chase',
+  title: 'THE PALDEA FIRST FUSION',
+  beats: [
+    { key: 'route', label: 'THE SEALED ROADS', work: 0.30,
+      tip: 'THE FIRST TREASURE YOU STRIKE OPENS YOUR ROAD — THE OTHERS SEAL' },
+    { key: 'pursuit', label: 'KORAIDON', work: 0.85,
+      tip: 'DODGE THE CHARGE — EVERY MISS SHATTERS A CRADLE LOCK' },
+    { key: 'fusion', label: 'THE CHAINED CROWN', work: 0.55,
+      tip: 'BAIT THE CHARGE OVER THE PUPPETEER — BREAK THE CHAINS, FELL THE PAIR' },
+  ],
+  chase: {
+    routeWord: 'YOUR ROAD OPENS', sealWord: 'THE OTHER ROADS SEAL',
+    lockWord: 'A CRADLE LOCK SHATTERS', chainWord: 'A CHAIN BREAKS',
+    exposedWord: 'THE PAIR IS EXPOSED — END IT', linkWord: 'THEY SHARE ONE FATE',
+  },
+};
 // AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
 // Eternatus hangs over the arena assembling a crown-lance, the Galar
 // regis each power a segment, and Zarude begins bound in the arena vines.
@@ -768,7 +791,7 @@ assembleSkins({
   finaleProfiles: FINALE_PROFILES,
   stageTitles: STAGE_TITLES,
   // AFT-020: Act-I challenge stages run authored conditions (this skin's words)
-  conditionAuthored: { 0: 'winds', 1: 'ambush', 2: 'swift', 3: 'swift', 4: 'bounty', 5: 'winds' },
+  conditionAuthored: { 0: 'winds', 1: 'ambush', 2: 'swift', 3: 'swift', 4: 'bounty', 5: 'winds', 6: 'winds', 7: 'bounty', 8: 'ambush' },
   conditionNames: {
     0: { winds: { name: 'ROUTE WARDLIGHT', desc: 'STRAY WARDLIGHT BENDS EVERY FLIGHT PATH' } },
     1: { ambush: { name: 'ECRUTEAK CROSSWINDS', desc: 'THE GALE CARRIES THEIR FIRE IN EARLY AND OFTEN' } },
@@ -776,6 +799,9 @@ assembleSkins({
     3: { swift: { name: 'GEAR SHIFT', desc: 'TIME RUNS HOT — EVERYTHING MOVES FASTER' } },
     4: { bounty: { name: 'CITY LIGHTS', desc: 'THE GRID PAYS DOUBLE — AND FIRES FOR IT' } },
     5: { winds: { name: 'PANE REFLECTIONS', desc: 'THE GALLERY GLASS BENDS EVERY FLIGHT PATH' } },
+    6: { winds: { name: 'ISLAND CROSSWINDS', desc: 'THE TRADE WINDS BEND EVERY FLIGHT PATH' } },
+    7: { bounty: { name: 'CROWD DECREE', desc: 'THE CROWD PAYS DOUBLE — AND DEMANDS A SHOW' } },
+    8: { ambush: { name: 'PARADOX STATIC', desc: 'THE SUNDERED AIR SPITS FIRE EARLY AND OFTEN' } },
   },
   starterMon: STARTER_MON, regionIntros: REGION_INTROS, stageFlavor: STAGE_FLAVOR,
   stageNames: STAGE_NAMES, acts: ACTS, junkieItems: JUNKIE_ITEMS,

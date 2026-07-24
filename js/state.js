@@ -409,6 +409,9 @@ function setCombatNotice(text, color, duration = 1.15) {
   G.combatNotice = { text, color, t: duration, max: duration };
 }
 function bossPhaseCount(br) { return Math.max(1, br?.phaseCount || 3); }
+// AFT-020 TIME SPIRAL: the second lap tightens finale TELL clocks ×0.9 —
+// mechanics and counters stay identical (plan §7.10)
+function spiralTellMul() { return (G.finale && G.finale.spiral) ? 0.9 : 1; }
 function bossLastStand(br) { return (br?.phase || 1) >= bossPhaseCount(br); }
 // ============================================================
 //  BALANCE INSTRUMENTATION (Milestone 0) — one compact record per wave
@@ -1083,6 +1086,9 @@ function buildLevel(lvl) {
       const fp = finaleProfile(rIdx);
       const fmt = (fp && fp.format) || 'ladder';
       G.finale = {
+        // TIME SPIRAL remix: learned campaigns run modestly tighter tells
+        // (spiralTellMul ×0.9) — same mechanics, same counter solutions
+        spiral: cycle > 0,
         realm: rIdx, format: fmt, profile: fp || null,
         beat: 0, beatKey: (FINALE_FORMATS[fmt] || FINALE_FORMATS.ladder).beats[0], beatT: 0,
         beatClocks: {},
@@ -1252,6 +1258,18 @@ function buildLevel(lvl) {
           steal: null, stolen: 0, tags: 0, reclaimed: false, gateCD: 3.5, stealCD: 14,
         };
         G.finale.meter = { value: 0, max: 3, label: fp.beats[0].label || 'RITES' };
+      }
+      // THE FIRST FUSION (format 'chase'): the first Vessel struck opens
+      // the ROUTE (a 0.3 BE duel; its Aspect names the road); the other
+      // two SEAL — and later dance as the puppeteer's marionettes. The
+      // pursuit and the chained climax live in the director.
+      if (fmt === 'chase') {
+        for (const v of G.bricks) if (v.subBoss && !v.dead) v.vessel = true;
+        G.finale.chase = {
+          chosen: null, locks: 0, chains: 0, linked: false, exposed: false,
+          rush: null, rushCD: 7,
+        };
+        G.finale.meter = { value: 0, max: 1, label: fp.beats[0].label || 'ROUTE' };
       }
       // SIEGE OF THE DEEP CURRENT (format 'siege'): the Sovereign circles
       // from the opening behind the PRESSURE SEAL (×0.12 damage while any
@@ -1814,7 +1832,7 @@ function buildLevel(lvl) {
   // defend) and the beat director remain STARFIGHTER's.
   if (!hasBoss && G.mode !== 'junkie') {
     const oX = encounterObjective(lvl);
-    if (oX && (oX.type === 'wardbreak' || oX.type === 'lanes' || oX.type === 'bells')) {
+    if (oX && ['wardbreak', 'lanes', 'bells', 'undercard'].includes(oX.type)) {
       G.objective = { ...oX, t: 0, done: false, failed: false, progress: 0 };
     }
   }
@@ -1920,6 +1938,7 @@ function buildLevel(lvl) {
       O.zoneW = Math.max(110, W * 0.15);
       O.zones = [W * 0.25, W * 0.5, W * 0.75];
     }
+    if (O.type === 'undercard') { O.crowd = 0; }
   }
   // AFT-008: stamp the wave's WORK reference on the ledger record — total
   // live enemy HP at build, plus the region's Sovereign HP as the
