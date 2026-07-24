@@ -615,6 +615,27 @@ FINALE_PROFILES[1] = {
     bloomName: 'TIME BLOSSOM', deflectWord: 'THE WIND TURNS IT',
   },
 };
+// AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
+// Eternatus hangs over the arena assembling a crown-lance, the Galar
+// regis each power a segment, and Zarude begins bound in the arena vines.
+FINALE_PROFILES[7] = {
+  format: 'raid',
+  title: 'THE GALAR RAID',
+  beats: [
+    { key: 'assembly', label: 'THE CROWN ASSEMBLES', work: 0.15,
+      tip: 'BREAK THE SEGMENT — HIT THE SENTINEL POWERING IT' },
+    { key: 'crown', label: 'BREAK THE CROWN', work: 0.30,
+      tip: 'THE SENTINELS TRADE THE WORK — FOLLOW THE TETHER' },
+    { key: 'window', label: 'THE FAILING WEAPON', work: 1.0,
+      tip: 'THE CROWN FAILS — STRIKE ETERNATUS NOW' },
+  ],
+  raid: {
+    meterLabel: 'BREAK METER', seraphShieldWord: 'THE CROWN SHIELDS IT',
+    segmentWord: 'CROWN SEGMENT', boundName: 'ZARUDE IS BOUND',
+    freeWord: 'ZARUDE UNBOUND — IT TEARS THE CROWN!',
+    jobs: ['ENERGIZE', 'REINFORCE', 'FREEZE'],
+  },
+};
 
 assembleSkins({
   names: NAMES, gens: GENS, habitatPacks: HABITAT_PACKS, typeClusters: TYPE_CLUSTERS,

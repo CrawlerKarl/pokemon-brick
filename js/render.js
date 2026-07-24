@@ -1242,6 +1242,9 @@ function drawBricks() {
     const col = TYPE_COLORS[br.poke.t];
     const smallCard = br.w < 72; // mobile-sized cards get minimal overlays
     const tinyCard = br.w < 44;  // late-game horde cards: sprite + frame only
+    // AFT-020 raid props carry no sprite id — they draw procedurally
+    if (br.raidVine) { drawRaidVine(br, x, y); continue; }
+    if (br.raidCover) { drawRaidCover(br, x, y); continue; }
     // NB: br.flash is decayed in update() (dt-scaled) — render only READS it.
     // ---- FREE-FLYING ALIEN: broke out of its box — just the Pokémon,
     // banking through its pattern with a type-colored aura underneath.
@@ -2809,6 +2812,122 @@ function drawRelayFx() {
     }
     ctx.restore();
   }
+}
+// AFT-020 THE SERAPH RAID: crown segments assemble on visible arcs over the
+// Sovereign; each live segment shows BOTH clocks (outer sweep = assembly
+// danger, inner bright fill = break progress) and a dashed TETHER to the
+// captain powering it — shape and motion, never color alone. The bound
+// mythic reads through crossed chain strokes until freed.
+function drawRaidFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'raid' || !F.raid || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const RD = F.raid;
+  const seraph = G.bricks.find(b => b.raidSeraph && !b.dead);
+  if (seraph && !RD.window) {
+    const cx = seraph.bx + G.fx, cy = seraph.by + G.fy;
+    const rad = Math.max(seraph.w, seraph.h) * 0.85;
+    for (let i = 0; i < RD.segments.length; i++) {
+      const S = RD.segments[i];
+      const a0 = Math.PI + (i * Math.PI) / 3 + 0.12;
+      const a1 = Math.PI + ((i + 1) * Math.PI) / 3 - 0.12;
+      ctx.save();
+      if (S.state === 'broken' || S.state === 'torn' || S.state === 'fizzled') {
+        // a resolved slot is a visible GAP in the crown — a few shard ticks
+        ctx.strokeStyle = 'rgba(176,190,197,0.35)';
+        ctx.lineWidth = 2;
+        for (let k = 0; k < 3; k++) {
+          const ak = a0 + ((a1 - a0) * (k + 0.5)) / 3;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(ak) * (rad - 5), cy + Math.sin(ak) * (rad - 5));
+          ctx.lineTo(cx + Math.cos(ak) * (rad + 5), cy + Math.sin(ak) * (rad + 5));
+          ctx.stroke();
+        }
+      } else {
+        const live = S.state === 'assembling';
+        ctx.lineWidth = live ? 6 : 3;
+        ctx.strokeStyle = live ? 'rgba(255,138,128,0.8)' : 'rgba(120,144,156,0.5)';
+        ctx.beginPath(); ctx.arc(cx, cy, rad, a0, a1); ctx.stroke();
+        if (live) {
+          // assembly clock sweeps the slot; break progress brightens inside it
+          const asm = Math.min(1, S.t / RD.assembleDur);
+          ctx.lineWidth = 8;
+          ctx.strokeStyle = 'rgba(255,82,82,0.9)';
+          ctx.beginPath(); ctx.arc(cx, cy, rad, a0, a0 + (a1 - a0) * asm); ctx.stroke();
+          const brk = Math.min(1, S.broken / RD.segNeed);
+          if (brk > 0) {
+            ctx.lineWidth = 3.4;
+            ctx.strokeStyle = '#80d8ff';
+            ctx.beginPath(); ctx.arc(cx, cy, rad - 9, a0, a0 + (a1 - a0) * brk); ctx.stroke();
+          }
+          // the tether names the captain that powers this segment
+          const owner = G.bricks.find(b => b.raidCaptain && !b.dead && b.subIdx === S.owner);
+          if (owner) {
+            const mid = (a0 + a1) / 2;
+            ctx.setLineDash([7, 7]);
+            ctx.lineDashOffset = -(G.time * 40) % 14; // energy flows captain → crown
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255,138,128,0.55)';
+            ctx.beginPath();
+            ctx.moveTo(owner.bx + G.fx, owner.by + G.fy - owner.h / 2);
+            ctx.lineTo(cx + Math.cos(mid) * rad, cy + Math.sin(mid) * rad);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      }
+      ctx.restore();
+    }
+  }
+  // the bound mythic: crossed chain strokes until freed
+  const bnd = G.bricks.find(b => b.raidBound && !b.dead && !b.raidFreed);
+  if (bnd) {
+    const bx2 = bnd.bx + G.fx, by2 = bnd.by + G.fy;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(185,246,202,0.65)';
+    ctx.lineWidth = 2.4;
+    for (const s2 of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(bx2 - bnd.w * 0.62, by2 - s2 * bnd.h * 0.5);
+      ctx.quadraticCurveTo(bx2, by2 + s2 * bnd.h * 0.18, bx2 + bnd.w * 0.62, by2 - s2 * bnd.h * 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+// procedural props (no sprite ids): the binding vines and the fallen cover
+function drawRaidVine(br, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  const hurt = br.hp < br.maxHp;
+  ctx.strokeStyle = hurt ? 'rgba(174,213,129,0.75)' : 'rgba(124,179,66,0.95)';
+  ctx.lineWidth = 4;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * 7, br.h / 2);
+    ctx.quadraticCurveTo(i * 12 + Math.sin(G.time * 2 + i) * 3, 0, i * 5, -br.h / 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#33691e';
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.sin(i * 2.7) * 8, -br.h / 2 + 8 + i * (br.h - 16) / 2, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (br.flash > 0) { ctx.globalAlpha = br.flash * 0.7; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(-br.w / 2, -br.h / 2, br.w, br.h); }
+  ctx.restore();
+}
+function drawRaidCover(br, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = 'rgba(96,125,139,0.9)';
+  ctx.strokeStyle = '#cfd8dc';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-br.w / 2, 4); ctx.lineTo(-br.w * 0.3, -br.h / 2); ctx.lineTo(br.w * 0.34, -br.h * 0.4);
+  ctx.lineTo(br.w / 2, 6); ctx.lineTo(br.w * 0.1, br.h / 2); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
 }
 function drawTelegraphs() {
   for (const tg of G.telegraphs) {
@@ -4847,6 +4966,10 @@ function drawFinaleMeterBanner() {
   let readout = '';
   if (F.format === 'relay' && F.relay && F.beat === 0) {
     readout = 'PASS ' + Math.min(F.relay.need, F.relay.passes + 1) + '/' + F.relay.need;
+  } else if (F.format === 'raid' && F.raid) {
+    if (F.raid.window) return; // the failing-weapon beat reads from the HUD dock
+    readout = ((F.profile && F.profile.raid && F.profile.raid.segmentWord) || 'SEGMENT')
+      + ' ' + Math.min(F.raid.segments.length, F.raid.seg + 1) + '/' + F.raid.segments.length;
   } else if (F.beat === 2 && F.coda) {
     readout = (F.mastery.counters.blooms || 0) + '/' + M.max;
   } else if (F.beat === 1) return; // the boss beat reads from the HUD dock, not a meter
@@ -9068,6 +9191,7 @@ function render() {
     drawRallyZone();
     drawTelegraphs();
     drawRelayFx(); // AFT-020: the gale-relay corridor + carrier cues (under the sprites)
+    drawRaidFx();  // AFT-020: the raid's crown arcs, tethers + binding read
     drawBricks();
     drawFragments();
     drawShield();

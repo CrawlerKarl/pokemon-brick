@@ -1098,6 +1098,53 @@ function buildLevel(lvl) {
         };
         G.finale.meter = { value: 0, max: 3, label: (fp.relay && fp.relay.meterLabel) || 'CORE' };
       }
+      // THE SERAPH RAID (format 'raid'): no rounds, no sequential cleanup.
+      // The Sovereign never parks — it hangs overhead from the first second
+      // behind the crown's shield (×0.25 damage, honest cue) while the
+      // captains power its segments; damaging the segment's OWN captain
+      // fills the BREAK meter fastest. The mythic begins BOUND in arena
+      // vines — freeing it is optional risk/reward. The round controller
+      // is bypassed for this format; the director owns progression.
+      if (fmt === 'raid') {
+        const seraph = G.bricks.find(b => b.isBoss && b.dormant);
+        if (seraph) {
+          seraph.dormant = false;
+          seraph.bx = seraph.hx = W / 2;
+          seraph.raidSeraph = true;
+          seraph.phaseCount = 1; // progression is the crown, never HP thirds
+        }
+        for (const v of G.bricks) if (v.subBoss && !v.dead) v.raidCaptain = true;
+        const mid = gen.gauntlet.myth;
+        const bX = Math.min(W - 70, W * 0.88), bY = Math.max(200, H * 0.36);
+        G.bricks.push({
+          bx: bX, by: bY, hx: bX, hy: bY, row: -4, col: 0,
+          w: Math.min(84, bw * 1.1), h: Math.min(74, bh * 1.3),
+          hp: 999, maxHp: 999, bare: true, raidBound: true,
+          poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+          flash: 0, wobble: 1.3,
+        });
+        getSprite(mid[0]);
+        for (let vi = 0; vi < 2; vi++) {
+          const vx3 = bX + (vi ? 30 : -30);
+          G.bricks.push({
+            bx: vx3, by: bY + 40, hx: vx3, hy: bY + 40, row: -4, col: 1 + vi,
+            w: 26, h: 40, hp: 2, maxHp: 2, bare: true, raidVine: true,
+            poke: { id: 0, t: 'grass', n: 'BINDING VINE' },
+            flash: 0, wobble: vi * 2.1,
+          });
+        }
+        G.finale.raid = {
+          seg: 0,
+          segments: [
+            { state: 'assembling', t: 0, owner: 0, broken: 0 },
+            { state: 'waiting', t: 0, owner: 1, broken: 0 },
+            { state: 'waiting', t: 0, owner: 2, broken: 0 },
+          ],
+          segNeed: Math.max(3, Math.round(bossHp * 0.12)),
+          assembleDur: 16, window: false, windowT: 0, freed: false, shieldCD: 0,
+        };
+        G.finale.meter = { value: 0, max: 1, label: (fp.raid && fp.raid.meterLabel) || 'BREAK' };
+      }
       setAnnounce('alert', gen.accent, (fp && fp.title) || ('THE ' + gen.name + ' GAUNTLET'),
         ((fp && fp.beats[0].label) || 'ROUND 1 — THE SENTINELS') + ': '
           + subs.map(x => SKIN.names[x[0]].toUpperCase()).join(' · '), 3.6,
@@ -1105,8 +1152,14 @@ function buildLevel(lvl) {
           ? fp.beats[0].tip
           : (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
             'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true, 'boss');
-      // AFT-002: the round-1 reveal — the sentinel trio, one shared contract
-      beginBossReveal('sentinels', G.bricks.filter(b => b.subBoss && !b.dead));
+      // AFT-002: the opening reveal — the trio for a ladder/relay, but the
+      // raid's headliner is the SOVEREIGN already hanging over the arena
+      if (fmt === 'raid') {
+        const sb = G.bricks.find(b => b.raidSeraph && !b.dead);
+        if (sb) beginBossReveal('legendary', [sb]);
+      } else {
+        beginBossReveal('sentinels', G.bricks.filter(b => b.subBoss && !b.dead));
+      }
     } else G.gauntlet = null;
     // pre-warm the boss's phase-tint silhouettes so the enrage transition
     // never pays a cache-miss hitch mid-fight
@@ -1333,8 +1386,9 @@ function buildLevel(lvl) {
     // stay compositionally tethered to it — they compress and reform through
     // teleports, exchange sides in phase 2, and become counter-rotating
     // orbits in the last stand (see the guard controller in update.js).
-    G.bricks = G.bricks.filter(b2 => b2.isBoss || b2.subBoss);
-    const nG = Math.min(12, 10 + (regionsIn >= 5 ? 2 : 0));
+    G.bricks = G.bricks.filter(b2 => b2.isBoss || b2.subBoss || b2.raidBound || b2.raidVine);
+    const raidWave = !!(G.finale && G.finale.format === 'raid');
+    const nG = raidWave ? 0 : Math.min(12, 10 + (regionsIn >= 5 ? 2 : 0)); // the raid's captains ARE the escort
     const perWing = nG / 2;
     const gw = Math.min(52, Math.max(IS_TOUCH ? 40 : 34, bw * 0.55));
     const gh = Math.min(46, Math.max(IS_TOUCH ? 35 : 30, bh * 0.78));

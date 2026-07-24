@@ -1738,6 +1738,75 @@ window.requestAnimationFrame = function () { return 0; };
     return '3 carrier passes (1 clean) · corridor live · Vows disperse unbroken · Sovereign mid-flow · bloom coda, no third bar';
   });
 
+  // AFT-020 Phase 2: THE SERAPH RAID — the simultaneous format. Sovereign
+  // live from second one behind the crown shield, captains powering visible
+  // segments, a Break meter with owner-weighted credit, a bound mythic as
+  // optional risk/reward, and one coordinated window when the weapon fails.
+  test('AFT-020 P2: the SERAPH RAID — live Sovereign, break meter, bound mythic, window', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(24, true, { seed: 'RAID1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const F = G.finale, RD = F && F.raid;
+    assert(F && F.format === 'raid' && RD && F.beatKey === 'assembly', 'raid arms on the region-8 finale');
+    const seraph = G.bricks.find(b => b.raidSeraph);
+    assert(seraph && !seraph.dormant && !seraph.dead, 'the Sovereign is LIVE from the first second');
+    assert(G.bricks.filter(b => b.raidCaptain && !b.dead).length === 3, 'three captains share the arena');
+    assert(G.bricks.some(b => b.raidBound) && G.bricks.filter(b => b.raidVine).length === 2,
+      'the bound mythic + two binding vines');
+    assert(!G.bricks.some(b => b.guard), 'no wing guards — the captains are the escort');
+    await runFrames(10);
+    // the crown shield quarters Sovereign damage, honestly cued
+    const shp = seraph.hp;
+    damageBrick(seraph, 4, seraph.bx, seraph.by, null, { source: 'bolt' });
+    assert(Math.abs((shp - seraph.hp) - 1) < 0.01,
+      'crown shield quarters Seraph damage (lost ' + (shp - seraph.hp).toFixed(2) + ')');
+    // the bound mythic is untouchable — hits point at the vines
+    const bnd = G.bricks.find(b => b.raidBound);
+    damageBrick(bnd, 5, bnd.bx, bnd.by, null, { source: 'bolt' });
+    assert(bnd.hp === bnd.maxHp, 'bound mythic takes no damage');
+    // segment 1: owner-weighted meter credit (full vs 35%)
+    const S0 = RD.segments[0];
+    assert(S0.state === 'assembling', 'segment 1 assembles from the start');
+    const owner = G.bricks.find(b => b.raidCaptain && !b.dead && b.subIdx === S0.owner);
+    const other = G.bricks.find(b => b.raidCaptain && !b.dead && b.subIdx !== S0.owner);
+    damageBrick(other, 2, other.bx, other.by, null, { source: 'bolt' });
+    assert(Math.abs(S0.broken - 0.7) < 0.01, 'off-captain damage credits 35% (got ' + S0.broken.toFixed(2) + ')');
+    assert(other.hp < other.maxHp, 'captains take real HP damage too');
+    damageBrick(owner, RD.segNeed, owner.bx, owner.by, null, { source: 'bolt' });
+    assert(RD.seg === 1 && RD.segments[0].state === 'broken' && F.beatKey === 'crown',
+      'the owner-fed meter breaks segment 1 → the crown beat');
+    assert(G.bricks.some(b => b.raidCover && !b.dead), 'a broken segment falls as temporary cover');
+    // segment 2 completes its assembly → ONE telegraphed lane punish
+    RD.segments[1].t = RD.assembleDur - 0.05;
+    G.columnStrikes.length = 0;
+    await runFrames(8);
+    assert(RD.segments[1].state === 'fired', 'an unbroken segment completes and discharges');
+    assert(G.columnStrikes.length === 1, 'the discharge is ONE lane strike (got ' + G.columnStrikes.length + ')');
+    // segment 3: shatter the vines → the mythic tears it open
+    for (const b of G.bricks.filter(b2 => b2.raidVine && !b2.dead)) {
+      b.hp = 0.5;
+      damageBrick(b, 2, b.bx, b.by, null, { source: 'bolt' });
+    }
+    assert(RD.freed === true && RD.segments[2].state === 'torn',
+      'freeing the bound mythic tears the open segment');
+    // all three resolved → the weapon fails: recovery + the ×1.35 window
+    assert(RD.window === true && F.beatKey === 'window' && RD.windowT > 0, 'the weapon fails into the window beat');
+    const shp2 = seraph.hp;
+    damageBrick(seraph, 4, seraph.bx, seraph.by, null, { source: 'bolt' });
+    assert(Math.abs((shp2 - seraph.hp) - 5.4) < 0.05,
+      'the failure window amplifies damage ×1.35 (lost ' + (shp2 - seraph.hp).toFixed(2) + ')');
+    // fell the Sovereign → optional actors disperse, the wave clears
+    seraph.hp = 0.5;
+    damageBrick(seraph, 2, seraph.bx, seraph.by, null, { source: 'bolt' });
+    await runFrames(500, () => (G.state !== 'play' ? false : undefined));
+    assert(G.state !== 'play', 'the raid clears once the Sovereign falls (state ' + G.state + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 24);
+    assert(L && L.finaleFormat === 'raid' && L.finaleCounters && L.finaleCounters.segmentsBroken === 1
+      && L.finaleMastery === 'countered', 'ledger: raid format, 1 broken segment, countered');
+    return 'Sovereign live behind the crown · owner-weighted break meter · fired/torn/broken segments · bound mythic freed · ×1.35 window · no cleanup round';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2278,6 +2347,14 @@ window.requestAnimationFrame = function () { return 0; };
       const sentinels = G.bricks.filter(b => b.subBoss && !b.dead);
       assert(sentinels.length && sentinels.every(b => b.phaseCount === 1),
         GENS[region].name + ' sentinels are not one phase');
+      // AFT-020: a RAID has no rounds — its Sovereign is live at build
+      // behind the crown; its full contract lives in the dedicated raid test
+      if (((finaleProfile(region) || {}).format || 'ladder') === 'raid') {
+        const seraph = G.bricks.find(b => b.raidSeraph && !b.dead);
+        assert(seraph && !seraph.dormant && seraph.phaseCount === 1,
+          GENS[region].name + ' raid Sovereign must be live with crown-driven progression');
+        continue;
+      }
       for (const b of sentinels) b.dead = true;
       gauntletWake();
       const legend = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
@@ -2298,9 +2375,11 @@ window.requestAnimationFrame = function () { return 0; };
         mythStyles.add(G.gauntlet.entry?.style);
       }
     }
-    const fightMyths = GENS.filter((g, r) => ((finaleProfile(r) || {}).format || 'ladder') !== 'relay').length;
+    const fmtOf = r => (finaleProfile(r) || {}).format || 'ladder';
+    const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid').length;
+    const fightMyths = GENS.filter((g, r) => fmtOf(r) !== 'relay' && fmtOf(r) !== 'raid').length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
-    assert(legendStyles.size === 9, 'legendary entrances are not unique across all generations');
+    assert(legendStyles.size === wakingLegends, 'legendary entrances are not unique across the waking finales');
     assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
 
     trialSel.region = 0; trialSel.stage = 2; trialSel.round = 3;
@@ -2510,6 +2589,7 @@ window.requestAnimationFrame = function () { return 0; };
         const ordinaryWave = stageIdx(lvl) !== 2;
         for (const br of G.bricks) {
           if (!isBossOnlyPokemon(br.poke.id)) continue;
+          if (br.raidBound) continue; // AFT-020: the raid's BOUND mythic is a boss-role actor
           if (ordinaryWave || (!br.isBoss && !br.subBoss)) {
             leaks.push(mode + ' L' + lvl + ' #' + br.poke.id + ' spawned as ordinary');
           }
@@ -3812,10 +3892,14 @@ window.requestAnimationFrame = function () { return 0; };
     try {
       SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
       resetRun(24, true, { seed: 'eternatus-duel' });
-      jumpToGauntletRound(1);
       paused = false; G.freeze = 0;
+      // AFT-020: region 8 is THE RAID — the Sovereign is live at build. The
+      // duel drives the KIT in isolation: mark the crown failed (plain
+      // damage rules) and clear the raid's other actors off the arena.
       const boss = G.bricks.find(b => b.isBoss && !b.dead);
-      assert(boss && boss.poke.id === 890, 'round jump did not reach Eternatus');
+      assert(boss && boss.poke.id === 890, 'the raid did not open with Eternatus live');
+      if (G.finale && G.finale.raid) { G.finale.raid.window = true; G.finale.raid.windowT = 0; G.finale.meter = null; }
+      for (const b of G.bricks) if (b.raidCaptain || b.raidVine || b.raidBound) b.dead = true;
       if (G.gauntlet) G.gauntlet.entry = null;
       G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
       mouseX = W / 2; G.paddle.x = W / 2;
@@ -4091,9 +4175,11 @@ window.requestAnimationFrame = function () { return 0; };
         chName: 'MOONBLAST',       pattern: 'rain',   cols: 5 },
       { lvl: 21, id: 802,  mon: 'MARSHADOW', rush: true,                             // SHADOW SNEAK afterimage rider
         chName: 'SPECTRAL THIEF',  pattern: 'clock',  cols: 6 },
-      { lvl: 24, id: 893,  mon: 'ZARUDE',    turn: 'vineTurn',  flag: 'gear',    count: 2,
-        flavor: s => s.every(x => x.gear && x.kind === 'vine' && x.gear.dripEvery === 2), // every-other-beat drip
-        chName: 'POWER WHIP',      pattern: 'pincer', cols: 6 },
+      // ZARUDE's mythic duel is RETIRED BY DESIGN (AFT-020): the region-8
+      // finale is THE SERAPH RAID and Zarude begins BOUND in the arena
+      // vines — a freed menace, never a third health bar. Its POWER WHIP
+      // kit stays as engine data; the raid's own contract is covered by
+      // 'AFT-020 P2: the SERAPH RAID'.
       { lvl: 27, id: 1025, mon: 'PECHARUNT', turn: 'mochiTurn', flag: 'feather', count: 3,
         flavor: s => s.every(x => x.feather && x.feather.fan === 3 && x.feather.swayAmp > 34), // heavy sway
         chName: 'MALIGNANT CHAIN', pattern: 'rain',   cols: 7 },

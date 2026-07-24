@@ -676,6 +676,31 @@
       bloomName: 'HOURSEED BLOOM', deflectWord: 'THE WIND TURNS IT',
     },
   };
+  // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
+  // raid. Omega Seraph hangs overhead from the first second, assembling a
+  // crown-lance from arena segments; the three captains each power one.
+  // Damaging the segment's OWN captain fills the BREAK meter fastest; a
+  // broken segment leaves cover. Vyrakka begins bound in the arena vines —
+  // freeing her tears a segment open, and turns her loose. When the weapon
+  // fails, one coordinated window ends it. No sequential cleanup.
+  finaleProfiles[7] = {
+    format: 'raid',
+    title: FINALE_TITLES[7],
+    beats: [
+      { key: 'assembly', label: 'THE CROWN ASSEMBLES', work: 0.15,
+        tip: 'BREAK THE SEGMENT — HIT THE CAPTAIN POWERING IT' },
+      { key: 'crown', label: 'BREAK THE CROWN', work: 0.30,
+        tip: 'THE CAPTAINS TRADE THE WORK — FOLLOW THE TETHER' },
+      { key: 'window', label: 'THE FAILING WEAPON', work: 1.0,
+        tip: 'THE CROWN FAILS — STRIKE THE SERAPH NOW' },
+    ],
+    raid: {
+      meterLabel: 'BREAK METER', seraphShieldWord: 'THE CROWN SHIELDS IT',
+      segmentWord: 'CROWN SEGMENT', boundName: 'VYRAKKA IS BOUND',
+      freeWord: 'VYRAKKA UNBOUND — SHE TEARS THE CROWN!',
+      jobs: ['ENERGIZE', 'REINFORCE', 'FREEZE'],
+    },
+  };
 
   // ---------- assembly ----------
   Object.assign(AF, {

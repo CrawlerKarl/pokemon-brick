@@ -1183,6 +1183,8 @@ function onPress(x, y) {
         if (inRect(x, y, T.region(i))) {
           trialSel.region = i;
           if (i !== 0 && trialSel.round === 3) trialSel.round = 2;
+          // a RAID is one continuous encounter — only the full launch exists
+          if (((finaleProfile(i) || {}).format || 'ladder') === 'raid') trialSel.round = 0;
           trialSel.phase = 1; // new region = new boss — reset the practice phase
           SFX.wall(); return;
         }

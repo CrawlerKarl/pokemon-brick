@@ -640,7 +640,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // like SHELL ARMOR — inside damageBrick, so the combat ledger stays honest
   // (no new loseLife path). STRICTLY gated on subBoss: it never touches
   // legendaries or mythics.
-  if (br.subBoss && !br.relayVow) { // relay Vows own ONE defensive rule (the core), never the guard too
+  if (br.subBoss && !br.relayVow && !br.raidCaptain) { // relay Vows / raid captains own ONE rule each — never the guard too
     if ((br.openT || 0) > 0) {
       if (!br.openHit) { br.openHit = true; dmg *= 1.2; } // window's first strike rewarded
     } else {
@@ -651,7 +651,32 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
     }
   }
+  // THE SERAPH RAID: the crown is the Sovereign's ONE defensive rule —
+  // ×0.25 while it stands (with an honest cue), ×1.35 in the failure
+  // window, plain ×1.0 after the window closes. Captains keep full-damage
+  // HP; their meter credit rides in raidCaptainHit below.
+  if (br.raidSeraph && G.finale && G.finale.raid && dmg < 90) {
+    const RD = G.finale.raid;
+    if (!RD.window) {
+      dmg *= 0.25;
+      if ((RD.shieldCD || 0) <= 0) {
+        RD.shieldCD = 1.1;
+        const word = (G.finale.profile && G.finale.profile.raid && G.finale.profile.raid.seraphShieldWord) || 'SHIELDED';
+        addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 14, word, '#b0bec5', 11);
+      }
+    } else if (RD.windowT > 0) dmg *= 1.35;
+  }
   statsDmgCat('guard', dmg - dPreGuard);
+  // the raid mythic is a PRESENCE (bound) or a menace (freed) — never a
+  // required target, never a damage sink. Bound hits point at the vines.
+  if (br.raidBound) {
+    br.flash = 1;
+    if (!br.raidFreed && G.finale && G.finale.raid && (G.finale.raid.boundCD || 0) <= 0) {
+      G.finale.raid.boundCD = 1.2;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 14, 'BREAK THE VINES', '#b9f6ca', 11);
+    }
+    return;
+  }
   // THE GALE RELAY (AFT-020): Vows never lose HP to damage — a carrier hit
   // feeds the pass meter (real, ledgered work); a non-carrier hit is turned
   // by the wind (a readable deflect cue, no hidden progress). Direct kills
@@ -662,6 +687,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   }
   statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
   br.hp -= dmg;
+  // RAID captains: real HP damage AND Break-meter credit — the segment's
+  // own captain credits in full, the others at 35% (target order is an
+  // advantage, never a mandate)
+  if (br.raidCaptain && G.finale && G.finale.raid) raidCaptainHit(br, dmg);
   if (dmg < 90 && G.secretUpg.echo && !meta.secretEcho) {
     G.secretHit = (G.secretHit || 0) + 1;
     if (G.secretHit % 7 === 0) {
@@ -786,6 +815,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     br.dead = true;
     statsKill();
     if (br.reinf) statsKillRenew(); // renewable-population kill (AFT-008 farm audit)
+    // RAID: the last vine down frees the bound mythic (optional risk/reward)
+    if (br.raidVine && raidState() && !G.bricks.some(b => b.raidVine && !b.dead && b !== br)) raidFreeBound();
     if (br.isBoss) statsBossPhaseMark(br, br.phase); // close the final phase clock
     if (G.runStats) {
       G.runStats.bricksBroken++;
@@ -3083,6 +3114,8 @@ function updateReveal(dt) {
 // Shared by the trial picker, the dev launcher, and the boss test harness.
 function jumpToGauntletRound(round, phase) {
   if (!(round > 0) || !G.gauntlet) return;
+  // a RAID is one continuous encounter — there is no round to jump to
+  if (G.finale && G.finale.format === 'raid') return;
   // AFT-004: banners/entrances/story cards from earlier rounds do not follow
   // a jump — only the run-level trial notice survives; the wake/summon below
   // queues exactly ONE boss reveal for the selected round.
@@ -3131,6 +3164,10 @@ function completeFinale() {
     F.mastery.countered = F.mastery.countered || (F.relay.cleanPasses >= 1);
     F.mastery.mastered = F.relay.cleanPasses >= F.relay.need
       && (F.mastery.counters.blooms || 0) >= 4;
+  }
+  if (F.format === 'raid' && F.raid) {
+    F.mastery.countered = (F.mastery.counters.segmentsBroken || 0) >= 1;
+    F.mastery.mastered = (F.mastery.counters.segmentsBroken || 0) >= 3;
   }
   const L = statsCur();
   if (L) {
@@ -3272,9 +3309,149 @@ function updateRelayCoda(dt) {
   }
   if (C.t >= C.dur && C.spawned >= C.blooms) F.codaHold = false; // falling pickups still hold the clear
 }
+// ---- THE SERAPH RAID (AFT-020 Phase 2 — the simultaneous format) ----
+// No rounds: the Sovereign, the captains, and the bound mythic all matter
+// from the first second. Each crown segment ASSEMBLES on a visible clock
+// (teach: segment 1 is slow and announced); damaging its owner captain
+// fills the BREAK meter (full credit; other captains 35%). A broken
+// segment leaves temporary cover; a completed one fires ONE telegraphed
+// lane punish and moves on; a dead owner fizzles its segment. Freeing the
+// bound mythic tears the current segment open — and turns it loose. When
+// all three resolve, the weapon fails: a 6s coordinated window (×1.35),
+// then a plain fight to the finish.
+function raidState() { return (G.finale && G.finale.format === 'raid' && G.finale.raid) || null; }
+function raidCaptainHit(br, dmg) {
+  const F = G.finale, RD = F.raid;
+  const S = RD.segments[RD.seg];
+  if (!S || S.state !== 'assembling' || RD.window) return;
+  const credit = dmg * (br.subIdx === S.owner ? 1 : 0.35);
+  S.broken += credit;
+  F.meter.value = Math.min(1, S.broken / RD.segNeed);
+  if (S.broken >= RD.segNeed) raidResolveSegment('broken');
+}
+function raidResolveSegment(how) {
+  const F = G.finale, RD = F.raid;
+  const S = RD.segments[RD.seg];
+  if (!S || S.state !== 'assembling') return;
+  S.state = how;
+  const word = (F.profile && F.profile.raid && F.profile.raid.segmentWord) || 'SEGMENT';
+  if (how === 'broken' || how === 'torn') {
+    if (how === 'broken') F.mastery.counters.segmentsBroken = (F.mastery.counters.segmentsBroken || 0) + 1;
+    setCombatNotice(word + ' ' + (RD.seg + 1) + (how === 'torn' ? ' TORN OPEN!' : ' SHATTERED!'), '#80d8ff', 1.6);
+    const seraph = G.bricks.find(b => b.raidSeraph && !b.dead);
+    if (seraph) {
+      burst(seraph.bx + G.fx, seraph.by + G.fy - seraph.h * 0.7, '#80d8ff', 26, 320, 0.6);
+      ringFx(seraph.bx + G.fx, seraph.by + G.fy, '#80d8ff', 8, 160, 4, 0.5);
+    }
+    // the shattered piece falls as temporary cover (shooter modes — it
+    // intercepts enemy fire like any barrier; classic has no fire to stop)
+    if (how === 'broken' && G.mode !== 'classic') {
+      G.bricks.push({
+        bx: W / 2 + (RD.seg - 1) * Math.min(140, W * 0.18), by: H * 0.5,
+        hx: W / 2 + (RD.seg - 1) * Math.min(140, W * 0.18), hy: H * 0.5,
+        row: -5, col: RD.seg, w: 54, h: 22, hp: 3, maxHp: 3,
+        bare: true, barrier: true, raidCover: true,
+        poke: { id: 0, t: 'steel', n: word },
+        flash: 0, wobble: RD.seg * 1.7,
+      });
+    }
+    SFX.wall();
+  } else if (how === 'fired') {
+    setCombatNotice(word + ' ' + (RD.seg + 1) + ' DISCHARGES!', '#ff8a80', 1.6);
+  } else if (how === 'fizzled') {
+    setCombatNotice(word + ' ' + (RD.seg + 1) + ' — ITS CAPTAIN IS DOWN', '#b0bec5', 1.6);
+  }
+  RD.seg++;
+  if (RD.seg === 1 && F.beat === 0) startFinaleBeat(1);
+  if (RD.seg >= RD.segments.length) { raidWeaponFails(); return; }
+  const next = RD.segments[RD.seg];
+  next.state = 'assembling'; next.t = 0;
+  F.meter.value = 0;
+}
+function raidSegmentFires(S) {
+  // ONE heavy telegraphed lane punish through the shared lane primitive —
+  // never in classic (the calm contract routes it through spawnEnemyShot,
+  // but a lane strike is authored danger, so it simply doesn't fire there)
+  if (G.mode === 'classic') return;
+  const px = Math.max(60, Math.min(W - 60, G.paddle.x));
+  G.columnStrikes.push({ x: px, w: 96, warn: 1.6, strike: 0.5, color: '#ff8a80' });
+  SFX.enrage();
+}
+function raidFreeBound() {
+  const F = G.finale, RD = F.raid;
+  if (RD.freed) return;
+  RD.freed = true;
+  F.mastery.counters.freed = 1;
+  const bnd = G.bricks.find(b => b.raidBound && !b.dead);
+  const word = (F.profile && F.profile.raid && F.profile.raid.freeWord) || 'UNBOUND!';
+  setAnnounce('alert', '#b9f6ca', word, null, 2.6);
+  if (bnd) {
+    bnd.raidFreed = true;
+    burst(bnd.bx + G.fx, bnd.by + G.fy, '#b9f6ca', 30, 300, 0.7);
+    ringFx(bnd.bx + G.fx, bnd.by + G.fy, '#b9f6ca', 8, 140, 4, 0.6);
+    if (G.mode === 'classic') {
+      // calm contract: she tears the crown and leaves — never a threat
+      bnd.crosser = { vx: (bnd.bx < W / 2 ? -1 : 1) * 280, bobPh: 0 };
+    }
+  }
+  const S = RD.segments[RD.seg];
+  if (S && S.state === 'assembling') raidResolveSegment('torn');
+  SFX.roar();
+}
+function raidDisperse() {
+  // the Sovereign has fallen — the arena empties. Surviving captains stand
+  // down and flee with the freed (or still-bound) mythic; nothing optional
+  // may hold the wave hostage, and there is NO cleanup round.
+  const RD = G.finale && G.finale.raid;
+  if (!RD || RD.dispersed) return;
+  RD.dispersed = true;
+  for (const b of G.bricks) {
+    if (b.dead) continue;
+    if (b.raidVine) { b.dead = true; continue; }
+    if (b.raidBound || b.raidCaptain) {
+      b.subBoss = false; b.raidCaptain = false;
+      if (!b.crosser) b.crosser = { vx: (b.bx < W / 2 ? -1 : 1) * 280, bobPh: (b.subIdx || 0) * 1.7 };
+    }
+  }
+}
+function updateRaid(dt) {
+  const F = G.finale, RD = F.raid;
+  if (RD.shieldCD > 0) RD.shieldCD -= dt;
+  if (RD.boundCD > 0) RD.boundCD -= dt;
+  const seraph = G.bricks.find(b => b.raidSeraph);
+  if (!seraph || seraph.dead) { raidDisperse(); return; }
+  if (RD.window) { RD.windowT = Math.max(0, RD.windowT - dt); return; }
+  const S = RD.segments[RD.seg];
+  if (!S) return;
+  const owner = G.bricks.find(b => b.raidCaptain && !b.dead && b.subIdx === S.owner);
+  if (!owner) { raidResolveSegment('fizzled'); return; }
+  if (S.state === 'assembling') {
+    S.t += dt;
+    if (S.t >= RD.assembleDur) {
+      raidSegmentFires(S);
+      raidResolveSegment('fired');
+    }
+  }
+}
+function raidWeaponFails() {
+  const F = G.finale, RD = F.raid;
+  if (RD.window) return;
+  RD.window = true; RD.windowT = 6;
+  startFinaleBeat(2);
+  F.meter = null; // beat 2 is a plain fight — the HUD dock owns the read
+  const tip = (F.profile && F.profile.beats[2] && F.profile.beats[2].tip) || 'STRIKE NOW';
+  const label = (F.profile && F.profile.beats[2] && F.profile.beats[2].label) || 'THE WEAPON FAILS';
+  setAnnounce('alert', '#ffd54f', label, tip, 3, null, null, false, true, 'boss');
+  // the recovery contract between beats: clear hostile lanes + vent heat
+  for (const s of G.enemyShots) if (!s.boss) s.dead = true;
+  G.columnStrikes.length = 0;
+  G.heat = Math.max(0, G.heat - 0.5);
+  G.shake = 10; SFX.mega();
+}
 function updateFinaleDirector(dt) {
   const F = G.finale;
   if (!F || G.state !== 'play' || G.reveal) return;
+  if (F.format === 'raid' && F.raid) updateRaid(dt);
   if (F.format === 'relay' && F.relay) {
     const R = F.relay;
     if (R.deflectCD > 0) R.deflectCD -= dt;
@@ -3980,7 +4157,9 @@ function update(dt) {
   // the finale beat clock excludes reveal freezes — beat time is combat time
   if (G.finale && G.state === 'play' && !G.reveal) G.finale.beatT += dt;
   updateFinaleDirector(dt);
-  if (G.gauntlet && G.state === 'play') {
+  // the RAID owns its own progression — the round controller's dead-actor
+  // checks would misread a format with no rounds at all
+  if (G.gauntlet && G.state === 'play' && !(G.finale && G.finale.format === 'raid')) {
     const gj = G.gauntlet;
     if (gj.phase === 0 && !G.bricks.some(b => !b.dead && b.subBoss)) {
       gauntletWake();
@@ -5248,7 +5427,9 @@ function update(dt) {
       G.bossShotCD -= dt * ts;
       if (G.mode !== 'classic' && G.bossShotCD <= 0 && boss.fireQuietT <= 0) {
         const bossBase = G.mode === 'junkie' ? d.starBossShotInt : d.bossShotInt;
-        G.bossShotCD = bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
+        // RAID: generic Sovereign fire YIELDS while the crown mechanic runs
+        const raidYield = boss.raidSeraph && raidState() && !G.finale.raid.window ? 1.6 : 1;
+        G.bossShotCD = raidYield * bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
           * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1)
           // BASTION cadence: a boss kit may tighten its volley once phase 2
           // opens (p2FireMul — Dialga's clockwork on the pokemon skin).
@@ -5268,7 +5449,9 @@ function update(dt) {
           : d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
-          && !b.barrier && !b.dormant && !b.crosser && !b.friendly && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
+          && !b.barrier && !b.dormant && !b.crosser && !b.friendly
+          && !b.raidVine && !(b.raidBound && !b.raidFreed) // bound actors and props never fire
+          && b.bx + G.fx > 30 && b.bx + G.fx < W - 30
           && !(G.encounter && b.flight && b.flight.sq != null && G.encounter.squads[b.flight.sq]
             && G.encounter.squads[b.flight.sq].silenceT > 0));
         // cap concurrent warnings so the board never fills with warning lines
@@ -5754,8 +5937,9 @@ function update(dt) {
       return;
     }
     // A gauntlet is not clear between rounds, even though every entity from
-    // the previous round is dead for one frame.
-    if (G.gauntlet && G.gauntlet.phase < 2) return;
+    // the previous round is dead for one frame. The RAID has no rounds —
+    // its Sovereign falling IS the clear (phase stays 0 by design).
+    if (G.gauntlet && G.gauntlet.phase < 2 && !(G.finale && G.finale.format === 'raid')) return;
     // Kanto Arrival and Challenge each offer one guaranteed piece. The clear
     // waits for the generous catch window, then continues whether caught or
     // deliberately left behind.

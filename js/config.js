@@ -391,12 +391,13 @@ function trialLayout() {
   // secret fourth tile. Picking a boss round reveals the PHASE row.
   const rounds = trialSel.stage === 2;
   const secretRound = rounds && trialSel.region === 0 && SETTINGS.mode === 'junkie';
-  const roundCount = secretRound ? 4 : 3;
-  const roundRows = secretRound ? 2 : 1;
   // AFT-020: formats own their beat shapes — a relay's coda is a reward
-  // event with no phases, so the phase row hides for it
+  // event with no phases, and a RAID is one continuous encounter (no round
+  // jumps at all), so those rows adapt per format
   const fmtT = ((typeof finaleProfile === 'function' && finaleProfile(trialSel.region)) || {}).format || 'ladder';
-  const phases = rounds && trialSel.round >= 1 && !(fmtT === 'relay' && trialSel.round >= 2);
+  const roundCount = fmtT === 'raid' ? 1 : secretRound ? 4 : 3;
+  const roundRows = secretRound ? 2 : 1;
+  const phases = rounds && trialSel.round >= 1 && fmtT !== 'raid' && !(fmtT === 'relay' && trialSel.round >= 2);
   const phaseCount = trialSel.round >= 2 ? 3 : 2;
   const gridY = short ? 74 : 96, tail = short ? 56 : 84;
   // base row metrics -> one squeeze factor fits the busiest state on-screen
