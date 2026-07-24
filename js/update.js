@@ -666,6 +666,17 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
     } else if (RD.windowT > 0) dmg *= 1.35;
   }
+  // SIEGE: the pressure seal is the Sovereign's ONE rule — near-immune
+  // while any Colossus stands (with an honest cue), plain damage after
+  if (br.siegeSov && G.finale && G.finale.siege && G.finale.beat === 0 && dmg < 90) {
+    const S = G.finale.siege;
+    dmg *= 0.12;
+    if ((S.sealCD || 0) <= 0) {
+      S.sealCD = 1.2;
+      const word = (G.finale.profile && G.finale.profile.siege && G.finale.profile.siege.sealWord) || 'SEALED';
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 14, word, '#b0bec5', 11);
+    }
+  }
   statsDmgCat('guard', dmg - dPreGuard);
   // the raid mythic is a PRESENCE (bound) or a menace (freed) — never a
   // required target, never a damage sink. Bound hits point at the vines.
@@ -830,6 +841,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (br.reinf) statsKillRenew(); // renewable-population kill (AFT-008 farm audit)
     // RAID: the last vine down frees the bound mythic (optional risk/reward)
     if (br.raidVine && raidState() && !G.bricks.some(b => b.raidVine && !b.dead && b !== br)) raidFreeBound();
+    // SIEGE: a fallen Colossus is the player's ORDER choice landing
+    if (br.siegeColossus && siegeState()) siegeColossusDown(br);
     // AFT-020 non-attrition objectives: source and marked-target kills
     if (br.wardSrc && G.objective && G.objective.type === 'wardbreak' && !G.objective.done) {
       const O = G.objective;
@@ -1987,6 +2000,11 @@ function rollUpgradeChoices() {
   const fusions = WEB_FUSIONS.filter(fusionEligible);
   const apexes = WEB_APEXES.filter(apexEligible);
   const needDefense = G.lives < Math.max(2, Math.ceil((G.livesMax || preset().lives) * 0.6));
+  // AFT-020: a caught siege WISH leans the hand's SHAPE (never its size or
+  // rank count) — commit deepens the invested route, adapt guarantees the
+  // survival slot, explore favors the web specials
+  const wish = (G.clearedStage === 2 && G.finale && G.finale.wish) || null;
+  const maxInv = Math.max(0, ...PATH_KEYS.map(k => pathLvl(k)));
   const seen = G.webSeen || (G.webSeen = {});
   const pity = key => Math.min(3, Math.max(0, (seen[key] || 0) - 3));
   const avoid = key => rerolledFrom.includes(key) ? 9 : 0;
@@ -1994,6 +2012,7 @@ function rollUpgradeChoices() {
   const scoreCont = k =>
     pathLvl(k) * 4 + gameRand() * 2 + pity(contKey(k)) - avoid(contKey(k)) +
     (needDefense && ['defense', 'utility'].includes(PATHS[k].family) ? 5 : 0) +
+    (wish === 'commit' && pathLvl(k) > 0 && pathLvl(k) === maxInv ? 6 : 0) +
     (G.mode === 'classic' && PATHS[k].family === 'offense' && pathLvl(k) === 2 ? 4 : 0);
   const rankedCont = PATH_KEYS.filter(k => pathLvl(k) < 4)
     .map(k => ({ k, s: scoreCont(k) })).sort((a, b) => b.s - a.s).map(x => x.k);
@@ -2015,7 +2034,7 @@ function rollUpgradeChoices() {
     const f = fusions.map(d => ({ d, s: 8 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
       .sort((a, b) => b.s - a.s)[0].d;
     webPicked.push({ def: f, kind: 'fusion' });
-  } else if (bridges.length && (freshForm || !rankedCont.length || gameRand() < 0.75)) {
+  } else if (bridges.length && (freshForm || wish === 'explore' || !rankedCont.length || gameRand() < 0.75)) {
     const b = bridges.map(d => ({ d, s: 6 + pity(d.key) - avoid(d.key) + gameRand() * 2 }))
       .sort((a, b) => b.s - a.s)[0].d;
     webPicked.push({ def: b, kind: 'bridge' });
@@ -2026,7 +2045,7 @@ function rollUpgradeChoices() {
   // FORCED when health is low (otherwise the top-ranked option keeps reroll
   // hands honestly fresh — scoring already leans defensive at low health)
   takeCont(k => pathLvl(k) >= 1) || takeCont();
-  if (needDefense) takeCont(k => ['defense', 'utility'].includes(PATHS[k].family)) || takeCont();
+  if (needDefense || wish === 'adapt') takeCont(k => ['defense', 'utility'].includes(PATHS[k].family)) || takeCont();
   else takeCont();
   // offense/non-offense guard while both groups remain among continuations
   for (const wantOffense of [true, false]) {
@@ -3257,6 +3276,11 @@ function completeFinale() {
     F.mastery.countered = (F.mastery.counters.segmentsBroken || 0) >= 1;
     F.mastery.mastered = (F.mastery.counters.segmentsBroken || 0) >= 3;
   }
+  if (F.format === 'siege' && F.siege) {
+    // countered = the seal fell to a chosen order (set at station 3);
+    // mastered = the trail's lesson learned — not one current hit taken
+    F.mastery.mastered = F.mastery.countered && (F.mastery.counters.trailHits || 0) === 0;
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3540,6 +3564,7 @@ function updateFinaleDirector(dt) {
   const F = G.finale;
   if (!F || G.state !== 'play' || G.reveal) return;
   if (F.format === 'raid' && F.raid) updateRaid(dt);
+  if (F.format === 'siege' && F.siege) updateSiege(dt);
   if (F.format === 'relay' && F.relay) {
     const R = F.relay;
     if (R.deflectCD > 0) R.deflectCD -= dt;
@@ -3559,11 +3584,155 @@ function updateFinaleDirector(dt) {
     if (F.beat === 2) updateRelayCoda(dt);
   }
 }
+// ---- SIEGE OF THE DEEP CURRENT (AFT-020 Phase 4) ----
+function siegeState() { return (G.finale && G.finale.format === 'siege' && G.finale.siege) || null; }
+function siegeColossusDown(br) {
+  const F = G.finale, S = F.siege;
+  const idx = br.subIdx || 0;
+  if (S.broken.includes(idx)) return;
+  S.broken.push(idx);
+  F.mastery.counters.stations = S.broken.length;
+  if (F.meter) F.meter.value = S.broken.length;
+  // each station strengthens ONE property of the coming weather — the
+  // ORDER is the player's play-style choice, never a hidden right answer
+  const prop = ['quicken', 'widen', 'arm'][idx] || 'quicken';
+  S.weather[prop]++;
+  const words = (F.profile && F.profile.siege && F.profile.siege.weatherWords) || [];
+  setCombatNotice(words[idx] || 'THE WEATHER SHIFTS', '#5ad7d2', 2);
+  if (S.broken.length >= 3) {
+    // THE SEAL FALLS — the round controller's no-subBoss check calls
+    // gauntletWake right after this kill resolves; the calm between beats
+    // arrives there
+    F.mastery.countered = true; // the station order was the signature answer
+  }
+}
+function siegeBeginCoda(gen2) {
+  const F = G.finale;
+  const fp = F.profile;
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  F.coda = { t: 0, dur: 12, spawned: 0, wishes: 3 };
+  F.codaHold = true;
+  if (mid) {
+    const vw2 = Math.min(110, W * 0.15);
+    const star = {
+      bx: -vw2, by: Math.max(140, H * 0.22), hx: -vw2, hy: Math.max(140, H * 0.22),
+      row: -3, col: 0, w: vw2, h: vw2 * 0.9, hp: 1, maxHp: 1,
+      bare: true, poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      crosser: { vx: Math.max(44, W / 14), bobPh: 0 }, flash: 0, wobble: 0,
+    };
+    G.bricks.push(star);
+    getSprite(mid[0]);
+    beginBossReveal('mythic', [star]);
+  }
+  const label = (fp && fp.beats[2] && fp.beats[2].label) || 'THREE WISHES';
+  const tip = (fp && fp.beats[2] && fp.beats[2].tip) || 'CATCH ONE';
+  setAnnounce('star', '#ffd54f', label, tip, 3.4, null, null, false, true, 'boss');
+  F.meter = null; // three falling stars need no meter — the sky is the read
+}
+function updateSiegeCoda(dt) {
+  const F = G.finale, C = F.coda;
+  if (!C) return;
+  C.t += dt;
+  const names = (F.profile && F.profile.siege && F.profile.siege.wishNames) || ['COMMIT', 'ADAPT', 'EXPLORE'];
+  const due = Math.min(C.wishes, Math.floor(C.t / 1.6) + 1);
+  while (C.spawned < due) {
+    const i = C.spawned++;
+    G.powerups.push({
+      x: W * (0.3 + 0.2 * i), y: -18, vy: 58,
+      p: { key: 'wish', name: names[i] + ' WISH', wishIdx: i },
+      rot: 0, hint: true,
+    });
+  }
+  if (C.t >= C.dur && C.spawned >= C.wishes) F.codaHold = false;
+}
+function updateSiege(dt) {
+  const F = G.finale, S = F.siege;
+  if (S.sealCD > 0) S.sealCD -= dt;
+  if (S.hitCD > 0) S.hitCD -= dt;
+  if (F.beat === 2) { updateSiegeCoda(dt); return; }
+  const sov = G.bricks.find(b => b.siegeSov && !b.dead);
+  if (!sov) return;
+  if (F.beat === 1) {
+    // THE CURRENT TRAIL: the body's path becomes the hazard. Records every
+    // 0.22s; safety ALTERNATES (burns ↔ safe) on a readable clock; the
+    // first taughtT seconds are a harmless shimmer with the rule named.
+    S.trailT += dt;
+    if (S.trailT >= 0.22) {
+      S.trailT = 0;
+      S.trail.push({ x: sov.bx + G.fx, y: sov.by + G.fy, t: 0 });
+      if (S.trail.length > 26) S.trail.shift();
+    }
+    for (const p2 of S.trail) p2.t += dt;
+    if (S.taughtT > 0) {
+      S.taughtT -= dt;
+      if (S.taughtT <= 0) setCombatNotice(
+        (F.profile && F.profile.siege && F.profile.siege.trailWord) || 'THE TRAIL BURNS', '#ff8a80', 2);
+    } else {
+      S.flipT += dt;
+      const flipEvery = S.flipEvery * (bossLastStand(sov) ? 0.72 : 1); // the remix: faster turns
+      if (S.flipT >= flipEvery) {
+        S.flipT = 0;
+        S.burns = !S.burns;
+        setCombatNotice(S.burns
+          ? ((F.profile && F.profile.siege && F.profile.siege.trailWord) || 'THE TRAIL BURNS')
+          : 'THE CURRENT CALMS — THE OPEN WATER STIRS', S.burns ? '#ff8a80' : '#80d8ff', 1.6);
+      }
+      // contact: one life, standard grace — never in classic (the calm
+      // contract: there the current only drags the BALL, in the ball loop)
+      if (S.burns && G.mode !== 'classic' && G.invuln <= 0 && S.hitCD <= 0) {
+        const px = G.paddle.x, py = shipY();
+        const rr2 = (S.trailR + S.weather.widen * 9);
+        for (const p2 of S.trail) {
+          if (p2.t < 0.35) continue; // the newest links shimmer in first — honest
+          const dx2 = px - p2.x, dy2 = py - p2.y;
+          if (dx2 * dx2 + dy2 * dy2 < rr2 * rr2) {
+            S.hitCD = 1.4;
+            // AEGIS answers environmental danger too — never regress the
+            // "a shield absorbs a lethal hit in every mode" contract
+            if (!absorbHit(px, py)) {
+              F.mastery.counters.trailHits = (F.mastery.counters.trailHits || 0) + 1;
+              loseLife((F.profile && F.profile.siege && F.profile.siege.trailWord) || 'THE CURRENT TRAIL');
+            }
+            break;
+          }
+        }
+      }
+      // ARMED DEEP (hull station survived to power it): the newest trail
+      // link drips one straight bubble micro every 3s — budgeted fire
+      if (S.weather.arm > 0 && G.mode !== 'classic') {
+        S.armT += dt;
+        if (S.armT >= 3 && S.trail.length) {
+          S.armT = 0;
+          const p2 = S.trail[S.trail.length - 1];
+          spawnEnemyShot({ x: p2.x, y: p2.y, vx: 0, vy: 150, boss: true,
+            type: sov.poke.t, species: sov.poke.id, kind: 'aqua', classKey: 'micro',
+            volleyId: nextEnemyVolley() });
+        }
+      }
+    }
+  }
+}
 function gauntletWake() {
   const gj = G.gauntlet;
   if (!gj) return;
   gj.phase = 1;
   startFinaleBeat(1);
+  // SIEGE: the Sovereign was never parked — the seal FALLING is the wake.
+  // Its wings still join here; the between-beats calm clears the lanes.
+  if (G.finale && G.finale.format === 'siege') {
+    const F = G.finale;
+    for (const b of G.bricks) if (b.dormant) b.dormant = false; // wings join the weather
+    for (const s of G.enemyShots) if (!s.boss) s.dead = true;
+    G.heat = Math.max(0, G.heat - 0.5);
+    G.enemyShotCD = Math.max(G.enemyShotCD, 2.2);
+    F.meter = null; // the weather beat reads from the HUD dock + the trail
+    const tip = (F.profile && F.profile.beats[1] && F.profile.beats[1].tip) || '';
+    setAnnounce('alert', '#5ad7d2',
+      (F.profile && F.profile.beats[1] && F.profile.beats[1].label) || 'THE SEAL FALLS',
+      tip, 3, null, null, false, true, 'boss');
+    G.shake = 10; SFX.roar();
+    return;
+  }
   let legend = null;
   for (const b of G.bricks) {
     if (!b.dormant) continue;
@@ -3598,6 +3767,11 @@ function gauntletSummonMythic(forceSecret = false) {
   // storm rewinds into blooms and the Hourseed drifts through, unfought.
   if (G.finale && G.finale.format === 'relay') {
     relayBeginCoda(gen2);
+    return;
+  }
+  // the SIEGE's coda: three falling wishes shape the Victory Draft
+  if (G.finale && G.finale.format === 'siege') {
+    siegeBeginCoda(gen2);
     return;
   }
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
@@ -4792,6 +4966,16 @@ function update(dt) {
       const rl = relayLane();
       const laneCalm = rl && Math.abs(b.x - rl.x) < rl.w / 2;
       if ((windy || rl) && !laneCalm) b.vx += Math.sin(G.time * 1.6 + b.y * 0.012) * (G.gustT > 0 ? 320 : 230) * dt;
+      // the SIEGE in classic: the calm contract holds — the burning current
+      // never touches the paddle, it DRAGS the ball instead
+      const S = siegeState();
+      if (S && G.finale.beat === 1 && S.burns && S.taughtT <= 0) {
+        const rr2 = S.trailR + S.weather.widen * 9;
+        for (const p2 of S.trail) {
+          const dx2 = b.x - p2.x, dy2 = b.y - p2.y;
+          if (dx2 * dx2 + dy2 * dy2 < rr2 * rr2) { b.vx *= 0.988; b.vy *= 0.988; break; }
+        }
+      }
     }
     // endgame aim-assist: gently steer rising balls toward the last few bricks
     if (aliveCnt > 0 && aliveCnt <= 4 && b.vy < 0) {
@@ -5517,7 +5701,12 @@ function update(dt) {
         const bossBase = G.mode === 'junkie' ? d.starBossShotInt : d.bossShotInt;
         // RAID: generic Sovereign fire YIELDS while the crown mechanic runs
         const raidYield = boss.raidSeraph && raidState() && !G.finale.raid.window ? 1.6 : 1;
-        G.bossShotCD = raidYield * bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
+        // SIEGE: fire yields to the station work; each TIDE station that
+        // survived to power the weather quickens the final volleys
+        const siegeMul = boss.siegeSov && siegeState()
+          ? (G.finale.beat === 0 ? 1.5 : 1) * Math.pow(0.88, G.finale.siege.weather.quicken || 0)
+          : 1;
+        G.bossShotCD = raidYield * siegeMul * bossBase * (bossLastStand(boss) ? 0.72 : boss.phase === 2 ? 0.84 : 1)
           * (boss.secretBoss ? 0.92 : boss.mythic ? 0.82 : 1)
           // BASTION cadence: a boss kit may tighten its volley once phase 2
           // opens (p2FireMul — Dialga's clockwork on the pokemon skin).

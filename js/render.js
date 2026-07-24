@@ -2813,6 +2813,51 @@ function drawRelayFx() {
     ctx.restore();
   }
 }
+// AFT-020 SIEGE: the pressure-seal tethers (each living Colossus → the
+// Sovereign) during the stations beat, then the CURRENT TRAIL — warm
+// pulsing rings while it burns, faint cool ones while it rests. Shape and
+// temperature of motion, never color alone (burning rings PULSE).
+function drawSiegeFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'siege' || !F.siege || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const S = F.siege;
+  const sov = G.bricks.find(b => b.siegeSov && !b.dead);
+  if (F.beat === 0 && sov) {
+    ctx.save();
+    ctx.setLineDash([9, 8]);
+    ctx.lineDashOffset = -(G.time * 30) % 17;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(90,215,210,0.5)';
+    for (const c of G.bricks) {
+      if (c.dead || !c.siegeColossus) continue;
+      ctx.beginPath();
+      ctx.moveTo(c.bx + G.fx, c.by + G.fy - c.h / 2);
+      ctx.lineTo(sov.bx + G.fx, sov.by + G.fy);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  if (F.beat === 1 && S.trail.length) {
+    ctx.save();
+    const rr2 = S.trailR + S.weather.widen * 9;
+    for (const p2 of S.trail) {
+      const age = Math.min(1, p2.t / 0.5);
+      if (S.burns && S.taughtT <= 0) {
+        const pulse = 0.65 + 0.35 * Math.sin(G.time * 6 + p2.x * 0.02);
+        ctx.lineWidth = 2.6;
+        ctx.strokeStyle = 'rgba(255,110,90,' + (0.5 * age * pulse) + ')';
+        ctx.beginPath(); ctx.arc(p2.x, p2.y, rr2 * (0.8 + 0.2 * pulse), 0, Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = 'rgba(128,216,255,' + (0.22 * age) + ')';
+        ctx.beginPath(); ctx.arc(p2.x, p2.y, rr2 * 0.8, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
 // AFT-020 non-attrition objective reads: the ward triangle linking its
 // three sources (wardbreak) and the live lane's rails + the marked target's
 // diamond (lanes). Shape and motion cues, strokes only.
@@ -3823,6 +3868,24 @@ function drawPowerups() {
       ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(1, 8); ctx.lineTo(16, -4); ctx.moveTo(1, 8); ctx.lineTo(-13, 12); ctx.stroke();
       ctx.globalAlpha = 1;
       drawGlyph(ctx, 'fairy', 1, 3, 5.5, '#ffffff');
+    } else if (pu.p.key === 'wish') {
+      // AFT-020 siege coda: a falling wish-star with a soft tail
+      const tw = 0.8 + 0.2 * Math.sin(G.time * 5 + pu.x * 0.03);
+      ctx.strokeStyle = 'rgba(255,213,79,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, -26); ctx.lineTo(0, -10); ctx.stroke();
+      ctx.fillStyle = '#fff9c4';
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2 + pu.rot * 0.5;
+        ctx.lineTo(Math.cos(a) * 11 * tw, Math.sin(a) * 11 * tw);
+        ctx.lineTo(Math.cos(a + Math.PI / 4) * 4.5, Math.sin(a + Math.PI / 4) * 4.5);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, 4 * tw, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd54f'; ctx.fill();
+      ctx.lineWidth = 1.4; ctx.strokeStyle = '#fff';
+      ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke();
     } else if (pu.p.key === 'bloom') {
       // AFT-020 relay coda: a soft five-petal bloom of rewound time —
       // strokes + fills only, gentle pulse, reads on bright and dark skies
@@ -9277,6 +9340,7 @@ function render() {
     drawRelayFx(); // AFT-020: the gale-relay corridor + carrier cues (under the sprites)
     drawRaidFx();  // AFT-020: the raid's crown arcs, tethers + binding read
     drawObjectiveFx(); // AFT-020: ward triangle + live-lane rails/marks
+    drawSiegeFx();     // AFT-020: seal tethers + the current trail
     drawBricks();
     drawFragments();
     drawShield();

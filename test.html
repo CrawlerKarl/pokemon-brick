@@ -1923,6 +1923,72 @@ window.requestAnimationFrame = function () { return 0; };
     return 'wardbreak collapses the classic wall · lanes gate damage by position · both end the wave without a grind';
   });
 
+  // AFT-020 Phase 4: the SIEGE — the Sovereign circles from second one
+  // behind the pressure seal; three stations broken in ANY order each arm
+  // one property of the final weather; the body's current trail alternates
+  // burning and safe; the coda drops three wishes and ONE catch shapes the
+  // Victory Draft.
+  test('AFT-020 P4: the SIEGE — seal, station order, current trail, wish coda', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(9, true, { seed: 'SIEGE1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const F = G.finale, S = F && F.siege;
+    assert(F && F.format === 'siege' && S && F.beatKey === 'stations', 'siege arms on the region-3 finale');
+    const sov = G.bricks.find(b => b.siegeSov);
+    assert(sov && !sov.dormant && !sov.dead, 'the Sovereign circles from the first second');
+    assert(G.bricks.filter(b => b.siegeColossus && !b.dead).length === 3, 'three Colossus stations hold the seal');
+    await runFrames(10);
+    const shp = sov.hp;
+    damageBrick(sov, 5, sov.bx, sov.by, null, { source: 'bolt' });
+    assert(Math.abs((shp - sov.hp) - 0.6) < 0.01,
+      'the pressure seal holds ×0.12 (lost ' + (shp - sov.hp).toFixed(2) + ')');
+    // break the stations in a CHOSEN order — frost, tide, hull
+    const byIdx = i => G.bricks.find(b => b.siegeColossus && !b.dead && b.subIdx === i);
+    for (const i of [1, 0, 2]) {
+      const c = byIdx(i);
+      c.hp = 0.5;
+      damageBrick(c, 2, c.bx, c.by, null, { source: 'bolt' });
+    }
+    assert(S.broken.join(',') === '1,0,2', "the order is the player's (got " + S.broken.join(',') + ')');
+    assert(S.weather.widen === 1 && S.weather.quicken === 1 && S.weather.arm === 1,
+      'each fallen station armed its own weather property');
+    await runFrames(20);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'weather', 'the seal falls into the weather beat');
+    assert(F.mastery.countered === true, 'the chosen order is the signature answer');
+    await runFrames(240);
+    assert(S.trail.length > 5, 'the trail records the body path');
+    // a burning link at the ship costs one life (through the shield contract)
+    S.taughtT = 0; S.burns = true; S.hitCD = 0;
+    G.shieldCharges = 0; G.invuln = 0;
+    const link = S.trail[Math.floor(S.trail.length / 2)];
+    link.x = G.paddle.x; link.y = shipY(); link.t = 1;
+    const lives0 = G.lives;
+    await runFrames(3);
+    assert(G.lives === lives0 - 1 && (F.mastery.counters.trailHits || 0) === 1,
+      'the burning current costs one life (lives ' + lives0 + '→' + G.lives + ')');
+    S.flipT = 99;
+    await runFrames(2);
+    assert(S.burns === false, 'the current alternates to safe');
+    // fell the Sovereign → the wish coda (no hostile mythic)
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(40);
+    assert(F.beatKey === 'coda' && F.codaHold === true, 'the wish coda holds the clear');
+    assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead), 'no hostile mythic spawned');
+    await runFrames(200);
+    const wishPu = G.powerups.find(pu => !pu.dead && pu.p.key === 'wish' && pu.p.wishIdx === 2);
+    assert(wishPu, 'the three wishes fall');
+    applyPower(wishPu.p);
+    assert(F.wish === 'explore' && F.codaHold === false, 'ONE caught wish leans the draft + releases the clear');
+    assert(!G.powerups.some(pu => !pu.dead && pu.p.key === 'wish'), 'the unchosen wishes fade');
+    await runFrames(400, () => (G.state !== 'play' ? false : undefined));
+    assert(G.state !== 'play', 'the siege clears (state ' + G.state + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 9);
+    assert(L && L.finaleFormat === 'siege' && L.finaleCounters && L.finaleCounters.stations === 3,
+      'ledger: siege format + station order');
+    return 'seal ×0.12 · order 1,0,2 armed its weather · trail burns/calms · one wish shapes the draft · no third bar';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -2475,16 +2541,18 @@ window.requestAnimationFrame = function () { return 0; };
       gauntletWake();
       const legend = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
       assert(legend && legend.phaseCount === 2, GENS[region].name + ' legendary is not two phases');
-      legendStyles.add(G.gauntlet.entry?.style);
+      // a SIEGE Sovereign never flies an entrance — the seal-fall IS its wake
+      if (((finaleProfile(region) || {}).format || 'ladder') !== 'siege') legendStyles.add(G.gauntlet.entry?.style);
       for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
       G.gauntlet.entry = null; // isolate the summon's own entrance (if any)
       gauntletSummonMythic(false);
       const fmtR = (finaleProfile(region) || {}).format || 'ladder';
-      if (fmtR === 'relay') {
-        // AFT-020: a relay's third beat is a REWARD CODA, not a mythic bar
+      if (fmtR === 'relay' || fmtR === 'siege') {
+        // AFT-020: these formats' third beat is a REWARD CODA (blooms /
+        // falling wishes), never a mythic health bar
         assert(!G.bricks.some(b => b.isBoss && b.mythic && !b.dead),
-          GENS[region].name + ' relay coda must not spawn a hostile mythic');
-        assert(G.finale && G.finale.codaHold, GENS[region].name + ' relay coda must hold the clear');
+          GENS[region].name + ' coda must not spawn a hostile mythic');
+        assert(G.finale && G.finale.codaHold, GENS[region].name + ' coda must hold the clear');
       } else {
         const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
         assert(myth && myth.phaseCount === 3, GENS[region].name + ' mythical is not three phases');
@@ -2492,8 +2560,10 @@ window.requestAnimationFrame = function () { return 0; };
       }
     }
     const fmtOf = r => (finaleProfile(r) || {}).format || 'ladder';
-    const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid').length;
-    const fightMyths = GENS.filter((g, r) => fmtOf(r) !== 'relay' && fmtOf(r) !== 'raid').length;
+    // raid Sovereigns never wake (live from build); siege wakes ride the
+    // seal-fall beat with no entrance flight of their own
+    const wakingLegends = GENS.filter((g, r) => fmtOf(r) !== 'raid' && fmtOf(r) !== 'siege').length;
+    const fightMyths = GENS.filter((g, r) => !['relay', 'raid', 'siege'].includes(fmtOf(r))).length;
     assert(sentinelStyles.size === 9, 'sentinel entrances are not unique across all generations');
     assert(legendStyles.size === wakingLegends, 'legendary entrances are not unique across the waking finales');
     assert(mythStyles.size === fightMyths, 'mythical entrances are not unique across the fighting finales');
@@ -2507,7 +2577,9 @@ window.requestAnimationFrame = function () { return 0; };
       'direct trial did not launch three-phase Mew VMAX');
     assert(G.gauntlet.entry && G.gauntlet.entry.style === 'maxrift', 'direct secret trial skipped the MAX RIFT entrance');
 
-    resetRun(9, true, { seed: 'phase-thresholds' }); // Hoenn — a fighting mythic (Johto's coda is a reward event)
+    // Greenspell/Kanto — THE ladder realm forever (AFT-020); trial jumps
+    // never trigger the Rift secret, so round 3 here is the plain mythic
+    resetRun(3, true, { seed: 'phase-thresholds' });
     G.starter = null;
     for (const b of G.bricks) if (b.subBoss) b.dead = true;
     gauntletWake();
@@ -4176,9 +4248,13 @@ window.requestAnimationFrame = function () { return 0; };
       // finale is THE GALE RELAY and its coda is a reward event, not a third
       // health bar. The BLOOM PODS/LEAF STORM kit stays as engine data; the
       // relay's own contract is covered by 'AFT-020 P2: the GALE RELAY'.
-      { lvl: 9,  id: 385, mon: 'JIRACHI', turn: 'wishTurn',   flag: 'orbit',   count: 3,
-        flavor: s => s.every(x => x.orbit && x.orbit.launchType === 'column' && x.orbit.stationary), // column launch
-        chName: 'MILLENNIUM COMET', pattern: 'columns', cols: 5 },
+      // JIRACHI's mythic duel is RETIRED BY DESIGN (AFT-020): the region-3
+      // finale is the SIEGE and its coda drops three falling WISHES that
+      // shape the Victory Draft — no third bar. Its WISH STARS kit stays
+      // as engine data; the siege's contract has its own test.
+      /* { lvl: 9,  id: 385, mon: 'JIRACHI', turn: 'wishTurn',   flag: 'orbit',   count: 3,
+        flavor: s => s.every(x => x.orbit && x.orbit.launchType === 'column' && x.orbit.stationary),
+        chName: 'MILLENNIUM COMET', pattern: 'columns', cols: 5 }, */
       { lvl: 12, id: 491, mon: 'DARKRAI', turn: 'hauntTurn',  flag: 'feather', count: 3,
         flavor: s => s.every(x => x.feather && x.feather.home === true),      // homing stalk
         chName: 'DARK VOID',        pattern: 'pincer',  cols: 6 },
@@ -4515,21 +4591,21 @@ window.requestAnimationFrame = function () { return 0; };
       G.megaT = 1; assert(bossMusicHeat() === 1, 'Mega over a live boss should lift heat to 1'); G.megaT = 0;
       // --- MYTHIC (3 phases): phase 2 → heat 1, phase 3 → heat 2 ---
       // (Hoenn since AFT-020 — Johto's third beat is the relay's reward coda)
-      resetRun(9, true, { seed: 'phase-jump-myth2' });
+      resetRun(3, true, { seed: 'phase-jump-myth2' }); // the forever-ladder realm
       paused = false; G.freeze = 0; G.megaT = 0;
       jumpToGauntletRound(2, 2);
       let myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
       assert(myth && bossPhaseCount(myth) === 3, 'round-2 jump did not summon a 3-phase mythic');
       assert(myth.phase === 2 && Math.abs(myth.hp / myth.maxHp - 0.5) < 0.03, 'mythic phase-2 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
       assert(bossMusicHeat() === 1, 'mythic phase 2 (not last stand) should read heat 1');
-      resetRun(9, true, { seed: 'phase-jump-myth3' });
+      resetRun(3, true, { seed: 'phase-jump-myth3' });
       paused = false; G.freeze = 0; G.megaT = 0;
       jumpToGauntletRound(2, 3);
       myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
       assert(myth.phase === 3 && Math.abs(myth.hp / myth.maxHp - 1 / 6) < 0.03, 'mythic phase-3 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
       assert(bossMusicHeat() === 2, 'mythic phase 3 (last stand) should read heat 2');
       // --- CLAMP (dev path parity): requesting phase 9 pins to phaseCount ---
-      resetRun(9, true, { seed: 'phase-clamp' });
+      resetRun(3, true, { seed: 'phase-clamp' });
       paused = false; G.freeze = 0; G.megaT = 0;
       jumpToGauntletRound(2, 9);
       const clamped = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);

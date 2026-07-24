@@ -621,6 +621,27 @@ FINALE_PROFILES[1] = {
     bloomName: 'TIME BLOSSOM', deflectWord: 'THE WIND TURNS IT',
   },
 };
+// AFT-020 Phase 4 — region 3 runs the SIEGE (engine format 'siege'): the
+// regi trio are pressure-seal stations broken in any order, Rayquaza
+// circles from the first second leaving an alternating current trail, and
+// Jirachi's coda drops three falling WISHES that shape the Victory Draft.
+FINALE_PROFILES[2] = {
+  format: 'siege',
+  title: 'THE HOENN SIEGE',
+  beats: [
+    { key: 'stations', label: 'THE PRESSURE SEAL', work: 0.45,
+      tip: 'CHOOSE THE ORDER — EVERY BROKEN TITAN CHANGES THE FINAL WEATHER' },
+    { key: 'weather', label: 'RAYQUAZA', work: 1.0,
+      tip: 'THE SKY TRAIL TURNS — WATCH WHICH AIR IS SAFE' },
+    { key: 'coda', label: 'THREE WISHES', work: 0,
+      tip: 'CATCH ONE FALLING WISH — IT SHAPES YOUR VICTORY DRAFT' },
+  ],
+  siege: {
+    sealWord: 'THE SEAL HOLDS', trailWord: 'THE WAKE BURNS',
+    wishNames: ['COMMIT', 'ADAPT', 'EXPLORE'],
+    weatherWords: ['THE STORM QUICKENS', 'THE ICE WIDENS THE WAKE', 'THE STEEL ARMS THE SKY'],
+  },
+};
 // AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
 // Eternatus hangs over the arena assembling a crown-lance, the Galar
 // regis each power a segment, and Zarude begins bound in the arena vines.

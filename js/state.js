@@ -701,6 +701,20 @@ function applyPower(p, srcType) {
     case 'magnet': bump('fx_magnet', 12); break;
     case 'star':   bump('fx_score', 15); break;
     case 'draco':  bump('fx_draco', 10); break;
+    case 'wish': { // AFT-020 siege coda: ONE caught wish shapes the draft
+      const idx = Math.max(0, Math.min(2, p.wishIdx || 0));
+      if (G.finale) {
+        G.finale.wish = ['commit', 'adapt', 'explore'][idx];
+        G.finale.mastery.counters.wish = idx + 1;
+        if (G.finale.coda) G.finale.codaHold = false; // the choice is made
+      }
+      for (const pu2 of G.powerups) if (pu2.p && pu2.p.key === 'wish') pu2.dead = true;
+      G.score += Math.round(300 * scoreMult());
+      sparkle(G.paddle.x, shipY() - 24, 10, true);
+      addFloater(G.paddle.x, shipY() - 46, (p.name || 'WISH') + ' — YOUR DRAFT LISTENS', '#ffd54f', 13);
+      SFX.mega();
+      return;
+    }
     case 'bloom': { // AFT-020 relay coda: a gathered bloom — score + mastery
       G.score += Math.round(200 * scoreMult());
       if (G.finale) {
@@ -1150,6 +1164,32 @@ function buildLevel(lvl) {
         };
         G.finale.meter = { value: 0, max: 1, label: (fp.raid && fp.raid.meterLabel) || 'BREAK' };
       }
+      // SIEGE OF THE DEEP CURRENT (format 'siege'): the Sovereign circles
+      // from the opening behind the PRESSURE SEAL (×0.12 damage while any
+      // Colossus stands). The three Colossi are order-choice stations at
+      // 0.15 BE each; every one broken strengthens ONE property of the
+      // final weather. The Sovereign's body leaves a CURRENT TRAIL whose
+      // safety alternates once the seal falls.
+      if (fmt === 'siege') {
+        const sov = G.bricks.find(b => b.isBoss && b.dormant);
+        if (sov) {
+          sov.dormant = false;
+          sov.bx = sov.hx = W / 2;
+          sov.siegeSov = true;
+        }
+        for (const v of G.bricks) {
+          if (!v.subBoss || v.dead) continue;
+          v.siegeColossus = true;
+          v.hp = v.maxHp = Math.max(4, Math.round(bossHp * 0.15)); // stations, not health walls
+        }
+        G.finale.siege = {
+          broken: [], trail: [], trailT: 0, trailR: 24,
+          burns: true, flipT: 0, flipEvery: 9, taughtT: 3.5,
+          weather: { quicken: 0, widen: 0, arm: 0 }, armT: 0,
+          sealCD: 0, hitCD: 0,
+        };
+        G.finale.meter = { value: 0, max: 3, label: fp.beats[0].label || 'SEAL' };
+      }
       // AFT-020 PREPARATION spend: the banked Challenge benefit arrives as a
       // readied defense — a shield if there's room, else a Surge head start.
       // Never over cap, never an extra offer, never a skipped teach.
@@ -1172,9 +1212,9 @@ function buildLevel(lvl) {
           : (G.mode === 'junkie' ? gauntletEntranceName(SKIN.sentinelEntranceStyles[rIdx]) + ' · ' : '') +
             'THREE ROUNDS — 1 PHASE · 2 PHASES · 3 PHASES', null, false, true, 'boss');
       // AFT-002: the opening reveal — the trio for a ladder/relay, but the
-      // raid's headliner is the SOVEREIGN already hanging over the arena
-      if (fmt === 'raid') {
-        const sb = G.bricks.find(b => b.raidSeraph && !b.dead);
+      // raid's and siege's headliner is the SOVEREIGN already in the arena
+      if (fmt === 'raid' || fmt === 'siege') {
+        const sb = G.bricks.find(b => (b.raidSeraph || b.siegeSov) && !b.dead);
         if (sb) beginBossReveal('legendary', [sb]);
       } else {
         beginBossReveal('sentinels', G.bricks.filter(b => b.subBoss && !b.dead));

@@ -683,6 +683,30 @@
       bloomName: 'HOURSEED BLOOM', deflectWord: 'THE WIND TURNS IT',
     },
   };
+  // Realm 3 — SIEGE OF THE DEEP CURRENT (AFT-020 Phase 4): an environmental
+  // siege. Thalassar circles from the opening but the three Colossi hold
+  // the PRESSURE SEAL — the destruction ORDER is the player's, and every
+  // broken Colossus removes its own hazard while strengthening one property
+  // of the final weather. Thalassar's body leaves a CURRENT TRAIL whose
+  // safety alternates. Mirajin's coda drops three falling WISHES — Commit,
+  // Adapt, Explore — and the one you catch shapes the Victory Draft.
+  finaleProfiles[2] = {
+    format: 'siege',
+    title: FINALE_TITLES[2],
+    beats: [
+      { key: 'stations', label: 'THE PRESSURE SEAL', work: 0.45,
+        tip: 'CHOOSE THE ORDER — EVERY BROKEN COLOSSUS CHANGES THE FINAL WEATHER' },
+      { key: 'weather', label: REALM_BOSSES[2].leg[0].toUpperCase(), work: 1.0,
+        tip: "THE CURRENT TRAIL TURNS — WATCH WHICH WATER IS SAFE" },
+      { key: 'coda', label: 'THREE WISHES', work: 0,
+        tip: 'CATCH ONE FALLING WISH — IT SHAPES YOUR VICTORY DRAFT' },
+    ],
+    siege: {
+      sealWord: 'THE SEAL HOLDS', trailWord: 'THE CURRENT BURNS',
+      wishNames: ['COMMIT', 'ADAPT', 'EXPLORE'],
+      weatherWords: ['THE TIDE QUICKENS', 'THE FROST WIDENS THE WAKE', 'THE HULL ARMS THE DEEP'],
+    },
+  };
   // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
   // raid. Omega Seraph hangs overhead from the first second, assembling a
   // crown-lance from arena segments; the three captains each power one.
