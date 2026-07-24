@@ -3100,10 +3100,30 @@ function jumpToBossPhase(round, phase) {
   boss.phase = ph;
   boss.hp = Math.max(1, Math.round(boss.maxHp * ((pc - ph + 0.5) / pc)));
 }
+// ---- AFT-020 finale director (Phase 1: an adapter over the gauntlet — the
+// gauntlet still drives combat; the director records format/beat/clock/
+// mastery state so Trial, presentation and the ledger read one contract).
+// Phase 2 flips the drive direction for the first non-ladder formats.
+function startFinaleBeat(i) {
+  const F = G.finale; if (!F || i === F.beat) return;
+  F.beatClocks[F.beatKey] = +(((F.beatClocks[F.beatKey] || 0) + F.beatT)).toFixed(1);
+  F.beat = i; F.beatT = 0;
+  const fmt = FINALE_FORMATS[F.format] || FINALE_FORMATS.ladder;
+  F.beatKey = fmt.beats[i] || ('beat' + i);
+}
+function completeFinale() {
+  const F = G.finale; if (!F || F.mastery.clear) return;
+  F.beatClocks[F.beatKey] = +(((F.beatClocks[F.beatKey] || 0) + F.beatT)).toFixed(1);
+  F.beatT = 0;
+  F.mastery.clear = true;
+  const L = statsCur();
+  if (L) { L.finaleFormat = F.format; L.finaleBeatT = { ...F.beatClocks }; }
+}
 function gauntletWake() {
   const gj = G.gauntlet;
   if (!gj) return;
   gj.phase = 1;
+  startFinaleBeat(1);
   let legend = null;
   for (const b of G.bricks) {
     if (!b.dormant) continue;
@@ -3132,6 +3152,7 @@ function gauntletSummonMythic(forceSecret = false) {
   const gj = G.gauntlet;
   if (!gj) return;
   gj.phase = 2;
+  startFinaleBeat(2); // covers both the mythic and the secret replacement
   const gen2 = genFor(G.level);
   const riftOpen = forceSecret || (secretEligible() && secretShardCount() === 3);
   if (riftOpen) {
@@ -3775,6 +3796,8 @@ function update(dt) {
   // ---- THE GAUNTLET: three rounds per finale. Round 1 the sentinels hold
   // the arena; felling them wakes the LEGENDARY (and its wings); felling
   // the legendary summons the MYTHICAL — smaller, faster, wilder.
+  // the finale beat clock excludes reveal freezes — beat time is combat time
+  if (G.finale && G.state === 'play' && !G.reveal) G.finale.beatT += dt;
   if (G.gauntlet && G.state === 'play') {
     const gj = G.gauntlet;
     if (gj.phase === 0 && !G.bricks.some(b => !b.dead && b.subBoss)) {
@@ -5571,6 +5594,7 @@ function update(dt) {
     SFX.stageClear();
     if (G.results.objectives.some(o => o.isNew)) setTimeout(() => SFX.medal(), 650);
     G.clearedStage = clearedStage;
+    if (clearedStage === 2) completeFinale(); // AFT-020: close the beat clocks + ledger stamp
     if (G.deathsThisWave === 0) G.adapt = Math.min(1.15, G.adapt * 1.04); // flawless → push back
     // AFT-007: the region-clear life rides the AEGIS capstone now (the old
     // `revive` key is the CROWNED RELIC weapon tier)

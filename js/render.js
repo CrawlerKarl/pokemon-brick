@@ -6719,8 +6719,14 @@ function drawTrial() {
   // the secret replacement fight directly so it can be practiced on demand.
   if (T.rounds) {
     const gsel = SKIN.gens[trialSel.region];
-    const labels = ['FULL GAUNTLET', '★ ' + gsel.boss.n.toUpperCase(),
-      gsel.gauntlet ? '✦ ' + (SKIN.names[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : '✦ MYTHICAL',
+    // AFT-020: the round chips carry the finale's NAMED CHAPTERS from the
+    // skin's profile (title / core / coda labels), falling back to the old
+    // generic wording where no profile exists
+    const fpT = finaleProfile(trialSel.region);
+    const chapT = i => (fpT && fpT.beats && fpT.beats[i] && fpT.beats[i].label) || null;
+    const labels = [(fpT && fpT.title) || 'FULL GAUNTLET',
+      '★ ' + (chapT(1) || gsel.boss.n.toUpperCase()),
+      '✦ ' + (chapT(2) || (gsel.gauntlet ? (SKIN.names[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : 'MYTHICAL')),
       '◆ ' + SKIN.secret.name + ' · SECRET'];
     for (let i = 0; i < T.roundCount; i++) {
       const rr2 = T.round(i), sel2 = trialSel.round === i;

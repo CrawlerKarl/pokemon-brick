@@ -1043,6 +1043,20 @@ function buildLevel(lvl) {
       legend.bx = legend.hx = -2000; // parked off-stage until round 2
       G.gauntlet = { phase: 0, origX: W / 2, legendHp: bossHp, subT: 0, subAbilityCD: 4, entry: null };
       G.sentinelGuardTaught = false; // the guard/opening strip teaches once per wave
+      // AFT-020 Phase 1: the finale DIRECTOR arms alongside the gauntlet
+      // (adapter mode — the gauntlet still drives combat; the director
+      // records format, beat, clocks and mastery so Trial, presentation
+      // and the ledger read ONE contract in every realm).
+      {
+        const fp = finaleProfile(rIdx);
+        const fmt = (fp && fp.format) || 'ladder';
+        G.finale = {
+          realm: rIdx, format: fmt, profile: fp || null,
+          beat: 0, beatKey: (FINALE_FORMATS[fmt] || FINALE_FORMATS.ladder).beats[0], beatT: 0,
+          beatClocks: {},
+          mastery: { clear: false, countered: false, mastered: false, counters: {} },
+        };
+      }
       const subs = gen.gauntlet.subs;
       const subHp = Math.max(5, Math.round(bossHp * (subs.length === 1 ? 0.85 : 0.42)));
       for (let i = 0; i < subs.length; i++) {

@@ -576,8 +576,28 @@ const ENCOUNTER_OBJECTIVES = {
 // Engine tables (EFFECTIVE/RESIST, SHOT_CLASSES, TYPE_PROJECTILE_KIND,
 // PATHS/STACK_ITEMS, MODIFIERS, STAGE_OBJECTIVE_SETS…) stay global.
 // ============================================================
+// AFT-020: finale profiles — the director's per-realm identity card. Phase 1
+// declares today's three-round ladder for every region (format keys are
+// engine vocabulary); as each realm's redesigned finale ships, its entry
+// gains the new format + authored beats. Labels feed the Trial chapter
+// chips and announce copy; `work` records today's real HP shares in
+// Sovereign-equivalents (trio 3×0.42, solo sentinel 0.85, mythic 0.82).
+const FINALE_PROFILES = GENS.map(g => ({
+  format: 'ladder',
+  title: 'THE ' + g.name + ' GAUNTLET',
+  beats: [
+    { key: 'opening', label: 'THE SENTINELS',
+      work: g.gauntlet && g.gauntlet.subs.length === 1 ? 0.85 : 1.26 },
+    { key: 'core', label: g.boss.n.toUpperCase(), work: 1.0 },
+    { key: 'coda',
+      label: (g.gauntlet ? (NAMES[g.gauntlet.myth[0]] || 'MYTHICAL') : 'MYTHICAL').toUpperCase(),
+      work: 0.82 },
+  ],
+}));
+
 assembleSkins({
   names: NAMES, gens: GENS, habitatPacks: HABITAT_PACKS, typeClusters: TYPE_CLUSTERS,
+  finaleProfiles: FINALE_PROFILES,
   starterMon: STARTER_MON, regionIntros: REGION_INTROS, stageFlavor: STAGE_FLAVOR,
   stageNames: STAGE_NAMES, acts: ACTS, junkieItems: JUNKIE_ITEMS,
   dexRewards: DEX_REWARDS, cheatItems: CHEAT_ITEMS,

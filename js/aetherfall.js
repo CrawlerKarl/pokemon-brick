@@ -628,8 +628,37 @@
     }),
   });
 
+  // ---------- AFT-020 finale profiles ----------
+  // The nine realm finales carry their AUTHORED titles from day one (they
+  // are this world's chapter names); formats stay 'ladder' until each
+  // realm's redesigned encounter ships, then the entry flips to its true
+  // format (relay / siege / hourglass / circuit / hunt / rite / raid /
+  // chase) with its authored beats. Work values are today's real HP
+  // shares in Sovereign-equivalents.
+  const FINALE_TITLES = [
+    'THE FIRST COVENANT', 'THE GALE RELAY', 'SIEGE OF THE DEEP CURRENT',
+    'THE FRACTURED HOUR', 'TRIAL OF THE LIVE GRID', 'THE FALSE FOUNDATION',
+    'THE ECLIPSE RITE', 'THE SERAPH RAID', 'THE FIRST FUSION',
+  ];
+  const OPENING_NAMES = [
+    'THE TRIUNE WARD', 'THE THREE VOWS', 'THE PRESSURE SEAL',
+    'THE FORGE SIBYLS', 'THE PALADIN GATE', 'THE FOUNDATION SERPENT',
+    'THE THREE TOTEMS', 'THE ARENA CAPTAINS', 'THE SEALED VESSELS',
+  ];
+  const finaleProfiles = REALM_BOSSES.map((B, r) => ({
+    format: 'ladder',
+    title: FINALE_TITLES[r],
+    beats: [
+      { key: 'opening', label: OPENING_NAMES[r],
+        work: B.sents.length === 1 ? 0.85 : 1.26 },
+      { key: 'core', label: B.leg[0].toUpperCase(), work: 1.0 },
+      { key: 'coda', label: B.myth[0].toUpperCase(), work: 0.82 },
+    ],
+  }));
+
   // ---------- assembly ----------
   Object.assign(AF, {
+    finaleProfiles,
     typeNames,
     edition: 'AETHERFALL EDITION',
     affinities: true, // unlocks the LIGHT/DARK setup pick (Round S6)

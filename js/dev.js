@@ -251,6 +251,17 @@ window.DEV = {
   boss(region = 1, round = 1, opts = {}) {
     return devLaunch({ region, stage: 3, round, ...opts });
   },
+  // AFT-020: exact finale-beat launch. `beat` accepts an index (0..3 — maps
+  // 1:1 to the gauntlet round today; 3 = the secret) or a beat KEY from the
+  // realm's format ('opening'/'core'/'coda' on a ladder).
+  finale(region = 1, beat = 0, opts = {}) {
+    let idx = beat;
+    if (typeof beat === 'string') {
+      const fmt = (finaleProfile(region - 1) || {}).format || 'ladder';
+      idx = Math.max(0, (FINALE_FORMATS[fmt] || FINALE_FORMATS.ladder).beats.indexOf(beat));
+    }
+    return devLaunch({ region, stage: 3, round: idx, ...opts });
+  },
   report: devRunReport,
   // AFT-017 reference captures: every vessel family × 3 forms × LIGHT/DARK,
   // side by side, downloaded as one PNG contact sheet. Run it twice if PNG
@@ -302,6 +313,7 @@ window.DEV = {
     console.log([
       'DEV.launch({level|region+stage, round, mode, diff, starter, seed, upg, real})',
       'DEV.boss(region 1-9, round 1-3, opts) — jump straight to a boss round',
+      "DEV.finale(region, beat|'core'|'coda', opts) — exact finale-beat launch",
       'DEV.grant("arsenal:3,aegis:2,vshred") — grant paths / web nodes / stacks',
       'DEV.report() — balance report object · DEV.download() — save as JSON',
       'DEV.panel() / F9 — live balance dashboard overlay',

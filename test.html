@@ -1629,6 +1629,47 @@ window.requestAnimationFrame = function () { return 0; };
     return 'same-seed launch bit-identical after page aging + dirtied clocks';
   });
 
+  // AFT-020 Phase 1: the finale DIRECTOR mirrors the gauntlet — same rounds,
+  // one new contract (format/beat/clock/mastery + the ledger stamp). Combat
+  // behavior is untouched in this phase; this locks the adapter itself.
+  test('AFT-020 P1: finale director mirrors the gauntlet (beats, clocks, ledger, trial)', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(3, true, { seed: 'FIN1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    assert(G.finale && G.finale.format === 'ladder' && G.finale.beat === 0
+      && G.finale.beatKey === 'opening', 'finale arms at beat 0/opening');
+    assert(G.gauntlet && G.gauntlet.phase === 0, 'gauntlet adapter intact');
+    assert(finaleProfile(0) && finaleProfile(0).beats.length === 3, 'active-skin profile resolves');
+    assert(SKINS.aetherfall.finaleProfiles && SKINS.aetherfall.finaleProfiles[0].title === 'THE FIRST COVENANT'
+      && SKINS.aetherfall.finaleProfiles[0].beats[0].label === 'THE TRIUNE WARD',
+      'aetherfall authors its own finale titles');
+    await runFrames(60);
+    assert(G.finale.beatT > 0.5, 'beat clock ticks with combat');
+    for (const b of G.bricks) if (b.subBoss) b.dead = true;
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && G.finale.beat === 1 && G.finale.beatKey === 'core',
+      'wake advances phase AND beat (got phase ' + G.gauntlet.phase + ', beat ' + G.finale.beat + ')');
+    assert((G.finale.beatClocks.opening || 0) > 0.5, 'opening clock closed on the wake');
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(30);
+    assert(G.gauntlet.phase === 2 && G.finale.beat === 2 && G.finale.beatKey === 'coda',
+      'summon advances to the coda beat');
+    for (const b of G.bricks) if (!b.dead) b.dead = true;
+    await runFrames(260, () => (G.state !== 'play' ? false : undefined));
+    const L = (G.runStats.levels || []).find(l => l.lv === 3);
+    assert(L && L.finaleFormat === 'ladder' && L.finaleBeatT && L.finaleBeatT.coda != null,
+      'clear stamps format + beat clocks on the ledger');
+    assert(G.finale.mastery.clear === true, 'mastery.clear set on completion');
+    // trial jump keeps the two in sync (jump routes through wake/summon)
+    resetRun(3, true, { seed: 'FIN2' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    jumpToGauntletRound(2);
+    assert(G.gauntlet.phase === 2 && G.finale.beat === 2 && G.finale.beatKey === 'coda',
+      'trial round jump syncs the director beat');
+    return 'ladder mirrored: opening→core→coda · clocks close per beat · ledger stamped · trial jump synced';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
