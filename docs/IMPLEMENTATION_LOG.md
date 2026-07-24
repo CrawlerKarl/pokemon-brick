@@ -5,6 +5,70 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24g — AFT-008 CLOSEOUT: the Section-9 corrections land, measured
+
+All six high-risk balance areas resolved with evidence (`a8c04e4`) and a
+locking suite fixture: Stormbinder → tempo (1.69× strongest/weakest, in
+band), AEGIS → +1 max once + restore-per-realm + active-threat-clocked
+regen ≤3/stage, One Life → 1.35×/1.8× (stake kept, triple penalty gone),
+forever-stacks → diminishing with floors/caps, renewable adds → no kill
+economy, multi→draco flood → region-alternating remap (57% → ~26-30%).
+The closeout matrix (aft008-redesigned-campaign.json) has the autopilot
+completing the ENTIRE redesigned campaign to the Dawn in one real run:
+26 drafts, 90% active-threat share, 0 KOs. The matrix also caught (and
+we fixed) positional objectives holding an emptied board hostage, and
+props inflating the BE stamp. Realm CRESTS persist per
+realm/mode/difficulty (storeKey('crests'), exported in bundles).
+
+---
+
+## 2026-07-24f — AFT-020 Phase 6: RITE + FIRST FUSION + undercard + spiral
+
+- **Realm 7 — THE ECLIPSE RITE** (`d83e142`): three NON-HP totem rites
+  (opening/pulse/root — a qualified strike IS the rite), marks that keep
+  gate lanes dark, a bright/dark moon read by SHAPE, and Umbrix stealing
+  banked Surge until three tags hurl it back. No third bar.
+- **Realm 9 — THE FIRST FUSION** (`7e7273f`): a chosen road, charges
+  whose MISSES shatter locks, marionette puppets, and a chained climax
+  where the pair SHARES every wound — the last collision cracks straight
+  into the Ninefold Dawn with no draft between (the Dawn branch resolves
+  finale mastery on its way out). Crucible's WIN THE UNDERCARD crowd
+  meter, Act-III authored conditions, and TIME SPIRAL remixes
+  (spiralTellMul ×0.9 on every finale tell clock) shipped alongside.
+
+---
+
+## 2026-07-24e — AFT-020 Phase 5: HOURGLASS + CIRCUIT + HUNT (Act II)
+
+- **Realm 4 — THE FRACTURED HOUR** (`29ed521`): Sibyls AWAKENED through
+  their own openings into friendly clocks; a ring-gated Regent whose
+  volleys echo back pale; a mid-fight invader trading hours. Fixed two
+  matrix-visible bugs: stale docked HP lanes surviving knockout rebuilds,
+  and deflects shortening invulnerability grace.
+- **Realm 5 — THE LIVE GRID** (`2b46434`): first-strike Paladin duel,
+  neutral terminals, full-route illuminated circuits redirected home, and
+  Ignivar as a RIDDEN Victory Flame. Root-fixed the classic mode-smoke
+  flake (fireAction re-launch in the finish path).
+- **Realm 6 — THE FALSE FOUNDATION** (`b9d8dfa`): real cells among
+  dashed reflections, a Serpent that flees UNBEATEN, closing shadow
+  sectors that drain-and-feed (clamped), and Lucerna's prison — a rescue
+  whose prism holds the final window. Act-II authored conditions.
+
+---
+
+## 2026-07-24d — AFT-020 Phases 3+4: variety spine + Act I
+
+- **Phase 3** (`1e6638e`): authored stage titles ×27 ×2 skins; VICTORY
+  DRAFTS at 4/5 offers with the mastered pin-reroll; PREPARATION; the
+  wardbreak + live-lanes non-attrition identities (cross-mode).
+- **Phase 4** (`5de5dc6`, `c9bedb0`): the SIEGE (order-choice stations,
+  the alternating current trail, wish coda that leans the draft), the
+  FIRST COVENANT rules (Triune Ward gaps, memory echoes with a harmless
+  teach, anchor-denial breaks, the 0.5× DREAM MIRROR coda), the sky
+  bells, and Act-I authored conditions.
+
+---
+
 ## 2026-07-24c — AFT-020 Phase 2: THE GALE RELAY + THE SERAPH RAID
 
 The two OPPOSITE finale formats that prove the director, per the plan's

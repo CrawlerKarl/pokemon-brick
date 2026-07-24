@@ -122,8 +122,8 @@ items have since shipped.
 | AFT-005B | P0 | ✅ Shipped | Mobile visual-regression scenes and fitted-label assertions | Makes layout, terminology, and presentation regressions catchable before release | M–L | AFT-001–004, AFT-005A |
 | AFT-006 | P0 | ✅ Shipped | Save export/import, versioned backup, and storage persistence | Protects a long 27-stage run against Safari storage eviction and corruption | M | — |
 | AFT-007 | P1 | ✅ Shipped 07-23e | ORBITAL RELIC redesign of the `bond` path (same keys, new identity) | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-003, AFT-005A |
-| AFT-008 | P1 | ⬜ Next · split around AFT-020 | Full-campaign balance matrix and regression budgets | Establishes the old-campaign baseline, then verifies the redesigned campaign | L | AFT-005A/B, AFT-007 |
-| AFT-020 | P1 | ⬜ Planned | Realm finales and campaign variety program | Gives every realm a distinct finale, stage identity, objective rhythm, and reward presentation | XL | AFT-008 baseline |
+| AFT-008 | P1 | ✅ Shipped 07-24 (baseline + closeout) | Full-campaign balance matrix and regression budgets | Old-campaign baseline captured, Section-9 corrections landed and measured against the redesigned campaign | L | AFT-005A/B, AFT-007 |
+| AFT-020 | P1 | ✅ Shipped 07-24 | Realm finales and campaign variety program | All nine authored finale formats live, stage titles, non-attrition identities, mastery drafts, Preparation, crests, Spiral remixes | XL | AFT-008 baseline |
 | AFT-009 | P1 | ⬜ Open | Mobile-first constellation redesign and build identity | Makes the updated web understandable and touch-friendly | L | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |

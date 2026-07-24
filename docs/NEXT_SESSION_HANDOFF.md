@@ -27,12 +27,21 @@
 > some of its status lines describe the pre-P0 world. Its **P1 ranking and
 > acceptance criteria are still live and authoritative.**
 >
-> **NEW OWNER DIRECTION — AFT-020:** replace the repeated realm-finale ladder
-> and audit repetition across the whole campaign. The handoff-ready executable
-> design is `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md`, including its
-> Section 9 balance framework and recommended corrections. Sequence it as:
-> **AFT-008 baseline → AFT-020 → AFT-008 closeout**, then resume the remaining
-> P1 track. Do not fully tune the old finale structure before replacing it.
+> **AFT-020 + AFT-008 SHIPPED (2026-07-24, one autonomous program):** all
+> NINE realm finales now run their authored formats (ladder / relay /
+> siege / hourglass / circuit / hunt / rite / raid / chase — only
+> Greenspell keeps the classic ladder), every stage carries an authored
+> display title, wardbreak/lanes/bells/undercard non-attrition identities
+> run in every mode, Victory Drafts deal 4/5 mastery-sized hands with a
+> pinned mastered reroll, Preparation banks a Challenge benefit, realm
+> crests persist, Time Spiral remixes tighten learned tells, and the
+> Section-9 balance corrections (Stormbinder tempo, AEGIS restore + gated
+> regen, One Life un-stacked, diminishing stacks, renewable-add
+> exclusions, drop diversification) are landed with regression fixtures.
+> The old-campaign baseline AND the redesigned-campaign closeout matrix
+> live in docs/baselines/. Suite is at 102 invariants; the working design
+> log is docs/archive/AFT020_PHASE_NOTES.md. Next in line: AFT-009
+> (constellation) → AFT-019 → AFT-010 → AFT-011 → AFT-012.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 

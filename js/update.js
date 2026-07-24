@@ -3539,12 +3539,14 @@ function completeFinale() {
     F.mastery.mastered = (F.chase.chains || 0) >= 3 && (F.chase.locks || 0) >= 3;
   }
   const L = statsCur();
+  const result = F.mastery.mastered ? 'mastered' : F.mastery.countered ? 'countered' : 'clear';
   if (L) {
     L.finaleFormat = F.format;
     L.finaleBeatT = { ...F.beatClocks };
     L.finaleCounters = { ...F.mastery.counters };
-    L.finaleMastery = F.mastery.mastered ? 'mastered' : F.mastery.countered ? 'countered' : 'clear';
+    L.finaleMastery = result;
   }
+  awardCrest(F.realm, result); // durable recognition, never power (real journeys only)
 }
 // ---- THE GALE RELAY (AFT-020 Phase 2 — the first non-ladder format) ----
 // Beat 0: the three Vows pass ONE storm core. Only the carrier takes real

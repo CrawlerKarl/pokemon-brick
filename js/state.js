@@ -176,7 +176,7 @@ function clearCheckpoint() { RUN_CKPT = null; saveStore(storeKey('run'), null); 
 // the current skin's checkpoint/codex/medals/victories/best/daily/coach
 // state. Import NEVER writes an unknown key, NEVER writes a checkpoint that
 // fails migrateCheckpoint, and always snapshots a pre-import backup first.
-const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach', 'relicNotice'];
+const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach', 'relicNotice', 'crests'];
 const EXPORT_GLOBAL_KEYS = ['pkbrk-settings', 'pkbrk-music'];
 function exportBundle() {
   const keys = {};
@@ -549,6 +549,19 @@ function statsObjective(type, done) {
 // journeys only (never trial/daily/cheated). Survives corrupt storage via
 // the loadStore guard, same pattern as SETTINGS.
 const MEDALS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore(storeKey('medals'), '{}'));
+// ---- REALM CRESTS (AFT-020 §8): the best finale-mastery result per
+// realm/mode/difficulty — durable recognition, never combat power. Real
+// journeys only; feeds the journey map, dossiers and Boss Rush later.
+const CRESTS = (v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {})(loadStore(storeKey('crests'), '{}'));
+function crestRank(v) { return v === 'mastered' ? 3 : v === 'countered' ? 2 : v === 'clear' ? 1 : 0; }
+function awardCrest(realm, result) {
+  if (G.trial || G.daily || G.cheated) return false;
+  const key = realm + ':' + G.mode + ':' + SETTINGS.preset;
+  if (crestRank(result) <= crestRank(CRESTS[key])) return false;
+  CRESTS[key] = result;
+  saveStore(storeKey('crests'), CRESTS);
+  return true;
+}
 function medalEarned(lvl, key) { return !!(MEDALS[lvl] && MEDALS[lvl][key]); }
 function awardMedal(lvl, key) {
   if (medalEarned(lvl, key)) return false;
