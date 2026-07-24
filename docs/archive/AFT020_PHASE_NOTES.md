@@ -87,7 +87,13 @@ mechanics in this phase (the new Greenspell attack rules are Phase 4).
    play time, trial chapter labels resolve in both skins, and the Rift
    secret (round-3 replacement) still records `beatKey 'coda'`.
 
-## CONTINUATION STATE (2026-07-24, mid-Phase-6)
+## CONTINUATION STATE — **PROGRAM COMPLETE (2026-07-24)**
+
+> This section was the mid-program resume point; it is now HISTORICAL.
+> All 10 phases shipped (log rounds 2026-07-24a–h), the suite finished at
+> 103 invariants, and the redesigned-campaign closeout matrix lives in
+> `docs/baselines/`. The per-finale pattern below remains the reference
+> for any future format work. The snapshot as of mid-Phase-6 follows.
 
 Shipped & committed (all gate-green): Phase 0 baseline+schemas+fixtures
 (`e603088`,`d796973`), P1 director (`85d5bf9`), P2 relay (`4f66efd`) +

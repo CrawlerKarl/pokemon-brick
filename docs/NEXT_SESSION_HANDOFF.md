@@ -2,7 +2,7 @@
 
 > **STATUS (2026-07-23 session closeout): ALL P0 ITEMS FROM THE BACKLOG ARE
 > IMPLEMENTED, TESTED, AND LIVE** (rounds g–o in the log): AFT-005A the
-> 28–31s headless release gate (`npm test`), AFT-001 safe zones + fitted
+> headless release gate (`npm test`), AFT-001 safe zones + fitted
 > labels, AFT-003 the SURGE lexicon, AFT-004 the kinded announce queue +
 > clean launches, AFT-002 the full-resolution boss reveal + HUD-lane dock,
 > AFT-017 the oath evolution channels, AFT-006 save safety
@@ -10,7 +10,7 @@
 > (baked hot loops + the adaptive effects budget), and AFT-005B mobile
 > scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 85/85. `npm test` (~28–31s headless) ran green before every
+> **Suite: 103/103. `npm test` (~30–35s headless) ran green before every
 > commit.** Production art: 259 base + 259 radiant + 54 previews +
 > **43 boss reveals** + 21 weapon sprites. Both sites live:
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
@@ -39,9 +39,15 @@
 > regen, One Life un-stacked, diminishing stacks, renewable-add
 > exclusions, drop diversification) are landed with regression fixtures.
 > The old-campaign baseline AND the redesigned-campaign closeout matrix
-> live in docs/baselines/. Suite is at 102 invariants; the working design
-> log is docs/archive/AFT020_PHASE_NOTES.md. Next in line: AFT-009
-> (constellation) → AFT-019 → AFT-010 → AFT-011 → AFT-012.
+> live in docs/baselines/. Suite is at 103 invariants; the working design
+> log is docs/archive/AFT020_PHASE_NOTES.md (marked COMPLETE).
+>
+> **Post-ship owner round (2026-07-24h, `09cea36` / dist `2efd83d`):** two
+> real-phone art-pop reports fixed same day — reveal portraits + weapon
+> sprites are WARMED ahead of first draw (`warmRevealArt`/`warmSetupArt`)
+> and each reveal LATCHES its art source at 0.35s so nothing swaps
+> mid-scene. Next in line: **owner playtest of the redesigned campaign** →
+> AFT-009 (constellation) → AFT-019 → AFT-010 → AFT-011 → AFT-012.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -55,7 +61,7 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
-  the reasoning behind it. Newest entries run through **2026-07-23f**.
+  the reasoning behind it. Newest entries run through **2026-07-24h**.
 - `FULL_GAME_ROADMAP.md` — milestone history (useful design context; the
   backlog wins on open items).
 - `archive/` — historical plan docs for shipped features (see its README).
@@ -148,6 +154,15 @@ art.** Local same-origin files only; the no-remote-fetch rule stands.
 
 ## What shipped, in brief (full detail in `IMPLEMENTATION_LOG.md`)
 
+**2026-07-24: the AFT-008 + AFT-020 program (rounds a–h)** — the finale
+director + nine authored realm-finale formats in both skins and all three
+modes, stage display titles ×27, four non-attrition objective identities
+(wardbreak/lanes/bells/undercard), mastery-sized Victory Drafts + pinned
+mastered reroll, Preparation, realm crests, authored conditions ×9, Time
+Spiral remixes, the Section-9 balance corrections with fixtures, the
+old/redesigned baselines (`npm run baseline`, docs/baselines/), suite
+87→103, and the same-day owner art-pop fix round (warming + reveal latch).
+
 **2026-07-22 → 07-23: all P0 items** — the headless gate (AFT-005A), safe
 zones + fitted labels (001), the SURGE lexicon (003), the kinded announce
 queue (004), the boss reveal scene (002), the oath evolution channels (017),
@@ -239,17 +254,17 @@ reopens it.
   closeout run was green in 28s: wave 1.01ms average; boss 0.87ms average /
   1.3ms P95; boss FULL 1.4 gradients + 3.9 blur writes/frame.
 
-### Then: AFT-008 baseline → AFT-020 → AFT-008 closeout
+### Then: owner playtest first, then the P1 track
 
-The owner has explicitly prioritized the new realm-finale and campaign-variety
-plan. The live sequence is (**AFT-007 SHIPPED 2026-07-23e** — the bond path
-flies the ORBITAL RELIC now, all keys unchanged, suite 86):
+The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
+2026-07-24a–h; both sites deployed and curl-verified). The live sequence:
 
 ```
 ✅ AFT-007 ORBITAL RELIC
-→ AFT-008 BASELINE (NEXT — measurement/schema only)
-→ AFT-020 REALM FINALES + CAMPAIGN VARIETY
-→ AFT-008 REDESIGNED-CAMPAIGN CLOSEOUT
+✅ AFT-008 BASELINE + SCHEMA LOCK (docs/baselines/, npm run baseline)
+✅ AFT-020 NINE REALM FINALES + CAMPAIGN VARIETY (all 10 phases)
+✅ AFT-008 REDESIGNED-CAMPAIGN CLOSEOUT (Section-9 corrections + matrix)
+→ OWNER PLAYTEST of the redesigned campaign (real phone) — the gating input
 → AFT-009 constellation redesign
 → AFT-019 first-session phone pass
 → AFT-010 accessibility
@@ -257,85 +272,44 @@ flies the ORBITAL RELIC now, all keys unchanged, suite 86):
 → AFT-012 visual pass
 ```
 
-**The next session starts with Phase 0 of the AFT-020 plan, not with boss
-implementation.**
-
-1. Inventory what the existing stats ledger already records for all 27 stages.
-2. Add only the missing baseline fields needed to compare the old and new
-   campaigns: finale format/beat, boss actions shown and countered, objective
-   result, director beats fired, modifier/condition, role mix, reward mastery,
-   stage duration, Sovereign-equivalent work, meaningful-progress/downtime,
-   damage by multiplier category, heat lockout, shield/heal/life sources,
-   Surge sources, renewable-enemy proc gain, and remapped drop distribution.
-3. Produce a deterministic baseline report across representative modes,
-   difficulties, affinities, vessels, and builds.
-4. Lock the data shapes for `FINALE_FORMATS`, `SKIN.finaleProfiles`,
-   `G.finale`, counter results, `SKIN.stageTitles`, and work/threat/recovery
-   budgets.
-5. Produce evidence-backed recommendations for the six highest-risk balance
-   areas listed below.
-6. Hand off a concrete Greenspell migration checklist. Do not leave nine
-   partially implemented finales.
-
-The creative decisions are already made in the plan:
-
-- Greenspell is the sole classic Heralds → Sovereign → Mythic ladder.
-- Belltower is a continuous gale relay; Drowned is a siege; Foundry is a
-  fractured dual timeline; Chrome is a branching circuit; Spire is a rescue
-  hunt; Atolls is a ritual; Crucible is a simultaneous raid; Cradle is a
-  chase/tag-team.
-- Mythics take different roles instead of always being the last health bar.
-- every realm gains one non-attrition regular-stage identity;
-- all 27 stages gain realm-specific display titles;
-- finale mastery improves draft choice, not permanent rank count;
-- no new progression currency, no seventh path, and no enemy fire in Breaker.
-
-### Balance reread — priority probes
-
-The plan's second pass found six areas that could distort every new encounter.
-Measure them before tuning the relay/raid slices, then resolve them during the
-AFT-008 closeout:
-
-1. **Stormbinder/electric:** the shared line currently reaches 2.2× damage,
-   much faster cadence, chains, 75% starting Surge, and passive Surge. The
-   plan recommends normalizing it globally as a fast chain/tempo vessel.
-2. **AEGIS:** SUPER SHIELD currently raises life on acquisition and every
-   later realm while regenerating every ten seconds. The plan recommends +1
-   maximum once, then restore one missing life on realm clear; regeneration
-   uses active-threat time and a per-stage ceiling.
-3. **Damage stacking:** vessel, path, Aspect, mastery, Surge, fusion/apex, and
-   counter multipliers can compound. Instrument each category and apply
-   within-category addition or diminishing returns before using a hidden cap.
-4. **Forever stacks and renewable adds:** Time Spiral stacks and objective
-   reinforcements can drive heat, damage, shields, drops, or Surge without a
-   ceiling. Preserve stored stacks, but diminish their effective value and
-   exclude non-budgeted renewable targets from combat-economy procs.
-5. **One Life:** one HP currently also carries 1.65× boss HP and 2.35× shot
-   rate. Its consequence is already the difficulty identity; test lower
-   HP/fire brackets rather than triple-stacking punishment.
-6. **Mode/drop normalization:** objective hit counts must reflect ball versus
-   volley contact rates, and the Aspect-to-power remap must not let one power
-   family dominate an act.
-
-Do not change those numbers during Phase 0. Capture the old behavior first,
-save the fixtures, then make one explained change at a time.
+1. **First: collect the owner's hands-on read.** Every finale, objective,
+   title, draft, and Section-9 number was tuned from deterministic autopilot
+   evidence — the closeout matrix has a full-campaign clear with 0 KOs, but
+   only the owner can judge feel. Two art-pop reports already came in and
+   were fixed same day (round 24h); expect more small rounds like it.
+2. **AFT-009 (constellation redesign)** is next in the backlog's P1 order —
+   its acceptance criteria in the backlog are still the spec.
+3. **Cheap follow-ups spotted during the closeout** (noted, not started):
+   - the ground vessel clears ~27% faster than the median vessel (matrix
+     evidence in docs/baselines/AFT008_CLOSEOUT_REPORT.md) — candidate for
+     a gentle trim if the owner confirms it feels dominant;
+   - a no-build L3 blaster run showed a game-over gap in the matrix —
+     verify a human can actually hit it before tuning anything;
+   - retired mythic duel specs (the seven formats that no longer end on a
+     mythic health bar) wait on a future Boss Rush / Trial-extra surface if
+     the owner ever wants those duels back as practice.
 
 Notes so you don't redo finished work:
 
-- **`npm test` is the gate** (~28–31s full, `--fast` ~15s, `--suite` ~12–18s):
-  syntax → assets → 85 invariants headless → both-skin + dist boots →
-  vocabulary scan → RESIDUE → 15 mobile scenes × 2 viewports with
-  fitted-label assertions (30 screenshots → `.gate-shots/`) → the wave AND
+- **`npm test` is the gate** (~30–35s full, `--fast` ~15s, `--suite` ~12–18s):
+  syntax → assets → 103 invariants headless → both-skin + dist boots →
+  vocabulary scan → RESIDUE → 19 mobile scenes × 2 viewports with
+  fitted-label assertions (38 screenshots → `.gate-shots/`) → the wave AND
   boss storm ledgers (`.gate-report.json`). Run it before every commit.
+- **`npm run baseline`** replays 69 deterministic autopilot scenarios
+  (~31s) into a ledger report. The committed snapshots in `docs/baselines/`
+  (old campaign + redesigned closeout) are FIXTURES — regenerate to compare,
+  but `git checkout` the old pair back; never overwrite history.
+- **The per-finale implementation pattern is documented** in
+  `docs/archive/AFT020_PHASE_NOTES.md` (skin profiles → buildLevel block →
+  director fns → damageBrick tail gate → kill hooks → summon override →
+  strokes-only fx → mastery → suite test → deliberate legacy-test updates).
+  Follow it for any new format work; don't invent a second pattern.
 - **AFT-003's optional tail** (renaming internal `G.mega`/`megaT`) remains
   ruled out by the backlog itself — engine identifiers ship unchanged.
 - **AFT-018's deeper rungs are available but unimplemented by design**:
   rung 3+ (offscreen fragment/trail culls, animation sampling) waits for
   real-device evidence; the storm ledger accumulates the baseline every run.
-- **AFT-007 groundwork that already exists**: the announce queue, fitLabel,
-  the gate, and `compactInPlace` are the rails the relic path will ride;
-  the backlog's guardrails section (bond key stays, five pair fusions
-  re-themed under existing keys) is the spec.
 
 ---
 
@@ -348,7 +322,7 @@ Notes so you don't redo finished work:
    `update(1/60)`, read `G.*`; `G.freeze=999; render()` for a screenshot.
    Add `&skin=aetherfall` to any dev URL. If `!W`, force `W/H/canvas` then
    `buildStars(); buildVignette(); bgGen=-1`.
-4. **Suite:** `npm test` (headless, ~28–31s; `--fast` ~15s while iterating).
+4. **Suite:** `npm test` (headless, ~30–35s; `--fast` ~15s while iterating).
    The fronted `/test.html` tab still works for interactive debugging but is
    never required. Modal boss reveals are dormant under the suite
    (`window.__SUITE`); a test that needs one sets `window.__SUITE_REVEALS`.
@@ -396,9 +370,29 @@ Notes so you don't redo finished work:
 - **A free-running timer that consumes `gameRand()` must be reset in
   `resetRun`** — `G.splashCD` wasn't, so a seeded run's RNG stream depended
   on how many runs preceded it in the page, and the AFT-018 sim-identity
-  check went intermittently red. Fixed 2026-07-23. If a determinism test
-  ever goes flaky, instrument `gameRand` call SITES (wrap it and capture
+  check went intermittently red. Fixed 2026-07-23; the AFT-008 round then
+  widened this to the WHOLE clock family (`G.time`, laser/blaster/missile/
+  invuln/se/enemyShot/bossShot/splash CDs, `lastChargeT`) plus a
+  cross-launch aged-page determinism test. Add any new free-running
+  consumer to that reset block. If a determinism test ever goes flaky,
+  instrument `gameRand` call SITES (wrap it and capture
   `new Error().stack`) and diff two runs — that found this in minutes.
+- **`fireAction()` per frame is how a test FINISHES a wave in any mode** —
+  it launches serves AND releases stuck/dropped balls; `serve()` re-racks
+  and can wedge a finish loop (the classic mode-smoke flake, fixed
+  2026-07-24). Test bots in finale scenarios also want `G.lives = 99` +
+  periodic strike/shot clears so a knockout can't pollute the assertion.
+- **Props at `hp ≥ 900` are unkillable scenery by convention** — the
+  AFT-008 workHp/BE stamps skip them (a 999-hp prop once inflated a
+  stage's earned-BE to 13×). Keep any new indestructible prop at 999 hp.
+- **`buildLevel` clears `G.reveal`/`G.revealDock` at build start** — a
+  knockout rebuild once left a stale dock reading from the HUD lane.
+- **Production art is WARMED, never first-drawn** (owner-report round 24h):
+  `warmSetupArt()` on the title (roster + all 21 weapon PNGs),
+  `warmRevealArt(rIdx)` in buildLevel (current + next region) and on Trial
+  region tap, and every reveal LATCHES its portrait source at t ≥ 0.35
+  (`revealLatch`). Any NEW PNG surface needs the same treatment or it will
+  visibly swap over its fallback on a real phone.
 - **Effects quality must never touch the seeded stream.** Cosmetic spawns
   ride `Math.random()`; anything gated by `effectsLevel()` must not sit in
   front of a `gameRand()` call.

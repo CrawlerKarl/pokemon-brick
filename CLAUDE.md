@@ -103,12 +103,12 @@ suite test guards every rect across six sizes.
   bricked startup permanently.
 
 ## Verifying (there is no live human tester)
-**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~28–31s, fully
+**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~30–35s, fully
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 15 mobile scenes
-at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (30
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 19 mobile scenes
+at two phone viewports with FITTED-LABEL CONTAINMENT ASSERTIONS (38
 screenshots → `.gate-shots/`) → the WAVE and BOSS artifact-storm benchmarks
 (ms/frame plus machine-portable per-frame gradient/blur budgets, recorded in
 `.gate-report.json` every run). `--fast` skips the
@@ -143,7 +143,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 86 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 103 checks; `window.TEST_RESULTS` at
   completion. Keep it green. Two overlap invariants:
   flyer↔WALL must be a strict **0** (hard geometry); flyer↔FLYER guards against
   BLOBBING (≤6 transient overlap-frames per run — a 1-frame touch between fast
@@ -451,16 +451,41 @@ phone — flag anything only verifiable there.
   `G.cheated` and the run's best score is not recorded.
 - **Nothing flies/attacks as a framed brick.** `bareMon(br)` gates this. Bare
   mons (flyers, divers, junkie flyers, bosses) FAINT; boxed bricks card-shatter.
-- **Every finale is a three-round GAUNTLET** (`gen.gauntlet`, data.js; the
-  controller lives in update.js): sub-legendaries → the legendary (dormant
-  until round 2, `br.dormant` parks it off-stage) → the mythical
-  (`br.mythic`: 0.82× legendary HP in STARFIGHTER, legacy 0.6× elsewhere,
-  with species-specific movement, fire, and signature ability).
-  Sub-legendaries (`br.subBoss`) fire aimed 3-shot fans; evolved elites
-  (`br.elite ≥ 2`) fire AIMED heavy bolts; only the unevolved rank-and-file
-  keep the classic straight bolt. Junkie separation is EASED (per-rider
-  sepX/sepY: fast build, ~0.4s release) so a kill never snaps neighbours;
-  riders float in one by one (`flight.entering`, excluded from solver+tests).
+- **Every region finale runs an AUTHORED FORMAT under the FINALE DIRECTOR
+  (AFT-020, 2026-07-24).** `FINALE_FORMATS` (data.js) defines nine
+  three-beat formats — ladder / relay / siege / hourglass / circuit / hunt /
+  rite / raid / chase, one per region in campaign order; only region 1
+  keeps the classic ladder. `finaleProfile()` resolves the region's format
+  plus skin copy from `SKIN.finaleProfiles` (both skins author all nine);
+  `G.finale` carries live state (beat/beatT/beatClocks/meter/mastery/coda);
+  `updateFinaleDirector` (update.js) dispatches per format. `G.gauntlet`
+  survives as the ladder-family ROUND ADAPTER (raid bypasses its controller
+  and clear guard). Rules that hold in every format: multi-actor fights
+  share ONE threat budget; each actor contributes at most ONE defensive
+  rule (the `damageBrick` tail gates); Sovereign rules are one sentence on
+  the teach→tell→commit→resolve→recover arc (the universal charge interrupt
+  is no longer the default answer outside the ladder); mythics take varied
+  roles — only the ladder keeps "mythic = last health bar"; finale mastery
+  (clear/countered/mastered) improves the VICTORY DRAFT (4/5-card hands +
+  a pinned mastered reroll), never permanent rank count; `completeFinale()`
+  settles mastery + crests and MUST run before `beginEnding()` on stage 27.
+  Positional objectives may never hold an emptied board hostage (bells
+  stand down after a 10s empty grace; undercard fails on an empty pool) —
+  the clear guard ignores done OR failed objectives, and coda holds ride
+  `G.finale.codaHold`. Phase-jump practice and the legacy three-round specs
+  target region 1, the forever-ladder.
+- **The region-1 ladder keeps the classic gauntlet contract** (`gen.gauntlet`,
+  data.js): sub-legendaries → the legendary (dormant until round 2,
+  `br.dormant` parks it off-stage) → the mythical (`br.mythic`: 0.82×
+  legendary HP in STARFIGHTER, legacy 0.6× elsewhere, with species-specific
+  movement, fire, and signature ability). Sub-legendaries (`br.subBoss`)
+  fire aimed 3-shot fans; evolved elites (`br.elite ≥ 2`) fire AIMED heavy
+  bolts; only the unevolved rank-and-file keep the classic straight bolt.
+  Junkie separation is EASED (per-rider sepX/sepY: fast build, ~0.4s
+  release) so a kill never snaps neighbours; riders float in one by one
+  (`flight.entering`, excluded from solver+tests). Other formats reuse
+  these actors under their own directors (relay vows, siege colossi, raid
+  captains…) — build blocks live in `buildLevel`'s gauntlet section.
 - **Boss presentation is mode-specific.** BREAKER finales use oversized,
   moving **boss bricks** (`drawBossBrick`) and brick guards; BLASTER and
   STARFIGHTER use bare legendaries (`drawBossMon`). All share **three phases**

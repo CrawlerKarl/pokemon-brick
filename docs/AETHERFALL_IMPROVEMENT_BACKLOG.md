@@ -9,7 +9,7 @@
 >
 > | This doc says | Reality as of 2026-07-23 |
 > |---|---|
-> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~28–31s**, 85 invariants, both-skin + dist boots, vocabulary scan, 30 mobile scenes with label assertions, wave + boss storm ledgers |
+> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~30–35s**, 103 invariants, both-skin + dist boots, vocabulary scan, 38 mobile scenes with label assertions, wave + boss storm ledgers |
 > | AFT-001/002/003/004/005A/005B/006/017/018 pending | **all shipped** — see `IMPLEMENTATION_LOG.md` rounds 2026-07-22f … 2026-07-23c |
 > | "boss exports are 192×192; high-res not packaged" | 43 × **512px** boss reveal portraits ship and drive the reveal scene |
 > | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
@@ -65,9 +65,9 @@ items have since shipped.
   codex full-size sprite gallery, neutral-until-sworn selection, and
   per-channel `OATH_CH` evolution curves for tint, rim, aura, fittings,
   radiant blend, and runes.
-- The release gate passes 85/85 invariants and runs headlessly via `npm test`
-  in about 28–31s. It also verifies assets, both editions, the standalone
-  distribution, vocabulary/RESIDUE, 30 mobile scenes, and wave + boss stress
+- The release gate passes 103/103 invariants and runs headlessly via `npm test`
+  in about 30–35s. It also verifies assets, both editions, the standalone
+  distribution, vocabulary/RESIDUE, 38 mobile scenes, and wave + boss stress
   ledgers.
 - The standalone runtime payload is about 37.4 MiB excluding its nested Git
   metadata, with about 36.1 MiB under `dist-aetherfall/art/`.

@@ -5,6 +5,33 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24h — owner reports: reveal portraits + weapon art never swap in late
+
+Two real-device reports ("the first trio's preview changed color after a
+split second"; "some weapon shops showed the old style for a split second"),
+one root cause: production PNGs loaded lazily on their FIRST DRAW, so the
+procedural / live-sprite fallback was already on screen when the real file
+landed (`09cea36`; dist `2efd83d`). Fix in three parts:
+
+- **`warmRevealArt(rIdx)`** (render.js) preloads every reveal portrait a
+  region can show (boss + sentinels + mythic + the realm-0 secret).
+  `buildLevel` warms the current AND next region every wave; the Trial
+  picker warms a region the moment it's tapped (input.js).
+- **`warmSetupArt()`** now also kicks all 21 Relicforge weapon PNGs
+  (`weaponArt.shapes` + `.aux`) on the title frame — a draft card can never
+  open on a vector fallback again.
+- **`revealLatch(r)`**: each reveal locks every portrait's art source once
+  its 0.35s fade completes (`latch[id]` threaded through all three
+  `drawRevealPortrait` call sites). Even on a cold cache the scene keeps
+  whatever it opened with instead of trading art mid-hold — no pop is
+  possible by construction.
+
+New invariant "reveal + weapon art never swap mid-scene" → **suite 103**.
+Both sites verified serving the fix (the dist's first Pages build hit the
+documented transient `errored`; a re-trigger cleared it).
+
+---
+
 ## 2026-07-24g — AFT-008 CLOSEOUT: the Section-9 corrections land, measured
 
 All six high-risk balance areas resolved with evidence (`a8c04e4`) and a

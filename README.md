@@ -140,7 +140,8 @@ renderer), and `assets/fonts/` (vendored Orbitron).
 | `build-aetherfall-art-manifest.js` | Derives the art manifest (the id/slug contract for image generation) straight from `aetherfall.js` — no DOM, no game load |
 | `build-aetherfall-dist.js` | Generates the pokemon-free standalone into `dist-aetherfall/`; prints a franchise-term RESIDUE report (a release requires **none**) |
 | `build-aetherfall-reveals.py` | 512px boss-reveal portraits for the 43 boss-class ids (same chroma + framing rules as the previews) |
-| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 85-check suite headless → both-skin + dist boot smokes → vocabulary scan → 30 mobile scenes with fitted-label assertions + screenshots → wave and boss artifact-storm benchmarks. ~28–31s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
+| `run-suite.js` | **The release gate (`npm test`)**: syntax → assets → the 103-check suite headless → both-skin + dist boot smokes → vocabulary scan → 38 mobile scenes with fitted-label assertions + screenshots → wave and boss artifact-storm benchmarks. ~30–35s, zero deps (raw CDP over Node's WebSocket + system Chrome) |
+| `run-baseline.js` | **The campaign matrix (`npm run baseline`)**: 69 deterministic autopilot scenarios (~31s) producing the AFT-008 ledger report — modes × difficulties × affinities × vessels × builds, plus full-campaign runs. Committed snapshots live in `docs/baselines/` (old campaign + redesigned-campaign closeout) |
 
 **`art/aetherfall-production/`** — the production art. `sprites/final/` (128px
 runtime sprites) and `sprites/preview/` (320px portraits) and `weapons/final/`
@@ -412,7 +413,24 @@ The charge shot has a full timing arc now:
   ordinary threats by default (more with Interceptor); massive siege fire takes
   three basic interceptions or one charged hit.
 
-### THE GAUNTLET — every region's finale (`gen.gauntlet`, data.js)
+### NINE FINALE FORMATS — the finale director (AFT-020, 2026-07-24)
+Since the realm-finale redesign, **each region's finale runs a different
+authored format** (`FINALE_FORMATS`, data.js — engine-shared, both skins):
+region 1 **ladder** (the classic gauntlet below), then **relay** (gale vows
+passed under a clock), **siege** (breach the colossi's line), **hourglass**
+(a fractured dual timeline), **circuit** (a branching paladin choice),
+**hunt** (track and free the caged), **rite** (three non-HP totem rites +
+a saboteur), **raid** (one shared meter against the live Seraph and its
+court), **chase** (linked vessels run; the Cradle finale feeds straight
+into the Ninefold Dawn). `finaleProfile()` merges the format with
+`SKIN.finaleProfiles` copy; `G.finale` holds beat/meter/mastery state;
+`updateFinaleDirector` (update.js) runs the beats; `completeFinale()`
+settles mastery + realm crests (`storeKey('crests')`). Finale mastery
+improves the VICTORY DRAFT (bigger hands, a pinned mastered reroll) — never
+permanent rank count. `G.gauntlet` remains the ladder-family round adapter,
+and Trial's round/phase rows are format-aware (`trialLayout`).
+
+### THE GAUNTLET — region 1's ladder (`gen.gauntlet`, data.js)
 Three rounds, difficulty scaling: **Round 1** — the SENTINELS (Kanto: the
 legendary birds; each gen has its trio + mythical authored in data.js) run a
 dedicated controller cycling THREE formations (rotating triangle, sweeping
@@ -902,7 +920,9 @@ recordings or copyrighted game melodies ship with the project.
 
 Persisted in `localStorage`: `pkbrk-settings`, `pkbrk-best`, `pkbrk-dex`,
 `pkbrk-dexs`, `pkbrk-music`, `pkbrk-daily`, `pkbrk-run` (the region
-checkpoint), `pkbrk-v`
+checkpoint), `pkbrk-medals`, `pkbrk-crests` (realm crests per
+realm/mode/difficulty, exported in save bundles), `pkbrk-victory`,
+`pkbrk-jcoach`, `pkbrk-v`
 (storage version). ALWAYS go through `loadStore`/`saveStore` (setup.js) —
 they survive corrupt values and full/blocked storage; raw
 `JSON.parse(localStorage...)` at module scope once bricked startup.
@@ -969,11 +989,11 @@ viewports` test — keep it green when adding menu items.
 
 ## Verifying changes
 
-**`npm test` is the release gate.** It runs syntax + asset checks, 85 headless
+**`npm test` is the release gate.** It runs syntax + asset checks, 103 headless
 invariants, both-edition boot smokes, the standalone build and vocabulary
-scan, 30 mobile reference scenes with fitted-label containment assertions,
+scan, 38 mobile reference scenes with fitted-label containment assertions,
 and both wave and boss artifact-storm benchmarks. A full run is currently
-about 28–31s; `npm test -- --fast` is about 15s and
+about 30–35s; `npm test -- --fast` is about 15s and
 `npm test -- --suite` is about 12–18s. Results and performance ledgers land in
 `.gate-report.json`; scene captures land in `.gate-shots/`.
 
