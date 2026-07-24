@@ -1030,6 +1030,10 @@ function buildLevel(lvl) {
   G.waveTheme = theme.name;
   preloadGen(gen);
   preloadGen(genFor(lvl + STAGES));
+  // reveal portraits warm with STAGES of lead time (owner report,
+  // 2026-07-24: the trio's portraits traded color a beat into the reveal)
+  warmRevealArt(rIdx);
+  warmRevealArt((rIdx + 1) % SKIN.gens.length);
   buildBackground(rIdx);
   const p = preset();
   const cycle = Math.floor((lvl - 1) / (SKIN.gens.length * STAGES)); // full-journey loops

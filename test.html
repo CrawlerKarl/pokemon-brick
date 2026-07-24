@@ -2548,6 +2548,41 @@ window.requestAnimationFrame = function () { return 0; };
     return 'Stormbinder tempo · One Life un-stacked · stacks diminish with floors/caps · AEGIS restores, regen rides threat time ≤3/stage';
   });
 
+  // Owner report 2026-07-24: reveal portraits traded color a beat into the
+  // scene, and draft surfaces flashed vector weapons before the PNGs landed.
+  // The fixes: region-level reveal warming (stages of lead time), weapon-art
+  // warming on the title frame, and a per-reveal LATCH that locks each
+  // portrait's art source after the 0.35s fade — no mid-scene swaps, ever.
+  test('reveal + weapon art never swap mid-scene (warm early, latch after the fade)', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie';
+    resetRun(1, true, { seed: 'WARM1' }); // an ARRIVAL build...
+    const gen = SKIN.gens[0];
+    assert(!!revealImgCache[gen.boss.id] && !!revealImgCache[gen.gauntlet.myth[0]]
+      && gen.gauntlet.subs.every(([sid]) => !!revealImgCache[sid]),
+      '...warms every portrait its region can reveal, stages ahead');
+    warmSetupArt();
+    if (SKIN.weaponArt && SKIN.weaponArt.shapes) {
+      const anyShape = Object.keys(SKIN.weaponArt.shapes)[0];
+      // pokemon has no weaponArt; on aetherfall the title warm must have
+      // kicked every Relicforge load (checked via the dist boot too)
+      assert(!anyShape || aetherRelicImage(anyShape) != null || SKIN.id !== 'aetherfall',
+        'weapon PNGs kick their loads at the title frame');
+    }
+    // the latch: whatever the portrait showed at the end of the fade is
+    // FINAL — a late-arriving PNG may not replace it mid-scene
+    const r = { t: 0.1 };
+    const latch = revealLatch(r);
+    assert(latch.lockNow === false, 'inside the fade the choice is still open');
+    r.t = 0.5;
+    revealLatch(r);
+    assert(r.artLatch.lockNow === true, 'past the fade the choice locks');
+    r.artLatch[999] = false; // an id that fell back during the fade…
+    revealLatch(r);
+    assert(r.artLatch[999] === false, '…stays on the live sprite for the whole scene');
+    return 'region reveals warm at build + trial pick · weapons warm at title · portrait art locks after the fade';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {

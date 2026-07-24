@@ -679,6 +679,13 @@ function warmSetupArt() {
     aetherPreviewImage(sm.ids[0], false);   // the hero portrait
     aetherPreviewImage(sm.ids[0], true);    // its radiant casting (LIGHT oath summary card)
   }
+  // the 21 Relicforge weapon sprites too (owner report, 2026-07-24: draft
+  // surfaces flashed the vector fallback for a beat before the PNG landed —
+  // production art must be there from the first frame)
+  if (SKIN.weaponArt) {
+    for (const k2 in (SKIN.weaponArt.shapes || {})) aetherRelicImage(k2);
+    for (const k2 in (SKIN.weaponArt.aux || {})) aetherAuxImage(k2);
+  }
 }
 function affinityVesselImage(id, big, forceBase) {
   if (id > 0) {
@@ -5838,6 +5845,20 @@ function fxGlow(px) { return effectsLevel() >= 1 ? 0 : px; }
 // that NEVER overlaps the art, a skippable hold, then the portrait flies
 // into the boss's combat rectangle. Reduced-effects mode dissolves in place.
 const revealImgCache = {};
+// Warm every reveal portrait a region can show (boss, sentinels, mythic —
+// and realm 1's secret) — called from buildLevel on EVERY wave of the
+// region and from the trial picker, so the 512px art has stages (or at
+// least seconds) of lead time before a reveal ever draws it.
+function warmRevealArt(rIdx2) {
+  const gen = SKIN.gens && SKIN.gens[rIdx2];
+  if (!gen) return;
+  bossRevealImage(gen.boss.id);
+  if (gen.gauntlet) {
+    for (const [sid] of gen.gauntlet.subs) bossRevealImage(sid);
+    bossRevealImage(gen.gauntlet.myth[0]);
+  }
+  if (rIdx2 === 0 && SKIN.secret) bossRevealImage(SKIN.secret.id);
+}
 function bossRevealImage(id) {
   if (revealImgCache[id]) return revealImgCache[id];
   let img = null;
@@ -5848,15 +5869,31 @@ function bossRevealImage(id) {
   revealImgCache[id] = img;
   return img;
 }
-function drawRevealPortrait(id, cx, cy, side, alpha) {
+function drawRevealPortrait(id, cx, cy, side, alpha, latch) {
   let img = bossRevealImage(id);
-  if (!img || !img.complete || !img.naturalWidth) img = getSprite(id); // load gap → live sprite
+  const ready = !!(img && img.complete && img.naturalWidth);
+  // the LATCH (owner report, 2026-07-24): the portrait's art source is
+  // decided during the 0.35s fade-in and then LOCKED — a slow-loading PNG
+  // may never pop in over an already-visible fallback mid-scene
+  if (latch) {
+    if (latch[id] === undefined) {
+      if (ready) latch[id] = true;
+      else if (latch.lockNow) latch[id] = false;
+    }
+    if (latch[id] === false) img = getSprite(id);
+    else if (!ready) img = getSprite(id);
+  } else if (!ready) img = getSprite(id); // load gap → live sprite
   if (!img || !(img.naturalWidth || img.width)) return;
   const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
   const sc = Math.min(side / iw, side / ih);
   ctx.globalAlpha = alpha;
   ctx.drawImage(img, cx - iw * sc / 2, cy - ih * sc / 2, iw * sc, ih * sc);
   ctx.globalAlpha = 1;
+}
+function revealLatch(r) {
+  if (!r.artLatch) r.artLatch = {};
+  r.artLatch.lockNow = r.t >= 0.35; // past the fade, the choice is final
+  return r.artLatch;
 }
 function drawBossReveal() {
   const r = G.reveal;
@@ -5891,10 +5928,10 @@ function drawBossReveal() {
       const span = Math.min(W - each - 24, side * 1.3);
       r.ids.forEach((id, i) => {
         const fx2 = W / 2 + span * (i / (r.ids.length - 1) - 0.5);
-        drawRevealPortrait(id, fx2, artCy, each, a);
+        drawRevealPortrait(id, fx2, artCy, each, a, revealLatch(r));
       });
     } else {
-      drawRevealPortrait(r.ids[0], W / 2, artCy, side * pop, a);
+      drawRevealPortrait(r.ids[0], W / 2, artCy, side * pop, a, revealLatch(r));
     }
     // the info panel — a dedicated band, never over the art
     const py = y0 + side + 10;
@@ -5934,7 +5971,7 @@ function drawBossReveal() {
       }
       const cx = r.reduced ? tx : sx2 + (tx - sx2) * e;
       const cy = r.reduced ? ty : artCy + (ty - artCy) * e;
-      drawRevealPortrait(b.poke.id, cx, cy, r.reduced ? tSide : sSide + (tSide - sSide) * e, fade);
+      drawRevealPortrait(b.poke.id, cx, cy, r.reduced ? tSide : sSide + (tSide - sSide) * e, fade, revealLatch(r));
     });
   }
   ctx.restore();

@@ -1208,6 +1208,7 @@ function onPress(x, y) {
       for (let i = 0; i < SKIN.gens.length; i++) {
         if (inRect(x, y, T.region(i))) {
           trialSel.region = i;
+          warmRevealArt(i); // the picked region's portraits load NOW, not at the reveal
           if (i !== 0 && trialSel.round === 3) trialSel.round = 2;
           // a RAID is one continuous encounter — only the full launch exists
           if (((finaleProfile(i) || {}).format || 'ladder') === 'raid') trialSel.round = 0;
