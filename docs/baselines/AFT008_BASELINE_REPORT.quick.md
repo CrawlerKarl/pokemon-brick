@@ -1,29 +1,39 @@
 # AFT-008 — OLD-CAMPAIGN BASELINE
 
-Generated 2026-07-24T18:21:31.269Z at `6910fa6a5f` by `npm run baseline` (**--quick** — partial matrix).
+Generated 2026-07-24T19:02:20.701Z at `c2b4370e86` by `npm run baseline` (**--quick** — partial matrix).
 Deterministic fixtures: seeded `DEV.launch` + a state-derived autopilot stepping `update(1/60)`.
 Full per-scenario `DEV.report()` payloads: `docs/baselines/aft008-old-campaign.quick.json`.
 
-Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":36,"playTime":22,"dmgNormal":48.4} vs {"kills":36,"playTime":22,"dmgNormal":48.4}
+Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":38,"playTime":22,"dmgNormal":51.4} vs {"kills":38,"playTime":22,"dmgNormal":51.4}
 
 ## Finales — campaign sweep (junkie · normal · progressive build)
 
 | stage | cleared | duration | boss equivalents | progress share | active-threat share | channels open/broken | KOs |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| L3 | yes | 77.0s | 3.24 | 99% | 100% | 1/0 | 0 |
+| L3 | yes | 76.6s | 3.24 | 99% | 100% | 1/0 | 0 |
 
 ## Non-boss stages — campaign sweep
 
 | stage | cleared | duration | kills | dmg out | dmg out/s | progress share | heat lockout | KOs |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | L1 | yes | 25.6s | 17 | 36.0 | 1.4 | 93% | 23% | 0 |
-| L8 | yes | 22.0s | 36 | 68.3 | 3.1 | 100% | 0% | 0 |
+| L8 | yes | 22.0s | 38 | 66.1 | 3.0 | 100% | 0% | 0 |
 
 ## Finales by mode
 
 | finale | mode | cleared | duration | boss equivalents | dmg out | KOs | lives left |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| L3 | junkie | yes | 59.1s | 3.24 | 99.0 | 0 | 4 |
+| L3 | junkie | yes | 67.7s | 3.24 | 99.1 | 0 | 3 |
+
+## BUDGETS (AFT-021 — the approved bands)
+
+**RED — 3 hard violation(s):**
+- ✗ A-sweep-J08: 3.0 shield charges earned (cap 2)
+- ✗ A-sweep heat lockout 21% of play (>12%)
+- ✗ A-sweep-J03: heat lockout 26% (>25%)
+
+1 target-band warning(s):
+- ⚠ A-sweep-J08: 22.0s outside the 25–50s target band
 
 ## ANOMALIES
 

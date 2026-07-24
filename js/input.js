@@ -1418,7 +1418,9 @@ function fireAction(auto = false) {
   if (G.blasterCD > 0) return;
   // HYPERNOVA CYCLE: during Mega an unbroken stream spins through 3 cadence
   // stages (the stream breaks — see tickEffects — and the stages fall away)
-  let cd = (upgN('hyper') ? 0.24 : 0.3) * starterMod('fireRate', 1);
+  // AFT-021 P6: HYPER's cadence bonus trims 25% → 18% (the VOLLEY probe ran
+  // 40% under the path median; the capstone's heat cut is untouched)
+  let cd = (upgN('hyper') ? 0.255 : 0.3) * starterMod('fireRate', 1);
   // OVERDRIVE cadence: Mega fires 20% faster while it lasts — a timed burst
   // on a meter you earned, not a fire-rate upgrade (the heat-fairness band
   // is measured on sustained NON-Mega fire and is untouched)
@@ -1485,6 +1487,24 @@ function fireAction(auto = false) {
   // CALIBRATED BARRAGE (shooter modes): a spent charge primed these volleys
   const calib = G.mode !== 'classic' && G.calibShots > 0;
   if (calib) G.calibShots--; // one prime per VOLLEY, not per bolt
+  // AFT-021 P6: SHIELDED RETALIATION — the AEGIS path's bounded damage
+  // conversion. While a shield charge is held, every 4th volley (3rd at the
+  // capstone) rides with a heavy retaliation bolt: the defense you built
+  // strikes back on a visible rhythm instead of tripling encounter time
+  // (the L15 aegis probe ran 157s vs the 66s median). No button, no aim.
+  if (G.mode !== 'classic' && pathLvl('aegis') >= 2 && G.shieldCharges > 0) {
+    G.aegisRetalN = (G.aegisRetalN || 0) + 1;
+    if (G.aegisRetalN >= (pathLvl('aegis') >= 4 ? 3 : 4)) {
+      G.aegisRetalN = 0;
+      G.lasers.push({
+        x: G.paddle.x + 20, y: shipY() - 14, basic: true, retal: true,
+        powerMul: 2.2, mega: G.megaT > 0,
+        shape: pilotInfo() ? pilotInfo().shape : null,
+        element: attackElement(), tier: G.starterLvl,
+      });
+      ringFx(G.paddle.x + 20, shipY() - 14, '#9ccc65', 3, 26, 2, 0.25);
+    }
+  }
   for (let i = 0; i < nBolts; i++) {
     G.lasers.push({
       x: G.paddle.x + (nBolts > 1 ? (i ? 11 : -11) : 0),
@@ -1633,9 +1653,7 @@ function tryMega() {
     ringFx(px, py, TYPE_COLORS[el] || '#ffd54f', 10, 150, 5, 0.5);
   }
   // REACTIVE OVERDRIVE: entering Mega regrows one missing shield (on cooldown)
-  if (upgN('reactive') && G.reactiveCD <= 0 && G.shieldCharges < shieldCap()) {
-    G.shieldCharges++;
-    statsShieldGain('reactive');
+  if (upgN('reactive') && G.reactiveCD <= 0 && tryShieldGain('reactive')) {
     G.reactiveCD = 20;
     addFloater(G.paddle.x, shipY() - 62, 'REACTIVE SHIELD!', '#dce775', 13);
     SFX.shield();

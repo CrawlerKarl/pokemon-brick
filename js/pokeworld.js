@@ -562,7 +562,7 @@ const ENCOUNTER_OBJECTIVES = {
     tip: 'DOWN THE THREE WARD KEEPERS — THE FLOCK SCATTERS' },
   '1:0': { type: 'bells', count: 3, dwell: 1.2, name: 'RING THE BELL TOWERS',
     tip: 'CROSS THE THREE BELL ZONES IN ORDER — HOLD EACH UNTIL IT RINGS' },
-  '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
+  '4:1': { type: 'lanes', count: 6, name: 'RUN THE LIVE LANES', // AFT-021 P5: six marked runs
     tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
   '7:1': { type: 'undercard', name: 'WIN THE UNDERCARD',
     tip: 'FILL THE CROWD METER — KILLS AND COMBOS ARE THE SHOW' },

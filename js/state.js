@@ -14,11 +14,48 @@ function megaDur() { return (upgN('megaX') ? 9 : upgN('blaze') ? 7 : MEGA_DUR) +
 // button, capstone on top). Both modes' numbers track their enemy-HP curves.
 function megaRegions() { return Math.min(8, Math.floor((G.level - 1) / 3)); }
 function megaBoltMul() {
-  return ((upgN('megaX') ? 1.4 : 1.25) + 0.12 * megaRegions()) * (1 + 0.10 * pathLvl('surge'));
+  // AFT-021 P6: the journey term eases 0.12 → 0.08 — with the new baseline
+  // weapon growth (journeyDmgMul) ALSO scaling Surge-window bolts, the old
+  // slope stacked into 30–40 dps late-window bursts that erased whole
+  // finale formats (measured L24 raid: 6 kills, 719 damage, 12 seconds)
+  return ((upgN('megaX') ? 1.4 : 1.25) + 0.08 * megaRegions()) * (1 + 0.10 * pathLvl('surge'));
 }
 function megaBallDmg() {
-  return (upgN('megaX') ? 4.2 : 3) * (1 + 0.09 * megaRegions()) * (1 + 0.10 * pathLvl('surge'));
+  return (upgN('megaX') ? 4.2 : 3) * (1 + 0.07 * megaRegions()) * (1 + 0.10 * pathLvl('surge'));
 }
+// ── AFT-021 P6: BASELINE WEAPON GROWTH ─────────────────────────────────────
+// The vessel's own armament matures with the journey (+6% core damage per
+// realm reached, ×1.48 by the finale) INDEPENDENT of drafts — permanent
+// picks specialize the weapon, they are no longer the only way damage keeps
+// pace with late durability. Applies to the CORE weapon only (bolts, charge,
+// ball, drones) at the weapon sites; fusion procs and item effects carry
+// their own numbers.
+function journeyDmgMul() { return 1 + 0.06 * megaRegions(); }
+// ── AFT-021 P5: MEASURED WORK COEFFICIENTS ─────────────────────────────────
+// The one-size-fits-all Sovereign HP pool measured 8–27s late finales and
+// 300–600s early ball/wall finales. Work is now budgeted per realm from the
+// measured expected-DPS curves (docs/baselines/aft021-campaign.json):
+// FINALE_WORK holds the shared per-realm scale (late realms carry real
+// durability so their authored formats get SEEN); FINALE_WORK_MODE scales
+// the walled modes' slower early delivery. Attack RULES never change per
+// mode or skin — only the work budget. beUnit rides the same helper so a
+// Sovereign-equivalent stays ≈3 per finale in every mode.
+const FINALE_WORK = [1.15, 1.8, 2.3, 2.5, 4.2, 3.9, 16, 25, 9.3];
+const FINALE_WORK_MODE = {
+  classic: [0.28, 0.30, 0.55, 0.68, 0.85, 1.50, 0.85, 1.40, 0.90],
+  blaster: [0.22, 1.00, 0.30, 0.85, 0.75, 3.20, 0.85, 0.45, 0.90],
+};
+function sovereignHp(rIdx, cycle) {
+  const p = preset();
+  const modeMul = (FINALE_WORK_MODE[G.mode] || [])[rIdx] ?? 1;
+  return Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp
+    * (FINALE_WORK[rIdx] ?? 1) * modeMul));
+}
+// Late ordinary waves grow real durability too (the L23 6-second stage):
+// flyer/elite/reinforcement HP compounds past the campaign's midpoint —
+// and the OPENERS stop one-tapping (the 13-second L2/L5).
+function lateWaveMul(regionsIn) { return 1 + Math.max(0, regionsIn - 4) * 0.22; }
+function earlyWaveMul(regionsIn) { return regionsIn === 0 ? 1.45 : regionsIn === 1 ? 1.6 : regionsIn === 2 ? 1.35 : 1; }
 function starterTierValue(key, tier) {
   const value = SKIN.starterMon[G.starter]?.mods?.[key];
   if (value == null) return 0;
@@ -647,6 +684,31 @@ function blasterArmed() {
   return G.mode !== 'classic';
 }
 
+// ── AFT-021 P7: THE SHIELD INCOME BUDGET ───────────────────────────────────
+// One stage can bank only so much free defense, whatever mixes it — drops,
+// Torrent, Regen, Rescue, Fusion, Halo, Reactive: ordinary stages 2 earned
+// charges, finales 4, +1 for a real AEGIS specialist (rank ≥3). Start-of-
+// stage SEEDS (AEGIS Guard, partner tiers, Preparation) are identity, not
+// income — they bypass. A denied grant converts to a visible score credit,
+// so the proc still reads as an event instead of silently vanishing.
+function tryShieldGain(source) {
+  if (G.shieldCharges >= shieldCap()) return false;
+  const seed = source === 'guard' || source === 'starterTier' || source === 'prep';
+  if (!seed) {
+    const cap = (stageIdx(G.level) === 2 ? 4 : 2) + (pathLvl('aegis') >= 3 ? 1 : 0);
+    G.shieldGrantN = G.shieldGrantN || 0;
+    if (G.shieldGrantN >= cap) {
+      G.score += Math.round(40 * (typeof scoreMult === 'function' ? scoreMult() : 1));
+      addFloater(G.paddle.x, shipY() - 44, 'WARD SATURATED · +40', '#9ccc65', 10);
+      return false;
+    }
+    G.shieldGrantN++;
+  }
+  G.shieldCharges++;
+  statsShieldGain(source);
+  return true;
+}
+
 // AFT-021 P1 — the ONE authority on whether damage can exist. Every path
 // that can cost a life, spawn hostile fire, or land a strike must pass this
 // gate: live combat is the 'play' state with no reveal holding the frame.
@@ -755,8 +817,7 @@ function applyPower(p, srcType) {
       return; // its floater is the whole read — no announce card, no element
     }
     case 'shield':
-      G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + 1);
-      statsShieldGain('drop');
+      tryShieldGain('drop'); // AFT-021 P7: rides the stage income budget
       tier = G.shieldCharges;
       SFX.shield();
       break;
@@ -766,9 +827,7 @@ function applyPower(p, srcType) {
       G.healthDropPity = 0;
       G.hurtHud = 2.8;
       // RESCUE CIRCUIT: recovery also restores a shield charge (heartbeat ring)
-      if (upgN('rescue') && G.shieldCharges < shieldCap()) {
-        G.shieldCharges++;
-        statsShieldGain('rescue');
+      if (upgN('rescue') && tryShieldGain('rescue')) {
         ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
         addFloater(G.paddle.x, shipY() - 34, 'RESCUE SHIELD!', '#ff8a80', 12);
         SFX.shield();
@@ -1034,6 +1093,14 @@ function buildLevel(lvl) {
   // retry was showing the PREVIOUS attempt's boss bar over round one
   G.reveal = null; G.revealDock = null;
   G.resolve = null; G.arenaPlate = null; // AFT-021: a fresh wave never inherits a resolution beat
+  G.shieldGrantN = 0; // AFT-021 P7: the shield income budget is per stage
+  // AFT-021 P7: THE BLASTER HULL PLATE — the turret is the least mobile
+  // mode and the only one whose every loss is enemy fire; it opens each
+  // stage with one seeded absorb (a start-of-stage SEED, like AEGIS Guard —
+  // outside the income budget). Measured: the reference build's mid-realm
+  // knockout spirals came one hit at a time.
+  const plate = G.mode === 'blaster' ? (stageIdx(lvl) === 2 ? 2 : 1) : 0; // finales are the long exposures
+  while (plate > 0 && G.shieldCharges < plate) { G.shieldCharges++; statsShieldGain('guard'); }
   G.gustT = 0; G.timeWarpT = 0; G.timeWarpClock = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
@@ -1086,7 +1153,8 @@ function buildLevel(lvl) {
     const bossW = Math.min(bw * 1.9, W * 0.4), bossH = bh * 1.75;
     const bossY = 102 + bossH / 2;
     // real boss-fight durability: three phases need room to breathe
-    const bossHp = Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp));
+    // (AFT-021 P5: the measured work coefficients live in sovereignHp)
+    const bossHp = sovereignHp(rIdx, cycle);
     G.bricks.push({
       bx: W / 2, by: bossY, w: bossW, h: bossH,
       hx: W / 2, hy: bossY, row: -1, col: -1,
@@ -1278,6 +1346,11 @@ function buildLevel(lvl) {
         for (const v of G.bricks) {
           if (!v.subBoss || v.dead) continue;
           v.totem = true;
+          // AFT-021 P5: a totem's WORK is its rite, not a health bar — its
+          // fallback-kill hp is pinned OUTSIDE the realm work vector (the
+          // classic ball, qualifying ~1 hit in 4 by luck, was chewing three
+          // 107-hp totems at ×0.25 trickle: a measured ten-minute stall)
+          v.hp = v.maxHp = 22;
           v.riteKind = ['opening', 'pulse', 'root'][ri2 % 3];
           v.riteHits = 0;
           v.riteRoot = 0;
@@ -1411,7 +1484,12 @@ function buildLevel(lvl) {
       // blocks are tougher now that the blaster fires freely — the extra HP
       // keeps waves from melting in seconds (BRICK_HP_MUL is the tuning knob)
       const BRICK_HP_MUL = 1.35;
-      let hp = Math.max(1, Math.round((tier + cycle) * p.brickHp * BRICK_HP_MUL) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
+      // AFT-021 P5: a FINALE's supporting wall rides the same mode work
+      // coefficient as its Sovereign — early walled-mode ladders were paced
+      // by wall chew (a 200s blaster L3 with only seven hits taken), late
+      // ones by the same measured curves
+      const finWallMul = hasBoss && G.mode !== 'junkie' ? ((FINALE_WORK_MODE[G.mode] || [])[rIdx] ?? 1) : 1;
+      let hp = Math.max(1, Math.round(((tier + cycle) * p.brickHp * BRICK_HP_MUL) * finWallMul) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
       if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
       // Wave entrance: each ROW arrives as ONE line — every brick starts
       // directly above its own column (slight alternating diagonal drift per
@@ -1554,7 +1632,7 @@ function buildLevel(lvl) {
       const count = streamPer;
       const tierPool = themedPool(gen, 2, theme);
       const [id, t] = tierPool[Math.floor(gameRand() * tierPool.length)]; // one species — reads as a flock
-      const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp));
+      const hp = Math.max(1, Math.round((1 + Math.floor(regionsIn / 2)) * p.brickHp * lateWaveMul(regionsIn) * earlyWaveMul(regionsIn))); // AFT-021 P5
       const edge = gameRand() < 0.5 ? 'left' : 'right';
       for (let j = 0; j < count; j++) {
         const sx = edge === 'left' ? -60 - j * 44 : W + 60 + j * 44;
@@ -1701,7 +1779,7 @@ function buildLevel(lvl) {
       perS = Math.max(3, Math.min(perS, Math.floor(span / minGap)));
       const pool3 = themedPool(gen, tier, theme); // same ecology, tier by tier
       const [id, t] = pool3[Math.floor(gameRand() * pool3.length)]; // one species per squad
-      const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.9 + regionsIn * 0.45 + cycle * 2) * p.brickHp));
+      const hp = Math.max(1, Math.round((1 + (tier - 1) * 1.9 + regionsIn * 0.45 + cycle * 2) * p.brickHp * lateWaveMul(regionsIn) * earlyWaveMul(regionsIn))); // AFT-021 P5
       const R = resolved[resolved.length - 1];
       // SHELL ARMOR: normal bolts plink off — ONE charged shot cracks it.
       // Kanto's challenge wave teaches it (3 armored rookies + a callout);
@@ -1981,11 +2059,14 @@ function buildLevel(lvl) {
       let work = 0;
       for (const b of G.bricks) {
         if (b.dead || b.barrier || b.crosser || b.friendly) continue;
-        if ((b.hp || 0) >= 900) continue; // unkillable-prop convention — presence, not work
+        // unkillable-prop convention — presence, not work. Boss-class
+        // actors are EXEMPT: late Sovereign pools legitimately exceed 900
+        // now (AFT-021 P5 work coefficients) and are absolutely real work.
+        if ((b.hp || 0) >= 900 && !b.isBoss && !b.subBoss && !b.mythic && !b.secretBoss) continue;
         work += Math.max(0, b.hp || 0);
       }
       L.workHp = work;
-      L.beUnit = Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp));
+      L.beUnit = sovereignHp(rIdx, cycle); // AFT-021 P5: BE rides the same coefficients — a finale stays ≈3 BE
     }
   }
   // arriving at a region's doorstep checkpoints the run (post-draft state —
@@ -2029,7 +2110,7 @@ function spawnReinforcement() {
     const [id, t] = pool[Math.floor(gameRand() * pool.length)];
     // reinforcements are all EVOLVED — bigger and tankier in junkie mode
     const rMul = junkie ? (rTier === 3 ? 1.5 : 1.25) : 1;
-    const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp * (junkie ? (rTier === 3 ? 1.7 : 1.25) : 1)));
+    const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp * (junkie ? (rTier === 3 ? 1.7 : 1.25) : 1) * lateWaveMul(regionsIn)));
     G.bricks.push({
       bx: i % 2 ? -70 : W + 70, by: -50 - (i % 5) * 24,
       hx: W / 2, hy: cy0, row: 0, col: i,
@@ -2109,6 +2190,8 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.laserCD = 0; G.blasterCD = 0; G.missileCD = 0; G.invuln = 0; G.seCD = 0;
   G.enemyShotCD = 6; G.bossShotCD = 4;
   G.lastChargeT = null; // G.time reset makes stale charge stamps read as fresh
+  G.aegisRetalN = 0; G.afterglowT = 0; // AFT-021 P6: retaliation rhythm + afterglow start fresh
+  G.chargeCur = null; G.chargeLog = null; // P4 telemetry never crosses runs
   G.stacks = freshStacks(); G.attackAnim = 0; G.upgradeFx = null;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins

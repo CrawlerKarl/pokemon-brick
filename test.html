@@ -498,8 +498,8 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.lasers.every(l => l.powerMul === 0.6), 'Twin bolts must each deal 60% base damage');
     assert(G.lasers.every(l => l.pulse && l.nova), 'fourth capped Impact volley was not a Nova pulse');
     assert(G.lasers.every(l => !l.hyper), 'old always-on Hyper pierce flag returned');
-    assert(Math.abs(G.blasterCD - 0.24) < 0.0001, 'Hyper Cycle cadence is not 20% faster');
-    return '6×4 tree; every tier has a visual tell; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−20% cooldown';
+    assert(Math.abs(G.blasterCD - 0.255) < 0.0001, 'Hyper Cycle cadence is not 18% faster (AFT-021 P6 trim)');
+    return '6×4 tree; every tier has a visual tell; fair draft; Twin=2×60%; Nova every 4th; Hyper Cycle=−18% cooldown';
   });
 
   // 2w) THE UPGRADE WEB — graph integrity: adjacency, pair coverage, unique
@@ -810,7 +810,7 @@ window.requestAnimationFrame = function () { return 0; };
     // WARDING ORBIT (AFT-007): potions restore a shield; every 6th RELIC
     // RETURN grows one — the bond web keys off the relic loop now
     G.upg.rescue = 1;
-    G.shieldCharges = 0; G.lives = 3;
+    G.shieldCharges = 0; G.lives = 3; G.shieldGrantN = 0; // AFT-021 P7: fresh stage income budget
     collectPickup({ x: G.paddle.x, y: shipY(), p: POWERS.heal });
     assert(G.shieldCharges === 1, 'potion did not restore a shield');
     G.rescueN = 5; G.shieldCharges = 0;
@@ -994,16 +994,17 @@ window.requestAnimationFrame = function () { return 0; };
     G.bricks = [mk(400, 150)];
     for (let i = 0; i < 6; i++) volley();
     assert(G.relics.length === 0, 'a relic flew without the glaive rank');
-    // tier 1: every 4th shot launches; a full airspace BANKS instead
+    // tier 1: every 5th shot launches (AFT-021 P6 cadence ease); a full
+    // airspace BANKS instead
     advancePath('bond'); // magnetize → RELIC GLAIVE
     G.relics = []; G.relicCount = 0; G.relicBank = 0;
-    for (let i = 0; i < 4; i++) volley();
-    assert(G.relics.length === 1, 'the 4th shot did not launch (got ' + G.relics.length + ')');
+    for (let i = 0; i < 5; i++) volley();
+    assert(G.relics.length === 1, 'the 5th shot did not launch (got ' + G.relics.length + ')');
     const R0 = G.relics[0];
     // element may be NULL for the neutral training drone — that's the
     // untyped baseline, same as its bolts
     assert(R0.phase === 'out', 'the relic launched without an out-flight');
-    for (let i = 0; i < 4; i++) volley();
+    for (let i = 0; i < 5; i++) volley();
     assert(G.relics.length === 1 && G.relicBank === 1, 'a full airspace did not bank the relic');
     // one hit per target per leg · ledger family · never feeds the Mega meter
     // (position is a pure function of t — collapse the curve onto the brick)
@@ -1020,7 +1021,7 @@ window.requestAnimationFrame = function () { return 0; };
     // RECALL EDGE: the return leg intercepts hostile fire, then lands home
     advancePath('bond'); // bond → RECALL EDGE
     // keep one far-off brick alive so the wave never clears mid-segment
-    G.relics = []; G.relicBank = 0; G.relicCount = 3; G.bricks = [mk(900, 90)];
+    G.relics = []; G.relicBank = 0; G.relicCount = 4; G.bricks = [mk(900, 90)]; // cadence 5 (AFT-021 P6)
     volley();
     const R1 = G.relics[0];
     assert(R1 && R1.icptN >= 1, 'recall edge armed no interception');
@@ -1918,7 +1919,7 @@ window.requestAnimationFrame = function () { return 0; };
     resetRun(14, true, { seed: 'LANE1' });
     G.state = 'play'; paused = false; G.freeze = 0;
     const O2 = G.objective;
-    assert(O2 && O2.type === 'lanes' && O2.count === 4, 'lanes objective arms on the Chrome challenge');
+    assert(O2 && O2.type === 'lanes' && O2.count === 6, 'lanes objective arms on the Chrome challenge'); // AFT-021 P5
     await runFrames(30);
     let mk = G.bricks.find(b => !b.dead && b.laneMark);
     assert(mk, 'one marked target is maintained');
@@ -1926,7 +1927,7 @@ window.requestAnimationFrame = function () { return 0; };
     const hp0 = mk.hp;
     damageBrick(mk, 1, mk.bx, mk.by, null, { source: 'bolt' });
     assert(mk.hp === hp0, 'outside the lane the mark holds (deflect cue)');
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < 6; k++) { // AFT-021 P5: six marked runs
       await runFrames(4);
       const m2 = G.bricks.find(b => !b.dead && b.laneMark);
       if (!m2) break;
@@ -1934,8 +1935,8 @@ window.requestAnimationFrame = function () { return 0; };
       m2.hp = 0.5;
       damageBrick(m2, 2, m2.bx, m2.by, null, { source: 'bolt' });
     }
-    assert(O2.done === true && (O2.hits || 0) >= 4,
-      'four in-lane mark kills run the circuit (hits ' + (O2.hits || 0) + ')');
+    assert(O2.done === true && (O2.hits || 0) >= 6,
+      'six in-lane mark kills run the circuit (hits ' + (O2.hits || 0) + ')');
     assert(!G.bricks.some(b => !b.dead && !b.barrier && !b.crosser && !b.friendly),
       'the flock dispersed — no attrition epilogue');
     return 'wardbreak collapses the classic wall · lanes gate damage by position · both end the wave without a grind';
@@ -2152,8 +2153,8 @@ window.requestAnimationFrame = function () { return 0; };
     F.beatT = 3.2; // the lone clock's window sits closed at 3–5s
     const rhp2 = regent.hp;
     damageBrick(regent, 2, regent.bx, regent.by, null, { source: 'bolt' });
-    assert(Math.abs((rhp2 - regent.hp) - 0.3) < 0.01,
-      'a SILENT hour shields it ×0.15 (lost ' + (rhp2 - regent.hp).toFixed(2) + ')');
+    assert(Math.abs((rhp2 - regent.hp) - 0.64) < 0.01,
+      'a SILENT hour shields it ×0.32 (AFT-021 P5 blind-play floor; lost ' + (rhp2 - regent.hp).toFixed(2) + ')');
     clocks[1].dead = false; clocks[2].dead = false; // stand them back up for the mastery read
     // replays: a recorded volley echoes back pale ~4s later
     HG.replayQ.push({ due: F.beatT + 0.05, x: W / 2, y: 160, type: 'dragon', species: regent.poke.id, kind: 'time' });
@@ -2170,7 +2171,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(regent.hourOut === true && !noct.hourOut, 'the thief takes the first hour — the Regent is a pale past');
     const nhp = noct.hp;
     damageBrick(regent, 3, regent.bx, regent.by, null, { source: 'bolt' });
-    assert(regent.hp === rhp2 - 0.3, 'an out-of-hour actor cannot be touched');
+    assert(regent.hp === rhp2 - 0.64, 'an out-of-hour actor cannot be touched');
     damageBrick(noct, 2, noct.bx, noct.by, null, { source: 'bolt' });
     assert(nhp - noct.hp >= 2, 'the in-hour actor takes true damage');
     // the hours trade on the clock
@@ -2365,14 +2366,14 @@ window.requestAnimationFrame = function () { return 0; };
     const php2 = pulseT.hp;
     damageBrick(pulseT, 1, pulseT.bx, pulseT.by, null, { source: 'bolt' });
     assert(pulseT.riteHits === 1 && pulseT.hp === php2, 'an on-beat strike IS the rite, never the wound');
-    damageBrick(pulseT, 1, pulseT.bx, pulseT.by, null, { source: 'bolt' });
+    for (let k = 0; k < 6; k++) damageBrick(pulseT, 1, pulseT.bx, pulseT.by, null, { source: 'bolt' }); // shooter need = 7 (AFT-021 P5)
     assert(R.marks === 1 && pulseT.crosser && !pulseT.subBoss, 'the pulse rite completes — the totem departs marked');
     // ROOT: three strikes before it closes; closing resets progress
     const rootT = totems().find(t => t.riteKind === 'root');
     rootT.riteHits = 2; rootT.riteRoot = 0.99;
     await runFrames(12); // the root closes
     assert(rootT.riteHits === 0, 'a closed root resets the rite (it resists)');
-    for (let k = 0; k < 3; k++) damageBrick(rootT, 1, rootT.bx, rootT.by, null, { source: 'bolt' });
+    for (let k = 0; k < 8; k++) damageBrick(rootT, 1, rootT.bx, rootT.by, null, { source: 'bolt' }); // shooter root need = 8 (AFT-021 P5)
     assert(R.marks === 2, 'three timely strikes break the root');
     // OPENING: only through the rotating gap; killing markless still works
     const openT = totems().find(t => t.riteKind === 'opening');
@@ -2519,7 +2520,7 @@ window.requestAnimationFrame = function () { return 0; };
   test('AFT-008 closeout: the Section-9 corrections hold', async () => {
     await resetBetween();
     const e = STARTER_MON.electric.mods;
-    assert(e.damage.join() === '1.15,1.25,1.4' && e.megaStart.join() === '0.2,0.35,0.5'
+    assert(e.damage.join() === '1.12,1.2,1.3' && e.megaStart.join() === '0.2,0.35,0.5' // AFT-021 P6 trim
       && e.fireRate.join() === '0.95,0.9,0.82' && e.chainEvery.join() === '8,7,6'
       && e.chainTargets.join() === '1,1,2' && e.megaPassive.join() === '0.006,0.01,0.015',
       'the Stormbinder tempo bracket (§9.4)');

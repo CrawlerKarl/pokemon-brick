@@ -79,8 +79,19 @@ function tickEffects(dt) {
   if (fighting) for (const k of ['fx_fire', 'fx_laser', 'fx_wide', 'fx_slow', 'fx_magnet', 'fx_score', 'fx_draco']) {
     if (G[k]) { G[k].t -= dt; if (G[k].t <= 0) G[k] = null; }
   }
-  if (G.megaT > 0) G.megaT = Math.max(0, G.megaT - dt);
+  if (G.megaT > 0) {
+    G.megaT = Math.max(0, G.megaT - dt);
+    // AFT-021 P6: SURGE AFTERGLOW — a rank-2+ SURGE build keeps +30% bolt
+    // damage for six seconds after every window closes (the path's bounded
+    // damage conversion: intentional Surge timing extends its own payoff;
+    // the L15 surge probe ran 130s vs the 66s median)
+    if (G.megaT <= 0 && pathLvl('surge') >= 2) {
+      G.afterglowT = 6;
+      addFloater(G.paddle.x, shipY() - 64, lex('MEGA AFTERGLOW'), '#ffd54f', 13);
+    }
+  }
   else if (G.state === 'play') gainMega(dt * starterMod('megaPassive', 0), 'passive');
+  G.afterglowT = Math.max(0, (G.afterglowT || 0) - dt);
   G.starterChillT = Math.max(0, (G.starterChillT || 0) - dt);
   if (G.ballElement && fighting) {
     G.ballElementT -= dt;
@@ -721,7 +732,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (qualified) {
       br.riteHits = (br.riteHits || 0) + 1;
       br.flash = 1;
-      const need = br.riteKind === 'root' ? 3 : 2;
+      // AFT-021 P5: the rite IS the encounter's work — shooter modes (whose
+      // fire can play the windows deliberately) answer more strikes per
+      // totem; classic keeps the short count (a ball cannot time windows)
+      const need = (br.riteKind === 'root' ? 3 : 2) + (G.mode !== 'classic' ? 5 : 0);
       if (br.riteHits >= need) { riteMark(br); return; }
       addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12,
         'RITE ' + br.riteHits + '/' + need, '#5affc3', 11);
@@ -835,7 +849,11 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     const HG = G.finale.hourglass;
     if (HG.awakened > 0) {
       if (!hourglassRinging()) {
-        dmg *= 0.15;
+        // AFT-021 P5: the blind-play floor rises 0.15 → 0.32 — un-synced
+        // fire shows honest progress while a rung window stays ≈3× better
+        // (the measured 60-second silent tail on the lone Regent). The BALL
+        // cannot time windows at all, so classic's floor sits higher.
+        dmg *= G.mode === 'classic' ? 0.5 : 0.32;
         if (HG.silentCD <= 0) {
           HG.silentCD = 1.2;
           addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 14,
@@ -1046,7 +1064,12 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
     if (G.objective && G.objective.type === 'undercard' && !G.objective.done && !br.crosser && !br.friendly) {
       const O2 = G.objective;
-      O2.crowd = Math.min(1, (O2.crowd || 0) + 0.055 + (G.combo >= 5 ? 0.02 : 0));
+      // AFT-021 P5: the crowd wants a SHOW, not a speedrun — smaller per-kill
+      // pops under a 0.09/s rate ceiling put the undercard at ~15-20s of
+      // sustained rhythm instead of one 8-second AoE dump
+      if (O2.t0 == null) O2.t0 = G.time;
+      const crowdCeil = 0.05 * Math.max(0.5, G.time - O2.t0);
+      O2.crowd = Math.min(1, Math.min((O2.crowd || 0) + 0.03 + (G.combo >= 5 ? 0.012 : 0), crowdCeil));
       O2.progress = O2.crowd;
       if (O2.crowd >= 1) completeNonAttrition(O2, O2.name || 'THE CROWD ROARS');
     }
@@ -1117,9 +1140,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       const need = Math.max(9, 25 - 4 * (stackN('halo') - 1));
       if (G.haloKills >= need) {
         G.haloKills = 0;
-        if (G.shieldCharges < shieldCap()) {
-          G.shieldCharges++;
-          statsShieldGain('halo');
+        if (tryShieldGain('halo')) {
           addFloater(G.paddle.x, shipY() - 30, 'HALO WARD +1', '#fff59d', 12);
           SFX.power();
         }
@@ -2363,7 +2384,10 @@ function absorbHit(x, y, shotType = null, volleyId = null) {
 // ride Math.random through sparkle/ringFx only.
 function relicAllowed() { return upgN('fortune') ? 2 : 1; } // TWIN ORBIT
 function relicCadence() { // VOLLEY synergy: a deep arsenal speeds the loop
-  return G.mode === 'classic' ? 6 : (pathLvl('arsenal') >= 3 ? 3 : 4);
+  // AFT-021 P6: the returning-relic identity keeps its rhythm but the proc
+  // cadence eases one notch (measured 40% tempo dominance over the median
+  // path at L15) — every 5th attack, every 4th with a deep arsenal
+  return G.mode === 'classic' ? 6 : (pathLvl('arsenal') >= 3 ? 4 : 5);
 }
 function relicPower(back) {
   let d = 1.6 * (1 + 0.15 * pathLvl('impact')) * starterMod('power', 1); // IMPACT: heavier outward hit
@@ -2485,9 +2509,7 @@ function webRelicProcs(ev) {
   } else if (ev === 'return') {
     if (upgN('rescue') && ++G.rescueN >= 6) {
       G.rescueN = 0;
-      if (G.shieldCharges < shieldCap()) {
-        G.shieldCharges++;
-        statsShieldGain('rescue');
+      if (tryShieldGain('rescue')) {
         ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
         addFloater(G.paddle.x, shipY() - 34, 'WARDING ORBIT!', '#ff8a80', 12);
         SFX.shield();
@@ -2693,8 +2715,7 @@ function celestialSector(k) {
       damageBrick(br, 1, br.bx + G.fx, br.by + G.fy, el, { noMega: true });
     }
   }
-  if (G.shieldCharges < shieldCap()) { G.shieldCharges++; statsShieldGain('fusion'); }
-  else if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; statsLifeGain('fusion'); }
+  if (!tryShieldGain('fusion') && G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; statsLifeGain('fusion'); }
   G.ballElement = el;
   G.ballElementT = Math.max(G.ballElementT, 4);
   G.resistStreak = 0;
@@ -3606,6 +3627,23 @@ function relayVowHit(br, dmg, sx, sy, meta) {
   const F = G.finale, R = F.relay;
   br.flash = 1; // keeps the pierce i-frame honest
   if (br !== relayCarrierBrick()) {
+    // BREAKER adapter (AFT-021 P5): the ball cannot CHOOSE its target the
+    // way a gun can — a non-carrier ball hit is carried on the wind into the
+    // pass at 40% credit instead of vanishing (the measured 10-minute relay).
+    // Aiming rallies at the carrier is still the efficient line; the rule
+    // itself is unchanged in the shooter modes.
+    if (G.mode === 'classic') {
+      const carried = dmg * 0.55;
+      statsDmgOut(meta.source || 'other', carried);
+      R.dealt += carried;
+      F.meter.value = R.passes + Math.min(1, R.dealt / R.passHp);
+      if ((R.deflectCD || 0) <= 0) {
+        R.deflectCD = 0.8;
+        addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, 'CARRIED ON THE WIND', '#80d8ff', 11);
+      }
+      if (R.dealt >= R.passHp) relayCompletePass();
+      return;
+    }
     // turned by the wind — a readable "not the target" cue, throttled
     if ((R.deflectCD || 0) <= 0) {
       R.deflectCD = 0.8;
@@ -3674,6 +3712,17 @@ function relayBeginCoda(gen2) {
   const mid = gen2.gauntlet && gen2.gauntlet.myth;
   F.coda = { t: 0, dur: 14, spawned: 0, blooms: 6 };
   F.codaHold = true;
+  // AFT-021 P5: the coda is a REWARD LAP — any ordinary leftovers stand
+  // down with the storm (a classic wall fragment once marched off-screen
+  // and held the finale hostage for ten minutes)
+  for (const b of G.bricks) {
+    if (b.dead || b.isBoss || b.subBoss || b.crosser || b.friendly || b.barrier) continue;
+    if (G.mode === 'classic') { shatterBrick(b, b.bx + G.fx, b.by + G.fy, bareMon(b)); b.dead = true; }
+    else if (b.flight || b.dive || b.bare) {
+      b.flight = null; b.dive = null; b.bare = true;
+      b.crosser = { vx: ((b.bx + G.fx) < W / 2 ? -1 : 1) * Math.max(150, W * 0.2), bobPh: Math.random() * 6 };
+    }
+  }
   if (mid) {
     // the Hourseed drifts serenely across the healed sky — present, never hostile
     const vw2 = Math.min(120, W * 0.16);
@@ -3941,7 +3990,11 @@ function chaseChooseRoute(br) {
   const F = G.finale, C = F.chase;
   C.chosen = br.subIdx || 0;
   br.vesselRoute = true;
-  br.hp = br.maxHp = Math.max(3, Math.round((G.gauntlet ? G.gauntlet.legendHp : 20) * 0.3));
+  // AFT-021 P5: the walled modes shoot the RUNNING vessel from the floor —
+  // their hit windows are a fraction of the flying pilot's, so the road is
+  // proportionally shorter (measured: a 580s blaster route stall)
+  const routeMul = G.mode === 'junkie' ? 0.3 : G.mode === 'blaster' ? 0.10 : 0.26;
+  br.hp = br.maxHp = Math.max(3, Math.round((G.gauntlet ? G.gauntlet.legendHp : 20) * routeMul));
   F.meter = { value: 0, max: 1, label: (br.poke.n || 'THE ROUTE').toUpperCase() };
   for (const b of G.bricks) {
     if (!b.vessel || b === br || b.dead) continue;
@@ -4036,6 +4089,21 @@ function chaseLink(boss) {
     null, null, false, true, 'boss');
 }
 function updateChase(dt) {
+  // AFT-021 P5: the WALLED modes cannot chase — if the floor turret/paddle
+  // has not run the road down in 40s, the road YIELDS (the no-hostage rule;
+  // the beat advances with no mastery credit). The flying pilot keeps the
+  // full pursuit.
+  {
+    const F0 = G.finale, C0 = F0 && F0.chase;
+    if (C0 && F0.beat === 0 && C0.chosen != null && G.mode !== 'junkie' && F0.beatT > 40) {
+      const duel = G.bricks.find(b => b.vesselRoute && !b.dead);
+      if (duel) {
+        setCombatNotice(chaseWord('routeWord', 'THE ROAD YIELDS'), '#ffcf5e', 2);
+        duel.hp = 0.5;
+        damageBrick(duel, 2, duel.bx + G.fx, duel.by + G.fy, null, { source: 'other', noMega: true });
+      }
+    }
+  }
   const F = G.finale, C = F.chase;
   if (F.beat === 0 && C.chosen != null && F.meter) {
     const duel = G.bricks.find(b => b.vesselRoute && !b.dead);
@@ -5177,14 +5245,14 @@ function update(dt) {
       if (G.shieldRegenT <= 0) {
         G.shieldRegenT = 10;
         G.shieldRegenN = (G.shieldRegenN || 0) + 1;
-        G.shieldCharges++;
-        SFX.shield();
-        // capstone proc reads on the SHIP, not just as text: the bubble
-        // flares green and a ring blooms outward as the charge regrows
-        G.shieldFlash = Math.max(G.shieldFlash || 0, 0.8);
-        statsShieldGain('regen');
-        ringFx(G.paddle.x, shipY(), '#66bb6a', 6, 52, 3, 0.4);
-        addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
+        if (tryShieldGain('regen')) { // AFT-021 P7: even the capstone rides the income budget
+          SFX.shield();
+          // capstone proc reads on the SHIP, not just as text: the bubble
+          // flares green and a ring blooms outward as the charge regrows
+          G.shieldFlash = Math.max(G.shieldFlash || 0, 0.8);
+          ringFx(G.paddle.x, shipY(), '#66bb6a', 6, 52, 3, 0.4);
+          addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
+        }
       }
     } else G.shieldRegenT = 10;
   }
@@ -6003,6 +6071,14 @@ function update(dt) {
       if (br.gauntletEntering || br.entry || (br.flight && br.flight.entering)) continue;
       const minY = safeTop - G.fy + br.h * 0.5;
       if (br.by < minY) br.by = minY;
+      // …and the X axis: an authored sweep may leave the screen, but a
+      // boss-class actor can never SETTLE off it (a measured hourglass
+      // Regent drifted to x = −161 and held its hp for ten minutes)
+      const sr = combatSafeRect();
+      const minX = sr.x0 - G.fx + br.w * 0.4, maxX = sr.x1 - G.fx - br.w * 0.4;
+      if (br.hx != null) br.hx = Math.max(minX, Math.min(maxX, br.hx));
+      if (br.bx < minX - 90) br.bx = minX - 90;
+      else if (br.bx > maxX + 90) br.bx = maxX + 90;
     }
   }
   if (G.state === 'play' || G.state === 'serve') updateSpriteKinematics(dt * ts);
@@ -6195,9 +6271,7 @@ function update(dt) {
         } else if (G.starter === 'water') { // Torrent: rhythm builds a shield
           if (++G.torrentCount >= 6 - G.starterLvl) {
             G.torrentCount = 0;
-            if (G.shieldCharges < shieldCap()) {
-              G.shieldCharges++;
-              statsShieldGain('torrent');
+            if (tryShieldGain('torrent')) {
               addFloater(G.paddle.x, py - 34, 'TORRENT SHIELD!', '#4dd0e1', 13);
               SFX.shield();
             }
@@ -6251,7 +6325,7 @@ function update(dt) {
           if (ox < oy) { b.vx = b.x < bx ? -Math.abs(b.vx) : Math.abs(b.vx); }
           else { b.vy = b.y < by ? -Math.abs(b.vy) : Math.abs(b.vy); }
           // Blaze embers from the last paddle return add burn damage
-          let dmg = pierce ? megaBallDmg() : 1; // journey + SURGE-rank scaled overdrive
+          let dmg = (pierce ? megaBallDmg() : 1) * journeyDmgMul(); // AFT-021 P6: the ball matures with the journey too
           if (b.ember > 0) {
             b.ember--;
             dmg += G.starterLvl >= 3 ? 2 : 1;
@@ -6380,6 +6454,11 @@ function update(dt) {
     for (const br of G.bricks) {
       if (br.dead || br.phaseT > 0 || L.dead || L.lastHit === br) continue;
       if (br.friendly) continue; // player fire PASSES THROUGH protect allies — no damage, no pierce spent, no lastHit
+      // AFT-021 P5: NEUTRAL SCENERY never shadows a real target — bolts pass
+      // through sealed chase vessels, the still-bound raid mythic, and
+      // stood-down actors exactly like allies (measured: a sealed 999-hp
+      // vessel parked in front of the Sovereign ate every bolt for 600s)
+      if (br.vesselSealed || (br.raidBound && !br.raidFreed) || br.stoodDown) continue;
       const bx = br.bx + G.fx, by = br.by + G.fy;
       // charged shots are fat, so they connect over a wider span
       const xtol = br.w / 2 + (L.charged ? L.r * 0.5 : 0) + (L.heavy ? 6 : 0);
@@ -6445,7 +6524,8 @@ function update(dt) {
         } else {
           L.dead = true;
         }
-        let dmg = L.charged ? L.power : (L.powerMul || 1);
+        let dmg = (L.charged ? L.power : (L.powerMul || 1)) * journeyDmgMul(); // AFT-021 P6: baseline growth
+        if (G.afterglowT > 0 && !L.charged) dmg *= 1.3; // SURGE AFTERGLOW (P6)
         if (L.heavy) dmg *= 1.15;
         if (L.nova) dmg *= 2;
         if (L.calib) dmg *= 1.6; // CALIBRATED BARRAGE: primed volley
@@ -6837,7 +6917,13 @@ function update(dt) {
       if (G.enemyShotCD <= 0) {
         G.enemyShotCD = G.mode === 'junkie'
           ? d.starShotInt * (0.85 + gameRand() * 0.3)
-          : d.enemyShotInt * (0.7 + gameRand() * 0.6) * (blaster ? 0.5 : 1);
+          // AFT-021 P7: BLASTER's cadence eases from the old flat ×0.5 — the
+          // doubled fire over long wall fights was the measured knockout
+          // engine (20 landed heavies in one L6 finale). It opens gentler
+          // and tightens across the journey; pressure stays well above
+          // classic at every realm.
+          : d.enemyShotInt * (0.7 + gameRand() * 0.6)
+            * (regionIdx(G.level) <= 1 ? 0.85 : regionIdx(G.level) <= 3 ? 0.8 : 0.68);
         // off-screen flyers (wrapping patterns / streams) can't fire
         const alive = G.bricks.filter(b => !b.dead && !b.isBoss && !b.subBoss && !b.entry && !b.dive
           && !b.barrier && !b.dormant && !b.crosser && !b.friendly
@@ -6853,7 +6939,11 @@ function update(dt) {
         // Ball play needs readable lanes; sustained cadence stays, walls don't.
         const classicWall = G.mode === 'classic'
           && G.enemyShots.reduce((n, s) => n + (!s.dead && !s.boss ? 1 : 0), 0) >= 8;
-        if (alive.length && activeTel < (blaster ? 5 : 3) && !classicWall) {
+        // AFT-021 P7: BLASTER caps concurrent wave telegraphs at 3 (was 5) —
+        // the floor-bound paddle was eating converging aimed-heavy fans from
+        // four elites at once (30+ landed heavies in one siege finale).
+        // Junkie keeps 5 (its threat budget governs separately).
+        if (alive.length && activeTel < (G.mode === 'blaster' ? 3 : blaster ? 5 : 3) && !classicWall) {
           const shooter = alive[Math.floor(gameRand() * alive.length)];
           if (G.mode === 'junkie') {
             const pattern = starEnemyPattern(shooter);
@@ -6931,8 +7021,9 @@ function update(dt) {
       // a phantom paddle width (same rule as enemy shots). Classic clips the
       // fixed DAMAGE CORE (never the widened wings), blaster its base width —
       // a warned beam lane must always leave a reachable escape.
-      const halfW = G.mode === 'junkie' ? 26
-        : G.mode === 'classic' ? classicCoreHalf() : G.paddle.w / 2;
+      // AFT-021 P7: blaster rides the same DEFLECTOR-CORE rule as classic —
+      // a warned beam clips the fixed core, never the widened wings
+      const halfW = G.mode === 'junkie' ? 26 : classicCoreHalf();
       if (G.invuln <= 0 && Math.abs(G.paddle.x - cs.x) < cs.w / 2 + halfW) {
         cs.strike = 0;
         if (absorbHit(G.paddle.x, shipY())) continue;
@@ -7164,7 +7255,11 @@ function update(dt) {
     // (classicCoreHalf — width mods never grow it); the wings outside it
     // are deflector armor handled just before the damage branch below.
     const hitR = s.hitR || (s.heavy ? 14 : 8);
-    const hitW = (jk ? 13 : (G.mode === 'classic' ? classicCoreHalf() : G.paddle.w / 2) + 4) + hitR;
+    // AFT-021 P7: BLASTER shares classic's DEFLECTOR-CORE rule — only the
+    // fixed core around the hull's center is vulnerable; the wings beyond it
+    // deflect strays (below). The full-width hurtbox made every long wall
+    // fight a war of attrition the paddle could not win.
+    const hitW = (jk ? 13 : classicCoreHalf() + 4) + hitR;
     const hitH = (jk ? 12 : G.paddle.h / 2 + 4) + hitR;
     // PROTECT OBJECTIVE: enemy fire can strike the friendly. This narrow check
     // runs ONLY while a live friendly exists — a shot inside its hitR is
@@ -7213,7 +7308,7 @@ function update(dt) {
     // makes every width upgrade a pure upgrade: more ball reach, more armor,
     // same small kill zone. Aimed elite/boss fire still targets your center,
     // so the counterplay (move the CORE) is untouched.
-    if (!s.dead && G.mode === 'classic' && s.y > py - hitH && s.y < py + hitH) {
+    if (!s.dead && G.mode !== 'junkie' && s.y > py - hitH && s.y < py + hitH) {
       const dx = Math.abs(s.x - G.paddle.x);
       const wingHalf = paddleW() / 2 + 4 + hitR;
       if (dx >= hitW && dx < wingHalf) {
@@ -7367,7 +7462,7 @@ function beginStageResolution() {
     if (b.friendly) {
       R.outcomes.rescued++;
       b.resolveOut = 'rescued';
-    } else if (b.gridTerminal || b.hp >= 900) {
+    } else if (b.gridTerminal || (b.hp >= 900 && !b.isBoss && !b.subBoss && !b.mythic)) {
       // persistent scenery: stays, but powers down — no bars, rings, or
       // targeting may survive on it (render reads stoodDown)
       R.outcomes.neutralized++;

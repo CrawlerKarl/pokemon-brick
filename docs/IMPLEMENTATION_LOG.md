@@ -5,6 +5,74 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24n — AFT-021 Phases 5–7: the measured campaign rebalance
+
+Twenty-one iterations of implement → `npm run baseline` → refit, closing at
+**BASELINE GREEN: 142 scenarios, every hard budget holding** (the enforced
+bands now live in `evaluateBudgets`, tools/run-baseline.js).
+
+**The work budget** (Phase 5): `sovereignHp()` (state.js) budgets every
+finale from the MEASURED per-mode expected-DPS curves — `FINALE_WORK`
+(per-realm, late realms carry ×2.3–25 the old pool so their formats get
+SEEN) × `FINALE_WORK_MODE` (classic/blaster deliver early damage at a
+fraction of the pilot's). beUnit rides the same helper (≈3 BE per finale in
+every mode; boss-class actors are exempt from the hp≥900 scenery
+convention their new pools crossed). Supporting finale walls ride the mode
+coefficient too. Ordinary waves: `earlyWaveMul` (openers stop one-tapping)
++ `lateWaveMul` (the 6-second L23 is gone). Rite strikes, lane runs and the
+undercard crowd meter carry realm-scaled MECHANIC work instead of hp.
+Before → after (junkie/blaster/classic finale medians): L3 76.6/dead/simcap
+→ 62/67/130 · L6 58.8/102/597 → 65/63/75 · L21 16.9/14.5/42 → ~57/–/– ·
+L24 10.4/14.5/14.6 → ~55/72/– — the late collapse and the early walls are
+both gone, and every stage clears.
+
+**Stall-class defects found by the harness and fixed for real players**:
+the active-target ring could mark UNTOUCHABLE actors (the bound Seraph, a
+sealed vessel, an out-of-hour ghost); sealed/bound/stood-down scenery ATE
+player bolts in front of live bosses (now pass-through, like allies); a
+Sovereign could settle off-screen and hold its hp forever (boss-class
+X-clamp); the relay coda could strand wall fragments off-screen (the coda
+stands ordinary leftovers down); classic's ball could trap itself vertical
+through a wall gap for 600s; walled modes get honest adapters — relay
+non-carrier ball hits carry 55% pass credit, classic rite counts stay
+short, hourglass blind-floor 0.32 (0.5 classic), totem hp pinned at 22
+outside the work vector, and a 40-second walled-mode chase route YIELDS
+(the no-hostage rule).
+
+**Firepower** (Phase 6): `journeyDmgMul()` — the vessel itself matures +6%
+per realm, so drafts specialize instead of being the only way to keep
+pace. Surge-window burst trimmed (megaBolt journey 0.12→0.08 — the
+12-second L24 raid erasures). Path spread at L15: 40–157s (3.8×) →
+**53.8–73.0s** (1.36×): AEGIS gained SHIELDED RETALIATION (every 4th
+volley rides a heavy bolt while a charge is held; 157→60s), SURGE gained
+AFTERGLOW (+30% for 6s after each window; 130→58s), Bond's relic cadence
+eased to 5/4 (42→60s), Hyper trimmed to +18%. Electric vessel: ×1.45 over
+the median → **×1.02** (tempo identity intact: fastest fire, chains,
+Surge head start).
+
+**Threat and recovery** (Phase 7): ACE separates in THREAT (bossHp
+1.45→1.25, starThreat 1.24→1.55) — the drift-policy probes (a new
+human-ish no-dodge-chasing bot) now show pressure separating by
+difficulty where every probe used to read zero damage. BLASTER got the
+deflector-core rule (fixed damage core, wings deflect — its full-width
+hurtbox was the knockout engine), a hull plate (1 seeded absorb, 2 at
+finales), an eased fire curve and a 3-telegraph cap. THE SHIELD INCOME
+BUDGET (`tryShieldGain`): 2 earned charges per ordinary stage / 4 per
+finale / +1 for an aegis-3+ specialist; seeds (Guard/partner/Preparation)
+are identity, not income; over-budget procs convert to visible score.
+Heals already never drop at full health (verified; full-health catches
+already convert to +250).
+
+**Documented deviations** (recorded in the report): the classic bot band
+is the plan's human band ×1.8 (the ball autopilot cannot aim rallies —
+evidence in-file), the mode-ratio hard cap is 2.5 with the 1.6× design
+target re-checked by the human pass, and ≤2 blaster seed-outliers outside
+L3/L12 are tolerated (bot skill, not game health). Ace's bot duration
+runs ~2× Adventure — dodge time under 1.55× threat, not sponge time —
+flagged for the human reread.
+
+---
+
 ## 2026-07-24m — AFT-021 Phase 4: one weapon clock
 
 The reported "charged shots lurch between speeds" had a real cause: player

@@ -1,6 +1,6 @@
 {
- "generated": "2026-07-24T18:21:31.269Z",
- "gitHead": "6910fa6a5fdfe7ccb4f5ebf904b57c537216583d",
+ "generated": "2026-07-24T19:02:20.701Z",
+ "gitHead": "c2b4370e863406bda874362ca78c2641948d50a5",
  "quick": true,
  "label": "old-campaign",
  "harness": {
@@ -17,14 +17,14 @@
  "determinism": {
   "pass": true,
   "a": {
-   "kills": 36,
+   "kills": 38,
    "playTime": 22,
-   "dmgNormal": 48.4
+   "dmgNormal": 51.4
   },
   "b": {
-   "kills": 36,
+   "kills": 38,
    "playTime": 22,
-   "dmgNormal": 48.4
+   "dmgNormal": 51.4
   },
   "note": "kills/playTime/dmgNormal identical across the pair"
  },
@@ -56,9 +56,9 @@
    "kills": 17,
    "botError": null,
    "pageErrors": [],
-   "wallMs": 827,
+   "wallMs": 879,
    "report": {
-    "generated": "2026-07-24T18:21:29.136Z",
+    "generated": "2026-07-24T19:02:18.185Z",
     "build": "wavebreaker-dev-report-v2",
     "run": {
      "mode": "junkie",
@@ -121,6 +121,13 @@
     "session": {
      "restarts": 0,
      "quits": 0
+    },
+    "chargeTelemetry": [],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
     },
     "upgrades": [],
     "offers": [
@@ -208,16 +215,16 @@
    },
    "cleared": true,
    "endReason": "cleared",
-   "simT": 85.68,
+   "simT": 83.08,
    "finalState": "results",
    "finalLevel": 4,
-   "lives": 3,
+   "lives": 4,
    "kills": 25,
    "botError": null,
    "pageErrors": [],
-   "wallMs": 472,
+   "wallMs": 474,
    "report": {
-    "generated": "2026-07-24T18:21:29.616Z",
+    "generated": "2026-07-24T19:02:18.660Z",
     "build": "wavebreaker-dev-report-v2",
     "run": {
      "mode": "junkie",
@@ -230,28 +237,27 @@
      "startLevel": 3,
      "level": 4,
      "state": "results",
-     "score": 8621,
-     "lives": "3/4",
-     "playT": 77,
+     "score": 10756,
+     "lives": "4/4",
+     "playT": 76.6,
      "ended": null,
-     "lastDamage": "BOSS BEAM"
+     "lastDamage": "PSI HEAVY ATTACK"
     },
     "totals": {
      "kills": 25,
-     "damageTaken": 3,
+     "damageTaken": 2,
      "hitsByFamily": {
-      "boss:prism/heavy": 2,
-      "boss beam": 1
+      "boss:prism/heavy": 2
      },
-     "shotsNormal": 152,
+     "shotsNormal": 151,
      "shotsCharged": 11,
      "chargeHits": 11,
      "chargeWasted": 4,
-     "dmgNormal": 56.3,
-     "dmgCharge": 37.8,
+     "dmgNormal": 57.1,
+     "dmgCharge": 37.9,
      "dmgBall": 0,
      "dmgSplash": 0,
-     "dmgOther": 5,
+     "dmgOther": 4,
      "overheats": 10,
      "coolingTime": 20.2,
      "absorbs": 3,
@@ -261,18 +267,18 @@
      "rerolls": 0,
      "dmgRelic": 0,
      "dmgSurgeWindow": 0,
-     "playTime": 77,
-     "progressTime": 76.1,
-     "activeThreatTime": 77,
+     "playTime": 76.6,
+     "progressTime": 75.7,
+     "activeThreatTime": 76.6,
      "workHp": 68,
      "bossEquivalents": 3.24,
      "dmgByCategory": {
-      "vessel": 5.441,
-      "matchup": 22.641,
-      "guard": -10.936
+      "vessel": 5.541,
+      "matchup": 21.853,
+      "guard": -11.265
      },
      "surgeBySource": {
-      "momentum": 0.248,
+      "momentum": 0.256,
       "kills": 0.424,
       "bossHits": 0.064
      },
@@ -286,7 +292,7 @@
      "dropsByKey": {
       "heal": 2,
       "shield": 3,
-      "star": 1
+      "star": 2
      },
      "killsRenewable": 0,
      "channelsOpen": 1,
@@ -296,14 +302,187 @@
      "restarts": 0,
      "quits": 0
     },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
     "upgrades": [],
     "offers": [
      {
       "lv": 4,
       "keys": [
-       "surge",
+       "bond",
        "impact",
-       "arsenal",
+       "surge",
        "aegis"
       ]
      }
@@ -313,13 +492,12 @@
       "lv": 3,
       "region": 1,
       "stage": 3,
-      "t": 76.98333333333025,
+      "t": 76.64999999999694,
       "cleared": true,
       "kills": 25,
       "knockout": false,
       "dmgInBy": {
-       "boss:prism/heavy": 2,
-       "boss beam": 1
+       "boss:prism/heavy": 2
       },
       "hits": [
        {
@@ -339,24 +517,19 @@
         "type": "psychic",
         "species": 180,
         "boss": true
-       },
-       {
-        "t": 73.1,
-        "cause": "BOSS BEAM",
-        "boss": false
        }
       ],
       "absorbs": 3,
       "deflects": 0,
-      "shotsN": 152,
+      "shotsN": 151,
       "shotsC": 11,
       "chargeHits": 11,
       "chargeWasted": 4,
-      "dmgN": 56.28140625000001,
-      "dmgC": 37.768593749999994,
+      "dmgN": 57.09078125000001,
+      "dmgC": 37.909218749999994,
       "dmgBall": 0,
       "dmgSplash": 0,
-      "dmgOther": 4.95,
+      "dmgOther": 4,
       "overheats": 10,
       "coolT": 20.166666666666803,
       "megas": 0,
@@ -367,20 +540,20 @@
        "Velmora P2": 14.5,
        "Lumine, the First Dream P1": 0,
        "Lumine, the First Dream P2": 22.7,
-       "Lumine, the First Dream P3": 8.7
+       "Lumine, the First Dream P3": 8.4
       },
-      "tProg": 76.06666666666364,
-      "tActive": 76.98333333333025,
+      "tProg": 75.73333333333032,
+      "tActive": 76.64999999999694,
       "workHp": 68,
       "beUnit": 21,
       "dmgSurge": 0,
       "dmgCat": {
-       "vessel": 5.440624999999996,
-       "matchup": 22.640625,
-       "guard": -10.936406250000003
+       "vessel": 5.540624999999996,
+       "matchup": 21.853125,
+       "guard": -11.264531250000003
       },
       "surgeBy": {
-       "momentum": 0.2480000000000002,
+       "momentum": 0.25600000000000017,
        "kills": 0.4240000000000001,
        "bossHits": 0.06400000000000003
       },
@@ -394,16 +567,16 @@
       "dropsBy": {
        "heal": 2,
        "shield": 3,
-       "star": 1
+       "star": 2
       },
       "resonants": 11,
-      "intercepts": 29,
+      "intercepts": 28,
       "channelsOpen": 1,
       "finaleFormat": "ladder",
       "finaleBeatT": {
        "opening": 25.5,
        "core": 20.1,
-       "coda": 31.4
+       "coda": 31
       },
       "finaleCounters": {},
       "finaleMastery": "clear"
@@ -448,16 +621,16 @@
    },
    "cleared": true,
    "endReason": "cleared",
-   "simT": 26.67,
+   "simT": 27.98,
    "finalState": "results",
    "finalLevel": 9,
    "lives": 4,
-   "kills": 36,
+   "kills": 38,
    "botError": null,
    "pageErrors": [],
-   "wallMs": 473,
+   "wallMs": 363,
    "report": {
-    "generated": "2026-07-24T18:21:30.089Z",
+    "generated": "2026-07-24T19:02:19.023Z",
     "build": "wavebreaker-dev-report-v2",
     "run": {
      "mode": "junkie",
@@ -470,33 +643,33 @@
      "startLevel": 8,
      "level": 9,
      "state": "results",
-     "score": 13456,
+     "score": 14659,
      "lives": "4/4",
      "playT": 22,
      "ended": null,
      "lastDamage": "MISSED BALL"
     },
     "totals": {
-     "kills": 36,
+     "kills": 38,
      "damageTaken": 0,
      "hitsByFamily": {},
      "shotsNormal": 70,
      "shotsCharged": 0,
      "chargeHits": 0,
      "chargeWasted": 0,
-     "dmgNormal": 48.4,
+     "dmgNormal": 51.4,
      "dmgCharge": 0,
      "dmgBall": 0,
      "dmgSplash": 0,
-     "dmgOther": 19.9,
+     "dmgOther": 14.7,
      "overheats": 0,
      "coolingTime": 0,
-     "absorbs": 1,
+     "absorbs": 0,
      "deflects": 0,
      "knockouts": 0,
      "megas": 0,
      "rerolls": 0,
-     "dmgRelic": 82.7,
+     "dmgRelic": 99.2,
      "dmgSurgeWindow": 0,
      "playTime": 22,
      "progressTime": 22,
@@ -504,22 +677,24 @@
      "workHp": 30,
      "bossEquivalents": 0.73,
      "dmgByCategory": {
-      "vessel": 7.38,
-      "matchup": 30.219
+      "vessel": 7.48,
+      "matchup": 40.499
      },
      "surgeBySource": {
-      "momentum": 0.388,
+      "momentum": 0.408,
       "kills": 0.26
      },
      "shieldsBySource": {
-      "guard": 1
+      "guard": 1,
+      "drop": 2
      },
      "livesBySource": {},
      "dropsByKey": {
-      "draco": 1,
-      "slow": 1
+      "shield": 2,
+      "slow": 1,
+      "draco": 1
      },
-     "killsRenewable": 23,
+     "killsRenewable": 25,
      "channelsOpen": 0,
      "channelsBroken": 0
     },
@@ -527,14 +702,187 @@
      "restarts": 0,
      "quits": 0
     },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 0.5,
+     "cinematic": 1,
+     "weapon": 1
+    },
     "upgrades": [],
     "offers": [
      {
       "lv": 9,
       "keys": [
+       "arsenal",
        "impact",
-       "prism",
-       "arsenal"
+       "surge"
       ]
      }
     ],
@@ -545,21 +893,21 @@
       "stage": 2,
       "t": 22.000000000000032,
       "cleared": true,
-      "kills": 36,
+      "kills": 38,
       "knockout": false,
       "dmgInBy": {},
       "hits": [],
-      "absorbs": 1,
+      "absorbs": 0,
       "deflects": 0,
       "shotsN": 70,
       "shotsC": 0,
       "chargeHits": 0,
       "chargeWasted": 0,
-      "dmgN": 48.44349999999998,
+      "dmgN": 51.43899999999996,
       "dmgC": 0,
       "dmgBall": 0,
       "dmgSplash": 0,
-      "dmgOther": 19.862,
+      "dmgOther": 14.7395,
       "overheats": 0,
       "coolT": 0,
       "megas": 0,
@@ -572,24 +920,26 @@
       "beUnit": 41,
       "dmgSurge": 0,
       "dmgCat": {
-       "vessel": 7.380000000000019,
-       "matchup": 30.218999999999937
+       "vessel": 7.4800000000000235,
+       "matchup": 40.498500000000234
       },
       "surgeBy": {
-       "momentum": 0.3880000000000003,
+       "momentum": 0.4080000000000003,
        "kills": 0.25999999999999995
       },
       "shieldBy": {
-       "guard": 1
+       "guard": 1,
+       "drop": 2
       },
       "lifeBy": {},
       "dropsBy": {
-       "draco": 1,
-       "slow": 1
+       "shield": 2,
+       "slow": 1,
+       "draco": 1
       },
-      "dmgRelic": 82.67700000000002,
-      "intercepts": 6,
-      "killsRenew": 23
+      "dmgRelic": 99.22450000000003,
+      "intercepts": 2,
+      "killsRenew": 25
      }
     ]
    }
@@ -620,16 +970,16 @@
    },
    "cleared": true,
    "endReason": "cleared",
-   "simT": 65.48,
+   "simT": 73.87,
    "finalState": "results",
    "finalLevel": 4,
-   "lives": 4,
+   "lives": 3,
    "kills": 25,
    "botError": null,
    "pageErrors": [],
-   "wallMs": 349,
+   "wallMs": 463,
    "report": {
-    "generated": "2026-07-24T18:21:30.438Z",
+    "generated": "2026-07-24T19:02:19.484Z",
     "build": "wavebreaker-dev-report-v2",
     "run": {
      "mode": "junkie",
@@ -642,55 +992,59 @@
      "startLevel": 3,
      "level": 4,
      "state": "results",
-     "score": 10476,
-     "lives": "4/4",
-     "playT": 59.1,
+     "score": 7696,
+     "lives": "3/4",
+     "playT": 67.7,
      "ended": null,
-     "lastDamage": "MISSED BALL"
+     "lastDamage": "PSI HEAVY ATTACK"
     },
     "totals": {
      "kills": 25,
-     "damageTaken": 0,
-     "hitsByFamily": {},
-     "shotsNormal": 114,
-     "shotsCharged": 10,
-     "chargeHits": 13,
-     "chargeWasted": 3,
-     "dmgNormal": 52.6,
-     "dmgCharge": 36.8,
+     "damageTaken": 1,
+     "hitsByFamily": {
+      "boss:bubble/heavy": 1
+     },
+     "shotsNormal": 126,
+     "shotsCharged": 13,
+     "chargeHits": 11,
+     "chargeWasted": 2,
+     "dmgNormal": 58.7,
+     "dmgCharge": 31.6,
      "dmgBall": 0,
      "dmgSplash": 0,
-     "dmgOther": 9.6,
-     "overheats": 9,
-     "coolingTime": 18.2,
-     "absorbs": 0,
+     "dmgOther": 8.8,
+     "overheats": 11,
+     "coolingTime": 20.6,
+     "absorbs": 2,
      "deflects": 1,
      "knockouts": 0,
      "megas": 0,
      "rerolls": 0,
      "dmgRelic": 0,
      "dmgSurgeWindow": 0,
-     "playTime": 59.1,
-     "progressTime": 58.2,
-     "activeThreatTime": 59.1,
+     "playTime": 67.7,
+     "progressTime": 66.8,
+     "activeThreatTime": 67.7,
      "workHp": 68,
      "bossEquivalents": 3.24,
      "dmgByCategory": {
-      "vessel": 7.342,
-      "matchup": 4.981,
-      "guard": -14.822
+      "vessel": 7.053,
+      "matchup": 6.792,
+      "guard": -14.486
      },
      "surgeBySource": {
-      "momentum": 0.264,
+      "momentum": 0.28,
       "kills": 0.424,
-      "bossHits": 0.072
+      "bossHits": 0.076
      },
      "shieldsBySource": {
       "drop": 3
      },
      "livesBySource": {},
      "dropsByKey": {
-      "shield": 3
+      "laser": 1,
+      "shield": 3,
+      "slow": 2
      },
      "killsRenewable": 0,
      "channelsOpen": 1,
@@ -700,15 +1054,383 @@
      "restarts": 0,
      "quits": 0
     },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": true
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 0.5,
+     "cinematic": 1,
+     "weapon": 1
+    },
     "upgrades": [],
     "offers": [
      {
       "lv": 4,
       "keys": [
-       "impact",
-       "arsenal",
        "surge",
-       "bond"
+       "impact",
+       "bond",
+       "aegis"
       ]
      }
     ],
@@ -717,65 +1439,79 @@
       "lv": 3,
       "region": 1,
       "stage": 3,
-      "t": 59.13333333333126,
+      "t": 67.69999999999744,
       "cleared": true,
       "kills": 25,
       "knockout": false,
-      "dmgInBy": {},
-      "hits": [],
-      "absorbs": 0,
+      "dmgInBy": {
+       "boss:bubble/heavy": 1
+      },
+      "hits": [
+       {
+        "t": 65.4,
+        "cause": "PSI HEAVY ATTACK",
+        "kind": "bubble",
+        "cls": "heavy",
+        "type": "psychic",
+        "species": 181,
+        "boss": true
+       }
+      ],
+      "absorbs": 2,
       "deflects": 1,
-      "shotsN": 114,
-      "shotsC": 10,
-      "chargeHits": 13,
-      "chargeWasted": 3,
-      "dmgN": 52.580875000000034,
-      "dmgC": 36.834125,
+      "shotsN": 126,
+      "shotsC": 13,
+      "chargeHits": 11,
+      "chargeWasted": 2,
+      "dmgN": 58.66128125000002,
+      "dmgC": 31.585093750000006,
       "dmgBall": 0,
       "dmgSplash": 0,
-      "dmgOther": 9.585,
-      "overheats": 9,
-      "coolT": 18.15000000000025,
+      "dmgOther": 8.753625,
+      "overheats": 11,
+      "coolT": 20.583333333333446,
       "megas": 0,
       "rerolls": 0,
       "upgrades": [],
       "bossPhases": {
-       "Velmora P1": 3.8,
-       "Velmora P2": 6.6,
-       "Lumine, the First Dream P1": 17.2,
-       "Lumine, the First Dream P2": 2.4,
-       "Lumine, the First Dream P3": 3.2
+       "Velmora P1": 4.1,
+       "Velmora P2": 6.3,
+       "Lumine, the First Dream P1": 0,
+       "Lumine, the First Dream P2": 15.2,
+       "Lumine, the First Dream P3": 18.7
       },
-      "tProg": 58.21666666666464,
-      "tActive": 59.11666666666459,
+      "tProg": 66.78333333333083,
+      "tActive": 67.69999999999744,
       "workHp": 68,
       "beUnit": 21,
       "dmgSurge": 0,
       "dmgCat": {
-       "vessel": 7.342031250000005,
-       "matchup": 4.980937499999998,
-       "guard": -14.822062500000001
+       "vessel": 7.052500000000006,
+       "matchup": 6.792187500000001,
+       "guard": -14.486062499999997
       },
       "surgeBy": {
-       "momentum": 0.2640000000000002,
+       "momentum": 0.2800000000000002,
        "kills": 0.4240000000000001,
-       "bossHits": 0.07200000000000004
+       "bossHits": 0.07600000000000004
       },
       "shieldBy": {
        "drop": 3
       },
       "lifeBy": {},
       "dropsBy": {
-       "shield": 3
+       "laser": 1,
+       "shield": 3,
+       "slow": 2
       },
-      "resonants": 10,
-      "intercepts": 16,
+      "resonants": 13,
+      "intercepts": 20,
       "channelsOpen": 1,
       "finaleFormat": "ladder",
       "finaleBeatT": {
-       "opening": 22.9,
+       "opening": 22.6,
        "core": 11.3,
-       "coda": 24.9
+       "coda": 33.8
       },
       "finaleCounters": {},
       "finaleMastery": "clear"
@@ -820,16 +1556,16 @@
    },
    "cleared": true,
    "endReason": "cleared",
-   "simT": 26.67,
+   "simT": 27.98,
    "finalState": "results",
    "finalLevel": 9,
    "lives": 4,
-   "kills": 36,
+   "kills": 38,
    "botError": null,
    "pageErrors": [],
-   "wallMs": 375,
+   "wallMs": 463,
    "report": {
-    "generated": "2026-07-24T18:21:30.813Z",
+    "generated": "2026-07-24T19:02:19.945Z",
     "build": "wavebreaker-dev-report-v2",
     "run": {
      "mode": "junkie",
@@ -842,33 +1578,33 @@
      "startLevel": 8,
      "level": 9,
      "state": "results",
-     "score": 13456,
+     "score": 14659,
      "lives": "4/4",
      "playT": 22,
      "ended": null,
      "lastDamage": "MISSED BALL"
     },
     "totals": {
-     "kills": 36,
+     "kills": 38,
      "damageTaken": 0,
      "hitsByFamily": {},
      "shotsNormal": 70,
      "shotsCharged": 0,
      "chargeHits": 0,
      "chargeWasted": 0,
-     "dmgNormal": 48.4,
+     "dmgNormal": 51.4,
      "dmgCharge": 0,
      "dmgBall": 0,
      "dmgSplash": 0,
-     "dmgOther": 19.9,
+     "dmgOther": 14.7,
      "overheats": 0,
      "coolingTime": 0,
-     "absorbs": 1,
+     "absorbs": 0,
      "deflects": 0,
      "knockouts": 0,
      "megas": 0,
      "rerolls": 0,
-     "dmgRelic": 82.7,
+     "dmgRelic": 99.2,
      "dmgSurgeWindow": 0,
      "playTime": 22,
      "progressTime": 22,
@@ -876,22 +1612,24 @@
      "workHp": 30,
      "bossEquivalents": 0.73,
      "dmgByCategory": {
-      "vessel": 7.38,
-      "matchup": 30.219
+      "vessel": 7.48,
+      "matchup": 40.499
      },
      "surgeBySource": {
-      "momentum": 0.388,
+      "momentum": 0.408,
       "kills": 0.26
      },
      "shieldsBySource": {
-      "guard": 1
+      "guard": 1,
+      "drop": 2
      },
      "livesBySource": {},
      "dropsByKey": {
-      "draco": 1,
-      "slow": 1
+      "shield": 2,
+      "slow": 1,
+      "draco": 1
      },
-     "killsRenewable": 23,
+     "killsRenewable": 25,
      "channelsOpen": 0,
      "channelsBroken": 0
     },
@@ -899,14 +1637,382 @@
      "restarts": 0,
      "quits": 0
     },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": true
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 0.5,
+     "cinematic": 1,
+     "weapon": 1
+    },
     "upgrades": [],
     "offers": [
      {
       "lv": 9,
       "keys": [
+       "arsenal",
        "impact",
-       "prism",
-       "arsenal"
+       "surge"
       ]
      }
     ],
@@ -917,21 +2023,21 @@
       "stage": 2,
       "t": 22.000000000000032,
       "cleared": true,
-      "kills": 36,
+      "kills": 38,
       "knockout": false,
       "dmgInBy": {},
       "hits": [],
-      "absorbs": 1,
+      "absorbs": 0,
       "deflects": 0,
       "shotsN": 70,
       "shotsC": 0,
       "chargeHits": 0,
       "chargeWasted": 0,
-      "dmgN": 48.44349999999998,
+      "dmgN": 51.43899999999996,
       "dmgC": 0,
       "dmgBall": 0,
       "dmgSplash": 0,
-      "dmgOther": 19.862,
+      "dmgOther": 14.7395,
       "overheats": 0,
       "coolT": 0,
       "megas": 0,
@@ -944,24 +2050,26 @@
       "beUnit": 41,
       "dmgSurge": 0,
       "dmgCat": {
-       "vessel": 7.380000000000019,
-       "matchup": 30.218999999999937
+       "vessel": 7.4800000000000235,
+       "matchup": 40.498500000000234
       },
       "surgeBy": {
-       "momentum": 0.3880000000000003,
+       "momentum": 0.4080000000000003,
        "kills": 0.25999999999999995
       },
       "shieldBy": {
-       "guard": 1
+       "guard": 1,
+       "drop": 2
       },
       "lifeBy": {},
       "dropsBy": {
-       "draco": 1,
-       "slow": 1
+       "shield": 2,
+       "slow": 1,
+       "draco": 1
       },
-      "dmgRelic": 82.67700000000002,
-      "intercepts": 6,
-      "killsRenew": 23
+      "dmgRelic": 99.22450000000003,
+      "intercepts": 2,
+      "killsRenew": 25
      }
     ]
    }
@@ -1003,16 +2111,16 @@
    },
    "cleared": true,
    "endReason": "cleared",
-   "simT": 26.67,
+   "simT": 27.98,
    "finalState": "results",
    "finalLevel": 9,
    "lives": 4,
-   "kills": 36,
+   "kills": 38,
    "botError": null,
    "pageErrors": [],
-   "wallMs": 382,
+   "wallMs": 639,
    "report": {
-    "generated": "2026-07-24T18:21:31.191Z",
+    "generated": "2026-07-24T19:02:20.588Z",
     "build": "wavebreaker-dev-report-v2",
     "run": {
      "mode": "junkie",
@@ -1025,33 +2133,33 @@
      "startLevel": 8,
      "level": 9,
      "state": "results",
-     "score": 13456,
+     "score": 14659,
      "lives": "4/4",
      "playT": 22,
      "ended": null,
      "lastDamage": "MISSED BALL"
     },
     "totals": {
-     "kills": 36,
+     "kills": 38,
      "damageTaken": 0,
      "hitsByFamily": {},
      "shotsNormal": 70,
      "shotsCharged": 0,
      "chargeHits": 0,
      "chargeWasted": 0,
-     "dmgNormal": 48.4,
+     "dmgNormal": 51.4,
      "dmgCharge": 0,
      "dmgBall": 0,
      "dmgSplash": 0,
-     "dmgOther": 19.9,
+     "dmgOther": 14.7,
      "overheats": 0,
      "coolingTime": 0,
-     "absorbs": 1,
+     "absorbs": 0,
      "deflects": 0,
      "knockouts": 0,
      "megas": 0,
      "rerolls": 0,
-     "dmgRelic": 82.7,
+     "dmgRelic": 99.2,
      "dmgSurgeWindow": 0,
      "playTime": 22,
      "progressTime": 22,
@@ -1059,22 +2167,24 @@
      "workHp": 30,
      "bossEquivalents": 0.73,
      "dmgByCategory": {
-      "vessel": 7.38,
-      "matchup": 30.219
+      "vessel": 7.48,
+      "matchup": 40.499
      },
      "surgeBySource": {
-      "momentum": 0.388,
+      "momentum": 0.408,
       "kills": 0.26
      },
      "shieldsBySource": {
-      "guard": 1
+      "guard": 1,
+      "drop": 2
      },
      "livesBySource": {},
      "dropsByKey": {
-      "draco": 1,
-      "slow": 1
+      "shield": 2,
+      "slow": 1,
+      "draco": 1
      },
-     "killsRenewable": 23,
+     "killsRenewable": 25,
      "channelsOpen": 0,
      "channelsBroken": 0
     },
@@ -1082,14 +2192,382 @@
      "restarts": 0,
      "quits": 0
     },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 24.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": true,
+       "chill": false,
+       "dramatic": true
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 23.7
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 0.5,
+     "cinematic": 1,
+     "weapon": 1
+    },
     "upgrades": [],
     "offers": [
      {
       "lv": 9,
       "keys": [
+       "arsenal",
        "impact",
-       "prism",
-       "arsenal"
+       "surge"
       ]
      }
     ],
@@ -1100,21 +2578,21 @@
       "stage": 2,
       "t": 22.000000000000032,
       "cleared": true,
-      "kills": 36,
+      "kills": 38,
       "knockout": false,
       "dmgInBy": {},
       "hits": [],
-      "absorbs": 1,
+      "absorbs": 0,
       "deflects": 0,
       "shotsN": 70,
       "shotsC": 0,
       "chargeHits": 0,
       "chargeWasted": 0,
-      "dmgN": 48.44349999999998,
+      "dmgN": 51.43899999999996,
       "dmgC": 0,
       "dmgBall": 0,
       "dmgSplash": 0,
-      "dmgOther": 19.862,
+      "dmgOther": 14.7395,
       "overheats": 0,
       "coolT": 0,
       "megas": 0,
@@ -1127,27 +2605,39 @@
       "beUnit": 41,
       "dmgSurge": 0,
       "dmgCat": {
-       "vessel": 7.380000000000019,
-       "matchup": 30.218999999999937
+       "vessel": 7.4800000000000235,
+       "matchup": 40.498500000000234
       },
       "surgeBy": {
-       "momentum": 0.3880000000000003,
+       "momentum": 0.4080000000000003,
        "kills": 0.25999999999999995
       },
       "shieldBy": {
-       "guard": 1
+       "guard": 1,
+       "drop": 2
       },
       "lifeBy": {},
       "dropsBy": {
-       "draco": 1,
-       "slow": 1
+       "shield": 2,
+       "slow": 1,
+       "draco": 1
       },
-      "dmgRelic": 82.67700000000002,
-      "intercepts": 6,
-      "killsRenew": 23
+      "dmgRelic": 99.22450000000003,
+      "intercepts": 2,
+      "killsRenew": 25
      }
     ]
    }
   }
- ]
+ ],
+ "budgets": {
+  "fails": [
+   "A-sweep-J08: 3.0 shield charges earned (cap 2)",
+   "A-sweep heat lockout 21% of play (>12%)",
+   "A-sweep-J03: heat lockout 26% (>25%)"
+  ],
+  "warns": [
+   "A-sweep-J08: 22.0s outside the 25–50s target band"
+  ]
+ }
 }

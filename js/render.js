@@ -5913,12 +5913,25 @@ function combatSafeRect() {
 // bar may draw. Everyone else keeps silhouette/aura identity and reads from
 // the compact roster rail instead of stacking world-space labels.
 function activeCombatActor() {
-  const live = G.bricks.filter(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss) && !b.stoodDown);
+  // UNTOUCHABLE actors must never wear the active ring: out-of-hour pasts,
+  // the raid's still-bound mythic, sealed chase vessels, stood-down scenery
+  // (measured: the ring marked the bound Seraph and play stalled around it)
+  const live = G.bricks.filter(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss)
+    && !b.stoodDown && !b.hourOut && !b.vesselSealed && !(b.raidBound && !b.raidFreed));
   if (!live.length) return null;
   const F = G.finale;
   if (F && F.relay && F.beat === 0 && F.relay.carrier != null) {
     const c = live.find(v => v.subIdx === F.relay.carrier);
     if (c) return c;
+  }
+  // the RAID teaches "break the crown at its owner" — while a segment
+  // assembles, the ring marks THAT captain, not the distant Sovereign
+  if (F && F.raid && !F.raid.window && F.raid.segments && F.raid.segments[F.raid.seg]) {
+    const S = F.raid.segments[F.raid.seg];
+    if (S.state === 'assembling') {
+      const cap = live.find(b => b.raidCaptain && b.subIdx === S.owner);
+      if (cap) return cap;
+    }
   }
   const mark = live.find(b => b.laneMark);
   if (mark) return mark;
@@ -6836,7 +6849,7 @@ function drawMenuStarfighterRig(cx, cy, size, t, accent, hov) {
   ctx.moveTo(-size * 0.055, size * 0.18); ctx.lineTo(0, size * (0.58 + thrust * 0.08));
   ctx.lineTo(size * 0.055, size * 0.18); ctx.closePath(); ctx.fill();
   const img = affinityVesselImage(pilot.id), ps = size * 0.64;
-  if (img.complete && img.naturalWidth) {
+  if (img && img.complete && img.naturalWidth) { // null-safe: a cold cache may not have baked this id yet
     const sil = getSilhouette(pilot.id, '#02040b');
     if (sil) { ctx.globalAlpha = 0.55; ctx.drawImage(sil, -ps / 2 + 4, -ps / 2 + 7, ps, ps); ctx.globalAlpha = 1; }
     drawAffinityVessel(pilot.id, 0, 0, ps);
