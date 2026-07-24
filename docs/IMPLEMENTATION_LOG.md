@@ -5,6 +5,40 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24m — AFT-021 Phase 4: one weapon clock
+
+The reported "charged shots lurch between speeds" had a real cause: player
+bolts multiplied Slow-Mo (×0.5), starter Chill (×0.7), the 0.6–1.6 speed
+setting, AND dramatic slow-mo (×0.3) while charge fill rode raw dt — a 57
+to 1,440 px/s spread against a fixed fill. Four NAMED time domains now:
+
+- `settingsScale` (the player's explicit choice) · `hostileScale` (Slow-Mo
+  + Chill, ENEMIES ONLY) · `cinematicScale` (drama, visual only) ·
+  `inputNow()` (wall-clock intent). `timeScale()` composes all three for
+  the world; **`weaponScale()` = settingsScale alone** drives charge fill,
+  resonance, overcharge, heat build/cool, fire cadence, and every player
+  projectile (bolts, missiles, the relic). A slow you earned never slows
+  your own weapon; Chill/Turbo scale fill and travel together so the ratio
+  is constant.
+- **Touch holds credit from the PRESS**: promotion (now 180 ms, was 220)
+  banks the elapsed intent window into the charge, so touch and desktop
+  reach full in the same 1.10 s (0.82 s Heavy Bolt) — proven equal at
+  30/60/120 Hz plus a 150 ms hitch by the promoted Phase-0 fixtures.
+- Heavy Bolt's faster fill is CUED (`HOLD = FAST CHARGE` on the pad);
+  SLOW-MO's copy says what it does (`ENEMIES SLOW DOWN — NOT YOUR
+  WEAPON`); Snow Warning announces `ENEMIES SLOWED — YOUR WEAPON HOLDS
+  SPEED`.
+- **No stuck charges**: pausing, backgrounding, or the resolution beat
+  disarms any held charge cleanly — no surprise release on resume.
+- `DEV.report()` now carries `chargeTelemetry` (last 24 releases:
+  press/full/strength/resonance/domains/cadence) and the live
+  `timeDomains` readout.
+
+All ten Phase-0 fixtures are now permanent invariants (zero xtest left).
+Gate green 114/114.
+
+---
+
 ## 2026-07-24l — AFT-021 Phase 3: the combat-safe viewport + the active target
 
 - **`combatSafeRect()`** (render.js): the rectangle combat may OWN — below

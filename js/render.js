@@ -5768,8 +5768,12 @@ function drawTouchControls() {
     ctx.font = '900 9.5px Orbitron, sans-serif';
     ctx.fillStyle = hot ? '#ff8a80' : charging ? (resonantNow ? '#80ffea' : overNow ? '#ffab66' : full ? '#e0ffff' : '#80deea') : heatWarn ? '#ffb74d' : '#b3e5fc';
     ctx.fillText(label, f.x, f.y + 12, f.r * 1.7);
-    // second line: what HOLDING does right now (shooter modes only)
-    const sub = !shooter ? '' : hot ? Math.ceil(G.overheat) + 's · LOCKED' : charging ? (full ? '' : 'KEEP HOLDING') : 'HOLD = CHARGE';
+    // second line: what HOLDING does right now (shooter modes only).
+    // AFT-021 P4: Heavy Bolt's faster fill is a bought identity — the pad
+    // names it persistently so the quicker arc reads as a feature.
+    const sub = !shooter ? '' : hot ? Math.ceil(G.overheat) + 's · LOCKED'
+      : charging ? (full ? '' : 'KEEP HOLDING')
+      : (upgN('heavy') ? 'HOLD = FAST CHARGE' : 'HOLD = CHARGE');
     if (sub) {
       ctx.font = '800 7px Orbitron, sans-serif';
       ctx.fillStyle = hot ? '#ff8a80' : charging ? '#b2ebf2' : heatWarn ? '#ffcc80' : '#90a4ae';

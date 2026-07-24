@@ -19,10 +19,27 @@ function paddleW() {
 function classicCoreHalf() {
   return Math.min(paddleW(), G.paddle.w * 0.84) / 2;
 }
-function timeScale() {
-  return (G.fx_slow ? 0.5 : 1) * (G.starterChillT > 0 ? 0.7 : 1)
-    * SETTINGS.speed * (G.dramaticT > 0 ? 0.3 : 1);
-}
+// ── AFT-021 P4: NAMED TIME DOMAINS ─────────────────────────────────────────
+// The same gesture must produce the same weapon timing, always. Four named
+// clocks, each with one job:
+//   settingsScale — the player's explicit global speed choice (Chill/Turbo).
+//     The one domain the WEAPON shares with the world, so charge fill and
+//     bolt travel keep the same ratio at every setting.
+//   hostileScale  — Slow-Mo drops and starter Chill. ENEMIES ONLY: a slow
+//     you earned must never secretly slow your own bolts (the audit's
+//     "charged shots lurch between speeds" finding).
+//   cinematicScale — boss-defeat drama. Visual only; player projectiles
+//     stay unscaled through the beat.
+//   inputNow()    — wall time for tap-vs-hold intent (input.js).
+// timeScale() (world/hostiles) composes all three; weaponScale() is the
+// player weapon clock: charge fill, resonance, overcharge, heat, cadence,
+// and projectile travel all ride it together.
+function settingsScale() { return SETTINGS.speed; }
+function hostileScale() { return (G.fx_slow ? 0.5 : 1) * (G.starterChillT > 0 ? 0.7 : 1); }
+function cinematicScale() { return G.dramaticT > 0 ? 0.3 : 1; }
+function timeScale() { return hostileScale() * settingsScale() * cinematicScale(); }
+function weaponScale() { return settingsScale(); }
+function chargeFillTime() { return upgN('heavy') ? 0.8 : 1.1; } // Heavy Bolt's fast fill is an IDENTITY, cued on the pad
 // Dialga's Roar of Time slows only the balls, not the player
 function ballTimeScale() { return G.timeWarpT > 0 ? 0.55 : 1; }
 // Dialga's TIME DILATION (Milestone 4): ONE shared metronome period drives both
@@ -76,15 +93,17 @@ function tickEffects(dt) {
       }
     }
   }
-  // blaster heat cools slowly on its own, faster once fully overheated
+  // blaster heat cools slowly on its own, faster once fully overheated.
+  // AFT-021 P4: heat rides the WEAPON clock so build (per shot, cadence-
+  // driven) and cool keep their ratio at every speed setting.
   if (G.overheat > 0) {
-    G.overheat -= dt;
+    G.overheat -= dt * weaponScale();
     statsCoolTick(dt); // balance report: seconds of weapons-locked downtime
     if (G.overheat <= 0) { G.overheat = 0; G.heat = 0.3; }
   } else {
     // vents on a pause — but slower than sustained fire builds, so holding the
     // trigger (or spamming the charge shot) really can cook the barrel
-    G.heat = Math.max(0, G.heat - dt * (G.mode === 'junkie' ? (preset().heatCool || 0.28) : 0.22));
+    G.heat = Math.max(0, G.heat - dt * weaponScale() * (G.mode === 'junkie' ? (preset().heatCool || 0.28) : 0.22));
   }
   G.gustT = Math.max(0, G.gustT - dt);
   // TIME DILATION metronome (Dialga): a dedicated, deterministic accumulator so
@@ -1067,7 +1086,9 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       const chillEvery = starterMod('chillEvery', 0);
       if (chillEvery && G.starterKOs % chillEvery === 0) {
         G.starterChillT = Math.max(G.starterChillT, starterMod('chillDur', 3));
-        setAnnounce('ice', '#4dd0e1', 'SNOW WARNING!', 'THE BATTLE SLOWS DOWN', 1.8);
+        // AFT-021 P4: the slow is a buff on ENEMIES — say so, so the weapon
+        // keeping its speed never reads as a bug
+        setAnnounce('ice', '#4dd0e1', 'SNOW WARNING!', 'ENEMIES SLOWED — YOUR WEAPON HOLDS SPEED', 1.8);
       }
       const swarmEvery = starterMod('swarmEvery', 0);
       if (swarmEvery && G.starterKOs % swarmEvery === 0) {
@@ -2395,8 +2416,8 @@ function updateRelics(dt) {
   if (!G.relics.length) return;
   const ts = G.megaT > 0 ? 1.5 : 1; // SURGE synergy: overdrive spins the orbit faster
   for (const R of G.relics) {
-    R.t += dt * ts;
-    R.spin += dt * ts * 9;
+    R.t += dt * weaponScale(); // AFT-021 P4: the relic is a player weapon — weapon clock
+    R.spin += dt * weaponScale() * 9;
     const k = Math.min(1, R.t / R.dur);
     const e = k * k * (3 - 2 * k);
     R.px = R.x; R.py = R.y;
@@ -4938,7 +4959,7 @@ function update(dt) {
     G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14 * follow);
   } else G.shipYv = PADDLE_Y();
   G.invuln = Math.max(0, G.invuln - dt);
-  G.blasterCD = Math.max(0, G.blasterCD - dt);
+  G.blasterCD = Math.max(0, G.blasterCD - dt * weaponScale()); // AFT-021 P4: fire cadence rides the weapon clock
   G.muzzle = Math.max(0, G.muzzle - dt);
   G.wingFloatT = Math.max(0, (G.wingFloatT || 0) - dt); // wing-deflect floater throttle
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb
@@ -5095,7 +5116,7 @@ function update(dt) {
   // ---- shooter modes (BLASTER / SPACE JUNKIE): hold FIRE to build a heavy
   // shot, release to fire. While a hold is pending or charging, normal fire
   // pauses so no stray bolt leaks out before the charged shot.
-  G.chargeCD = Math.max(0, G.chargeCD - dt);
+  G.chargeCD = Math.max(0, G.chargeCD - dt * weaponScale()); // AFT-021 P4: weapon clock
   let charging = false, chargedThisFrame = false;
   // CLASSIC joins the charge arc whenever its blaster is ARMED (laser
   // window, Mega, or an offense capstone) — the full Starfighter grammar:
@@ -5104,21 +5125,32 @@ function update(dt) {
     // A FIRE touch still down past the intent threshold promotes into a charge;
     // a quicker release is dispatched as one normal shot by input.js.
     if (touchFirePendingId !== null && inputNow() - touchFirePendingT >= TOUCH_CHARGE_HOLD_MS) {
+      const heldMs = inputNow() - touchFirePendingT;
       chargeHeld = true; chargeTouchId = touchFirePendingId; touchFirePendingId = null;
+      // AFT-021 P4: the charge arc measures from the PRESS — the promoted
+      // hold credits its elapsed intent window instead of starting at zero,
+      // so touch and desktop reach full charge in the same time.
+      G.charge = Math.max(G.charge, Math.min(1, (heldMs / 1000) * weaponScale() / chargeFillTime()));
+      G.chargeCur = { pressMs: +heldMs.toFixed(1), t0: G.time, fullS: null };
     }
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
-      // COOLANT's shooter translation: a cooler barrel also charges faster
-      G.charge = Math.min(1, G.charge + dt / (upgN('heavy') ? 0.8 : 1.1)); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
+      // COOLANT's shooter translation: a cooler barrel also charges faster.
+      // AFT-021 P4: fill rides the WEAPON clock — the ratio between charge
+      // time and bolt travel is constant at every speed setting.
+      G.charge = Math.min(1, G.charge + dt * weaponScale() / chargeFillTime()); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
+      if (G.charge >= 1 && G.chargeCur && G.chargeCur.fullS == null) {
+        G.chargeCur.fullS = +(((G.chargeCur.pressMs || 0) / 1000) + (G.time - G.chargeCur.t0)).toFixed(3);
+      }
       // RESONANCE (Milestone 2): the instant the charge tops out, a short
       // sweet-spot window opens (RESONANCE_WINDOW) — release inside it for
       // the resonant shot. Sitting on a full charge past ~1.4s OVERCHARGES:
       // the barrel slowly cooks, so hoarding the big shot has a real cost.
       if (G.charge >= 1) {
-        G.chargeFullT += dt;
+        G.chargeFullT += dt * weaponScale();
         // must OUTPACE passive cooling (~0.28/s) or hoarding is free —
         // net ≈ +0.12 heat/s: gentle, but a hot barrel will tip over
-        if (G.chargeFullT > 1.4) addWeaponHeat(dt * 0.4);
+        if (G.chargeFullT > 1.4) addWeaponHeat(dt * weaponScale() * 0.4);
       }
     } else if (G.charge > 0) {
       fireCharge(G.charge, G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW);
@@ -6281,7 +6313,9 @@ function update(dt) {
     }
   }
   for (const L of G.lasers) {
-    L.y -= 900 * ts * dt;
+    // AFT-021 P4: player bolts ride the WEAPON clock — hostile slows and
+    // cinematic beats never touch their travel
+    L.y -= 900 * weaponScale() * dt;
     // TAILWIND CURRENT (Lugia): the pilot's bolts drift downwind in shooter
     // modes — aim upwind to hit. Accumulates a lateral vx, integrated below.
     if (G.mode !== 'classic' && G.gustT > 0 && G.gustDir) L.vx = (L.vx || 0) + G.gustDir * 150 * dt;
@@ -6508,7 +6542,7 @@ function update(dt) {
       const sp = 430;
       m.vx = Math.cos(na) * sp; m.vy = Math.sin(na) * sp;
     }
-    m.x += m.vx * ts * dt; m.y += m.vy * ts * dt;
+    m.x += m.vx * weaponScale() * dt; m.y += m.vy * weaponScale() * dt; // AFT-021 P4: weapon clock
     if (G.particles.length < 430) G.particles.push({ x: m.x, y: m.y, vx: -m.vx * 0.08, vy: -m.vy * 0.08, life: 0.3, maxLife: 0.3, color: m.drone ? '#ea80fc' : '#ffab91', r: 2.5 });
     if (shotTgt && !shotTgt.dead && Math.hypot(shotTgt.x - m.x, shotTgt.y - m.y) < 18) {
       // drone intercept: the shot dies to a hex flash, never reaching you

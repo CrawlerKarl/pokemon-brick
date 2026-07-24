@@ -158,6 +158,14 @@ function devRunReport() {
       channelsOpen: agg('channelsOpen'), channelsBroken: agg('channelsBroken'),
     },
     session: { restarts: SESSION_STATS.restarts, quits: SESSION_STATS.quits },
+    // AFT-021 P4: the last 24 charge releases — press/full/strength/domains
+    chargeTelemetry: (G.chargeLog || []).slice(),
+    timeDomains: {
+      settings: SETTINGS.speed,
+      hostile: typeof hostileScale === 'function' ? +hostileScale().toFixed(2) : 1,
+      cinematic: typeof cinematicScale === 'function' ? +cinematicScale().toFixed(2) : 1,
+      weapon: typeof weaponScale === 'function' ? +weaponScale().toFixed(2) : 1,
+    },
     upgrades: levels.flatMap(L => (L.upgrades || []).map(u => ({ afterLevel: L.lv, pick: u }))),
     offers: rs.offers || [],
     levels,

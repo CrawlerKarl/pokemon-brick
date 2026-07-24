@@ -62,7 +62,11 @@ let chargeHeld = false, chargeTouchId = null; // charge a big shot (right-click 
 // normal shot, or keep holding past this short intent threshold to charge. The
 // threshold prevents ordinary taps from becoming tiny accidental charge shots.
 let touchFirePendingId = null, touchFirePendingT = 0;
-const TOUCH_CHARGE_HOLD_MS = 220;
+// AFT-021 P4: 180ms (was 220) — the hold now CREDITS its elapsed time into
+// the charge at promotion, so the threshold only decides tap-vs-hold intent,
+// never delays the arc. 160–200ms is the plan's target band; press-down
+// feedback (pulse + haptic) fires immediately on the pad.
+const TOUCH_CHARGE_HOLD_MS = 180;
 // AFT-021: the INPUT CLOCK — the one wall-time source for tap-vs-hold intent.
 // Mockable (inputClockOverride) so the suite can drive deterministic hold
 // timings at any simulated frame rate; identical to performance.now() in play.
@@ -435,7 +439,15 @@ function togglePause() {
     advOpen = false; cheatOpen = false; saveSettings();
     return;
   }
-  if (G.state === 'play' || G.state === 'serve') paused = !paused;
+  if (G.state === 'play' || G.state === 'serve') {
+    paused = !paused;
+    // AFT-021 P4: no input may stay stuck charging across a pause — the
+    // held charge disarms cleanly (no surprise release on resume)
+    if (paused) {
+      chargeHeld = false; chargeTouchId = null; touchFirePendingId = null;
+      G.charge = 0; G.chargeFullT = 0;
+    }
+  }
 }
 // bail out of a run straight back to the title screen (keeps your best score)
 function quitToMenu() {
@@ -448,7 +460,15 @@ function quitToMenu() {
   dexScroll = 0;
   SFX.wall();
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') paused = true; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G.state === 'play') {
+    paused = true;
+    // AFT-021 P4: backgrounding disarms any held charge — nothing may stay
+    // stuck charging while the tab is away
+    chargeHeld = false; chargeTouchId = null; touchFirePendingId = null;
+    G.charge = 0; G.chargeFullT = 0;
+  }
+});
 
 function setSliderFromX(i, x) {
   const s = activeSliders()[i], gm = sliderGeom(i);
@@ -1491,6 +1511,23 @@ function fireCharge(c, resonant = false) {
   if (!blasterArmed()) return; // no paddle gun in classic — the charge can never fire
   G.chargedEver = true; // the charge tutor banner retires once you've done it
   G.lastChargeT = G.time; // the realm-1 DREAM MIRROR reads recent charges
+  // AFT-021 P4: charge telemetry — every release records its full arc and
+  // the time domains that were live, so a "the charge felt wrong" report is
+  // answerable from DEV.report().chargeTelemetry instead of a guess
+  {
+    const cur = G.chargeCur || {};
+    if (!G.chargeLog) G.chargeLog = [];
+    G.chargeLog.push({
+      pressMs: cur.pressMs || 0, fullS: cur.fullS ?? null,
+      strength: +c.toFixed(2), resonant: !!resonant,
+      fastFill: !!upgN('heavy'),
+      domains: { speed: SETTINGS.speed, slow: !!G.fx_slow, chill: G.starterChillT > 0, dramatic: G.dramaticT > 0 },
+      boltPxPerS: Math.round(900 * (typeof weaponScale === 'function' ? weaponScale() : 1)),
+      cadenceMs: typeof PERF !== 'undefined' ? +PERF.cadenceAvg().toFixed(1) : null,
+    });
+    if (G.chargeLog.length > 24) G.chargeLog.shift();
+    G.chargeCur = null;
+  }
   statsShotFired(true);
   if (resonant) statsResonant();
   // AEGIS LANCE: while shielded, a full charge SPENDS one real shield and the

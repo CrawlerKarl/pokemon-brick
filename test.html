@@ -5682,7 +5682,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'the combat field is derived from HUD, insets and control geometry — and actors respect it';
   });
 
-  xtest('AFT-021 P0: player bolts ignore hostile/cinematic slows; charge and travel share the settings clock', async () => {
+  test('AFT-021 P0: player bolts ignore hostile/cinematic slows; charge and travel share the settings clock', async () => {
     DEV.launch({ level: 5, mode: 'blaster', diff: 'normal', seed: 'AFT021-CLK' });
     paused = false; G.freeze = 0;
     await runFrames(10);
@@ -5732,7 +5732,7 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { clearFx(); chargeHeld = false; G.charge = 0; }
   });
 
-  xtest('AFT-021 P0: equal touch holds reach equal charge at every frame rate', async () => {
+  test('AFT-021 P0: equal touch holds reach equal charge at every frame rate', async () => {
     DEV.launch({ level: 5, mode: 'blaster', diff: 'normal', seed: 'AFT021-HOLD' });
     paused = false; G.freeze = 0;
     await runFrames(5);

@@ -317,7 +317,7 @@ const POWERS = {
   // shooter modes have no paddle — `wide` widens the item-collection reach.
   wide:   { key: 'wide',   icon: 'wide',   name: 'WIDE PADDLE',    desc: 'PADDLE GROWS LARGER',        color: '#42a5f5',
     sname: 'WIDE CATCH', sdesc: 'ITEM COLLECTION REACH GROWS' },
-  slow:   { key: 'slow',   icon: 'slow',   name: 'SLOW-MO',        desc: 'EVERYTHING SLOWS DOWN',      color: '#4dd0e1' },
+  slow:   { key: 'slow',   icon: 'slow',   name: 'SLOW-MO',        desc: 'ENEMIES SLOW DOWN — NOT YOUR WEAPON', color: '#4dd0e1' },
   shield: { key: 'shield', icon: 'shield', name: 'SHIELD',         desc: 'BARRIER PROTECTS THE FLOOR', color: '#66bb6a' },
   magnet: { key: 'magnet', icon: 'magnet', name: 'MAGNET',         desc: 'BALLS STICK — FIRE TO AIM',  color: '#ec407a' },
   star:   { key: 'star',   icon: 'star',   name: 'SCORE x2',       desc: 'POINTS ARE DOUBLED',         color: '#ffee58' },
