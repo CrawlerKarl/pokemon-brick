@@ -116,9 +116,15 @@ function devRunReport() {
   const agg = (field) => levels.reduce((n, L) => n + (L[field] || 0), 0);
   const hitsBy = {};
   for (const L of levels) for (const k in (L.dmgInBy || {})) hitsBy[k] = (hitsBy[k] || 0) + L.dmgInBy[k];
+  // AFT-008: merge the per-level source maps into run totals
+  const mergeBy = (field) => {
+    const out = {};
+    for (const L of levels) for (const k in (L[field] || {})) out[k] = +((out[k] || 0) + L[field][k]).toFixed(3);
+    return out;
+  };
   return {
     generated: new Date().toISOString(),
-    build: 'wavebreaker-dev-report-v1',
+    build: 'wavebreaker-dev-report-v2',
     run: {
       mode: G.mode, preset: SETTINGS.preset, starter: G.starter || 'none',
       seed: G.runSeed, trial: G.trial, daily: G.daily, cheated: G.cheated,
@@ -137,9 +143,23 @@ function devRunReport() {
       overheats: agg('overheats'), coolingTime: +agg('coolT').toFixed(1),
       absorbs: agg('absorbs'), deflects: agg('deflects'),
       knockouts: rs.knockouts || 0, megas: agg('megas'), rerolls: agg('rerolls'),
+      // AFT-008 baseline aggregates
+      dmgRelic: +agg('dmgRelic').toFixed(1), dmgSurgeWindow: +agg('dmgSurge').toFixed(1),
+      playTime: +agg('t').toFixed(1),
+      progressTime: +agg('tProg').toFixed(1), activeThreatTime: +agg('tActive').toFixed(1),
+      workHp: +agg('workHp').toFixed(1),
+      bossEquivalents: +(levels.reduce((n, L) => n + (L.beUnit ? (L.workHp || 0) / L.beUnit : 0), 0)).toFixed(2),
+      dmgByCategory: mergeBy('dmgCat'),
+      surgeBySource: mergeBy('surgeBy'),
+      shieldsBySource: mergeBy('shieldBy'),
+      livesBySource: mergeBy('lifeBy'),
+      dropsByKey: mergeBy('dropsBy'),
+      killsRenewable: agg('killsRenew'),
+      channelsOpen: agg('channelsOpen'), channelsBroken: agg('channelsBroken'),
     },
     session: { restarts: SESSION_STATS.restarts, quits: SESSION_STATS.quits },
     upgrades: levels.flatMap(L => (L.upgrades || []).map(u => ({ afterLevel: L.lv, pick: u }))),
+    offers: rs.offers || [],
     levels,
   };
 }

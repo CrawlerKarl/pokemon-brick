@@ -63,7 +63,7 @@ function tickEffects(dt) {
     if (G[k]) { G[k].t -= dt; if (G[k].t <= 0) G[k] = null; }
   }
   if (G.megaT > 0) G.megaT = Math.max(0, G.megaT - dt);
-  else if (G.state === 'play') G.mega = Math.min(1, G.mega + dt * starterMod('megaPassive', 0));
+  else if (G.state === 'play') gainMega(dt * starterMod('megaPassive', 0), 'passive');
   G.starterChillT = Math.max(0, (G.starterChillT || 0) - dt);
   if (G.ballElement && fighting) {
     G.ballElementT -= dt;
@@ -158,9 +158,15 @@ function modePower(p) {
   if (!p || !p.key) return p;
   // classic no longer has a paddle gun, so a LASER drop would be dead — hand out
   // a MULTIBALL instead (fun, calm, and on-theme for the ball-first game).
-  if (G.mode === 'classic') return p.key === 'laser' ? POWERS.multi : p;
-  const swap = { multi: regionIdx(G.level) >= 1 ? 'draco' : 'star', magnet: 'shield', warp: 'star' };
-  return swap[p.key] ? POWERS[swap[p.key]] : p;
+  const out = (() => {
+    if (G.mode === 'classic') return p.key === 'laser' ? POWERS.multi : p;
+    const swap = { multi: regionIdx(G.level) >= 1 ? 'draco' : 'star', magnet: 'shield', warp: 'star' };
+    return swap[p.key] ? POWERS[swap[p.key]] : p;
+  })();
+  // AFT-008: every type-keyed drop routes through here — record the POST-remap
+  // key so the matrix can audit which power families flood a mode
+  if (out && out.key) statsDrop(out.key);
+  return out;
 }
 
 // ---- ENEMY FIRE DIRECTOR -------------------------------------------------
@@ -540,11 +546,18 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   }
   // Late-run mastery remains useful in every mode (ball, bolts, missiles,
   // explosions) without recreating the old giant weapon-capstone spike.
+  // AFT-008: dPre* checkpoints attribute the damage each multiplier CATEGORY
+  // adds (or removes) — the ledger's per-category breakdown rides the deltas.
+  const dPreStacks = dmg;
   if (dmg < 90 && G.stacks && G.stacks.orb) dmg *= 1 + 0.06 * G.stacks.orb;
   if (dmg < 90 && stackN('fang')) dmg *= 1 + 0.07 * stackN('fang'); // VOID FANG (dark affinity)
   if (dmg < 90 && meta.source === 'charge' && stackN('hex')) dmg *= 1 + 0.09 * stackN('hex'); // UMBRAL HEX
   if (dmg < 90 && G.secretUpg.lens) dmg *= 1.15;
+  statsDmgCat('stacks', dmg - dPreStacks);
+  const dPreWindow = dmg;
   if (br.staggerT > 0 && dmg < 90) dmg *= 1.35; // Psystrike stagger: the interrupt's reward window
+  statsDmgCat('window', dmg - dPreWindow);
+  const dPreVessel = dmg;
   const starterDirect = dmg < 90 && !meta.starterChain && !meta.behavior && !meta.linked;
   if (starterDirect && G.starter) {
     G.starterHits = (G.starterHits || 0) + 1;
@@ -569,6 +582,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       ringFx(sx, sy, '#ec407a', 4, 46, 3, 0.3);
     }
   }
+  statsDmgCat('vessel', dmg - dPreVessel);
+  const dPreMatch = dmg;
   // type effectiveness: super effective ×2 (PRISM AMPLIFY pushes it further),
   // resisted ×¼ — unless the OMNI LENS capstone ignores resistances outright
   if (element && dmg < 90) {
@@ -576,7 +591,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       dmg *= 2 * (upgN('amplify') ? 1.3 : 1);
       // AURORA DRIVE: super-effective hits feed the Mega ring (gold motes)
       if (upgN('aurora') && G.megaT <= 0) {
-        G.mega = Math.min(1, G.mega + 0.015);
+        gainMega(0.015, 'aurora');
         G.surgeFlash = Math.max(G.surgeFlash || 0, 0.4);
       }
       if (element === G.ballElement) G.resistStreak = 0;
@@ -610,6 +625,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
     } else if (element === G.ballElement) G.resistStreak = 0;
   }
+  statsDmgCat('matchup', dmg - dPreMatch);
+  const dPreGuard = dmg;
   // SENTINEL GUARD / OPENING (round-1 gauntlet). Sentinels hold a guard that
   // halves incoming damage until they commit to their OWN special; the opening
   // it leaves (br.openT, set in subAbility, decayed in updateSentinels) takes
@@ -628,6 +645,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       }
     }
   }
+  statsDmgCat('guard', dmg - dPreGuard);
   statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
   br.hp -= dmg;
   if (dmg < 90 && G.secretUpg.echo && !meta.secretEcho) {
@@ -676,7 +694,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     SFX.bossHit();
     // meta.noMega: fusion/apex area damage can never rebuild the meter it
     // spent (Cataclysm's declared guard) or quietly farm the boss for Mega
-    if (!meta.noMega) G.mega = Math.min(1, G.mega + 0.004);
+    if (!meta.noMega) gainMega(0.004, 'bossHits');
     // Phase count belongs to the encounter tier. STARFIGHTER legendaries
     // split at 50% (two phases), mythicals split at ⅔/⅓ (three), and the
     // sentinels never enter this boss-only transition path.
@@ -753,6 +771,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (br.hp <= 0) {
     br.dead = true;
     statsKill();
+    if (br.reinf) statsKillRenew(); // renewable-population kill (AFT-008 farm audit)
     if (br.isBoss) statsBossPhaseMark(br, br.phase); // close the final phase clock
     if (G.runStats) {
       G.runStats.bricksBroken++;
@@ -775,7 +794,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // BONUS FLOCK reward: chaining the harmless crossers pays score + Mega
       G.score += 150;
       addFloater(br.bx + G.fx, br.by + G.fy - 20, '+150 BONUS', '#80d8ff', 13);
-      if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.03);
+      if (G.megaT <= 0) gainMega(0.03, 'kills');
     }
     if (G.starter) {
       G.starterKOs = (G.starterKOs || 0) + 1;
@@ -798,8 +817,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     // RALLY MASTER's shooter translation: kills are the only tempo there, so
     // they charge much harder (×2.5 total) — mega lands roughly every 2 waves
     const rallyKill = upgN('rally') ? (br.isBoss ? 0.04 : (G.mode !== 'classic' ? 0.012 : 0.004)) : 0;
-    if (G.megaT <= 0) G.mega = Math.min(1, G.mega + (br.isBoss ? 0.12 : 0.008) + rallyKill
-      + 0.009 * stackN('tithe')); // BLOOD TITHE (dark affinity)
+    if (G.megaT <= 0) {
+      gainMega((br.isBoss ? 0.12 : 0.008) + rallyKill, 'kills');
+      gainMega(0.009 * stackN('tithe'), 'tithe'); // BLOOD TITHE (dark affinity)
+    }
     // HALO WARD (light affinity): a kill-count rhythm that raises a shield
     if (stackN('halo')) {
       G.haloKills = (G.haloKills || 0) + 1;
@@ -808,6 +829,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         G.haloKills = 0;
         if (G.shieldCharges < shieldCap()) {
           G.shieldCharges++;
+          statsShieldGain('halo');
           addFloater(G.paddle.x, shipY() - 30, 'HALO WARD +1', '#fff59d', 12);
           SFX.power();
         }
@@ -904,6 +926,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         * starterMod('healChance', 1));
       if (missingHp > 0 && (G.healthDropPity >= starterMod('healPity', 10) || gameRand() < healChance)) {
         G.healthDropPity = 0;
+        statsDrop('heal');
         G.powerups.push({ x: br.bx + G.fx, y: br.by + G.fy, vy: 112, p: POWERS.heal, rot: 0, hint: true });
       } else if (gameRand() < d.dropChance) {
         const p = modePower(POWERS[POWER_BY_TYPE[br.poke.t] || 'star']);
@@ -1148,7 +1171,7 @@ function awardRally(b, x, y) {
   if (b.rally < 3) return;
   const bonus = Math.round(b.rally * 15 * scoreMult() * (upgN('rally') ? 1.5 : 1));
   G.score += bonus;
-  if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.0035); // rallies feed Mega
+  if (G.megaT <= 0) gainMega(0.0035, 'rally'); // rallies feed Mega
   if (b.rally === 3 || b.rally % 3 === 0) {
     const hot = b.rally >= 9;
     addFloater(x, y - 22, 'RALLY ×' + b.rally + '  +' + bonus, hot ? '#ff7043' : '#ffd54f', 13 + Math.min(9, b.rally));
@@ -1236,7 +1259,7 @@ function collectPickup(pu) {
   if (pu.p && pu.p.key === 'heal') webGuardianCharge();
   // GRACE LIGHT (light affinity): mending also banks Mega
   if (pu.p && pu.p.key === 'heal' && stackN('grace') && G.megaT <= 0) {
-    G.mega = Math.min(1, G.mega + 0.15 * stackN('grace'));
+    gainMega(0.15 * stackN('grace'), 'grace');
   }
   if (pu.secretShard || pu.p.key === 'riftShard') {
     const i = Math.max(0, Math.min(2, pu.shardIndex || 0));
@@ -1990,6 +2013,9 @@ function rollUpgradeChoices() {
   G.lastOfferKeys = handKeys;
   G.lastDraftForm = webForm();
   G.upgradeChoices = choices.length ? choices : null;
+  // AFT-008: record every dealt hand so offer frequency can normalize pick rates
+  if (choices.length) statsOffer(choices.map(c =>
+    c.web ? c.web.key : c.stack ? 'stack:' + c.stack.key : c.pathKey || '?'));
 }
 
 // A shield charge absorbs one lethal hit on the player (enemy shot or column
@@ -2018,7 +2044,7 @@ function absorbHit(x, y, shotType = null, volleyId = null) {
   SFX.shield();
   // REACTIVE OVERDRIVE: the break feeds the Mega ring — gold surge on the rig
   if (upgN('reactive') && G.megaT <= 0) {
-    G.mega = Math.min(1, G.mega + 0.15);
+    gainMega(0.15, 'reactive');
     G.surgeFlash = 1;
     addFloater(G.paddle.x, y - 64, lex('+15% MEGA'), '#dce775', 12);
   }
@@ -2158,6 +2184,7 @@ function webRelicProcs(ev) {
       G.rescueN = 0;
       if (G.shieldCharges < shieldCap()) {
         G.shieldCharges++;
+        statsShieldGain('rescue');
         ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
         addFloater(G.paddle.x, shipY() - 34, 'WARDING ORBIT!', '#ff8a80', 12);
         SFX.shield();
@@ -2200,7 +2227,7 @@ function webGuardianCharge() {
     G.guardCharge = 0;
     G.guardPulsedWave = true;
     for (const s of G.enemyShots) if (!s.boss) s.dead = true;
-    if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; }
+    if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; statsLifeGain('fusion'); }
     ringFx(G.paddle.x, shipY(), '#b9f6ca', 12, 230, 6, 0.7);
     ringFx(G.paddle.x, shipY(), '#f8bbd0', 8, 160, 4, 0.55);
     sparkle(G.paddle.x, shipY() - 30, 10, true);
@@ -2363,8 +2390,8 @@ function celestialSector(k) {
       damageBrick(br, 1, br.bx + G.fx, br.by + G.fy, el, { noMega: true });
     }
   }
-  if (G.shieldCharges < shieldCap()) G.shieldCharges++;
-  else if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; }
+  if (G.shieldCharges < shieldCap()) { G.shieldCharges++; statsShieldGain('fusion'); }
+  else if (G.lives < Math.max(1, G.livesMax)) { G.lives++; G.hurtHud = 2.6; statsLifeGain('fusion'); }
   G.ballElement = el;
   G.ballElementT = Math.max(G.ballElementT, 4);
   G.resistStreak = 0;
@@ -3360,6 +3387,24 @@ function update(dt) {
 
   tickEffects(dt);
   if (G.state === 'play') { G.playT += dt; statsPlayTick(dt); }
+  // AFT-008 clock classifier: one cheap pass per frame — does a damageable
+  // target or live objective exist (MEANINGFUL PROGRESS), and is hostile
+  // threat live (ACTIVE THREAT)? Reveals freeze combat, so neither clock
+  // runs under one. Classic takes no enemy fire — its "active threat" is a
+  // live ball to keep. Phase-gated / dormant targets don't count as progress.
+  if (G.state === 'play' && !G.reveal && G.runStats && G.runStats.cur) {
+    let dmgable = false, hostileAlive = false;
+    for (const b of G.bricks) {
+      if (b.dead || b.barrier || b.crosser || b.friendly || b.dormant) continue;
+      hostileAlive = true;
+      if (!(b.phaseT > 0)) { dmgable = true; break; }
+    }
+    const prog = dmgable || !!(G.objective && !G.objective.done && !G.objective.failed);
+    const active = G.mode === 'classic'
+      ? G.balls.length > 0
+      : (hostileAlive || G.enemyShots.length > 0);
+    statsClockTick(dt, prog, active);
+  }
   // ---- shooter modes (BLASTER / SPACE JUNKIE): hold FIRE to build a heavy
   // shot, release to fire. While a hold is pending or charging, normal fire
   // pauses so no stray bolt leaks out before the charged shot.
@@ -3413,6 +3458,7 @@ function update(dt) {
         // capstone proc reads on the SHIP, not just as text: the bubble
         // flares green and a ring blooms outward as the charge regrows
         G.shieldFlash = Math.max(G.shieldFlash || 0, 0.8);
+        statsShieldGain('regen');
         ringFx(G.paddle.x, shipY(), '#66bb6a', 6, 52, 3, 0.4);
         addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
       }
@@ -4296,7 +4342,7 @@ function update(dt) {
       // reaching the very top is a skill beat — reward it (points + a little Mega)
       if (G.state === 'play' && !b.stuck) {
         G.score += Math.round(12 * scoreMult());
-        if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.0015);
+        if (G.megaT <= 0) gainMega(0.0015, 'rally');
         burst(b.x, 56 + b.r, '#ffd54f', 3, 90, 0.3);
       }
     }
@@ -4323,7 +4369,7 @@ function update(dt) {
             const bo = Math.round(150 * scoreMult());
             G.score += bo;
             addFloater(b.x, b.y + 20, 'HIGH GROUND! +' + bo, '#ffd54f', 17);
-            if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.03);
+            if (G.megaT <= 0) gainMega(0.03, 'rally');
             tone(880, 0.14, 'triangle', 0.06, 200);
           }
         }
@@ -4374,7 +4420,7 @@ function update(dt) {
         burst(b.x, py, '#90caf9', 6, 120, 0.3);
         // a clean return vents blaster heat and (with Momentum) charges Mega
         if (G.overheat <= 0) G.heat = Math.max(0, G.heat - 0.5);
-        if (G.megaT <= 0) G.mega = Math.min(1, G.mega + 0.02 * upgN('momentum'));
+        if (G.megaT <= 0) gainMega(0.02 * upgN('momentum'), 'momentum');
         // CALIBRATED BARRAGE (classic): every 4th clean return primes the ball
         if (G.mode === 'classic' && upgN('calibrated') && ++G.calibReturns >= 4) {
           G.calibReturns = 0; G.calibShots = 1;
@@ -4390,6 +4436,7 @@ function update(dt) {
             G.torrentCount = 0;
             if (G.shieldCharges < shieldCap()) {
               G.shieldCharges++;
+              statsShieldGain('torrent');
               addFloater(G.paddle.x, py - 34, 'TORRENT SHIELD!', '#4dd0e1', 13);
               SFX.shield();
             }
@@ -4642,6 +4689,7 @@ function update(dt) {
         // desperation BREAKS and Mewtwo staggers open (bonus-damage window)
         if (L.charged && br.channel && !br.dead) {
           br.channel = null; br.channelCD = 9; br.staggerT = 1.5;
+          statsChannel('broken');
           br.flash = 1;
           br.fireQuietT = Math.max(br.fireQuietT || 0, 1.6);
           addFloater(bx, by - br.h / 2 - 16, 'CHANNEL BROKEN!', '#80d8ff', 16);
@@ -4652,7 +4700,7 @@ function update(dt) {
         }
         // MOMENTUM: in the shooter modes there are no paddle returns, so
         // blaster hits carry the whole tier — twice the classic trickle
-        if (L.basic && G.megaT <= 0 && upgN('momentum')) G.mega = Math.min(1, G.mega + (G.mode !== 'classic' ? 0.004 : 0.002));
+        if (L.basic && G.megaT <= 0 && upgN('momentum')) gainMega(G.mode !== 'classic' ? 0.004 : 0.002, 'momentum');
         // FUSION hit meters: only ORDINARY basic volleys line up — primed
         // lanes, echoes and reflections are excluded so no proc feeds itself
         if (L.basic && !L.charged && !L.prism && !L.echo && !L.facet) {
@@ -4854,6 +4902,7 @@ function update(dt) {
         if (!boss.channel && (boss.channelCD || 0) > 0) boss.channelCD -= dt * ts;
         if (!boss.channel && boss.hp / boss.maxHp <= chDef.hpFrac && (boss.channelCD || 0) <= 0 && !(boss.staggerT > 0)) {
           boss.channel = { t: 0, dur: chDef.dur, pattern: chDef.pattern, name: chDef.name };
+          statsChannel('open');
           boss.fireQuietT = Math.max(boss.fireQuietT || 0, 3.4);
           boss.teleportAt = null; // the channel roots him
           boss.phaseT = 0; // a desperation must never be uninterruptible (Lunala's
@@ -5521,6 +5570,7 @@ function update(dt) {
     // `revive` key is the CROWNED RELIC weapon tier)
     if (clearedStage === 2 && upgN('aegisX')) {
       G.lives++;
+      statsLifeGain('aegisX');
       addFloater(W / 2, H * 0.42, PATHS.aegis.tiers[3].name + ' — +1 LIFE', '#66bb6a', 20);
     }
     // draft: advance one of up to three paths (skip maxed ones)

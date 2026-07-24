@@ -26,9 +26,9 @@ function starterTierValue(key, tier) {
 }
 function applyStarterTierUpgrade(fromTier, toTier) {
   const hpGain = Math.max(0, starterTierValue('bonusHp', toTier) - starterTierValue('bonusHp', fromTier));
-  if (hpGain) { G.lives += hpGain; G.livesMax += hpGain; }
+  if (hpGain) { G.lives += hpGain; G.livesMax += hpGain; statsLifeGain('starterTier'); }
   const shieldGain = Math.max(0, starterTierValue('shieldStart', toTier) - starterTierValue('shieldStart', fromTier));
-  if (shieldGain) G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + shieldGain);
+  if (shieldGain) { G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + shieldGain); statsShieldGain('starterTier'); }
   const megaFloor = starterTierValue('megaStart', toTier);
   if (megaFloor) G.mega = Math.max(G.mega, megaFloor);
 }
@@ -313,6 +313,12 @@ const G = {
   scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
   announce: null, announceQueue: [], modifier: null, combatNotice: null,
   reveal: null, revealDock: null, // AFT-002: the boss-reveal scene + HUD-lane dock
+  // AFT-020: the finale director's state (null outside a finale; the old
+  // G.gauntlet stays alongside as the compatibility adapter during migration)
+  // shape when live: { realm, format, beat, beatT, actors, objective, mastery,
+  //   carry, reward, budgets, clocks, procEligibility, entry }
+  finale: null,
+  prep: null, // temporary Challenge→finale PREPARATION benefit (expires after the finale)
   fx: 0, fy: 0, swayT: 0,
   brickW: 0, brickH: 0,
   shake: 0, flashT: 0, stateT: 0,
@@ -425,6 +431,15 @@ function statsBeginLevel(lv) {
     dmgN: 0, dmgC: 0, dmgBall: 0, dmgSplash: 0, dmgOther: 0,
     overheats: 0, coolT: 0, megas: 0, rerolls: 0,
     upgrades: [], bossPhases: {},
+    // AFT-008 baseline fields: encounter-economy clocks + attributed sources.
+    // tProg = seconds a damageable target/objective existed (meaningful
+    // progress); tActive = seconds under live hostile threat. workHp/beUnit
+    // are stamped at wave build (total enemy HP, and the region's Sovereign
+    // HP as the Boss-Equivalent unit). dmgCat records damage ADDED by each
+    // multiplier category inside damageBrick; dmgSurge is damage landed
+    // while the overdrive window ran.
+    tProg: 0, tActive: 0, workHp: 0, beUnit: 0, dmgSurge: 0,
+    dmgCat: {}, surgeBy: {}, shieldBy: {}, lifeBy: {}, dropsBy: {},
   };
   G.runStats.levels.push(L);
   if (G.runStats.levels.length > 220) G.runStats.levels.shift(); // marathon cap
@@ -451,6 +466,7 @@ function statsShotFired(charged) { const L = statsCur(); if (L) { if (charged) L
 function statsChargeWasted() { const L = statsCur(); if (L) L.chargeWasted++; }
 function statsDmgOut(source, dmg) {
   const L = statsCur(); if (!L) return;
+  if (G.megaT > 0) L.dmgSurge += dmg; // damage landed inside the overdrive window
   if (source === 'bolt') L.dmgN += dmg;
   else if (source === 'charge') { L.dmgC += dmg; L.chargeHits++; }
   else if (source === 'ball') L.dmgBall += dmg;
@@ -479,6 +495,46 @@ function specVeilActive(br) {
   return !!br.specVeil && ((G.time + br.specVeil.ph) % 3.4) < 2.0;
 }
 function statsShellCrack() { const L = statsCur(); if (L) L.shellCracks = (L.shellCracks || 0) + 1; }
+// ---- AFT-008 baseline instrumentation (all no-ops without a run record;
+// none of these allocates in a hot loop — per-frame calls mutate numbers) ----
+// meaningful-progress / active-threat clocks (classified once per frame in
+// update() next to statsPlayTick — see the classifier there)
+function statsClockTick(dt, prog, active) {
+  const L = statsCur(); if (!L) return;
+  if (prog) L.tProg += dt;
+  if (active) L.tActive += dt;
+}
+// damage ADDED (or removed) by one multiplier category inside damageBrick
+function statsDmgCat(cat, delta) {
+  const L = statsCur(); if (L && delta) L.dmgCat[cat] = (L.dmgCat[cat] || 0) + delta;
+}
+function statsShieldGain(src) { const L = statsCur(); if (L) L.shieldBy[src] = (L.shieldBy[src] || 0) + 1; }
+function statsLifeGain(src) { const L = statsCur(); if (L) L.lifeBy[src] = (L.lifeBy[src] || 0) + 1; }
+function statsDrop(key) { const L = statsCur(); if (L) L.dropsBy[key] = (L.dropsBy[key] || 0) + 1; }
+function statsChannel(ev) {
+  const L = statsCur(); if (!L) return;
+  const k = ev === 'open' ? 'channelsOpen' : 'channelsBroken';
+  L[k] = (L[k] || 0) + 1;
+}
+function statsKillRenew() { const L = statsCur(); if (L) L.killsRenew = (L.killsRenew || 0) + 1; }
+// each dealt draft hand, run-level (drafts land between level records)
+function statsOffer(keys) {
+  if (!G.runStats) return;
+  (G.runStats.offers = G.runStats.offers || []).push({ lv: G.level, keys });
+  if (G.runStats.offers.length > 260) G.runStats.offers.shift();
+}
+// THE Surge-meter funnel: identical clamp to the inline sites it replaces
+// (G.mega = Math.min(1, G.mega + amt)), plus source + overflow attribution.
+// Call-site guards (G.megaT <= 0, !meta.noMega, …) stay at the call sites.
+function gainMega(amt, src) {
+  if (!(amt > 0)) return;
+  const before = G.mega;
+  G.mega = Math.min(1, before + amt);
+  const L = statsCur(); if (!L) return;
+  L.surgeBy[src] = (L.surgeBy[src] || 0) + amt;
+  const over = before + amt - 1;
+  if (over > 0) L.surgeBy.wasted = (L.surgeBy.wasted || 0) + over;
+}
 // ENCOUNTER OBJECTIVE outcome (M3 Round C): records the protect-objective
 // resolution on the current level ledger so RESULTS can surface one line.
 function statsObjective(type, done) {
@@ -642,6 +698,7 @@ function applyPower(p, srcType) {
     case 'draco':  bump('fx_draco', 10); break;
     case 'shield':
       G.shieldCharges = Math.min(shieldCap(), G.shieldCharges + 1);
+      statsShieldGain('drop');
       tier = G.shieldCharges;
       SFX.shield();
       break;
@@ -653,6 +710,7 @@ function applyPower(p, srcType) {
       // RESCUE CIRCUIT: recovery also restores a shield charge (heartbeat ring)
       if (upgN('rescue') && G.shieldCharges < shieldCap()) {
         G.shieldCharges++;
+        statsShieldGain('rescue');
         ringFx(G.paddle.x, shipY(), '#ff8a80', 5, 54, 3, 0.4);
         addFloater(G.paddle.x, shipY() - 34, 'RESCUE SHIELD!', '#ff8a80', 12);
         SFX.shield();
@@ -662,6 +720,7 @@ function applyPower(p, srcType) {
         G.score += 250;
         p = { ...p, name: 'POTION BONUS', desc: 'HP FULL · +250 POINTS' };
       } else {
+        statsLifeGain('potion');
         ringFx(G.paddle.x, shipY(), p.color, 8, 84, 4, 0.55);
         addFloater(G.paddle.x, shipY() - 54, '+1 HP', p.color, 22);
       }
@@ -912,6 +971,7 @@ function buildLevel(lvl) {
   G.secret.pendingShard = null; G.secret.vmax = false; G.secret.rewardDraft = false;
   G.secret.deferredChoices = null;
   if (stageIdx(lvl) !== 2) G.gauntlet = null;
+  G.finale = null; // AFT-020: the finale director re-arms per wave (Phase 1+)
   G.gustT = 0; G.timeWarpT = 0; G.timeWarpClock = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
@@ -1436,7 +1496,11 @@ function buildLevel(lvl) {
   // dives (and squad maneuvers) only start once the journey hardens
   G.divers = classic ? false : junkie ? regionsIn >= 1 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
   G.diveCD = 6;
-  if (upgN('guard')) G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
+  if (upgN('guard')) {
+    const preGuard = G.shieldCharges;
+    G.shieldCharges = Math.max(G.shieldCharges, upgN('guard'));
+    if (G.shieldCharges > preGuard) statsShieldGain('guard');
+  }
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
   G.modifier = stage === 1 && lvl >= 2
     ? MODIFIERS[Math.floor(gameRand() * MODIFIERS.length)]
@@ -1557,6 +1621,23 @@ function buildLevel(lvl) {
   // the guardian and chorus get their one proc back, the squadron stands down
   G.reactorUsed = false; G.vortexes = []; G.meteorRain = null;
   G.guardPulsedWave = false; G.chorusUsed = false; G.squadT = 0; G.lanceT = 0;
+  // AFT-008: stamp the wave's WORK reference on the ledger record — total
+  // live enemy HP at build, plus the region's Sovereign HP as the
+  // Boss-Equivalent unit (same formula as the finale boss above). Stamped
+  // here, at the END of buildLevel, because the junkie flyer block adds its
+  // population after statsBeginLevel ran.
+  {
+    const L = statsCur();
+    if (L) {
+      let work = 0;
+      for (const b of G.bricks) {
+        if (b.dead || b.barrier || b.crosser || b.friendly) continue;
+        work += Math.max(0, b.hp || 0);
+      }
+      L.workHp = work;
+      L.beUnit = Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp));
+    }
+  }
   // arriving at a region's doorstep checkpoints the run (post-draft state —
   // buildLevel runs after every pick, and after knockout tree burns too).
   // Level 1 is stage 0 too, but migrateCheckpoint rejects lvl<4 BY DESIGN —
@@ -1605,6 +1686,7 @@ function spawnReinforcement() {
       w: rw * rMul, h: rh * rMul,
       hp, maxHp: hp,
       poke: { id, t },
+      reinf: true, // AFT-008: renewable-population tag — kills of these are ledgered separately
       flash: 0, wobble: gameRand() * Math.PI * 2,
       entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
       flight: {
@@ -1678,6 +1760,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
+  G.finale = null; G.prep = null; // AFT-020 director + preparation state
   G.specVeilTaught = false; // re-teach the veil once per journey
   G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
   G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0,

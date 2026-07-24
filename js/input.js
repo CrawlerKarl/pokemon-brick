@@ -1559,6 +1559,7 @@ function tryMega() {
   // REACTIVE OVERDRIVE: entering Mega regrows one missing shield (on cooldown)
   if (upgN('reactive') && G.reactiveCD <= 0 && G.shieldCharges < shieldCap()) {
     G.shieldCharges++;
+    statsShieldGain('reactive');
     G.reactiveCD = 20;
     addFloater(G.paddle.x, shipY() - 62, 'REACTIVE SHIELD!', '#dce775', 13);
     SFX.shield();

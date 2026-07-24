@@ -1066,7 +1066,7 @@ function advancePath(p) {
   G.upg[tier.key] = 1;
   // AFT-007: the extra-life perk lives on the AEGIS capstone now (the old
   // `revive` key is the CROWNED RELIC weapon tier and grants no life)
-  if (tier.key === 'aegisX') G.lives++;
+  if (tier.key === 'aegisX') { G.lives++; statsLifeGain('aegisX'); }
   return tier;
 }
 function regressPath(p) {
@@ -1118,6 +1118,50 @@ function regionIdx(lvl) { return Math.floor((lvl - 1) / STAGES) % SKIN.gens.leng
 function stageIdx(lvl) { return (lvl - 1) % STAGES; } // 0 arrival · 1 challenge · 2 boss
 function genFor(level) { return SKIN.gens[regionIdx(level)]; }
 function actIdx(lvl) { return Math.min(2, Math.floor(regionIdx(lvl) / 3)); }
+
+// ============================================================
+// AFT-020 FINALE SCHEMAS — locked in Phase 0; the finale director (Phase 1)
+// builds on these. ENGINE-ONLY: format keys, beat names, attack states,
+// counter verbs, and budget shapes. Skin-owned casts, titles, and copy live
+// in SKIN.finaleProfiles / SKIN.stageTitles (aetherfall authors first; the
+// pokemon skin maps the same engine slots to its own species and language).
+// Format keys are engine identifiers — storage/trial-stable, NEVER rename.
+// ============================================================
+const FINALE_FORMATS = {
+  ladder:    { beats: ['opening', 'core', 'coda'] },        // R1 only: group → sovereign → mastery coda
+  relay:     { beats: ['relay', 'descent', 'coda'] },       // continuous pursuit, carrier passes
+  siege:     { beats: ['stations', 'weather', 'coda'] },    // sovereign present from the start
+  hourglass: { beats: ['awaken', 'regent', 'stolenHour'] }, // protect → linked dual timeline
+  circuit:   { beats: ['duel', 'grid', 'victoryFlame'] },   // branching duel → redirectable grid
+  hunt:      { beats: ['shedding', 'shadow', 'rescue'] },   // hunt → main boss → rescue climax
+  rite:      { beats: ['rites', 'eclipse', 'reclaim'] },    // non-HP tests → saboteured sovereign
+  raid:      { beats: ['assembly', 'crown', 'window'] },    // simultaneous fight, one shared meter
+  chase:     { beats: ['route', 'pursuit', 'fusion'] },     // route choice → chase → linked climax
+};
+// Every major authored action passes through these states, in order. 'teach'
+// is harmless, 'tell' is the unmistakable cue, 'commit' locks the actor,
+// 'resolve' evaluates once, 'recover' opens the punish/relief window.
+const ATTACK_STATES = ['teach', 'tell', 'commit', 'resolve', 'recover'];
+// How a committed action is answered. The counter-answer budget (no more
+// than three finales lean on chargeBreak as the PRIMARY answer) is a suite
+// assertion once profiles land, not a per-fight switch.
+const COUNTER_VERBS = ['sustain', 'chargeBreak', 'move', 'bait', 'protect', 'order', 'aspect', 'intercept'];
+// Ledger vocabulary for counter outcomes (statsAttack in the director).
+const COUNTER_RESULTS = ['taught', 'committed', 'countered', 'failed', 'skipped'];
+// Budget shape carried by each finale beat (BE = the realm's Sovereign HP
+// unit already stamped per-wave as L.beUnit): { work: BE fraction, threat:
+// multiplier vs starThreatCap while the beat runs, recovery: authored calm
+// seconds on completion }. Mastery payload is non-persistent inside the
+// finale: 'clear' → 'countered' (fifth offer) → 'mastered' (pin + reroll).
+function finaleProfile(rIdx2) {
+  return (SKIN.finaleProfiles && SKIN.finaleProfiles[rIdx2]) || null;
+}
+// Optional realm-authored display titles (SKIN.stageTitles[region][stage]);
+// the structural ARRIVAL / CHALLENGE / finale subtitle stays for orientation.
+function stageTitle(lvl) {
+  const t = SKIN.stageTitles && SKIN.stageTitles[regionIdx(lvl)];
+  return (t && t[stageIdx(lvl)]) || null;
+}
 
 // ---- CHEAT CODES (pause screen): grant any power-up combination. Using
 // one marks the run G.cheated — best score won't be recorded that run.
