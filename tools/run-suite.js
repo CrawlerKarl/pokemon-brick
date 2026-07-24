@@ -280,7 +280,16 @@ async function runScenes(cdp, port) {
           const meta = ${SCENE_META};
           const out = (zoneLog || []).filter(b => b.x0 < -0.5 || b.x1 > W + 0.5)
             .map(b => (b.zone || '?') + ':' + String(b.text).slice(0, 34));
-          return JSON.stringify({ ok: true, expectOk, meta, out, w: W, h: H });
+          // AFT-021 P2: the overlay collision contract, enforced at REAL
+          // phone geometry on every captured scene — no two claimed
+          // non-background surfaces may overlap
+          const claims = (surfaceLog || []).filter(s => !s.bg);
+          const olp = [];
+          for (let i = 0; i < claims.length; i++) for (let j = i + 1; j < claims.length; j++) {
+            const a = claims[i], b = claims[j];
+            if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) olp.push(a.name + '×' + b.name);
+          }
+          return JSON.stringify({ ok: true, expectOk, meta, out, olp, w: W, h: H });
         } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 120) }); }
       })()`).then(JSON.parse).catch(e => ({ ok: false, err: e.message }));
       if (!res.ok) { failures.push(sc.name + '@' + vw + 'x' + vh + ': ' + res.err); continue; }
@@ -291,6 +300,7 @@ async function runScenes(cdp, port) {
           + ' · actual state=' + (res.meta && res.meta.state) + ')');
       }
       if (res.out.length) failures.push(sc.name + '@' + vw + 'x' + vh + ': labels out of viewport — ' + res.out.slice(0, 3).join(' · '));
+      if (res.olp && res.olp.length) failures.push(sc.name + '@' + vw + 'x' + vh + ': overlapping surfaces — ' + res.olp.slice(0, 4).join(' · '));
       if (res.meta) {
         fs.writeFileSync(path.join(shotsDir, sc.name + '-' + vw + 'x' + vh + '.json'),
           JSON.stringify({ scene: sc.name, viewport: vw + 'x' + vh, expect: sc.expect || null, expectOk: res.expectOk, ...res.meta }, null, 1));

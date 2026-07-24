@@ -5,6 +5,48 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24k — AFT-021 Phase 2: one owner per screen region
+
+The combat UI has a layout AUTHORITY now, not just containment:
+
+- **The surface registry** (`claimSurface`, render.js): every HUD/transient
+  surface claims its rectangle as it draws; the suite AND every mobile gate
+  scene assert that no two non-background claims overlap. The contract
+  caught two real collisions the moment it landed (the siege hero card over
+  the FIRE/MEGA pads; the widened goal pill vs the pause circle) — both
+  fixed the same hour, which is exactly the loop it exists to create.
+- **The goal owns the narrow top row.** Under 560 px, while a live
+  objective/finale meter exists the stage title yields entirely (its full
+  name lives in reveal/results/codex); the pill widens into the freed row
+  so goal names read without ellipsis.
+- **One transient at a time.** A combat notice never draws while an
+  announcement is up — its clock PAUSES and it takes its turn. The resolve
+  pulse yields the same way. Hero cards clamp above the bottom control
+  cluster on touch.
+- **The upper-left column decongested** (narrow/touch): the element
+  identity moved to a pinned bottom-left status chip (PILOT permanent /
+  ITEM with seconds, mirrored right for left-handed pads); the build
+  summary yields while a goal is live; the affinity chip rides only wide
+  HUDs.
+- **Trial copy finishes before combat begins**: shooter trial/daily
+  launches open on a 1.8 s BRIEFING HOLD (`G.engageHold`) — hostile
+  cooldowns floored (RNG stream untouched), formations fly, nothing fires
+  — and the notice retires as the hold ends. The Phase-0 fixture is now a
+  permanent invariant.
+- **The sound circle left live combat**: one 44 px pause target remains;
+  the music toggle lives on the pause screen.
+- **Results/drafts ride a static arena plate**: at settle, one world-only
+  frame of the RESOLVED arena (no HUD, no floaters, no combat text) is
+  captured, quieted, and used as the panels' backdrop — the combat object
+  graph is neither simulated nor drawn behind cards, and nothing reads
+  through them.
+- The tutorial coach yields to any live goal or announcement.
+
+New permanent invariant 'AFT-021 P2: overlay collision contract' (suite
+114) + per-scene overlap enforcement in the gate. Gate green.
+
+---
+
 ## 2026-07-24j — AFT-021 Phase 1: the stage-resolution beat — a win must LOOK won
 
 The clear no longer teleports into the results panel. The win condition now

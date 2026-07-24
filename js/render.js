@@ -4534,6 +4534,7 @@ function drawParticles() {
   ctx.textAlign = 'center';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
   for (const f of G.floaters) {
+    if (PLATE_RENDER) break; // AFT-021 P2: no combat text bakes into the arena plate
     ctx.globalAlpha = Math.min(1, f.life);
     ctx.font = `900 ${f.size}px Orbitron, sans-serif`;
     ctx.fillStyle = f.color;
@@ -4579,11 +4580,7 @@ function drawAnnounce() {
   const alpha = Math.min(fadeOut, a.t < 0.5 ? a.t / 0.5 : 1);
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const y = H * 0.64;
-  // entrance: the banner scales in with a soft pop instead of just appearing
-  const enter = Math.min(1, (a.max - a.t) / 0.22);
-  const sc = 0.93 + 0.07 * (1 - Math.pow(1 - enter, 3));
-  ctx.translate(W / 2, y); ctx.scale(sc, sc); ctx.translate(-W / 2, -y);
+  let y = H * 0.64;
   const maxTextW = Math.min(W - 60, 560);
   const isGlyph = a.icon && /^[a-z]+$/.test(a.icon);
   const gR = Math.min(15, W / 30);
@@ -4607,6 +4604,22 @@ function drawAnnounce() {
   for (const l of subLines) lineW = Math.max(lineW, ctx.measureText(l).width);
   const pillW = Math.min(W - 16, lineW + 56);
   const pillH = 62 + descH + (subH ? subH + 6 : 0);
+  // AFT-021 P2: on touch, the hero card may never sit on the control pads —
+  // its bottom edge clamps above the highest control (short-landscape phones
+  // put the pads well up the screen)
+  if (IS_TOUCH && (G.state === 'play' || G.state === 'serve')) {
+    const B = touchButtons();
+    // only the BOTTOM cluster (fire/mega) constrains the card — pause rides
+    // the top corner and never shares the card's centered column
+    const tops = [B.fire, B.mega].filter(Boolean).map(b => b.y - b.r);
+    const padTop = tops.length ? Math.min(...tops) : H;
+    y = Math.max(SAFE_T + 130, Math.min(y, padTop - 12 - pillH + 32));
+  }
+  // entrance: the banner scales in with a soft pop instead of just appearing
+  const enter = Math.min(1, (a.max - a.t) / 0.22);
+  const sc = 0.93 + 0.07 * (1 - Math.pow(1 - enter, 3));
+  ctx.translate(W / 2, y); ctx.scale(sc, sc); ctx.translate(-W / 2, -y);
+  claimSurface('announceCard', W / 2 - pillW / 2, y - 32, pillW, pillH);
   // translucent pill behind the text so it reads over any background
   ctx.globalAlpha = alpha * 0.72;
   roundRect(W / 2 - pillW / 2, y - 32, pillW, pillH, 20);
@@ -4699,6 +4712,7 @@ function drawAnnounceStrip(a) {
   const lead = (isGlyph ? gR * 2 + 8 : 0) + (sprR ? sprR * 2 + 8 : 0);
   const pillW = Math.min(W - 12, Math.max(nameW + lead, descW) + 44);
   const pillH = a.desc ? 46 : 30;
+  claimSurface('announceStrip', W / 2 - pillW / 2, y - pillH / 2, pillW, pillH);
   ctx.globalAlpha = alpha * 0.9;
   roundRect(W / 2 - pillW / 2, y - pillH / 2, pillW, pillH, 13);
   ctx.fillStyle = 'rgba(6,9,24,0.85)'; ctx.fill();
@@ -5273,7 +5287,12 @@ function drawHUD() {
     ctx.fillText('COMBO x' + G.combo, 20, 72);
   }
   const hudElem = G.mode === 'junkie'; // junkie always shows the live attack type
-  if (G.ballElement || hudElem) {
+  // AFT-021 P2: on narrow/touch screens the element identity collapses to a
+  // bottom-left status chip (built into the chips row below) — the upper-left
+  // column stays clear for score + goal instead of stacking four text rows
+  // over the same band the objective pill and formations use.
+  const compactHud = W < 560 || IS_TOUCH;
+  if ((G.ballElement || hudElem) && !compactHud) {
     // attackElement() is null for a NO-PARTNER (neutral/typeless) pilot — the
     // element readout renders that as NEUTRAL rather than a type.
     const el = hudElem ? attackElement() : G.ballElement;
@@ -5302,16 +5321,19 @@ function drawHUD() {
   }
   // skill tree at a glance — Phoenix-style: your build is always visible
   {
-    const treeY = ((G.ballElement || hudElem) ? (G.combo > 1 ? 110 : 92) : (G.combo > 1 ? 92 : 74));
-    const compactBuild = W < 560 || IS_TOUCH;
+    const treeY = ((G.ballElement || hudElem) && !compactHud ? (G.combo > 1 ? 110 : 92) : (G.combo > 1 ? 92 : 74));
+    const compactBuild = compactHud;
     if (compactBuild) {
+      // AFT-021 P2: the build summary is the LOWEST-priority copy — it
+      // yields its row entirely while a live goal owns the upper band
       const ownedPaths = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
       const ownedTiers = totalPathLevels();
-      if (ownedPaths) {
+      if (ownedPaths && !goalSurfaceLive()) {
         ctx.font = '700 9.5px Orbitron, sans-serif';
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillStyle = '#78909c';
         ctx.fillText('BUILD ' + ownedTiers + ' · ' + ownedPaths + (ownedPaths === 1 ? ' PATH' : ' PATHS'), 20, treeY);
+        claimSurface('buildLine', 20, SAFE_T + treeY - 6, 150, 12);
       }
     } else {
       let tx3 = 26;
@@ -5342,8 +5364,16 @@ function drawHUD() {
   const waveY = narrow ? 48 : (G.modifier ? 22 : 28);
   const waveText = G.secret.vmax ? 'SECRET RIFT · ' + SKIN.secret.name
     : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + (stageTitle(G.level) || SKIN.stageNames[stg]);
-  fitLabel(waveText, (span0 + span1) / 2, waveY,
-    { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
+  // AFT-021 P2: on narrow screens the title's second row IS the goal pill's
+  // band — while a live goal exists, the GOAL owns the row and the stage
+  // title yields entirely (the full name lives in reveal/results/codex).
+  // The two surfaces are designed into the same space; only one may claim it.
+  const goalOwnsRow = narrow && goalSurfaceLive() && (G.state === 'play' || G.state === 'serve');
+  if (!goalOwnsRow) {
+    const tb = fitLabel(waveText, (span0 + span1) / 2, waveY,
+      { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
+    claimSurface('waveTitle', tb.x0, SAFE_T + waveY - tb.size * 0.75, tb.w, tb.size * 1.5);
+  }
   // AFT-001: the modifier chip is SECONDARY copy — it yields its row to a
   // live objective banner (the win condition) instead of stacking under it
   const objLive = G.objective && !G.objective.done && !G.objective.failed;
@@ -5361,6 +5391,17 @@ function drawHUD() {
   drawObjectiveBanner();
   // ---- active power-up chips: capped slots so phones stay readable ----
   const active = [];
+  // AFT-021 P2: on compact HUDs the live element identity leads the chips
+  // row (bottom-left, beside the ship's own lane) instead of a text stack
+  // in the upper band. PILOT = permanent; a timed ITEM override shows its
+  // remaining seconds exactly like every other timed chip.
+  if (compactHud && (G.ballElement || hudElem) && (G.state === 'play' || G.state === 'serve')) {
+    const el = hudElem ? attackElement() : G.ballElement;
+    const timed = hudElem ? !!G.ballElement : !(G.ballElementT > 1000);
+    active.push({ icon: 'target', color: el ? TYPE_COLORS[el] : '#b0bec5',
+      tier: null, t: timed ? G.ballElementT : null, pin: true,
+      label: typeLabel(el) ? String(typeLabel(el)).slice(0, 5) : 'NEUT' });
+  }
   for (const [slot, icon, color] of [
     ['fx_fire', 'fire', '#ff7043'], ['fx_laser', 'laser', '#ffd54f'], ['fx_wide', 'wide', '#42a5f5'],
     ['fx_slow', 'slow', '#4dd0e1'], ['fx_magnet', 'magnet', '#ec407a'], ['fx_score', 'star', '#ffee58'],
@@ -5372,10 +5413,15 @@ function drawHUD() {
   const riftReward = SECRET_UPGRADES.find(s => G.secretUpg[s.key]);
   if (riftReward) active.push({ icon: riftReward.icon, color: riftReward.color, tier: 1, t: null, label: 'RIFT' });
   const maxSlots = (narrow || IS_TOUCH) ? 3 : 7;
-  active.sort((a, b) => (a.t ?? 99) - (b.t ?? 99)); // most urgent first
+  // identity chip pinned first, then most-urgent timers
+  active.sort((a, b) => ((b.pin ? 1 : 0) - (a.pin ? 1 : 0)) || (a.t ?? 99) - (b.t ?? 99));
   const shown = active.slice(0, maxSlots);
-  let cx2 = 14;
+  // AFT-021 P2: with LEFT-HANDED controls the pads occupy the lower-LEFT —
+  // the chips row mirrors to the right so status and controls never overlap
+  const chipsMirror = IS_TOUCH && SETTINGS.leftHanded;
+  let cx2 = chipsMirror ? W - 14 - (shown.length * 60 - 6) : 14;
   const cy = FLOOR() - 26;
+  if (shown.length) claimSurface('statusChips', cx2, cy - 17, shown.length * 60, 34);
   for (const chip of shown) {
     ctx.save();
     ctx.globalAlpha = chip.t != null && chip.t < 2 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 6))) : 1;
@@ -5399,13 +5445,15 @@ function drawHUD() {
     ctx.font = '700 11px Orbitron, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#90a4ae';
-    ctx.fillText('+' + (active.length - shown.length), cx2 + 2, cy);
+    ctx.fillText('+' + (active.length - shown.length),
+      chipsMirror ? W - 14 - shown.length * 60 - 22 : cx2 + 2, cy);
   }
   // ---- MEGA meter (desktop) or touch buttons (phones/tablets) ----
   if (G.state === 'play' || G.state === 'serve') {
     if (IS_TOUCH) drawTouchControls();
     else {
       const mw = 160, mh = 12, mx = W - mw - 20, my = FLOOR() - 28;
+      claimSurface('megaMeter', mx, my - 22, mw, mh + 26);
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.font = '900 11px Orbitron, sans-serif';
       const ready = G.mega >= 1 && G.megaT <= 0;
@@ -5485,7 +5533,8 @@ function drawFinaleMeterBanner() {
     readout = (F.mastery.counters.blooms || 0) + '/' + M.max;
   } else if (F.beat === 1) return; // the boss beat reads from the HUD dock, not a meter
   const y = SAFE_T + (short ? 44 : 52);
-  const w = Math.min(W * 0.72, (short ? 220 : 300));
+  const w = short ? Math.min(W - 118, 300) : Math.min(W * 0.72, 300); // AFT-021 P2: the pill owns its row — full goal names, no ellipsis
+  claimSurface('goalPill', W / 2 - w / 2, y, w, short ? 26 : 30);
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   roundRect(W / 2 - w / 2, y, w, short ? 26 : 30, (short ? 26 : 30) / 2);
@@ -5528,7 +5577,8 @@ function drawObjectiveBanner() {
   // AFT-001: SAFE_T (drawn outside the HUD translate) + collapse the
   // SECONDARY readout before ever shrinking the primary objective name
   const y = SAFE_T + (short ? 44 : 52);
-  const w = Math.min(W * 0.72, (short ? 220 : 300));
+  const w = short ? Math.min(W - 118, 300) : Math.min(W * 0.72, 300); // AFT-021 P2: the pill owns its row — full goal names, no ellipsis
+  claimSurface('goalPill', W / 2 - w / 2, y, w, short ? 26 : 30);
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   roundRect(W / 2 - w / 2, y, w, short ? 26 : 30, (short ? 26 : 30) / 2);
@@ -5553,6 +5603,10 @@ function drawObjectiveBanner() {
 function drawCombatNotice() {
   const n = G.combatNotice;
   if (!n || (G.state !== 'play' && G.state !== 'serve')) return;
+  // AFT-021 P2: ONE transient at a time — while an announcement is on
+  // screen the combat notice waits its turn (its clock pauses in update),
+  // so two banners can never stack in the same band.
+  if (announceLive()) return;
   const hasRule = G.mode === 'classic' && stageIdx(G.level) !== 2;
   const elemRows = G.ballElement || G.mode === 'junkie';
   // shooters: ride the LOW BAND under the announce strip, never the flock zone
@@ -5564,6 +5618,7 @@ function drawCombatNotice() {
   ctx.globalAlpha = alpha;
   ctx.font = `900 ${W < 560 ? 10 : 11}px Orbitron, sans-serif`;
   const w = Math.min(W * 0.82, ctx.measureText(n.text).width + 34);
+  claimSurface('combatNotice', W / 2 - w / 2, y, w, 28);
   roundRect(W / 2 - w / 2, y, w, 28, 14);
   ctx.fillStyle = 'rgba(5,8,22,0.9)'; ctx.fill();
   ctx.lineWidth = 1.4; ctx.strokeStyle = n.color; ctx.stroke();
@@ -5715,17 +5770,18 @@ function drawTouchControls() {
   ctx.fillStyle = ready ? '#ffe082' : '#90a4ae';
   ctx.fillText(lex(G.megaT > 0 ? 'MEGA' : ready ? 'TAP MEGA' : 'HITS CHARGE'), m.x, m.y + 19, m.r * 1.55);
   // (charge now lives on the FIRE pad — hold; no separate pad)
-  // pause + sound, top-right under the lives
-  for (const [b, icon, on] of [[B.pause, 'pause', true], [B.sound, 'sound', MUSIC.on]]) {
+  // ONE 44px pause target under the lives — the sound toggle lives on the
+  // pause screen now (AFT-021 P2: no second circle over the formation)
+  {
+    const b = B.pause;
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(10,16,38,0.6)'; ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.stroke();
-    drawGlyph(ctx, icon, b.x, b.y, 8, on ? '#cfd8dc' : '#546e7a');
-    if (!on) { // slash across a muted speaker
-      ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(b.x - 8, b.y + 8); ctx.lineTo(b.x + 8, b.y - 8); ctx.stroke();
-    }
+    drawGlyph(ctx, 'pause', b.x, b.y, 8, '#cfd8dc');
+    claimSurface('padPause', b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
   }
+  if (B.fire) claimSurface('padFire', B.fire.x - B.fire.r, B.fire.y - B.fire.r, B.fire.r * 2, B.fire.r * 2);
+  claimSurface('padMega', B.mega.x - B.mega.r, B.mega.y - B.mega.r, B.mega.r * 2, B.mega.r * 2);
   if (G.uiTouchPulse) {
     const p = G.uiTouchPulse, q = 1 - p.t / p.max;
     ctx.globalAlpha = Math.max(0, p.t / p.max);
@@ -5768,6 +5824,45 @@ function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, san
 let ZONE_DEBUG = /[?&]zones\b/.test(location.search);
 let zoneLog = null; // per-frame label bounds, collected only while debugging
 let actorLabelLog = null; // AFT-021: local actor nameplates this frame (suite/debug only)
+// ── AFT-021 P2: THE SURFACE REGISTRY — the layout/priority authority ────────
+// Every named HUD/transient surface CLAIMS its rectangle as it draws. The
+// registry is the enforcement side of the single-owner rule: the suite and
+// the mobile scene gate assert that no two non-background claims overlap.
+// The behavioral side lives at the draw sites — lower-priority copy YIELDS
+// (title under a live goal, combat notices behind announcements, tutorials
+// behind objectives) instead of stacking.
+let surfaceLog = null; // per-frame claimed surfaces (suite/?zones only)
+function claimSurface(name, x, y, w, h, opts = {}) {
+  if (surfaceLog) surfaceLog.push({ name, x, y, w, h, bg: !!opts.bg });
+}
+// is a PRIMARY goal surface live (objective or finale meter)? — the one
+// question every lower-priority surface asks before taking a lane
+function goalSurfaceLive() {
+  if (G.objective && !G.objective.done && !G.objective.failed) return true;
+  const F = G.finale;
+  return !!(F && F.meter && !F.mastery.clear);
+}
+// is any announcement (card or strip) currently displayed?
+function announceLive() { return !!G.announce; }
+// AFT-021 P2: the RESULTS/DRAFT backing plate. At settle the last resolved
+// frame (a sanitized arena — every enemy departed or stood down) is captured
+// once and quieted; the panels then draw over this STATIC plate instead of
+// re-rendering the combat object graph every frame. Nothing live can read
+// through a card, and the panels stop paying for a world they don't show.
+let PLATE_RENDER = false; // render() draws WORLD ONLY while set (no HUD/overlays/text)
+function captureArenaPlate() {
+  try {
+    PLATE_RENDER = true;
+    render(); // one clean world-only frame of the resolved arena
+    const c = document.createElement('canvas');
+    c.width = canvas.width; c.height = canvas.height;
+    const q = c.getContext('2d');
+    q.drawImage(canvas, 0, 0);
+    q.fillStyle = 'rgba(4,7,18,0.6)'; // quiet it down — panels own the contrast
+    q.fillRect(0, 0, c.width, c.height);
+    G.arenaPlate = c;
+  } catch (e) { G.arenaPlate = null; } finally { PLATE_RENDER = false; }
+}
 function uiZones() {
   const hudH = 56 + SAFE_T;
   const bannerH = 100; // objective banner / region rail / element rows lane
@@ -5781,7 +5876,7 @@ function uiZones() {
   };
   if (IS_TOUCH) {
     const B = touchButtons();
-    const bs = [B.fire, B.mega, B.pause, B.sound].filter(Boolean);
+    const bs = [B.fire, B.mega, B.pause].filter(Boolean);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const b of bs) { x0 = Math.min(x0, b.x - b.r); y0 = Math.min(y0, b.y - b.r); x1 = Math.max(x1, b.x + b.r); y1 = Math.max(y1, b.y + b.r); }
     if (bs.length) z.controls = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
@@ -9220,8 +9315,9 @@ function drawOverlays() {
   else if (G.state === 'resolve' && !paused) {
     // AFT-021 P1: the resolution beat — the win reads on the FIELD (exits,
     // stand-downs, the catch window); one quiet pulse names it. The results
-    // panel waits until the screen has visibly finished.
-    if (G.stateT > 0.2) pulse('STAGE CLEAR', H * 0.56);
+    // panel waits until the screen has visibly finished. P2: the pulse
+    // YIELDS while an announcement (objective outcome card) owns the lane.
+    if (G.stateT > 0.2 && !announceLive()) pulse('STAGE CLEAR', H * 0.56);
   }
   else if (G.state === 'serve' && !paused) {
     // The stage card owns the centre first; controls arrive immediately after
@@ -9250,10 +9346,18 @@ function drawOverlays() {
       jc.step === 3 ? (IS_TOUCH ? 'HOLD FIRE TO CHARGE A BIG SHOT' : 'HOLD SHIFT OR RIGHT-CLICK — CHARGE A BIG SHOT') :
       jc.step === 4 ? ((orbFalling || hit) ? 'GRAB THE FALLING ORB — IT CHANGES YOUR ATTACK TYPE' : null) :
       jc.step === 5 ? ((megaReady || hit) ? lex(IS_TOUCH ? 'MEGA IS FULL — TAP THE GLOWING RING' : 'MEGA IS FULL — PRESS E') : null) : null;
-    // same safe band as the compact announcements (only one shows at a time):
-    // under the HUD column on portrait, mid-screen gap on short landscape
-    const coachY = H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 156 : 124);
-    if (txt) hintPill((hit ? '✓ ' : '') + txt, coachY, hit ? '#9df2b0' : '#ffd54f');
+    // AFT-021 P2: the coach is the LOWEST-priority surface — it yields to a
+    // live goal pill, an urgent tell, or any announcement, and on touch it
+    // anchors CONTROL-ADJACENT (just above the FIRE pad) instead of taking a
+    // full-width band over the formation.
+    if (txt && !goalSurfaceLive() && !announceLive()) {
+      let coachY = H < 560 ? H * 0.42 : SAFE_T + (W < 560 ? 156 : 124);
+      if (IS_TOUCH) {
+        const B = touchButtons();
+        if (B.fire) coachY = Math.max(SAFE_T + 96, B.fire.y - B.fire.r - 34);
+      }
+      hintPill((hit ? '✓ ' : '') + txt, coachY, hit ? '#9df2b0' : '#ffd54f');
+    }
   } else if (G.state === 'upgrade') {
     dim(0.55);
     const draftShort = H < 520;
@@ -9655,6 +9759,27 @@ function drawOverlays() {
     pulse(IS_TOUCH ? 'TAP TO RESUME' : 'CLICK OR P TO RESUME', H * 0.64);
     // Mid-run settings remove the old dead end where changing touch controls
     // required abandoning the journey. Quit remains visually destructive.
+    // AFT-021 P2: the sound toggle lives HERE now — one quiet row above the
+    // actions — instead of a second circle floating over live combat.
+    {
+      const mb = pauseMusicGeom();
+      const mHov = inRect(mouseX, lastMouseY, mb);
+      ctx.save();
+      roundRect(mb.x, mb.y, mb.w, mb.h, 10);
+      ctx.fillStyle = mHov ? 'rgba(207,216,220,0.16)' : 'rgba(207,216,220,0.07)'; ctx.fill();
+      ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.stroke();
+      drawGlyph(ctx, 'sound', mb.x + 22, mb.y + mb.h / 2, 7, MUSIC.on ? '#cfd8dc' : '#546e7a');
+      if (!MUSIC.on) {
+        ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(mb.x + 15, mb.y + mb.h / 2 + 7); ctx.lineTo(mb.x + 29, mb.y + mb.h / 2 - 7); ctx.stroke();
+      }
+      ctx.font = '800 11px Orbitron, sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = MUSIC.on ? '#cfd8dc' : '#78909c';
+      ctx.fillText(MUSIC.on ? 'MUSIC ON — TAP TO MUTE' : 'MUSIC OFF — TAP TO PLAY', mb.x + 40, mb.y + mb.h / 2 + 1, mb.w - 50);
+      ctx.textAlign = 'center';
+      ctx.restore();
+    }
     for (const [b, label, col, bg] of [
       [pauseSettingsGeom(), '⚙ SETTINGS', '#80d8ff', '128,216,255'],
       [pauseQuitGeom(), 'QUIT TO MENU', '#ef9a9a', '239,83,80'],
@@ -9763,6 +9888,7 @@ function render() {
   // label-roster contract reads it (at most ONE local label once Phase 3
   // lands). Collected under the suite and the ?zones overlay; null in play.
   actorLabelLog = (ZONE_DEBUG || (typeof window !== 'undefined' && window.__SUITE)) ? [] : null;
+  surfaceLog = actorLabelLog ? [] : null; // AFT-021 P2: the surface registry rides the same switch
   ctx.save();
   if (G.dramaticT > 0) { // last-brick slow-mo zoom
     const z = 1 + 0.035 * Math.sin(Math.min(1, (0.9 - G.dramaticT) / 0.25) * Math.PI / 2);
@@ -9771,7 +9897,11 @@ function render() {
   const shk = SETTINGS.reduceShake ? G.shake * 0.25 : G.shake;
   if (shk > 0) ctx.translate((Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk);
   drawBackground();
-  if (G.state !== 'menu' && G.state !== 'dex') {
+  // AFT-021 P2: results and the draft ride the static arena plate — the
+  // combat object graph is neither drawn nor readable behind their panels
+  if ((G.state === 'results' || G.state === 'upgrade') && G.arenaPlate) {
+    ctx.drawImage(G.arenaPlate, 0, 0, W, H);
+  } else if (G.state !== 'menu' && G.state !== 'dex') {
     drawGauntletEntranceFx();
     drawDangerLine();
     drawRallyZone();
@@ -9797,9 +9927,10 @@ function render() {
     if (G.state !== 'gameover' && G.state !== 'upgrade' && G.state !== 'results') drawUpgradeInstallFx();
     drawShootHint();
     drawParticles();
-    drawAnnounce();
+    if (!PLATE_RENDER) drawAnnounce();
   }
   ctx.restore();
+  if (PLATE_RENDER) return; // the arena plate is world-only — no HUD, overlays, or text
   // bloom the gameplay scene before the vignette darkens the edges
   if (G.state === 'play' || G.state === 'serve') drawBloom();
   drawZoneOverlay(); // AFT-001 (?zones) — zone bands + fitted-label bounds

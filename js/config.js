@@ -449,6 +449,12 @@ function pauseActionLayout() {
 }
 function pauseSettingsGeom() { return pauseActionLayout().settings; }
 function pauseQuitGeom() { return pauseActionLayout().quit; }
+// AFT-021 P2: the live SOUND circle moved off the combat screen — this is
+// its pause-screen home (one tap to mute, same as before, minus the overlap)
+function pauseMusicGeom() {
+  const s = pauseSettingsGeom();
+  return { x: s.x, y: s.y - 44, w: s.w + 12 + s.w, h: 32 };
+}
 function gameOverLayout() {
   const narrow = W < 620, pw = Math.min(620, W * 0.94);
   const ph = Math.min(H * 0.86, narrow ? 560 : 500);

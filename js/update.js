@@ -4949,8 +4949,12 @@ function update(dt) {
   if (G.uiTouchPulse) { G.uiTouchPulse.t -= dt; if (G.uiTouchPulse.t <= 0) G.uiTouchPulse = null; }
   G.shareToast = Math.max(0, (G.shareToast || 0) - dt);
   if (G.combatNotice) {
-    G.combatNotice.t -= dt;
-    if (G.combatNotice.t <= 0) G.combatNotice = null;
+    // AFT-021 P2: the notice's clock pauses while an announcement owns the
+    // transient lane — it shows AFTER, never stacked on top
+    if (!G.announce) {
+      G.combatNotice.t -= dt;
+      if (G.combatNotice.t <= 0) G.combatNotice = null;
+    } else if (G.combatNotice.t > 2.2) G.combatNotice.t = 2.2; // never hoard a stale queue
   }
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 
@@ -5052,6 +5056,20 @@ function update(dt) {
 
   tickEffects(dt);
   if (G.state === 'play') { G.playT += dt; statsPlayTick(dt); }
+  // AFT-021 P2: the trial/daily BRIEFING HOLD — while it runs, every hostile
+  // clock is floored (no fire, no dives, no maneuvers; formations still fly)
+  // and when it ends the trial notice retires so copy never sits over live
+  // combat. Cooldown clamps only: the seeded RNG stream is untouched.
+  if (G.engageHold > 0 && G.state === 'play') {
+    G.engageHold -= dt;
+    G.enemyShotCD = Math.max(G.enemyShotCD, 0.9);
+    G.bossShotCD = Math.max(G.bossShotCD, 0.9);
+    G.diveCD = Math.max(G.diveCD, 0.9);
+    G.maneuverCD = Math.max(G.maneuverCD, 0.9);
+    if (G.engageHold <= 0 && G.announce && G.announce.kind === 'trial') {
+      G.announce.t = Math.min(G.announce.t, 0.01); // retire — combat begins
+    }
+  }
   // AFT-008 clock classifier: one cheap pass per frame — does a damageable
   // target or live objective exist (MEANINGFUL PROGRESS), and is hostile
   // threat live (ACTIVE THREAT)? Reveals freeze combat, so neither clock
@@ -7394,6 +7412,8 @@ function settleStageResolution() {
     // AFT-021 P1: results speak the completion VERBS — what was defeated,
     // what fled, who was saved, what powered down (drawResults reads it)
     G.results.outcomes = R.outcomes || {};
+    // AFT-021 P2: snapshot the resolved arena as the panels' static backdrop
+    if (typeof captureArenaPlate === 'function') captureArenaPlate();
     G.announce = null; G.announceQueue = []; // stale clear-time cards would overlap the panel
     G.level++;
     G.state = 'results'; G.stateT = 0;

@@ -338,6 +338,7 @@ const G = {
   results: null, // stage-results interstitial payload (buildStageResults)
   resolve: null, // AFT-021 P1: the stage-resolution beat between the win and results
   arenaPlate: null, // AFT-021 P2: static backdrop snapshot for results/draft panels
+  engageHold: 0, // AFT-021 P2: trial/daily briefing hold — combat fire waits for the copy
   director: null, // encounter director: the stage's authored beat script (Milestone 3)
   objective: null, // live in-wave objective (survive/…) — Milestone 3 Round B
   uiTouchPulse: null, shareToast: 0,
@@ -2170,9 +2171,16 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
       'SAME WALLS · DROPS · STARTER · UPGRADES FOR EVERY PLAYER', 3.4,
       'LOCAL BEST ' + dailyBest() + ' · ONE SEEDED JOURNEY', null, false, false, 'trial');
     else setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
-      genFor(startLevel).name + ' · ' + SKIN.stageNames[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 3,
+      genFor(startLevel).name + ' · ' + SKIN.stageNames[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 1.6,
       granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null, null, false, false, 'trial');
     encounterCards.forEach(a => setAnnounce(a.icon, a.color, a.name, a.desc, a.max, a.sub, a.spriteId, a.spriteShiny, a.hero, a.kind));
+    // AFT-021 P2: trial copy must FINISH before live combat begins. Shooter
+    // modes enter play instantly, so the launch opens on a short BRIEFING
+    // HOLD — hostile fire, dives, and maneuvers wait while the notice shows,
+    // then it retires and the fight starts clean. (Classic serves frozen, so
+    // it needs no hold; the RNG stream is untouched — the hold only clamps
+    // cooldown floors.)
+    G.engageHold = G.mode !== 'classic' ? 1.8 : 0;
   }
 }
 function startDailyRun() {

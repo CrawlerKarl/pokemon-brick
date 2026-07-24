@@ -5601,7 +5601,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'damage is impossible in every non-combat state';
   });
 
-  xtest('AFT-021 P0: narrow stage title never shares the goal pill row', async () => {
+  test('AFT-021 P0: narrow stage title never shares the goal pill row', async () => {
     forceViewport(390, 700);
     DEV.launch({ level: 8, mode: 'junkie', diff: 'normal', seed: 'AFT021-HUD' });
     paused = false; G.freeze = 0;
@@ -5637,7 +5637,7 @@ window.requestAnimationFrame = function () { return 0; };
     return 'inactive actors read from the roster rail, not stacked nameplates';
   });
 
-  xtest('AFT-021 P0: the trial notice finishes before live combat begins', async () => {
+  test('AFT-021 P0: the trial notice finishes before live combat begins', async () => {
     DEV.launch({ level: 5, mode: 'junkie', diff: 'hard', seed: 'AFT021-TRIAL' });
     paused = false; G.freeze = 0;
     // the contract (plan §Phase 2): trial/daily copy lives in a FROZEN
@@ -5754,6 +5754,61 @@ window.requestAnimationFrame = function () { return 0; };
       assert(Math.abs(tHitch - t60) <= 0.17, 'a single 150ms frame hitch shifted full charge by ' + Math.abs(tHitch - t60).toFixed(2) + 's');
       return 'touch and desktop share one charge arc measured from the press';
     } finally { inputClockOverride = null; chargeHeld = false; chargeTouchId = null; touchFirePendingId = null; G.charge = 0; }
+  });
+
+  test('AFT-021 P2: overlay collision contract — one owner per region', async () => {
+    const overlaps = () => {
+      const log = (surfaceLog || []).filter(s => !s.bg);
+      const out = [];
+      for (let i = 0; i < log.length; i++) for (let j = i + 1; j < log.length; j++) {
+        const a = log[i], b = log[j];
+        if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) out.push(a.name + '×' + b.name);
+      }
+      return out;
+    };
+    // 1) narrow portrait, live goal: the pill owns the row, the title yields
+    forceViewport(390, 700);
+    DEV.launch({ level: 8, mode: 'junkie', diff: 'normal', seed: 'AFT021-P2A' });
+    paused = false; G.freeze = 0;
+    await runFrames(30);
+    if (!G.objective || G.objective.done || G.objective.failed) {
+      G.objective = { type: 'bells', name: 'RING THE THREE BELLS', zones: [W * 0.25, W * 0.5, W * 0.75],
+        zoneW: 90, dwell: 1.2, dwellT: 0, rung: 0, count: 3, progress: 0 };
+    }
+    render();
+    let bad = overlaps();
+    assert(bad.length === 0, 'overlapping surfaces with a live goal: ' + bad.join(' · '));
+    assert(!(zoneLog || []).some(b => b.zone === 'topHud' && b.y > 40 && b.y < 60),
+      'the stage title took the goal pill\'s row');
+    // 2) a combat notice never stacks with an announcement
+    setCombatNotice('SUPER EFFECTIVE!', '#ffab40', 2.5);
+    setAnnounce('star', '#ffd54f', 'A CARD', 'ONE OWNER PER LANE', 1.2);
+    render();
+    bad = overlaps();
+    assert(bad.length === 0, 'notice/announce stacked: ' + bad.join(' · '));
+    const noticeDrawn = (surfaceLog || []).some(s => s.name === 'combatNotice');
+    assert(!noticeDrawn, 'the combat notice drew while an announcement owned the transient lane');
+    // …and the notice clock PAUSES rather than expiring silently behind it
+    const t0 = G.combatNotice.t;
+    paused = false; G.freeze = 0; update(1 / 60);
+    assert(G.combatNotice && Math.abs(G.combatNotice.t - Math.min(t0, 2.2)) < 1e-6,
+      'the queued notice burned its clock behind the announcement');
+    // 3) short landscape: same contract under the tighter geometry
+    forceViewport(667, 375);
+    DEV.launch({ level: 14, mode: 'junkie', diff: 'normal', seed: 'AFT021-P2B' });
+    paused = false; G.freeze = 0;
+    await runFrames(40);
+    render();
+    bad = overlaps();
+    assert(bad.length === 0, 'overlapping surfaces at 667×375: ' + bad.join(' · '));
+    // 4) the tutorial coach yields while a goal is live
+    G.jCoach = { step: 1, moved: 0, doneT: 0, lastX: null };
+    if (!G.objective || G.objective.done) G.objective = { type: 'bells', name: 'X', zones: [W * 0.3, W * 0.5, W * 0.7], zoneW: 80, dwell: 1, dwellT: 0, rung: 0, count: 3, progress: 0 };
+    G.announce = null; G.announceQueue = [];
+    render();
+    assert(!(zoneLog || []).some(b => String(b.text).includes('DRAG')), 'the coach drew over a live goal');
+    G.jCoach = null;
+    return 'goal owns its row · one transient at a time · notice clock queues · coach yields';
   });
 
   // ---- runner -------------------------------------------------------------

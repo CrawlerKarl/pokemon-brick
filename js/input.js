@@ -16,10 +16,12 @@ function touchButtons() {
   // side/top safe-area insets keep every control clear of notches and
   // rounded landscape corners, matching the existing bottom treatment
   const edge = n => left ? n + SAFE_L : W - n - SAFE_R;
+  // AFT-021 P2: ONE top corner target — pause. The sound toggle moved to the
+  // pause screen (it was a second large circle floating over the formation
+  // zone; live combat keeps only what live combat needs).
   const b = {
     mega:  { x: edge(138), y: base - 40, r: 30 * scale }, // beside FIRE — paddle rides above both
     pause: { x: edge(28), y: 86 + SAFE_T, r: 22 * scale }, // ≥44 px visible targets
-    sound: { x: edge(74), y: 84 + SAFE_T, r: 20 * scale },
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
   // and the ball is launched by tapping the playfield, not this pad. In the
@@ -179,11 +181,10 @@ window.addEventListener('touchstart', e => {
       }
       if (inCircle(x, y, B.mega, 12)) { tryMega(); claimUiTouch(t.identifier, B.mega.x, B.mega.y, 'MEGA'); continue; }
       if (inCircle(x, y, B.pause, 10)) { togglePause(); claimUiTouch(t.identifier, B.pause.x, B.pause.y, 'PAUSE'); continue; }
-      if (inCircle(x, y, B.sound, 10)) { toggleMusic(); claimUiTouch(t.identifier, B.sound.x, B.sound.y, 'SOUND'); continue; }
       // near-miss dead zone: a fumbled tap AROUND a button is swallowed
       // outright — under no circumstances does it become paddle control
       if ((B.fire && inCircle(x, y, B.fire, 64)) || inCircle(x, y, B.mega, 42) ||
-          inCircle(x, y, B.pause, 30) || inCircle(x, y, B.sound, 30)) {
+          inCircle(x, y, B.pause, 30)) {
         claimUiTouch(t.identifier);
         continue;
       }
@@ -1321,6 +1322,7 @@ function onPress(x, y) {
       return;
     }
     if (inRect(x, y, cheatBtnGeom())) { cheatOpen = true; SFX.wall(); return; }
+    if (inRect(x, y, pauseMusicGeom())) { toggleMusic(); return; } // AFT-021 P2: sound lives on pause
     if (inRect(x, y, pauseSettingsGeom())) {
       cheatOpen = false;
       // A phone player arriving from pause most likely needs pad size,
