@@ -2085,6 +2085,94 @@ window.requestAnimationFrame = function () { return 0; };
     return 'ward gaps ×0.55→0.75 · memories teach then echo · 2 anchors = the break · a mirrored dream coda at 0.5× · bells rung by position alone';
   });
 
+  // AFT-020 Phase 5: THE FRACTURED HOUR — hostile Sibyls awaken through
+  // their own openings into friendly clocks; the Regent yields only while
+  // one RINGS and its volleys echo back; the mythic INVADES the midpoint
+  // and the two actors trade hours instead of queueing as rounds.
+  test('AFT-020 P5: the FRACTURED HOUR — awaken, rings, replays, the stolen hour', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(12, true, { seed: 'HOUR1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const F = G.finale, HG = F && F.hourglass;
+    assert(F && F.format === 'hourglass' && HG && F.beatKey === 'awaken', 'the hourglass arms on the region-4 finale');
+    const sibs = () => G.bricks.filter(b => b.sibyl && !b.dead);
+    assert(sibs().length === 3, 'three hostile Sibyls open the hour');
+    // three OPEN-window strikes wake a Sibyl to your side, unharmed
+    const s0 = sibs()[0];
+    s0.openT = 2; s0.openHit = true; // inside its opening (past the first-strike bonus)
+    const hp0 = s0.hp;
+    for (let k = 0; k < 3; k++) { s0.openT = 2; damageBrick(s0, 1, s0.bx, s0.by, null, { source: 'bolt' }); }
+    assert(s0.sibylAwake === true && s0.friendly === true && s0.hp === 999 && hp0 > 0,
+      'three open strikes AWAKEN the Sibyl (never wound it)');
+    assert(HG.awakened === 1 && F.mastery.countered === true && F.wish, 'the first clock leans the Victory Draft');
+    // guarded strikes still damage a sleeping Sibyl (attrition stays open)
+    const s1 = sibs().find(b => !b.sibylAwake);
+    s1.openT = 0;
+    const hp1 = s1.hp;
+    damageBrick(s1, 2, s1.bx, s1.by, null, { source: 'bolt' });
+    assert(s1.hp < hp1, 'a guarded Sibyl can still be worn down the old way');
+    // wake the rest, open the Regent beat
+    for (const b of sibs().filter(b2 => !b2.sibylAwake)) {
+      for (let k = 0; k < 3; k++) { b.openT = 2; b.openHit = true; damageBrick(b, 1, b.bx, b.by, null, { source: 'bolt' }); }
+    }
+    assert(HG.awakened === 3 && !G.bricks.some(b => b.subBoss && !b.dead), 'all three clocks wake');
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'regent', 'the Regent beat opens');
+    if (G.gauntlet) G.gauntlet.entry = null;
+    G.bossIntro = 0;
+    const regent = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+    // the ring gate: silent hours quarter-to-nothing, ringing hours open it
+    F.beatT = 0; // sibyl 0's window rings at t<3
+    const rhp = regent.hp;
+    damageBrick(regent, 2, regent.bx, regent.by, null, { source: 'bolt' });
+    assert(Math.abs((rhp - regent.hp) - 2) < 0.01, 'a RINGING hour opens the Regent');
+    // with all THREE clocks awake the windows overlap into full uptime (the
+    // reward for waking them all) — a silent hour needs a LONE clock
+    const clocks = G.bricks.filter(b => b.sibylAwake && !b.dead);
+    clocks[1].dead = true; clocks[2].dead = true;
+    F.beatT = 3.2; // the lone clock's window sits closed at 3–5s
+    const rhp2 = regent.hp;
+    damageBrick(regent, 2, regent.bx, regent.by, null, { source: 'bolt' });
+    assert(Math.abs((rhp2 - regent.hp) - 0.3) < 0.01,
+      'a SILENT hour shields it ×0.15 (lost ' + (rhp2 - regent.hp).toFixed(2) + ')');
+    clocks[1].dead = false; clocks[2].dead = false; // stand them back up for the mastery read
+    // replays: a recorded volley echoes back pale ~4s later
+    HG.replayQ.push({ due: F.beatT + 0.05, x: W / 2, y: 160, type: 'dragon', species: regent.poke.id, kind: 'time' });
+    G.enemyShots = [];
+    await runFrames(10);
+    assert(G.enemyShots.filter(s => s.replay).length === 3, 'the recorded hour repeats as a pale fan');
+    // the midpoint theft: Regent phase 2 → the invader arrives, hours trade
+    regent.phase = 2;
+    await runFrames(5);
+    assert(HG.invaded === true && F.beatKey === 'stolenHour', 'the mythic INVADES at the midpoint');
+    const noct = G.bricks.find(b => b.hourActor === 'noct' && !b.dead);
+    assert(noct && noct.mythic, 'the invader is live alongside the Regent');
+    await runFrames(5);
+    assert(regent.hourOut === true && !noct.hourOut, 'the thief takes the first hour — the Regent is a pale past');
+    const nhp = noct.hp;
+    damageBrick(regent, 3, regent.bx, regent.by, null, { source: 'bolt' });
+    assert(regent.hp === rhp2 - 0.3, 'an out-of-hour actor cannot be touched');
+    damageBrick(noct, 2, noct.bx, noct.by, null, { source: 'bolt' });
+    assert(nhp - noct.hp >= 2, 'the in-hour actor takes true damage');
+    // the hours trade on the clock
+    HG.hourT = HG.hourEvery + 0.01;
+    await runFrames(3);
+    assert(regent.hourOut === false && noct.hourOut === true, 'the hours trade back');
+    // fell them BOTH (either order) → the wave clears, mastery reads
+    for (const b of G.bricks) if (!b.dead && b.isBoss) { b.hourOut = false; b.hp = 0.5; damageBrick(b, 2, b.bx, b.by, null, { source: 'bolt' }); }
+    await runFrames(500, () => {
+      for (const pu of G.powerups) pu.dead = true;
+      for (const b of G.bricks) if (!b.dead && b.guard) b.dead = true;
+      return G.state !== 'play' ? false : undefined;
+    });
+    assert(G.state !== 'play', 'the hourglass clears once both actors fall (state ' + G.state + ')');
+    const L = (G.runStats.levels || []).find(l => l.lv === 12);
+    assert(L && L.finaleFormat === 'hourglass' && L.finaleCounters.sibyls === 3
+      && L.finaleMastery === 'mastered', 'ledger: hourglass, three clocks woken and kept');
+    return '3 Sibyls woken unharmed · ring-gated Regent · pale replays · a mid-fight invader trading hours · no cleanup round';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -3802,6 +3890,7 @@ window.requestAnimationFrame = function () { return 0; };
       paused = false; G.freeze = 0;
       const boss = G.bricks.find(b => b.isBoss && !b.dead);
       assert(boss && boss.poke.id === 483, 'round jump did not reach Dialga');
+      if (G.finale) G.finale.hourglass = null; // AFT-020: drive the KIT in isolation (no ring gate)
       if (G.gauntlet) G.gauntlet.entry = null;
       G.bossIntro = 0; G.invuln = 999; // survive stray fire while we drive the kit
       // ---- P1 CHRONO GEARS: two 2-HP heavy gears orbit flanks in ANTI-PHASE ----

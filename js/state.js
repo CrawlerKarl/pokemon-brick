@@ -1002,6 +1002,9 @@ function buildLevel(lvl) {
   G.secret.deferredChoices = null;
   if (stageIdx(lvl) !== 2) G.gauntlet = null;
   G.finale = null; // AFT-020: the finale director re-arms per wave (Phase 1+)
+  // a rebuilt wave never inherits a reveal or a docked HP lane — a knockout
+  // retry was showing the PREVIOUS attempt's boss bar over round one
+  G.reveal = null; G.revealDock = null;
   G.gustT = 0; G.timeWarpT = 0; G.timeWarpClock = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
   // one ECOLOGY per wave: every squad and rank draws from the same habitat
@@ -1173,6 +1176,19 @@ function buildLevel(lvl) {
           assembleDur: 16, window: false, windowT: 0, freed: false, shieldCD: 0,
         };
         G.finale.meter = { value: 0, max: 1, label: (fp.raid && fp.raid.meterLabel) || 'BREAK' };
+      }
+      // THE FRACTURED HOUR (format 'hourglass'): the Sibyls begin hostile
+      // but are AWAKENED through their own openings (three open-window
+      // strikes each) into friendly forge clocks; the Regent yields only
+      // while a woken clock RINGS and its volleys REPLAY as pale echoes;
+      // at its midpoint the mythic INVADES and the two trade hours.
+      if (fmt === 'hourglass') {
+        for (const v of G.bricks) if (v.subBoss && !v.dead) { v.sibyl = true; v.sibylHits = 0; }
+        G.finale.hourglass = {
+          awakened: 0, invaded: false, hour: 'forge', hourT: 0, hourEvery: 8,
+          replayQ: [], silentCD: 0, outCD: 0,
+        };
+        G.finale.meter = { value: 0, max: 3, label: fp.beats[0].label || 'SIBYLS' };
       }
       // SIEGE OF THE DEEP CURRENT (format 'siege'): the Sovereign circles
       // from the opening behind the PRESSURE SEAL (×0.12 damage while any

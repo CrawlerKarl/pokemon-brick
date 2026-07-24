@@ -709,6 +709,30 @@
       weatherWords: ['THE TIDE QUICKENS', 'THE FROST WIDENS THE WAKE', 'THE HULL ARMS THE DEEP'],
     },
   };
+  // Realm 4 — THE FRACTURED HOUR (AFT-020 Phase 5): every major event
+  // happens twice. The hostile Sibyls are AWAKENED through their own
+  // openings into friendly forge clocks that must survive; the Clockwork
+  // Regent is damageable only while an awakened clock RINGS, and its
+  // volleys REPLAY as pale ghosts seconds later. At the midpoint Nocthern
+  // STEALS one timeline — Forge Hour and Still Hour alternate, and the two
+  // actors share one work budget instead of queueing as rounds.
+  finaleProfiles[3] = {
+    format: 'hourglass',
+    title: FINALE_TITLES[3],
+    beats: [
+      { key: 'awaken', label: 'WAKE THE SIBYLS', work: 0.35,
+        tip: 'STRIKE A SIBYL IN ITS OPENING — THRICE, AND IT WAKES TO YOUR SIDE' },
+      { key: 'regent', label: REALM_BOSSES[3].leg[0].toUpperCase(), work: 0.85,
+        tip: 'IT ONLY YIELDS WHILE A WOKEN CLOCK RINGS — AND EVERY BLOW ECHOES TWICE' },
+      { key: 'stolenHour', label: 'THE STILL HOUR', work: 0.45,
+        tip: 'NOCTHERN STEALS A TIMELINE — STRIKE WHOEVER HOLDS THE PRESENT HOUR' },
+    ],
+    hourglass: {
+      wakeWord: 'A SIBYL WAKES', silentWord: 'THE HOURS ARE SILENT',
+      outWord: 'OUT OF HOUR', replayWord: 'THE HOUR REPEATS',
+      forgeWord: 'FORGE HOUR', stillWord: 'STILL HOUR',
+    },
+  };
   // Realm 8 — THE SERAPH RAID (AFT-020 Phase 2): a simultaneous stadium
   // raid. Omega Seraph hangs overhead from the first second, assembling a
   // crown-lance from arena segments; the three captains each power one.

@@ -253,10 +253,11 @@ function spawnStarEnemyPattern(src, P, bx, by, d, volleyId) {
   // the player, so interception is the friendly's counterplay and dodging
   // stays yours.
   let aimX = G.paddle.x, aimY = shipY();
-  const fr = G.objective && G.objective.friendly;
+  const fr = (G.objective && G.objective.friendly)
+    || (G.friendlyList && G.friendlyList[0]) || null; // woken clocks draw fire too
   if (fr && !fr.dead && fr.fhp > 0 && P.aimed && P.classKey === 'micro') {
-    G.objective.redirN = (G.objective.redirN || 0) + 1;
-    if (G.objective.redirN % 2 === 0) { aimX = fr.bx + G.fx; aimY = fr.by + G.fy; }
+    G.redirN = (G.redirN || 0) + 1; // G-scoped: friendlies exist outside objectives now
+    if (G.redirN % 2 === 0) { aimX = fr.bx + G.fx; aimY = fr.by + G.fy; }
   }
   const base = P.aimed ? Math.atan2(aimY - by, aimX - bx) : Math.PI / 2;
   const sp = (225 + d.lv * 14) * d.shotSpeed * P.speedMul;
@@ -665,6 +666,16 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (br.subBoss && !br.relayVow && !br.raidCaptain) { // relay Vows / raid captains own ONE rule each — never the guard too
     if ((br.openT || 0) > 0) {
       if (!br.openHit) { br.openHit = true; dmg *= 1.2; } // window's first strike rewarded
+      // THE FRACTURED HOUR: open-window strikes AWAKEN a Sibyl instead of
+      // wearing it down — the third one turns it to your side unharmed
+      if (br.sibyl && G.finale && G.finale.hourglass && !br.sibylAwake) {
+        br.sibylHits = (br.sibylHits || 0) + 1;
+        br.flash = 1;
+        if (br.sibylHits >= 3) { sibylAwakens(br); return; }
+        addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12,
+          'WAKING ' + br.sibylHits + '/3', '#a5d6a7', 11);
+        return; // the waking blow rings the clock, it doesn't wound it
+      }
     } else {
       dmg *= wardGuardMul(); // guarded — the realm-1 ward WEAKENS as Heralds fall
       if (!G.sentinelGuardTaught) {
@@ -700,6 +711,33 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
   }
   statsDmgCat('guard', dmg - dPreGuard);
+  // THE FRACTURED HOUR: the out-of-hour actor is a pale past — untouchable
+  // until the hours trade back (its ONE defensive rule)
+  if (br.hourOut) {
+    br.flash = 1;
+    const HG = hourglassState();
+    if (HG && HG.outCD <= 0) {
+      HG.outCD = 1.2;
+      addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 14, hourglassWord('outWord', 'OUT OF HOUR'), '#b0bec5', 11);
+    }
+    return;
+  }
+  // …and the Regent yields only while a woken clock RINGS (with an honest
+  // fallback: no clocks woken at all = a plain ×0.75 attrition)
+  if (br.isBoss && !br.mythic && !br.secretBoss && dmg < 90
+    && hourglassState() && G.finale.beat >= 1) {
+    const HG = G.finale.hourglass;
+    if (HG.awakened > 0) {
+      if (!hourglassRinging()) {
+        dmg *= 0.15;
+        if (HG.silentCD <= 0) {
+          HG.silentCD = 1.2;
+          addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 14,
+            hourglassWord('silentWord', 'THE HOURS ARE SILENT'), '#b0bec5', 11);
+        }
+      }
+    } else dmg *= 0.75;
+  }
   // the raid mythic is a PRESENCE (bound) or a menace (freed) — never a
   // required target, never a damage sink. Bound hits point at the vines.
   if (br.raidBound) {
@@ -2967,9 +3005,17 @@ function completeProtect(O, name) {
 // extra punishment — the wave reverts to a normal attrition clear (the clear
 // guard ignores failed objectives) and the banner disappears.
 function friendlyFaints(fr) {
-  const O = G.objective;
   fr.dead = true;
   shatterBrick(fr, fr.bx + G.fx, fr.by + G.fy, true); // bare faint
+  // an awakened SIBYL clock falling silent is a loss of tempo, never an
+  // objective fail — the finale's ring windows just thin out
+  if (fr.sibyl) {
+    setAnnounce('star', '#ff80ab', 'A CLOCK FALLS SILENT', 'THE RING WINDOWS THIN', 2.2,
+      null, null, false, false, 'objective');
+    SFX.hit(0); haptic('hit');
+    return;
+  }
+  const O = G.objective;
   if (O) { O.failed = true; statsObjective(O.type, false); }
   setAnnounce('star', '#ff80ab', 'THE TRAVELER FELL — CLEAR THE WAVE!', '', 2.4,
     null, null, false, false, 'objective');
@@ -3331,6 +3377,12 @@ function completeFinale() {
     // mastered = countered AND every memory echo escaped
     F.mastery.mastered = F.mastery.countered && !(F.mastery.counters.echoHits > 0);
   }
+  if (F.format === 'hourglass' && F.hourglass) {
+    // countered = at least one Sibyl woken; mastered = all three woken AND
+    // all three clocks still standing at the end
+    F.mastery.mastered = (F.mastery.counters.sibyls || 0) >= 3
+      && G.bricks.filter(b => b.sibylAwake && !b.dead).length >= 3;
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3615,6 +3667,7 @@ function updateFinaleDirector(dt) {
   if (!F || G.state !== 'play' || G.reveal) return;
   if (F.format === 'raid' && F.raid) updateRaid(dt);
   if (F.format === 'siege' && F.siege) updateSiege(dt);
+  if (F.format === 'hourglass' && F.hourglass) updateHourglass(dt);
   if (F.format === 'ladder' && F.memory) updateLadderMemory(dt);
   if (F.format === 'relay' && F.relay) {
     const R = F.relay;
@@ -3675,6 +3728,134 @@ function updateLadderMemory(dt) {
       continue;
     }
     G.columnStrikes.push({ x: m.x, w: 74, warn: 1.2, strike: 0.45, color: '#ec407a', echo: true });
+  }
+}
+// ---- THE FRACTURED HOUR (AFT-020 Phase 5, realm 4) ----
+function hourglassState() { return (G.finale && G.finale.format === 'hourglass' && G.finale.hourglass) || null; }
+function hourglassWord(k, fallback) {
+  const F = G.finale;
+  return (F && F.profile && F.profile.hourglass && F.profile.hourglass[k]) || fallback;
+}
+function sibylAwakens(br) {
+  const F = G.finale, HG = F.hourglass;
+  br.subBoss = false;
+  br.sibylAwake = true;
+  br.friendly = true; br.fhp = 3; br.fpath = 'hold';
+  br.hp = br.maxHp = 999;
+  br.openT = 0; br.flash = 1;
+  br.fbx0 = br.bx; br.f0y = br.by;
+  br.slotX = W * (0.22 + 0.28 * (br.subIdx || 0)); // its forge-line station
+  br.slotY = Math.max(130, H * 0.2);
+  HG.awakened++;
+  F.mastery.counters.sibyls = HG.awakened;
+  F.mastery.countered = true;
+  if (F.meter) F.meter.value = HG.awakened;
+  // the FIRST woken Sibyl leans the Victory Draft by its own discipline —
+  // anvil/piston/furnace → commit/adapt/explore. Selection control only.
+  if (!F.wish) F.wish = ['commit', 'adapt', 'explore'][br.subIdx || 0];
+  setCombatNotice(hourglassWord('wakeWord', 'IT WAKES') + ' — IT RINGS FOR YOU', '#a5d6a7', 2.2);
+  ringFx(br.bx + G.fx, br.by + G.fy, '#a5d6a7', 8, 110, 4, 0.55);
+  sparkle(br.bx + G.fx, br.by + G.fy, 10, true);
+  SFX.mega();
+}
+// is any woken clock RINGING right now? (staggered 3s-on / 2s-off windows)
+function hourglassRinging() {
+  const F = G.finale;
+  if (!F || !F.hourglass) return false;
+  let i = 0;
+  for (const b of G.bricks) {
+    if (b.dead || !b.sibylAwake) continue;
+    if (((F.beatT + i * 2.5) % 5) < 3) return true;
+    i++;
+  }
+  return false;
+}
+function hourglassInvade() {
+  const F = G.finale, HG = F.hourglass;
+  if (HG.invaded) return;
+  HG.invaded = true;
+  if (G.gauntlet) G.gauntlet.phase = 2;
+  startFinaleBeat(2);
+  const gen2 = genFor(G.level);
+  const mid = gen2.gauntlet && gen2.gauntlet.myth;
+  const regent = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic && !b.secretBoss);
+  if (regent) regent.hourActor = 'regent';
+  if (mid) {
+    const mw = Math.min(150, Math.max(96, W * 0.16)), mh2 = mw * 0.92;
+    const noct = {
+      bx: W * 0.75, by: Math.max(150, H * 0.24), hx: W * 0.75, hy: Math.max(150, H * 0.24),
+      row: -1, col: 1, w: mw, h: mh2,
+      hp: Math.max(6, Math.round(G.gauntlet.legendHp * 0.45)),
+      maxHp: Math.max(6, Math.round(G.gauntlet.legendHp * 0.45)),
+      phase: 1, phaseCount: 1, isBoss: true, mythic: true, hourActor: 'noct',
+      poke: { id: mid[0], t: mid[1], n: SKIN.names[mid[0]] },
+      flash: 0, wobble: 2.2,
+      abilityCD: (SKIN.mythicAbilities[mid[0]]?.cd || 5) * 0.8,
+    };
+    G.bricks.push(noct);
+    getSprite(mid[0]);
+    beginBossReveal('mythic', [noct]);
+  }
+  // the thief takes the first hour — the Regent phases OUT
+  HG.hour = 'still'; HG.hourT = 0;
+  setAnnounce('alert', '#b388ff',
+    (F.profile && F.profile.beats[2] && F.profile.beats[2].label) || 'THE STOLEN HOUR',
+    (F.profile && F.profile.beats[2] && F.profile.beats[2].tip) || '', 3,
+    null, null, false, true, 'boss');
+  G.shake = 10; SFX.roar();
+}
+function updateHourglass(dt) {
+  const F = G.finale, HG = F.hourglass;
+  if (HG.silentCD > 0) HG.silentCD -= dt;
+  if (HG.outCD > 0) HG.outCD -= dt;
+  // awakened clocks glide to their forge-line stations
+  for (const b of G.bricks) {
+    if (b.dead || !b.sibylAwake || b.slotX == null) continue;
+    b.fbx0 += (b.slotX - b.fbx0) * Math.min(1, dt * 1.6);
+    b.f0y += (b.slotY - b.f0y) * Math.min(1, dt * 1.6);
+  }
+  const regent = G.bricks.find(b => b.hourActor === 'regent' && !b.dead)
+    || G.bricks.find(b => b.isBoss && !b.dead && !b.mythic && !b.secretBoss);
+  // the midpoint theft: the Regent's second phase invites the invader
+  if (F.beat === 1 && regent && (regent.phase || 1) >= 2) hourglassInvade();
+  // the REPLAY queue: recorded volleys echo back pale and slower
+  for (let i = HG.replayQ.length - 1; i >= 0; i--) {
+    const r = HG.replayQ[i];
+    if (F.beatT < r.due) continue;
+    HG.replayQ.splice(i, 1);
+    if (G.mode === 'classic') continue; // the calm contract
+    const base = Math.atan2(shipY() - r.y, G.paddle.x - r.x);
+    const sp = 150 * diff().shotSpeed;
+    const vid = nextEnemyVolley();
+    for (let k = -1; k <= 1; k++) {
+      const a = base + k * 0.22;
+      spawnEnemyShot({ x: r.x, y: r.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        boss: true, replay: true, type: r.type, species: r.species,
+        kind: r.kind, classKey: 'micro', volleyId: vid });
+    }
+    if (HG.outCD <= 0) {
+      HG.outCD = 1.4;
+      setCombatNotice(hourglassWord('replayWord', 'THE HOUR REPEATS'), '#b0bec5', 1.2);
+    }
+  }
+  if (F.beat === 2 && HG.invaded) {
+    const noct = G.bricks.find(b => b.hourActor === 'noct' && !b.dead);
+    if (regent && noct) {
+      HG.hourT += dt;
+      if (HG.hourT >= HG.hourEvery) {
+        HG.hourT = 0;
+        HG.hour = HG.hour === 'forge' ? 'still' : 'forge';
+        setCombatNotice(HG.hour === 'forge'
+          ? hourglassWord('forgeWord', 'FORGE HOUR')
+          : hourglassWord('stillWord', 'STILL HOUR'),
+        HG.hour === 'forge' ? '#ffab6b' : '#b388ff', 1.6);
+      }
+      regent.hourOut = HG.hour === 'still';
+      noct.hourOut = HG.hour === 'forge';
+    } else {
+      // one actor has fallen — the survivor holds every hour
+      for (const b of G.bricks) if (b.hourActor && !b.dead) b.hourOut = false;
+    }
   }
 }
 // ---- SIEGE OF THE DEEP CURRENT (AFT-020 Phase 4) ----
@@ -4136,6 +4317,9 @@ function update(dt) {
   // threat live (ACTIVE THREAT)? Reveals freeze combat, so neither clock
   // runs under one. Classic takes no enemy fire — its "active threat" is a
   // live ball to keep. Phase-gated / dormant targets don't count as progress.
+  // one cached list serves every friendly rule (traveler + woken Sibyls)
+  G.friendlyList = G.bricks.some(b => b.friendly && !b.dead)
+    ? G.bricks.filter(b => b.friendly && !b.dead) : null;
   if (G.state === 'play' && !G.reveal && G.runStats && G.runStats.cur) {
     let dmgable = false, hostileAlive = false;
     for (const b of G.bricks) {
@@ -5657,8 +5841,11 @@ function update(dt) {
 
   // ---- enemy fire (telegraphed — a warning flashes before every shot) ----
   if (G.state === 'play' && G.bossIntro <= 0) {
-    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
-    if (boss) {
+    // THE FRACTURED HOUR: the actor holding the PRESENT hour acts — an
+    // out-of-hour boss neither fires nor channels
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.dormant && !b.hourOut)
+      || G.bricks.find(b => b.isBoss && !b.dead && !b.dormant);
+    if (boss && !boss.hourOut) {
       // signature ability (teleport, winds, sweeps, time warp...)
       // DESPERATION CHANNEL (SKIN.bossChannels, data.js — Mewtwo's PSYSTRIKE rolled
       // across the roster): below hpFrac HP the desperation begins — a rooted
@@ -5874,6 +6061,16 @@ function update(dt) {
       const bx = tg.br.bx + G.fx, by = tg.br.by + G.fy + tg.br.h / 2;
       if (tg.boss) {
         spawnBossFire(tg.br, bx, by, d, tg);
+        // THE FRACTURED HOUR: the Regent's volleys are RECORDED and echo
+        // back pale 4 seconds later (the replay queue, updateHourglass)
+        if (hourglassState() && G.finale.beat >= 1 && tg.br.isBoss && !tg.br.mythic && !tg.br.hourOut) {
+          G.finale.hourglass.replayQ.push({
+            due: G.finale.beatT + 4, x: bx, y: by,
+            type: tg.br.poke.t, species: tg.br.poke.id,
+            kind: projectileKindFor(tg.br.poke.id, tg.br.poke.t),
+          });
+          if (G.finale.hourglass.replayQ.length > 4) G.finale.hourglass.replayQ.shift();
+        }
       } else {
         const src = tg.br;
         if (G.mode === 'junkie' && tg.pattern) {
@@ -6158,18 +6355,24 @@ function update(dt) {
     // runs ONLY while a live friendly exists — a shot inside its hitR is
     // consumed and chips one heart pip; at 0 the traveler faints and the
     // objective FAILS. reduceFlash-safe feedback (a ring + floater, no bloom).
-    const fr = G.objective && G.objective.friendly;
-    if (!s.dead && fr && !fr.dead && fr.fhp > 0) {
-      const fx = fr.bx + G.fx, fy = fr.by + G.fy, fR = hitR + Math.max(fr.w, fr.h) / 2;
-      if (Math.abs(s.x - fx) < fR && Math.abs(s.y - fy) < fR) {
-        s.dead = true;
-        fr.fhp--; fr.flash = 0.7;
-        ringFx(fx, fy, '#ff80ab', 5, 34, 3, 0.35);
-        addFloater(fx, fy - fr.h / 2 - 10, fr.fhp > 0 ? '− ♥' : 'FELL!', '#ff80ab', 12);
-        tone(360, 0.07, 'sine', 0.05, -120);
-        if (fr.fhp <= 0) friendlyFaints(fr);
-        continue;
+    // (AFT-020 generalized: the objective traveler AND any awakened Sibyl
+    // clocks ride the same rule — G.friendlyList is cached once per frame)
+    if (!s.dead && G.friendlyList && G.friendlyList.length) {
+      let consumed = false;
+      for (const fr of G.friendlyList) {
+        if (fr.dead || !(fr.fhp > 0)) continue;
+        const fx = fr.bx + G.fx, fy = fr.by + G.fy, fR = hitR + Math.max(fr.w, fr.h) / 2;
+        if (Math.abs(s.x - fx) < fR && Math.abs(s.y - fy) < fR) {
+          s.dead = true; consumed = true;
+          fr.fhp--; fr.flash = 0.7;
+          ringFx(fx, fy, '#ff80ab', 5, 34, 3, 0.35);
+          addFloater(fx, fy - fr.h / 2 - 10, fr.fhp > 0 ? '− ♥' : 'FELL!', '#ff80ab', 12);
+          tone(360, 0.07, 'sine', 0.05, -120);
+          if (fr.fhp <= 0) friendlyFaints(fr);
+          break;
+        }
       }
+      if (consumed) continue;
     }
     // BULWARK BATTERY: the hex wall floats ahead of the pilot and eats
     // ordinary shots crossing it, one segment each
@@ -6234,7 +6437,8 @@ function update(dt) {
       // a NORMAL shot your type resists is deflected — no life lost. Heavy elite
       // blasts punch through your resist (that's what makes elites scary).
       if (eff === -1 && !s.heavy) {
-        s.dead = true; G.invuln = 0.55;
+        s.dead = true;
+        G.invuln = Math.max(G.invuln, 0.55); // a deflect never SHORTENS existing grace
         statsDeflect();
         addFloater(G.paddle.x, py - 42, 'RESISTED', pc, 12);
         burst(s.x, py, pc, 10, 150, 0.4);

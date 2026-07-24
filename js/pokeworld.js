@@ -644,6 +644,27 @@ FINALE_PROFILES[2] = {
     weatherWords: ['THE STORM QUICKENS', 'THE ICE WIDENS THE WAKE', 'THE STEEL ARMS THE SKY'],
   },
 };
+// AFT-020 Phase 5 — region 4 runs THE FRACTURED HOUR (engine format
+// 'hourglass'): the lake trio wake into friendly forge clocks, Dialga
+// yields only while one rings (and every volley echoes), and Darkrai
+// invades the midpoint to trade hours with it.
+FINALE_PROFILES[3] = {
+  format: 'hourglass',
+  title: 'THE SINNOH FRACTURED HOUR',
+  beats: [
+    { key: 'awaken', label: 'WAKE THE LAKE TRIO', work: 0.35,
+      tip: 'STRIKE A GUARDIAN IN ITS OPENING — THRICE, AND IT WAKES TO YOUR SIDE' },
+    { key: 'regent', label: 'DIALGA', work: 0.85,
+      tip: 'IT ONLY YIELDS WHILE A WOKEN GUARDIAN RINGS — AND EVERY BLOW ECHOES TWICE' },
+    { key: 'stolenHour', label: 'THE STOLEN HOUR', work: 0.45,
+      tip: 'DARKRAI STEALS A TIMELINE — STRIKE WHOEVER HOLDS THE PRESENT HOUR' },
+  ],
+  hourglass: {
+    wakeWord: 'A GUARDIAN WAKES', silentWord: 'THE HOURS ARE SILENT',
+    outWord: 'OUT OF HOUR', replayWord: 'THE HOUR REPEATS',
+    forgeWord: 'TIME FLOWS', stillWord: 'THE DARK HOUR',
+  },
+};
 // AFT-020 Phase 2 — region 8 runs THE SERAPH RAID (engine format 'raid'):
 // Eternatus hangs over the arena assembling a crown-lance, the Galar
 // regis each power a segment, and Zarude begins bound in the arena vines.

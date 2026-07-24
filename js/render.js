@@ -1419,7 +1419,13 @@ function drawBricks() {
     }
     if (br.isBoss) {
       if (G.mode === 'classic') drawBossBrick(br, x, y);
-      else drawBossMon(br, x, y);
+      else if (br.hourOut) {
+        // an OUT-OF-HOUR actor is a pale past — ghosted until the hours trade
+        ctx.save();
+        ctx.globalAlpha *= 0.38;
+        drawBossMon(br, x, y);
+        ctx.restore();
+      } else drawBossMon(br, x, y);
       continue;
     }
     ctx.save();
@@ -2836,6 +2842,42 @@ function drawWardFx() {
   }
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.restore();
+}
+// AFT-020 THE FRACTURED HOUR: the ring read (a golden arc over whichever
+// woken clock is RINGING — the Regent's open window), pale pre-echo rings
+// where a replay is about to fire, and the hour banner colors.
+function drawHourglassFx() {
+  const F = G.finale;
+  if (!F || F.format !== 'hourglass' || !F.hourglass || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const HG = F.hourglass;
+  let i = 0;
+  ctx.save();
+  for (const b of G.bricks) {
+    if (b.dead || !b.sibylAwake) continue;
+    const ringing = ((F.beatT + i * 2.5) % 5) < 3;
+    i++;
+    const bx2 = b.bx + G.fx, by2 = b.by + G.fy;
+    if (ringing && F.beat >= 1) {
+      const pulse = 0.7 + 0.3 * Math.sin(G.time * 7);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,213,79,' + (0.5 + 0.35 * pulse) + ')';
+      ctx.beginPath();
+      ctx.arc(bx2, by2 - b.h * 0.7, 12 + 4 * pulse, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+    }
+  }
+  // pre-echo: the last 1.2s before a replay fires, a pale ring breathes at
+  // the recorded origin — the preview the plan demands
+  for (const r of HG.replayQ) {
+    const till = r.due - F.beatT;
+    if (till > 1.2) continue;
+    const a = 0.5 * (1 - till / 1.2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(207,216,220,' + a + ')';
+    ctx.beginPath(); ctx.arc(r.x, r.y, 18 + (1.2 - till) * 20, 0, Math.PI * 2); ctx.stroke();
+  }
   ctx.restore();
 }
 // AFT-020 SIEGE: the pressure-seal tethers (each living Colossus → the
@@ -9404,6 +9446,7 @@ function render() {
     drawObjectiveFx(); // AFT-020: ward triangle + bells + live-lane rails/marks
     drawSiegeFx();     // AFT-020: seal tethers + the current trail
     drawWardFx();      // AFT-020: the Triune Ward between the Heralds
+    drawHourglassFx(); // AFT-020: ring windows + replay pre-echoes
     drawBricks();
     drawFragments();
     drawShield();
