@@ -562,16 +562,22 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (starterDirect && G.starter) {
     G.starterHits = (G.starterHits || 0) + 1;
     dmg *= starterMod('damage', 1);
-    if (starterPerk() === 'GUTS') {
+    // Perk gates key on the STARTER TYPE, never the skin's ability NAME —
+    // 'GUTS' is the pokemon skin's word for the fighting line's perk, and
+    // gating on it silently disabled these four perks under any other skin
+    // (a rules divergence; skins may differ in words and art only). The
+    // starterMod keys themselves are already type-line data, so the type
+    // key is the engine-true gate. Pokemon behavior is bit-identical.
+    if (G.starter === 'fighting') { // GUTS / BERSERK PROTOCOL
       const missing = Math.max(0, (G.livesMax || G.lives) - G.lives);
       dmg *= 1 + missing * starterMod('guts', 0);
       if (br.isBoss) dmg *= starterMod('bossDamage', 1);
     }
-    if (starterPerk() === 'SAND FORCE' && (br.armored || br.shellArmor || br.barrier || br.isBoss)) {
+    if (G.starter === 'ground' && (br.armored || br.shellArmor || br.barrier || br.isBoss)) { // SAND FORCE / SEISMIC RIG
       dmg *= starterMod('armorDamage', 1);
     }
-    if (starterPerk() === 'MOXIE') dmg *= 1 + Math.min(G.combo, 20) * starterMod('comboDamage', 0);
-    if (starterPerk() === 'CORROSION') {
+    if (G.starter === 'dark') dmg *= 1 + Math.min(G.combo, 20) * starterMod('comboDamage', 0); // MOXIE / BLOODLUST
+    if (G.starter === 'poison') {
       br.starterCorrosion = Math.min(5, (br.starterCorrosion || 0) + 1);
       dmg *= 1 + (br.starterCorrosion - 1) * starterMod('corrosion', 0);
     }

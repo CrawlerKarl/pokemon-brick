@@ -1561,6 +1561,43 @@ window.requestAnimationFrame = function () { return 0; };
     return 'MEGA→SURGE across copy · CHARGE + OMEGA spared · pokemon identical · shared tables pristine';
   });
 
+  // Vessel perks are ENGINE rules keyed on the starter TYPE — a skin renames
+  // the ability word, never the mechanic. Regression: the fighting/ground/
+  // dark/poison perk gates once compared against the pokemon skin's ability
+  // NAMES ('GUTS', 'SAND FORCE', …), silently disabling all four under any
+  // other skin. This proves the perk fires even when the ability word is a
+  // foreign skin's, and that pokemon numbers are unchanged.
+  test('vessel perks are skin-agnostic (type-keyed, never ability-name-keyed)', async () => {
+    await resetBetween();
+    resetRun(1, true);
+    G.state = 'play';
+    const mkBoss = () => ({ bx: W / 2, by: 200, hx: W / 2, hy: 200, row: -1, col: -1,
+      w: 60, h: 40, hp: 1000, maxHp: 1000, isBoss: true, phase: 1, phaseCount: 3,
+      poke: { id: 6, t: 'normal', n: 'T' }, flash: 0, wobble: 0 });
+    const hitFor = () => {
+      const br = mkBoss(); G.bricks = [br]; G.combo = 0; G.starterHits = 0;
+      damageBrick(br, 1, br.bx, br.by, null, {});
+      return 1000 - br.hp;
+    };
+    const realAbility = SKIN.starterMon.fighting.ability;
+    try {
+      SETTINGS.starter = 'fighting'; G.starter = 'fighting'; G.starterLvl = 3;
+      G.livesMax = 4; G.lives = 2; // two missing segments arm the missing-HP term
+      const expected = starterMod('damage', 1) * (1 + 2 * starterMod('guts', 0)) * starterMod('bossDamage', 1);
+      const native = hitFor();
+      assert(Math.abs(native - expected) < 0.001,
+        'fighting perk under its own name: dealt ' + native + ', expected ' + expected);
+      SKIN.starterMon.fighting.ability = 'BERSERK PROTOCOL'; // another skin's word
+      const foreign = hitFor();
+      assert(Math.abs(foreign - native) < 0.001,
+        'renaming the ability changed the mechanic: ' + foreign + ' vs ' + native);
+    } finally {
+      SKIN.starterMon.fighting.ability = realAbility;
+      SETTINGS.starter = 'none'; G.starter = null; G.starterLvl = 1;
+    }
+    return 'fighting perk identical under pokemon + foreign ability names (engine rule, skin word)';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
