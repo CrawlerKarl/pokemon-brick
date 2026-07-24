@@ -192,27 +192,64 @@ const VOCAB_SCAN = `(() => {
 })()`;
 
 // ── AFT-005B: deterministic mobile scenes + the artifact storm ─────────────
+// AFT-021 Phase 0: every scene carries an `expect` — the state it CLAIMS to
+// capture, asserted in-page right before the screenshot. A screenshot name
+// can no longer disagree with the actual game state (the old `results` scene
+// silently captured a serve announcement for weeks). Each capture also emits
+// a metadata sidecar (<scene>-<viewport>.json) recording what was on screen.
 const SCENES = [
-  { name: 'home', js: `G.state='menu'; advOpen=false;` },
-  { name: 'settings-save', js: `G.state='menu'; advOpen=true; settingsPage=2;` },
-  { name: 'arrival', js: `advOpen=false; DEV.launch({level:1,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<40;i++)update(1/60);` },
-  { name: 'objective', js: `DEV.launch({level:8,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<100;i++)update(1/60);` },
-  { name: 'charge', js: `G.charge=0.85; G.chargeHeld=true; update(1/60);` },
-  { name: 'surge-ready', js: `G.charge=0; G.mega=1; G.megaT=0; for(let i=0;i<12;i++)update(1/60);` },
-  { name: 'boss-reveal', js: `DEV.launch({level:3,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); jumpToGauntletRound(1); for(let i=0;i<45;i++)update(1/60);` },
-  { name: 'boss-combat', js: `revealSkip(); for(let i=0;i<220;i++)update(1/60);` },
-  { name: 'relay-finale', js: `DEV.launch({level:6,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<180;i++)update(1/60);` },
-  { name: 'raid-finale', js: `DEV.launch({level:24,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<200;i++)update(1/60);` },
-  { name: 'lanes-objective', js: `DEV.launch({level:14,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<120;i++)update(1/60);` },
-  { name: 'siege-finale', js: `DEV.launch({level:9,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(const b of G.bricks) if(b.siegeColossus&&!b.dead){b.hp=0.5; damageBrick(b,2,b.bx,b.by,null,{source:'bolt'});} for(let i=0;i<300;i++)update(1/60);` },
-  { name: 'draft', js: `G.state='upgrade'; G.stateT=1; if(!G.upgradeChoices) rollUpgradeChoices();` },
-  { name: 'web', js: `upgradeTreeOpen=true;` },
-  { name: 'results', js: `upgradeTreeOpen=false; DEV.launch({level:2,mode:'classic',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(const b of G.bricks){b.dead=true;} for(let i=0;i<80;i++)update(1/60);` },
-  { name: 'trial-picker', js: `G.state='menu'; trialOpen=true; trialSel.region=0; trialSel.stage=2; trialSel.round=1; trialSel.phase=1;` },
-  { name: 'codex', js: `G.state='dex'; trialOpen=false;` },
-  { name: 'ending', js: `beginEnding(); paused=false; G.freeze=0; for(let i=0;i<60;i++)update(1/60);` },
-  { name: 'gameover', js: `G.state='gameover'; G.stateT=1;` },
+  { name: 'home', js: `G.state='menu'; advOpen=false;`,
+    expect: `G.state==='menu' && !advOpen` },
+  { name: 'settings-save', js: `G.state='menu'; advOpen=true; settingsPage=2;`,
+    expect: `G.state==='menu' && advOpen && settingsPage===2` },
+  { name: 'arrival', js: `advOpen=false; DEV.launch({level:1,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<40;i++)update(1/60);`,
+    expect: `G.state==='play' && G.level===1 && G.mode==='junkie'` },
+  { name: 'objective', js: `DEV.launch({level:8,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<100;i++)update(1/60);`,
+    expect: `G.state==='play' && !!G.objective && !G.objective.done && !G.objective.failed` },
+  { name: 'charge', js: `chargeHeld=true; G.charge=0.85; G.chargeFullT=0; G.overheat=0; G.chargeCD=0; update(1/60);`,
+    expect: `G.charge>0.5` },
+  { name: 'surge-ready', js: `chargeHeld=false; G.charge=0; G.chargeCD=0.3; G.mega=1; G.megaT=0; for(let i=0;i<12;i++)update(1/60);`,
+    expect: `G.mega>=1 && G.megaT<=0 && G.state==='play'` },
+  { name: 'boss-reveal', js: `DEV.launch({level:3,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); jumpToGauntletRound(1); for(let i=0;i<45;i++)update(1/60);`,
+    expect: `!!G.reveal` },
+  { name: 'boss-combat', js: `revealSkip(); for(let i=0;i<220;i++)update(1/60);`,
+    expect: `!G.reveal && G.bricks.some(b=>!b.dead && !b.dormant && (b.isBoss||b.subBoss))` },
+  { name: 'relay-finale', js: `DEV.launch({level:6,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<180;i++)update(1/60);`,
+    expect: `G.finale && G.finale.format==='relay' && G.state==='play'` },
+  { name: 'raid-finale', js: `DEV.launch({level:24,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(let i=0;i<200;i++)update(1/60);`,
+    expect: `G.finale && G.finale.format==='raid' && G.state==='play'` },
+  { name: 'lanes-objective', js: `DEV.launch({level:14,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<120;i++)update(1/60);`,
+    expect: `G.state==='play' && G.objective && G.objective.type==='lanes'` },
+  { name: 'siege-finale', js: `DEV.launch({level:9,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<8;i++)update(1/60); while(G.reveal){revealSkip(); update(0.5);} for(const b of G.bricks) if(b.siegeColossus&&!b.dead){b.hp=0.5; damageBrick(b,2,b.bx,b.by,null,{source:'bolt'});} for(let i=0;i<300;i++)update(1/60);`,
+    expect: `G.finale && G.finale.format==='siege'` },
+  { name: 'draft', js: `G.state='upgrade'; G.stateT=1; if(!G.upgradeChoices) rollUpgradeChoices();`,
+    expect: `G.state==='upgrade' && !!G.upgradeChoices` },
+  { name: 'web', js: `upgradeTreeOpen=true;`,
+    expect: `G.state==='upgrade' && upgradeTreeOpen===true` },
+  { name: 'results', js: `upgradeTreeOpen=false; DEV.launch({level:5,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<10;i++)update(1/60); G.objective=null; G.reinforce=0; G.powerups.length=0; for(const b of G.bricks){if(!b.dead)b.dead=true;} for(let i=0;i<600 && G.state!=='results';i++){paused=false; G.freeze=0; update(1/60);} for(let i=0;i<45;i++){paused=false; G.freeze=0; update(1/60);} upgradeTreeOpen=false;`,
+    expect: `G.state==='results' && !!G.results && G.stateT>0.5` },
+  { name: 'trial-picker', js: `G.state='menu'; trialOpen=true; trialSel.region=0; trialSel.stage=2; trialSel.round=1; trialSel.phase=1;`,
+    expect: `G.state==='menu' && trialOpen===true` },
+  { name: 'codex', js: `G.state='dex'; trialOpen=false;`,
+    expect: `G.state==='dex'` },
+  { name: 'ending', js: `beginEnding(); paused=false; G.freeze=0; for(let i=0;i<60;i++)update(1/60);`,
+    expect: `G.state==='ending'` },
+  { name: 'gameover', js: `G.state='gameover'; G.stateT=1;`,
+    expect: `G.state==='gameover'` },
 ];
+// the on-screen truth captured beside every screenshot — human review of
+// .gate-shots/ can trust what each artifact was actually showing
+const SCENE_META = `({
+  state: G.state, level: G.level, mode: G.mode, reveal: !!G.reveal, paused: paused,
+  stateT: +G.stateT.toFixed(2),
+  objective: G.objective ? { type: G.objective.type, done: !!G.objective.done, failed: !!G.objective.failed } : null,
+  finale: G.finale ? { format: G.finale.format, beat: G.finale.beat } : null,
+  announce: G.announce ? { kind: G.announce.kind || null, name: G.announce.name } : null,
+  liveActors: G.bricks.filter(b => !b.dead && !b.dormant).length,
+  enemyShots: G.enemyShots.length, columnStrikes: G.columnStrikes.length,
+  overlays: { trialOpen: trialOpen, upgradeTreeOpen: upgradeTreeOpen, advOpen: advOpen, cheatOpen: typeof cheatOpen !== 'undefined' ? cheatOpen : null },
+  controls: (typeof IS_TOUCH !== 'undefined' && IS_TOUCH && (G.state === 'play' || G.state === 'serve')) ? touchButtons() : null,
+})`;
 const SHOT_VIEWPORTS = [[390, 844], [667, 375]];
 async function runScenes(cdp, port) {
   const t0 = Date.now();
@@ -237,13 +274,25 @@ async function runScenes(cdp, port) {
         try {
           ${sc.js}
           G.freeze = 999; render();
+          const expectOk = ${sc.expect ? `!!(${sc.expect})` : 'true'};
+          const meta = ${SCENE_META};
           const out = (zoneLog || []).filter(b => b.x0 < -0.5 || b.x1 > W + 0.5)
             .map(b => (b.zone || '?') + ':' + String(b.text).slice(0, 34));
-          return JSON.stringify({ ok: true, out, w: W, h: H });
+          return JSON.stringify({ ok: true, expectOk, meta, out, w: W, h: H });
         } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 120) }); }
       })()`).then(JSON.parse).catch(e => ({ ok: false, err: e.message }));
       if (!res.ok) { failures.push(sc.name + '@' + vw + 'x' + vh + ': ' + res.err); continue; }
+      // AFT-021 P0: a named screenshot must PROVE its state — capturing the
+      // wrong screen is a gate failure, never a silently mislabeled artifact
+      if (!res.expectOk) {
+        failures.push(sc.name + '@' + vw + 'x' + vh + ': did not reach its named state (expected ' + sc.expect
+          + ' · actual state=' + (res.meta && res.meta.state) + ')');
+      }
       if (res.out.length) failures.push(sc.name + '@' + vw + 'x' + vh + ': labels out of viewport — ' + res.out.slice(0, 3).join(' · '));
+      if (res.meta) {
+        fs.writeFileSync(path.join(shotsDir, sc.name + '-' + vw + 'x' + vh + '.json'),
+          JSON.stringify({ scene: sc.name, viewport: vw + 'x' + vh, expect: sc.expect || null, expectOk: res.expectOk, ...res.meta }, null, 1));
+      }
       const shot = await cdp.send('Page.captureScreenshot', { format: 'png' }, sid).catch(() => null);
       if (shot) { fs.writeFileSync(path.join(shotsDir, sc.name + '-' + vw + 'x' + vh + '.png'), Buffer.from(shot.data, 'base64')); shots++; }
     }

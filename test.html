@@ -190,6 +190,13 @@ window.requestAnimationFrame = function () { return 0; };
   // ---- the tests ----------------------------------------------------------
   const TESTS = [];
   function test(name, fn) { TESTS.push({ name, fn }); }
+  // AFT-021 Phase 0 — expected-failure fixtures. A confirmed, not-yet-fixed
+  // defect gets its deterministic reproduction registered HERE: the runner
+  // INVERTS the result (assertion throws = defect reproduced = PASS; clean
+  // run = FAIL loudly, "promote this fixture to test()"), so a fix can never
+  // land silently — flipping xtest → test is part of the fixing phase, and a
+  // finished program carries ZERO xtest registrations.
+  function xtest(name, fn) { TESTS.push({ name: 'XFAIL · ' + name, fn, xfail: true }); }
 
   // 1) startup: scripts loaded, one resize + update + render, no errors, menu state
   test('startup', async () => {
@@ -5496,6 +5503,255 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
+  // ===========================================================================
+  // AFT-021 Phase 0 — deterministic reproductions of the playtest defects.
+  // Every fixture is written as the POST-FIX CONTRACT and registered as an
+  // expected failure (xtest): it throws today because the defect exists, and
+  // the phase that fixes it flips the registration to test(). A finished
+  // program carries zero xtest registrations.
+  // ===========================================================================
+  function visibleEnemyShapedActors() {
+    // "enemy-shaped": a non-dead, non-dormant actor still rendering with an
+    // enemy presentation (not stood down / not resolved to scenery) inside
+    // the viewport. Friendlies count too — a rescued ally must LEAVE.
+    return G.bricks.filter(b => !b.dead && !b.dormant && !b.stoodDown
+      && (b.bx + G.fx) > -50 && (b.bx + G.fx) < W + 50
+      && (b.by + G.fy) > -50 && (b.by + G.fy) < H + 50);
+  }
+
+  xtest('AFT-021 P0: visible clear — results never opens with enemy-shaped actors on screen', async () => {
+    SETTINGS.preset = 'normal';
+    DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-CLEAR' });
+    paused = false; G.freeze = 0;
+    await runFrames(30);
+    G.objective = null; // the fixture drives the completion verb itself
+    const live = G.bricks.filter(b => !b.dead && !b.crosser && !b.friendly && !b.barrier);
+    assert(live.length > 5, 'fixture needs a populated wave (got ' + live.length + ')');
+    live.slice(5).forEach(b => { b.dead = true; }); // silent removals: no drops, no kill hooks
+    disperseSwarm(); // the non-attrition completion verb — five visible actors flee
+    G.powerups.length = 0; G.reinforce = 0; G.dramaticT = 0;
+    for (let f = 0; f < 60 * 8 && G.state !== 'results'; f++) { paused = false; G.freeze = 0; update(1 / 60); }
+    assert(G.state === 'results', 'the dispersed wave never reached results');
+    const vis = visibleEnemyShapedActors();
+    assert(vis.length === 0, 'results opened with ' + vis.length + ' enemy-shaped actor(s) still on screen');
+    skipResults();
+    return 'the departure resolves before the results panel appears';
+  });
+
+  xtest('AFT-021 P0: clear-exempt terminals stand down before results', async () => {
+    DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-TERM' });
+    paused = false; G.freeze = 0;
+    await runFrames(30);
+    G.objective = null;
+    const live = G.bricks.filter(b => !b.dead && !b.crosser && !b.friendly && !b.barrier);
+    assert(live.length > 2, 'fixture needs a populated wave');
+    const terms = live.slice(0, 2);
+    terms.forEach(b => { b.gridTerminal = true; b.hp = 999; b.maxHp = 999; b.flight = null; b.dive = null; b.bare = true; });
+    live.slice(2).forEach(b => { b.dead = true; });
+    G.powerups.length = 0; G.reinforce = 0; G.dramaticT = 0;
+    for (let f = 0; f < 60 * 8 && G.state !== 'results'; f++) { paused = false; G.freeze = 0; update(1 / 60); }
+    assert(G.state === 'results', 'the terminal wave never reached results');
+    for (const tm of terms) {
+      assert(tm.dead || tm.stoodDown, 'a clear-exempt terminal still reads as a live enemy behind the results panel');
+    }
+    skipResults();
+    return 'neutral scenery loses its enemy presentation at the clear';
+  });
+
+  xtest('AFT-021 P0: no damage can land after the clear condition is met', async () => {
+    DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-DMG' });
+    paused = false; G.freeze = 0;
+    await runFrames(20);
+    G.objective = null; G.reinforce = 0; G.dramaticT = 0;
+    // a drop is still falling as the last enemy dies…
+    G.powerups.length = 0;
+    // a SCORE drop (never heal — a caught potion would mask the lost life)
+    G.powerups.push({ x: W / 2, y: Math.max(40, shipY() - 200), vy: 60, p: POWERS.star, rot: 0 });
+    for (const b of G.bricks) if (!b.dead) b.dead = true;
+    // …while a hostile volley and a warned beam are still live at the win moment
+    mouseX = W / 2; G.paddle.x = W / 2; lastMouseY = H - 30;
+    G.invuln = 0; G.shieldCharges = 0;
+    spawnEnemyShot({ x: W / 2, y: Math.max(60, shipY() - 260), vx: 0, vy: 420, type: 'normal', classKey: 'standard' });
+    G.columnStrikes.push({ x: W / 2, w: 70, warn: 0.4, strike: 0.5, color: '#ffffff' });
+    const lives0 = G.lives;
+    for (let f = 0; f < 60 * 6 && G.state !== 'results'; f++) { paused = false; G.freeze = 0; mouseX = W / 2; update(1 / 60); }
+    assert(G.lives === lives0, 'a post-clear hazard cost a life (' + lives0 + ' → ' + G.lives + ') — cause: ' + G.lastDamageCause);
+    if (G.state === 'results') {
+      assert(G.enemyShots.length === 0 && G.columnStrikes.length === 0,
+        'hostile projectiles/beams survived into results');
+      skipResults();
+    }
+    return 'the win moment dissolves every hostile projectile and beam';
+  });
+
+  xtest('AFT-021 P0: loseLife is inert outside live combat', async () => {
+    DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-LL' });
+    paused = false; G.freeze = 0;
+    await runFrames(10);
+    for (const st of ['results', 'upgrade', 'ceremony', 'gameover', 'ending', 'menu', 'dex', 'resolve']) {
+      G.state = st;
+      G.lives = 4;
+      loseLife('AFT-021 STATE PROBE (' + st + ')');
+      assert(G.lives === 4, 'loseLife reduced lives in state "' + st + '"');
+    }
+    return 'damage is impossible in every non-combat state';
+  });
+
+  xtest('AFT-021 P0: narrow stage title never shares the goal pill row', async () => {
+    forceViewport(390, 700);
+    DEV.launch({ level: 8, mode: 'junkie', diff: 'normal', seed: 'AFT021-HUD' });
+    paused = false; G.freeze = 0;
+    await runFrames(20);
+    if (!G.objective || G.objective.done || G.objective.failed) {
+      G.objective = { type: 'bells', name: 'RING THE THREE BELLS', zones: [W * 0.25, W * 0.5, W * 0.75],
+        zoneW: 90, dwell: 1.2, dwellT: 0, rung: 0, count: 3, progress: 0 };
+    }
+    const oldZ = ZONE_DEBUG;
+    ZONE_DEBUG = true;
+    try {
+      render();
+      const pillY0 = SAFE_T + 44, pillY1 = SAFE_T + 70;
+      const title = (zoneLog || []).find(b => b.zone === 'topHud' && b.y > 40 && b.y < 60);
+      if (title) {
+        const t0 = title.y - title.size * 0.75, t1 = title.y + title.size * 0.75;
+        assert(t1 < pillY0 || t0 > pillY1,
+          'stage title (y ' + t0.toFixed(1) + '–' + t1.toFixed(1) + ' "' + title.text + '") overlaps the goal pill band (y ' + pillY0 + '–' + pillY1 + ')');
+      }
+      return 'the goal pill owns the second HUD row while a goal is live';
+    } finally { ZONE_DEBUG = oldZ; zoneLog = null; }
+  });
+
+  xtest('AFT-021 P0: multi-actor fights label one active target, not a pileup', async () => {
+    DEV.finale(2, 0, { mode: 'junkie', diff: 'normal', seed: 'AFT021-RELAY' });
+    paused = false; G.freeze = 0;
+    await runFrames(50);
+    const vows = G.bricks.filter(b => !b.dead && b.subBoss);
+    assert(vows.length >= 3, 'expected the three relay vows, got ' + vows.length);
+    render();
+    assert(actorLabelLog && actorLabelLog.length <= 1,
+      (actorLabelLog ? actorLabelLog.length : '?') + ' world-anchored actor labels drawn at once — expected only the active target');
+    return 'inactive actors read from the roster rail, not stacked nameplates';
+  });
+
+  xtest('AFT-021 P0: the trial notice finishes before live combat begins', async () => {
+    DEV.launch({ level: 5, mode: 'junkie', diff: 'hard', seed: 'AFT021-TRIAL' });
+    paused = false; G.freeze = 0;
+    // the contract (plan §Phase 2): trial/daily copy lives in a FROZEN
+    // pre-engage flow — a briefing hold, a serve, or a reveal — and retires
+    // before hostile simulation runs. It may never sit over live combat.
+    let overlap = 0;
+    for (let f = 0; f < 60 * 6; f++) {
+      paused = false; G.freeze = 0; update(1 / 60);
+      if (G.state === 'play' && !G.reveal && !(G.engageHold > 0)
+        && G.announce && G.announce.kind === 'trial') overlap++;
+    }
+    assert(overlap === 0, 'the trial card sat over unfrozen live combat for ' + overlap + ' frame(s)');
+    return 'trial copy finishes inside the pre-engage hold';
+  });
+
+  xtest('AFT-021 P0: a combat-safe viewport authority exists and holds', async () => {
+    assert(typeof combatSafeRect === 'function',
+      'combatSafeRect() does not exist — no combat-safe viewport authority yet');
+    forceViewport(667, 375);
+    DEV.launch({ level: 6, mode: 'junkie', diff: 'normal', seed: 'AFT021-SAFE' });
+    paused = false; G.freeze = 0;
+    await runFrames(30);
+    const R = combatSafeRect();
+    assert(R && (R.x1 - R.x0) > W * 0.5 && (R.y1 - R.y0) > 120,
+      'combat-safe rect degenerate: ' + JSON.stringify(R));
+    return 'the combat field is derived from HUD, insets and control geometry';
+  });
+
+  xtest('AFT-021 P0: player bolts ignore hostile/cinematic slows; charge and travel share the settings clock', async () => {
+    DEV.launch({ level: 5, mode: 'blaster', diff: 'normal', seed: 'AFT021-CLK' });
+    paused = false; G.freeze = 0;
+    await runFrames(10);
+    G.invuln = 99; G.lives = 20;
+    const clearFx = () => { G.fx_slow = null; G.starterChillT = 0; G.dramaticT = 0; SETTINGS.speed = 1; };
+    const boltStep = () => {
+      G.lasers.length = 0;
+      G.lasers.push({ x: 8, y: H * 0.55, basic: true });
+      const y0 = G.lasers[0].y;
+      paused = false; G.freeze = 0; G.invuln = 99; update(1 / 60);
+      const dy = G.lasers.length ? y0 - G.lasers[0].y : NaN;
+      G.lasers.length = 0;
+      return dy;
+    };
+    const chargeGain = () => {
+      chargeHeld = true; G.charge = 0; G.chargeFullT = 0; G.overheat = 0; G.heat = 0; G.chargeCD = 0;
+      paused = false; G.freeze = 0; G.invuln = 99; update(1 / 60);
+      const c = G.charge;
+      chargeHeld = false; G.charge = 0; G.chargeFullT = 0;
+      return c;
+    };
+    try {
+      clearFx();
+      const base = boltStep();
+      assert(Number.isFinite(base) && base > 0, 'bolt probe failed (dy=' + base + ')');
+      G.fx_slow = { t: 5, tier: 1 };
+      const slow = boltStep();
+      G.fx_slow = null;
+      G.starterChillT = 3;
+      const chill = boltStep();
+      G.starterChillT = 0;
+      G.dramaticT = 0.6;
+      const drama = boltStep();
+      G.dramaticT = 0;
+      assert(Math.abs(slow - base) < 0.01, 'Slow-Mo scaled the player bolt (' + slow.toFixed(2) + ' vs ' + base.toFixed(2) + 'px/frame)');
+      assert(Math.abs(chill - base) < 0.01, 'starter Chill scaled the player bolt (' + chill.toFixed(2) + ' vs ' + base.toFixed(2) + ')');
+      assert(Math.abs(drama - base) < 0.01, 'dramatic slow-mo scaled the player bolt (' + drama.toFixed(2) + ' vs ' + base.toFixed(2) + ')');
+      clearFx();
+      const g1 = chargeGain(), b1 = boltStep();
+      SETTINGS.speed = 0.6;
+      const g06 = chargeGain(), b06 = boltStep();
+      SETTINGS.speed = 1;
+      const r1 = g1 / b1, r06 = g06 / b06;
+      assert(Math.abs(r1 - r06) / r1 < 0.02,
+        'charge fill and bolt travel diverge under the speed setting (fill/travel ratio ' + r1.toFixed(4) + ' vs ' + r06.toFixed(4) + ')');
+      return 'one weapon clock: hostile and cinematic slows never touch it; the settings speed scales all of it';
+    } finally { clearFx(); chargeHeld = false; G.charge = 0; }
+  });
+
+  xtest('AFT-021 P0: equal touch holds reach equal charge at every frame rate', async () => {
+    DEV.launch({ level: 5, mode: 'blaster', diff: 'normal', seed: 'AFT021-HOLD' });
+    paused = false; G.freeze = 0;
+    await runFrames(5);
+    G.lives = 20;
+    const fullFromPress = (hz, hitchAtMs = -1) => {
+      inputClockOverride = 0;
+      touchFirePendingId = 77; touchFirePendingT = 0; chargeTouchId = null; chargeHeld = false;
+      G.charge = 0; G.chargeFullT = 0; G.overheat = 0; G.heat = 0; G.chargeCD = 0;
+      let t = 0;
+      for (let i = 0; i < hz * 3; i++) {
+        const dt = (hitchAtMs >= 0 && t >= hitchAtMs && t < hitchAtMs + 1) ? 0.15 : 1 / hz;
+        t += dt * 1000;
+        inputClockOverride = t;
+        paused = false; G.freeze = 0; G.invuln = 99;
+        update(dt);
+        if (G.charge >= 1) break;
+      }
+      chargeHeld = false; chargeTouchId = null; touchFirePendingId = null; G.charge = 0; G.chargeFullT = 0;
+      return t / 1000;
+    };
+    try {
+      // sub-threshold: no promotion, no charge
+      inputClockOverride = 0;
+      touchFirePendingId = 77; touchFirePendingT = 0; chargeTouchId = null; chargeHeld = false; G.charge = 0;
+      inputClockOverride = 120; paused = false; G.freeze = 0; update(1 / 60);
+      assert(!chargeHeld && G.charge === 0, 'a 120ms hold promoted to charge before the intent threshold');
+      touchFirePendingId = null;
+      const t60 = fullFromPress(60);
+      const t30 = fullFromPress(30);
+      const t120 = fullFromPress(120);
+      const tHitch = fullFromPress(60, 400);
+      assert(Math.abs(t60 - 1.10) <= 0.06,
+        'full charge from press took ' + t60.toFixed(2) + 's at 60Hz — the promoted hold must credit the intent window (target 1.10±0.05)');
+      assert(Math.abs(t30 - t120) <= 0.06, '30Hz vs 120Hz full-charge drift: ' + t30.toFixed(2) + 's vs ' + t120.toFixed(2) + 's');
+      assert(Math.abs(tHitch - t60) <= 0.17, 'a single 150ms frame hitch shifted full charge by ' + Math.abs(tHitch - t60).toFixed(2) + 's');
+      return 'touch and desktop share one charge arc measured from the press';
+    } finally { inputClockOverride = null; chargeHeld = false; chargeTouchId = null; touchFirePendingId = null; G.charge = 0; }
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();
@@ -5505,8 +5761,13 @@ window.requestAnimationFrame = function () { return 0; };
       let status = 'PASS', detail = '';
       try {
         detail = (await t.fn()) || '';
+        if (t.xfail) { // the defect no longer reproduces — the fix landed
+          status = 'FAIL';
+          detail = 'defect no longer reproduces — promote this fixture to test()' + (detail ? ' (' + detail + ')' : '');
+        }
       } catch (e) {
         if (e instanceof Skip) { status = 'SKIP'; detail = e.message; }
+        else if (t.xfail) { status = 'PASS'; detail = 'defect reproduced (expected failure): ' + (e.message || String(e)); }
         else { // keep the top of the stack — "undefined is not a function" alone is undebuggable
           status = 'FAIL';
           detail = (e.message || String(e)) +

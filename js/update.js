@@ -5077,7 +5077,7 @@ function update(dt) {
   if ((G.mode !== 'classic' || blasterArmed()) && G.state === 'play') {
     // A FIRE touch still down past the intent threshold promotes into a charge;
     // a quicker release is dispatched as one normal shot by input.js.
-    if (touchFirePendingId !== null && performance.now() - touchFirePendingT >= TOUCH_CHARGE_HOLD_MS) {
+    if (touchFirePendingId !== null && inputNow() - touchFirePendingT >= TOUCH_CHARGE_HOLD_MS) {
       chargeHeld = true; chargeTouchId = touchFirePendingId; touchFirePendingId = null;
     }
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {

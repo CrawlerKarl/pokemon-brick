@@ -62,6 +62,28 @@ const CHUNK_FRAMES = 2400; // 40 sim-seconds per evaluate round-trip
 
 const args = process.argv.slice(2);
 const QUICK = args.includes('--quick');
+// AFT-021 Phase 0 — report provenance. A run is labeled for WHAT it measures
+// (`--label old-campaign` | `--label redesigned` | any slug); the label names
+// the output files, the report TITLE, and the report's self-reference, so a
+// closeout matrix can never again ship calling itself the old-campaign
+// baseline while its numbers live in a differently-named JSON.
+const labelArg = args.find(a => a.startsWith('--label'));
+const LABEL = labelArg
+  ? (labelArg.includes('=') ? labelArg.split('=')[1] : args[args.indexOf(labelArg) + 1] || 'old-campaign')
+  : 'old-campaign';
+const LABEL_INFO = {
+  'old-campaign': { title: 'AFT-008 — OLD-CAMPAIGN BASELINE', md: 'AFT008_BASELINE_REPORT', json: 'aft008-old-campaign' },
+  'redesigned-campaign': { title: 'AFT-008 — REDESIGNED-CAMPAIGN CLOSEOUT MATRIX', md: 'AFT008_CLOSEOUT_REPORT', json: 'aft008-redesigned-campaign' },
+  'aft021': { title: 'AFT-021 — POST-REMEDIATION CAMPAIGN MATRIX', md: 'AFT021_MATRIX_REPORT', json: 'aft021-campaign' },
+};
+const LI = LABEL_INFO[LABEL] || {
+  title: 'CAMPAIGN MATRIX — ' + LABEL.toUpperCase(),
+  md: 'MATRIX_' + LABEL.toUpperCase().replace(/-/g, '_') + '_REPORT',
+  json: 'matrix-' + LABEL,
+};
+const REPORT_TITLE = LI.title;
+const JSON_BASENAME = LI.json + (QUICK ? '.quick' : '') + '.json';
+const MD_BASENAME = LI.md + (QUICK ? '.quick' : '') + '.md';
 
 // ── tiny static server (serve.js semantics — copied from run-suite.js) ─────
 function serveDir(root) {
@@ -619,12 +641,13 @@ function buildMarkdown(out) {
   const S = out.scenarios;
   const by = g => S.filter(s => s.group === g && s.report);
   const md = [];
-  md.push('# AFT-008 — OLD-CAMPAIGN BASELINE');
+  md.push('# ' + REPORT_TITLE);
   md.push('');
-  md.push('Generated ' + out.generated + ' at `' + out.gitHead.slice(0, 10) + '` by `npm run baseline`'
+  md.push('Generated ' + out.generated + ' at `' + out.gitHead.slice(0, 10) + '` by `npm run baseline'
+    + (out.label && out.label !== 'old-campaign' ? ' -- --label ' + out.label : '') + '`'
     + (out.quick ? ' (**--quick** — partial matrix)' : '') + '.');
   md.push('Deterministic fixtures: seeded `DEV.launch` + a state-derived autopilot stepping `update(1/60)`.');
-  md.push('Full per-scenario `DEV.report()` payloads: `docs/baselines/aft008-old-campaign.json`.');
+  md.push('Full per-scenario `DEV.report()` payloads: `docs/baselines/' + JSON_BASENAME + '`.');
   md.push('');
   md.push('Determinism check (same seed, same bot, DEX-isolated): **'
     + (out.determinism.pass ? 'PASS' : 'FAIL') + '** — '
@@ -936,6 +959,7 @@ async function main() {
     generated: new Date().toISOString(),
     gitHead,
     quick: QUICK,
+    label: LABEL,
     harness: {
       viewport: '1280x900@1', skin: 'aetherfall', chunkFrames: CHUNK_FRAMES,
       normalizations: [
@@ -949,10 +973,11 @@ async function main() {
     scenarios: results,
   };
   // --quick writes to its own files so iteration never clobbers the
-  // committed full-matrix fixtures
-  const jsonPath = path.join(OUT_DIR, QUICK ? 'aft008-old-campaign.quick.json' : 'aft008-old-campaign.json');
+  // committed full-matrix fixtures; --label routes every run to files that
+  // carry its own name (AFT-021 P0 — reports can no longer misattribute)
+  const jsonPath = path.join(OUT_DIR, JSON_BASENAME);
   fs.writeFileSync(jsonPath, JSON.stringify(out, null, 1));
-  const mdPath = path.join(OUT_DIR, QUICK ? 'AFT008_BASELINE_REPORT.quick.md' : 'AFT008_BASELINE_REPORT.md');
+  const mdPath = path.join(OUT_DIR, MD_BASENAME);
   fs.writeFileSync(mdPath, buildMarkdown(out));
 
   const failed = results.filter(r => !r.report);

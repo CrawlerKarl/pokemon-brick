@@ -5,6 +5,42 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24i — AFT-021 Phase 0: every playtest defect locked in a failing fixture
+
+The remediation program opens by making each confirmed defect REPRODUCIBLE
+before anything changes behavior:
+
+- **`xtest()` — the expected-failure group** (test.html). Ten fixtures are
+  written as their POST-FIX contracts and inverted by the runner: an
+  assertion throw = the defect reproduced = PASS; a clean run FAILS loudly
+  with "promote this fixture to test()". A fix physically cannot land
+  without flipping its fixture into a permanent invariant, and a finished
+  program carries zero xtest registrations. The ten: visible-clear,
+  clear-exempt terminals, post-clear hazard damage, loseLife-outside-combat,
+  narrow title/goal-pill overlap, multi-actor label pileups, trial copy over
+  live combat, the missing combat-safe viewport authority, hostile/cinematic
+  slows leaking into player bolts, and touch-hold charge timing parity
+  (30/60/120 Hz + a 150 ms hitch). Suite 103 → 113.
+- **Screenshot names can no longer lie** (tools/run-suite.js): every mobile
+  scene now carries an `expect` asserted in-page right before capture (the
+  old `results` scene had been screenshotting a serve announcement — twice
+  wrong: it never reached results, and when driven there it captured the
+  0-alpha first frame). Each capture writes a metadata sidecar
+  (`.gate-shots/<scene>-<viewport>.json`: state, level, mode, objective,
+  finale, announce, live actors, overlays, control geometry) so human
+  review of the artifacts can trust what each one shows.
+- **Report provenance** (tools/run-baseline.js): `--label` names the run's
+  output files, report title, and self-reference; the committed closeout
+  report's header is corrected (it measured the REDESIGNED campaign while
+  titling itself the old-campaign baseline and linking the wrong JSON).
+- **Fixture plumbing, zero behavior change**: `inputNow()` (input.js) is the
+  one wall-clock source for touch tap-vs-hold intent, mockable by the suite;
+  `actorLabelLog` (render.js) records world-anchored actor nameplates per
+  frame under the suite/?zones so the label-roster contract is checkable.
+
+Gate green end to end (suite 113/113 with all ten defects reproducing,
+38/38 scenes proving their named states).
+
 ## 2026-07-24h — owner reports: reveal portraits + weapon art never swap in late
 
 Two real-device reports ("the first trio's preview changed color after a

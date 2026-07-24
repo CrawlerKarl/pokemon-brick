@@ -61,6 +61,11 @@ let chargeHeld = false, chargeTouchId = null; // charge a big shot (right-click 
 // threshold prevents ordinary taps from becoming tiny accidental charge shots.
 let touchFirePendingId = null, touchFirePendingT = 0;
 const TOUCH_CHARGE_HOLD_MS = 220;
+// AFT-021: the INPUT CLOCK — the one wall-time source for tap-vs-hold intent.
+// Mockable (inputClockOverride) so the suite can drive deterministic hold
+// timings at any simulated frame rate; identical to performance.now() in play.
+let inputClockOverride = null;
+function inputNow() { return inputClockOverride != null ? inputClockOverride : performance.now(); }
 const uiTouchIds = new Set(); // touches claimed by on-screen buttons
 // Pin the steering target to the player's current position whenever a UI pad
 // claims a touch. This also neutralizes any pointer replay that arrived just
@@ -163,7 +168,7 @@ window.addEventListener('touchstart', e => {
           // tap from a hold. A second finger cannot steal an active FIRE touch.
           if (touchFirePendingId === null && chargeTouchId === null) {
             touchFirePendingId = t.identifier;
-            touchFirePendingT = performance.now();
+            touchFirePendingT = inputNow();
           }
         } else {
           // CLASSIC (and serve launch) keep their immediate press/held-fire

@@ -1,8 +1,13 @@
-# AFT-008 — OLD-CAMPAIGN BASELINE
+# AFT-008 — REDESIGNED-CAMPAIGN CLOSEOUT MATRIX
 
 Generated 2026-07-24T13:24:15.574Z at `7e7273f096` by `npm run baseline`.
 Deterministic fixtures: seeded `DEV.launch` + a state-derived autopilot stepping `update(1/60)`.
-Full per-scenario `DEV.report()` payloads: `docs/baselines/aft008-old-campaign.json`.
+Full per-scenario `DEV.report()` payloads: `docs/baselines/aft008-redesigned-campaign.json`.
+
+> Provenance corrected 2026-07-24 (AFT-021 Phase 0): this file measures the
+> REDESIGNED campaign (post-AFT-020 finale formats + Section-9 corrections) —
+> the generator used to stamp every run with the old-campaign title and JSON
+> link. `tools/run-baseline.js` now takes `--label` and names its own output.
 
 Determinism check (same seed, same bot, DEX-isolated): **PASS** — {"kills":37,"playTime":24,"dmgNormal":50.3} vs {"kills":37,"playTime":24,"dmgNormal":50.3}
 

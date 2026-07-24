@@ -46,8 +46,23 @@
 > real-phone art-pop reports fixed same day — reveal portraits + weapon
 > sprites are WARMED ahead of first draw (`warmRevealArt`/`warmSetupArt`)
 > and each reveal LATCHES its art source at 0.35s so nothing swaps
-> mid-scene. Next in line: **owner playtest of the redesigned campaign** →
-> AFT-009 (constellation) → AFT-019 → AFT-010 → AFT-011 → AFT-012.
+> mid-scene. The subsequent owner playtest is now complete; its findings are
+> the AFT-021 program immediately below.
+>
+> **POST-AFT-020 PLAYTEST AUDIT (2026-07-24): AFT-021 IS NOW THE NEXT
+> EXECUTION PROGRAM.** Manual phone play, source tracing, generated-scene
+> review, and the redesigned baseline confirmed that stages can resolve while
+> neutralized/departing actors still look alive, post-clear hazards are not
+> comprehensively state-gated, narrow HUD surfaces overlap live objectives
+> and actors, touch controls cover critical combat space, and player
+> projectiles use hidden slow-motion multipliers while charge fill uses a
+> different clock. The balance matrix also has 8–27 second late encounters,
+> 220–405 second early mode outliers, and a roughly 3.8× path-duration spread.
+> The 103/103 gate still passes because it checks fitted-label containment,
+> not overlay overlap or actor occlusion. Execute
+> `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md` Phase 0 through
+> Phase 9 before AFT-009. The plan includes its own autonomous execution
+> contract and balance reread.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -55,6 +70,9 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
 ## Read these first
 
+- `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md` — **AFT-021,
+  the current execution authority: post-clear correctness, combat
+  readability, charge/input timing, and campaign rebalance.**
 - `AETHERFALL_IMPROVEMENT_BACKLOG.md` — **the backlog. Start here.**
 - `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md` — **the new AFT-020
   execution plan: nine finale formats plus campaign-wide variety work.**
@@ -254,7 +272,7 @@ reopens it.
   closeout run was green in 28s: wave 1.01ms average; boss 0.87ms average /
   1.3ms P95; boss FULL 1.4 gradients + 3.9 blur writes/frame.
 
-### Then: owner playtest first, then the P1 track
+### Then: AFT-021 stabilization, then the P1 track
 
 The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 2026-07-24a–h; both sites deployed and curl-verified). The live sequence:
@@ -264,7 +282,7 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 ✅ AFT-008 BASELINE + SCHEMA LOCK (docs/baselines/, npm run baseline)
 ✅ AFT-020 NINE REALM FINALES + CAMPAIGN VARIETY (all 10 phases)
 ✅ AFT-008 REDESIGNED-CAMPAIGN CLOSEOUT (Section-9 corrections + matrix)
-→ OWNER PLAYTEST of the redesigned campaign (real phone) — the gating input
+→ AFT-021 POST-AFT-020 UX STABILIZATION + BALANCE REREAD
 → AFT-009 constellation redesign
 → AFT-019 first-session phone pass
 → AFT-010 accessibility
@@ -272,12 +290,12 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 → AFT-012 visual pass
 ```
 
-1. **First: collect the owner's hands-on read.** Every finale, objective,
-   title, draft, and Section-9 number was tuned from deterministic autopilot
-   evidence — the closeout matrix has a full-campaign clear with 0 KOs, but
-   only the owner can judge feel. Two art-pop reports already came in and
-   were fixed same day (round 24h); expect more small rounds like it.
-2. **AFT-009 (constellation redesign)** is next in the backlog's P1 order —
+1. **Execute AFT-021 autonomously from Phase 0 through Phase 9.** The owner
+   playtest has now supplied the gating input. The executable plan is
+   `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its P0 work
+   preempts feature expansion.
+2. **AFT-009 (constellation redesign)** follows once AFT-021's release
+   definition is satisfied —
    its acceptance criteria in the backlog are still the spec.
 3. **Cheap follow-ups spotted during the closeout** (noted, not started):
    - the ground vessel clears ~27% faster than the median vessel (matrix

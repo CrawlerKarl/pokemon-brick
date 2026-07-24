@@ -1053,9 +1053,11 @@ function drawBossMon(br, x, y) {
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = lastStand ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-  if (G.revealDock !== br.poke.id) // AFT-002: a docked boss reads from the HUD lane
+  if (G.revealDock !== br.poke.id) { // AFT-002: a docked boss reads from the HUD lane
     fitLabel((lastStand ? '💀 ' : ph === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (ph === 1 ? ' ★' : ''),
       x, y - hh - 26, { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(160, br.w * 1.5)), zone: 'field' });
+    if (actorLabelLog) actorLabelLog.push({ x, y: y - hh - 26, w: Math.max(160, br.w * 1.5), name: br.poke.n, kind: 'boss' });
+  }
   ctx.shadowBlur = 0;
   const bw2 = Math.max(br.w * 0.85, 150), frac = Math.max(0, br.hp / br.maxHp);
   roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
@@ -1364,6 +1366,7 @@ function drawBricks() {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = '#e8eef6';
         ctx.fillText((br.poke.n || SKIN.names[br.poke.id] || 'SENTINEL').toUpperCase(), x, sby - 8, sbw);
+        if (actorLabelLog) actorLabelLog.push({ x, y: sby - 8, w: sbw, name: br.poke.n, kind: 'subBoss' });
         roundRect(x - sbw / 2, sby, sbw, 6, 3);
         ctx.fillStyle = 'rgba(5,8,20,0.72)'; ctx.fill();
         if (frac > 0) {
@@ -5747,6 +5750,7 @@ function fitText(text, y, baseSize, weight, color, maxW, family = 'Orbitron, san
 // (glyph placement, the dev overlay, the suite's containment assertions).
 let ZONE_DEBUG = /[?&]zones\b/.test(location.search);
 let zoneLog = null; // per-frame label bounds, collected only while debugging
+let actorLabelLog = null; // AFT-021: local actor nameplates this frame (suite/debug only)
 function uiZones() {
   const hudH = 56 + SAFE_T;
   const bannerH = 100; // objective banner / region rail / element rows lane
@@ -9722,6 +9726,10 @@ function drawCursor() {
 
 function render() {
   zoneLog = ZONE_DEBUG ? [] : null; // AFT-001 dev overlay collection
+  // AFT-021: world-anchored actor nameplates drawn this frame — the suite's
+  // label-roster contract reads it (at most ONE local label once Phase 3
+  // lands). Collected under the suite and the ?zones overlay; null in play.
+  actorLabelLog = (ZONE_DEBUG || (typeof window !== 'undefined' && window.__SUITE)) ? [] : null;
   ctx.save();
   if (G.dramaticT > 0) { // last-brick slow-mo zoom
     const z = 1 + 0.035 * Math.sin(Math.min(1, (0.9 - G.dramaticT) / 0.25) * Math.PI / 2);

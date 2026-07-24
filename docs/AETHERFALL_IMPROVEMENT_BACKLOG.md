@@ -15,14 +15,15 @@
 > | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
 >
 > **The live plan is the P1 track**: ~~AFT-007 (ORBITAL RELIC)~~ **shipped
-> 2026-07-23e** → **AFT-008 baseline (NEXT)** → **AFT-020 realm finales +
-> campaign variety** → AFT-008 redesigned-campaign closeout → AFT-009
-> (constellation) → AFT-019 → AFT-010 → AFT-011 → AFT-012. The executable
-> AFT-020 spec is `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md`.
+> 2026-07-23e** → ~~AFT-008 baseline + AFT-020 realm finales + closeout~~
+> **shipped 2026-07-24** → **AFT-021 post-ship UX stabilization and balance
+> reread (NEXT)** → AFT-009 (constellation) → AFT-019 → AFT-010 → AFT-011
+> → AFT-012. The executable AFT-021 spec is
+> `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`.
 
 
-Last reviewed: 2026-07-23 session closeout (runtime through `ed39d79`;
-review started from documentation commit `ee0b250`)
+Last reviewed: 2026-07-24 post-AFT-020 UX playtest audit (workspace head
+`6cbe099`; AFT-021 plan added)
 
 This is the current product backlog for the standalone Aetherfall build. It
 supersedes unchecked items in `FULL_GAME_ROADMAP.md` when the two disagree.
@@ -124,6 +125,7 @@ items have since shipped.
 | AFT-007 | P1 | ✅ Shipped 07-23e | ORBITAL RELIC redesign of the `bond` path (same keys, new identity) | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-003, AFT-005A |
 | AFT-008 | P1 | ✅ Shipped 07-24 (baseline + closeout) | Full-campaign balance matrix and regression budgets | Old-campaign baseline captured, Section-9 corrections landed and measured against the redesigned campaign | L | AFT-005A/B, AFT-007 |
 | AFT-020 | P1 | ✅ Shipped 07-24 | Realm finales and campaign variety program | All nine authored finale formats live, stage titles, non-attrition identities, mastery drafts, Preparation, crests, Spiral remixes | XL | AFT-008 baseline |
+| AFT-021 | P1, P0 defects first | ⬜ Ready | Post-AFT-020 UX stabilization and balance reread | Makes stage wins unambiguous, keeps UI off live combat, unifies charge timing, and restores healthy mode/path/progression pacing | XL | AFT-020, AFT-008 closeout |
 | AFT-009 | P1 | ⬜ Open | Mobile-first constellation redesign and build identity | Makes the updated web understandable and touch-friendly | L | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
@@ -529,6 +531,20 @@ Detailed execution spec:
 - Prove Belltower's continuous relay and the Crucible's simultaneous raid
   before rolling the framework across all nine realms.
 
+### AFT-021 — Post-AFT-020 UX stabilization and balance reread
+
+The owner playtest after AFT-020 found defects that the existing green gate
+does not cover: clear-exempt actors can remain visibly alive as results begin,
+post-clear hazards are not comprehensively state-gated, narrow HUD and touch
+surfaces cover live actors, and charge fill/projectile motion use inconsistent
+time domains. The redesigned balance matrix also exposes severe early/late,
+mode, and path-duration outliers.
+
+The complete executable program, evidence, quantitative targets, permanent
+test additions, and autonomous handoff contract live in
+`AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`. Execute its Phase 0
+through Phase 9 before AFT-009.
+
 ### AFT-009 — Mobile constellation and build identity
 
 - Keep the redesigned six-path web legible without requiring precise pinch
@@ -665,10 +681,10 @@ tuning one stage at a time.
 ### Shipping and replayability
 
 AFT-008 baseline → AFT-020 vertical slices and rollout → AFT-008 closeout →
-AFT-009 → AFT-019 → AFT-010 (stage 1, then stage 2) → AFT-011 → AFT-012 →
-AFT-013 → AFT-015, with AFT-014 after the redesigned campaign matrix is
-healthy. Do AFT-016 incrementally at subsystem boundaries, not as a rewrite
-that blocks player-facing work.
+AFT-021 stabilization → AFT-009 → AFT-019 → AFT-010 (stage 1, then stage 2)
+→ AFT-011 → AFT-012 → AFT-013 → AFT-015, with AFT-014 after the redesigned
+campaign matrix is healthy. Do AFT-016 incrementally at subsystem boundaries,
+not as a rewrite that blocks player-facing work.
 
 ## Guardrails
 
