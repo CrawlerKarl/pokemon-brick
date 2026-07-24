@@ -15,9 +15,10 @@
 > | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
 >
 > **The live plan is the P1 track**: ~~AFT-007 (ORBITAL RELIC)~~ **shipped
-> 2026-07-23e** → AFT-008 (balance matrix — NEXT; the ledger now carries a
-> `relic` damage family to read) → AFT-009 (constellation) → AFT-019 →
-> AFT-010 → AFT-011 → AFT-012. Acceptance criteria below stay authoritative.
+> 2026-07-23e** → **AFT-008 baseline (NEXT)** → **AFT-020 realm finales +
+> campaign variety** → AFT-008 redesigned-campaign closeout → AFT-009
+> (constellation) → AFT-019 → AFT-010 → AFT-011 → AFT-012. The executable
+> AFT-020 spec is `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md`.
 
 
 Last reviewed: 2026-07-23 session closeout (runtime through `ed39d79`;
@@ -39,6 +40,9 @@ items have since shipped.
   on the chosen hull and becomes spectacular through Forms II and III.
 - Prefer clearer presentation, safer progression, and measurable balance over
   adding more raw content.
+- Make the nine realms structurally distinct adventures. Aetherfall's public
+  campaign must not repeat the same opening group → Sovereign → Mythic ladder
+  or the same five encounter beats across all 27 stages.
 - Keep combat readable. New art and spectacle must never cover live threats,
   the player vessel, touch controls, or objective state.
 - **The engine is shared.** Skins differ in words and art, never in rules.
@@ -118,7 +122,8 @@ items have since shipped.
 | AFT-005B | P0 | ✅ Shipped | Mobile visual-regression scenes and fitted-label assertions | Makes layout, terminology, and presentation regressions catchable before release | M–L | AFT-001–004, AFT-005A |
 | AFT-006 | P0 | ✅ Shipped | Save export/import, versioned backup, and storage persistence | Protects a long 27-stage run against Safari storage eviction and corruption | M | — |
 | AFT-007 | P1 | ✅ Shipped 07-23e | ORBITAL RELIC redesign of the `bond` path (same keys, new identity) | Adds a genuinely different, mobile-friendly weapon build without a seventh spoke | L–XL | AFT-003, AFT-005A |
-| AFT-008 | P1 | ⬜ Next | Full-campaign balance matrix and regression budgets | Finds difficulty spikes, dead builds, and unfair mobile encounters | L | AFT-005A/B, AFT-007 |
+| AFT-008 | P1 | ⬜ Next · split around AFT-020 | Full-campaign balance matrix and regression budgets | Establishes the old-campaign baseline, then verifies the redesigned campaign | L | AFT-005A/B, AFT-007 |
+| AFT-020 | P1 | ⬜ Planned | Realm finales and campaign variety program | Gives every realm a distinct finale, stage identity, objective rhythm, and reward presentation | XL | AFT-008 baseline |
 | AFT-009 | P1 | ⬜ Open | Mobile-first constellation redesign and build identity | Makes the updated web understandable and touch-friendly | L | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
@@ -462,6 +467,10 @@ This is still an upgrade-web redesign, not four isolated cards:
 
 ### AFT-008 — Campaign balance matrix
 
+- Deliver this in two halves: capture and lock the current baseline first;
+  complete the tuning/regression matrix after AFT-020 replaces the repeated
+  finale and stage structures. Do not exhaustively tune content scheduled for
+  replacement.
 - Use seeded AI runs and recorded human runs across three modes, four
   difficulties, all 27 stages, LIGHT/DARK, representative pilots, and at least
   eight build archetypes including the new weapon.
@@ -469,10 +478,56 @@ This is still an upgrade-web redesign, not four isolated cards:
   share, Surge frequency, heat lockout, upgrade pick rate, boss phase time,
   and mobile frame time. The `stats*` ledger machinery already records
   per-wave combat data — build on it rather than adding a parallel recorder.
+- Separate encounter work, threat, and recovery. Record Sovereign-equivalent
+  work, meaningful-progress/downtime, damage after each multiplier category,
+  shield sources/spend/regrowth, healing and maximum-life growth, Surge
+  sources, renewable-enemy proc gain, and power-up distribution after mode
+  remapping.
+- Include explicit probes for all six paths, LIGHT/DARK, representative
+  vessels and builds, Stormbinder/electric, AEGIS, the forever-stacking
+  satellites, at least four fusions, both apexes, and One Life.
 - Establish regression budgets for difficulty spikes, dead upgrades, dominant
   picks, unavoidable damage, and bosses that die before demonstrating their
   mechanics.
+- Resolve or reject with evidence the high-risk findings in Section 9 of the
+  AFT-020 spec: inherited electric over-power, AEGIS's unbounded realm-life
+  growth and long-fight shield regeneration, multiplicative boss damage,
+  renewable-add farming, drop-family flooding, infinite Time Spiral scaling,
+  and One Life's stacked HP/fire-rate/one-hit penalties.
 - Keep deterministic fixtures for every issue fixed through balance changes.
+
+### AFT-020 — Realm finales and campaign variety
+
+Detailed execution spec:
+`AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md`.
+
+- Replace the repeated opening group → Sovereign → Mythic ladder with nine
+  finale formats. Greenspell is the only traditional ladder; the remaining
+  formats are relay, siege, dual timeline, branching circuit, rescue hunt,
+  ritual, simultaneous raid, and chase/tag-team.
+- Give every Sovereign a one-sentence arena rule using teach → tell → commit →
+  resolve → recover. Retire the universal low-health charge channel as the
+  default answer.
+- Keep every existing boss asset, but use Mythics as codas, invaders, allies,
+  saboteurs, rescues, or linked antagonists where appropriate.
+- Expand the non-boss director beyond its five current beats, give every realm
+  one non-attrition stage identity, author realm conditions, and add distinct
+  display titles for all 27 stages.
+- Keep one permanent upgrade per ordinary clear. Finale mastery improves offer
+  visibility and reroll control, not permanent rank count; the Marches Rift
+  stays the one choose-two exception.
+- Budget finales by Sovereign-equivalent work rather than copying the current
+  2.67–3.08-equivalent ladder HP into objective-heavy formats. Multi-actor
+  fights share work and threat budgets; at least 70% of active finale time
+  permits damage, objective progress, counterplay, or a meaningful choice.
+- Treat transition time as non-farmable: reveals, route choices, recovery,
+  renewable adds, allied actors, and codas cannot passively manufacture
+  shields, healing, Surge, drops, or fusion resources.
+- Preserve the shared engine, both skins, Breaker's no-fire contract, saves,
+  affinities, Rift, ending, Time Spiral, deterministic Trial launches, mobile
+  accessibility, and the current performance budgets.
+- Prove Belltower's continuous relay and the Crucible's simultaneous raid
+  before rolling the framework across all nine realms.
 
 ### AFT-009 — Mobile constellation and build identity
 
@@ -609,10 +664,11 @@ tuning one stage at a time.
 
 ### Shipping and replayability
 
-AFT-019 → AFT-010 (stage 1, then stage 2) → AFT-011 → AFT-012 → AFT-013 →
-AFT-015, with AFT-014 after the campaign matrix is healthy. Do AFT-016
-incrementally at subsystem boundaries, not as a rewrite that blocks
-player-facing work.
+AFT-008 baseline → AFT-020 vertical slices and rollout → AFT-008 closeout →
+AFT-009 → AFT-019 → AFT-010 (stage 1, then stage 2) → AFT-011 → AFT-012 →
+AFT-013 → AFT-015, with AFT-014 after the redesigned campaign matrix is
+healthy. Do AFT-016 incrementally at subsystem boundaries, not as a rewrite
+that blocks player-facing work.
 
 ## Guardrails
 

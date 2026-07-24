@@ -21,11 +21,18 @@
 > profiler round. The deeper rungs (3+) stay unimplemented by design; the
 > storm ledger keeps accumulating the baseline every gate run.
 >
-> **`AETHERFALL_IMPROVEMENT_BACKLOG.md` remains the scope authority** (17
-> ranked items + acceptance criteria) and SUPERSEDES `FULL_GAME_ROADMAP.md`
+> **`AETHERFALL_IMPROVEMENT_BACKLOG.md` remains the scope authority** (now
+> including AFT-020 + acceptance criteria) and SUPERSEDES `FULL_GAME_ROADMAP.md`
 > where they disagree — but read its status banner: its P0 list is DONE, and
 > some of its status lines describe the pre-P0 world. Its **P1 ranking and
 > acceptance criteria are still live and authoritative.**
+>
+> **NEW OWNER DIRECTION — AFT-020:** replace the repeated realm-finale ladder
+> and audit repetition across the whole campaign. The handoff-ready executable
+> design is `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md`, including its
+> Section 9 balance framework and recommended corrections. Sequence it as:
+> **AFT-008 baseline → AFT-020 → AFT-008 closeout**, then resume the remaining
+> P1 track. Do not fully tune the old finale structure before replacing it.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -34,6 +41,8 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 ## Read these first
 
 - `AETHERFALL_IMPROVEMENT_BACKLOG.md` — **the backlog. Start here.**
+- `AETHERFALL_REALM_FINALE_AND_VARIETY_PLAN.md` — **the new AFT-020
+  execution plan: nine finale formats plus campaign-wide variety work.**
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
@@ -221,17 +230,86 @@ reopens it.
   closeout run was green in 28s: wave 1.01ms average; boss 0.87ms average /
   1.3ms P95; boss FULL 1.4 gradients + 3.9 blur writes/frame.
 
-### Then: the P1 track
+### Then: AFT-008 baseline → AFT-020 → AFT-008 closeout
 
-The backlog's P1 sequence, in its own order (**AFT-007 SHIPPED 2026-07-23e**
-— the bond path flies the ORBITAL RELIC now, all keys unchanged, suite 86):
+The owner has explicitly prioritized the new realm-finale and campaign-variety
+plan. The live sequence is (**AFT-007 SHIPPED 2026-07-23e** — the bond path
+flies the ORBITAL RELIC now, all keys unchanged, suite 86):
 
 ```
-✅ AFT-007 ORBITAL RELIC  →  AFT-008 balance matrix (NEXT — the ledger has a
-   `relic` damage family to read)  →  AFT-009 constellation redesign
-   →  AFT-019 first-session phone pass  →  AFT-010 accessibility
-   →  AFT-011 loading/WebP  →  AFT-012 visual pass
+✅ AFT-007 ORBITAL RELIC
+→ AFT-008 BASELINE (NEXT — measurement/schema only)
+→ AFT-020 REALM FINALES + CAMPAIGN VARIETY
+→ AFT-008 REDESIGNED-CAMPAIGN CLOSEOUT
+→ AFT-009 constellation redesign
+→ AFT-019 first-session phone pass
+→ AFT-010 accessibility
+→ AFT-011 loading/WebP
+→ AFT-012 visual pass
 ```
+
+**The next session starts with Phase 0 of the AFT-020 plan, not with boss
+implementation.**
+
+1. Inventory what the existing stats ledger already records for all 27 stages.
+2. Add only the missing baseline fields needed to compare the old and new
+   campaigns: finale format/beat, boss actions shown and countered, objective
+   result, director beats fired, modifier/condition, role mix, reward mastery,
+   stage duration, Sovereign-equivalent work, meaningful-progress/downtime,
+   damage by multiplier category, heat lockout, shield/heal/life sources,
+   Surge sources, renewable-enemy proc gain, and remapped drop distribution.
+3. Produce a deterministic baseline report across representative modes,
+   difficulties, affinities, vessels, and builds.
+4. Lock the data shapes for `FINALE_FORMATS`, `SKIN.finaleProfiles`,
+   `G.finale`, counter results, `SKIN.stageTitles`, and work/threat/recovery
+   budgets.
+5. Produce evidence-backed recommendations for the six highest-risk balance
+   areas listed below.
+6. Hand off a concrete Greenspell migration checklist. Do not leave nine
+   partially implemented finales.
+
+The creative decisions are already made in the plan:
+
+- Greenspell is the sole classic Heralds → Sovereign → Mythic ladder.
+- Belltower is a continuous gale relay; Drowned is a siege; Foundry is a
+  fractured dual timeline; Chrome is a branching circuit; Spire is a rescue
+  hunt; Atolls is a ritual; Crucible is a simultaneous raid; Cradle is a
+  chase/tag-team.
+- Mythics take different roles instead of always being the last health bar.
+- every realm gains one non-attrition regular-stage identity;
+- all 27 stages gain realm-specific display titles;
+- finale mastery improves draft choice, not permanent rank count;
+- no new progression currency, no seventh path, and no enemy fire in Breaker.
+
+### Balance reread — priority probes
+
+The plan's second pass found six areas that could distort every new encounter.
+Measure them before tuning the relay/raid slices, then resolve them during the
+AFT-008 closeout:
+
+1. **Stormbinder/electric:** the shared line currently reaches 2.2× damage,
+   much faster cadence, chains, 75% starting Surge, and passive Surge. The
+   plan recommends normalizing it globally as a fast chain/tempo vessel.
+2. **AEGIS:** SUPER SHIELD currently raises life on acquisition and every
+   later realm while regenerating every ten seconds. The plan recommends +1
+   maximum once, then restore one missing life on realm clear; regeneration
+   uses active-threat time and a per-stage ceiling.
+3. **Damage stacking:** vessel, path, Aspect, mastery, Surge, fusion/apex, and
+   counter multipliers can compound. Instrument each category and apply
+   within-category addition or diminishing returns before using a hidden cap.
+4. **Forever stacks and renewable adds:** Time Spiral stacks and objective
+   reinforcements can drive heat, damage, shields, drops, or Surge without a
+   ceiling. Preserve stored stacks, but diminish their effective value and
+   exclude non-budgeted renewable targets from combat-economy procs.
+5. **One Life:** one HP currently also carries 1.65× boss HP and 2.35× shot
+   rate. Its consequence is already the difficulty identity; test lower
+   HP/fire brackets rather than triple-stacking punishment.
+6. **Mode/drop normalization:** objective hit counts must reflect ball versus
+   volley contact rates, and the Aspect-to-power remap must not let one power
+   family dominate an act.
+
+Do not change those numbers during Phase 0. Capture the old behavior first,
+save the fixtures, then make one explained change at a time.
 
 Notes so you don't redo finished work:
 
