@@ -391,6 +391,28 @@ function spawnBossFire(br, bx, by, d, tg) {
     spawnBossAngles(br, bx, by, d, { count: 5, spread: 0.24, classKey: 'standard' });
     return;
   }
+  // THE FIRST DREAM (realm-1 coda): the mythic MIRRORS the player's weapon
+  // — a slow, readable dream version of whatever you've been firing. A
+  // recent charge is answered by one heavy dream orb; sustained fire by a
+  // gentle three-bolt fan in your own spread. Abilities/channels untouched.
+  if (br.mythic && G.finale && G.finale.format === 'ladder' && G.finale.realm === 0 && !br.secretBoss) {
+    const base = Math.atan2(shipY() - by, G.paddle.x - bx);
+    const sp = (170 + d.lv * 8) * d.shotSpeed * 0.8;
+    const kind = projectileKindFor(id, br.poke.t);
+    const vid = nextEnemyVolley();
+    const charged = (G.time - (G.lastChargeT ?? -99)) < 4 && G.lastChargeT != null;
+    if (charged) {
+      spawnEnemyShot({ x: bx, y: by, vx: Math.cos(base) * sp * 0.72, vy: Math.sin(base) * sp * 0.72,
+        boss: true, type: br.poke.t, species: id, kind, classKey: 'heavy', volleyId: vid });
+    } else {
+      for (let i = -1; i <= 1; i++) {
+        const a = base + i * 0.2;
+        spawnEnemyShot({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          boss: true, type: br.poke.t, species: id, kind, classKey: 'micro', volleyId: vid });
+      }
+    }
+    return;
+  }
   switch (id) {
     case 150: // Mewtwo: prisms frame one growing Psystrike core
       spawnBossAngles(br, bx, by, d, phase >= 2
@@ -644,7 +666,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if ((br.openT || 0) > 0) {
       if (!br.openHit) { br.openHit = true; dmg *= 1.2; } // window's first strike rewarded
     } else {
-      dmg *= 0.55; // guarded — punish mindless spray
+      dmg *= wardGuardMul(); // guarded — the realm-1 ward WEAKENS as Heralds fall
       if (!G.sentinelGuardTaught) {
         G.sentinelGuardTaught = true; // once per wave — announce STRIP, never a center card
         setAnnounce('alert', '#80d8ff', 'SENTINELS GUARD', 'STRIKE AFTER THEY ATTACK!', 2.6);
@@ -843,6 +865,11 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (br.raidVine && raidState() && !G.bricks.some(b => b.raidVine && !b.dead && b !== br)) raidFreeBound();
     // SIEGE: a fallen Colossus is the player's ORDER choice landing
     if (br.siegeColossus && siegeState()) siegeColossusDown(br);
+    // THE TRIUNE WARD: a fallen Herald leaves a PERMANENT gap
+    if (br.subBoss && G.finale && G.finale.ward) {
+      G.finale.ward.fallen++;
+      if (G.finale.ward.fallen < 3) setCombatNotice('THE WARD BREAKS — THEIR GUARD WEAKENS', '#9CFF57', 1.8);
+    }
     // AFT-020 non-attrition objectives: source and marked-target kills
     if (br.wardSrc && G.objective && G.objective.type === 'wardbreak' && !G.objective.done) {
       const O = G.objective;
@@ -2970,12 +2997,30 @@ function completeNonAttrition(O, name) {
 function updateObjective(dt) {
   const O = G.objective;
   if (!O || G.state !== 'play' || O.done || O.failed) return;
-  // wardbreak/lanes run in EVERY mode; the older families stay junkie-only
-  const crossMode = O.type === 'wardbreak' || O.type === 'lanes';
+  // wardbreak/lanes/bells run in EVERY mode; the older families stay junkie-only
+  const crossMode = O.type === 'wardbreak' || O.type === 'lanes' || O.type === 'bells';
   if (G.mode !== 'junkie' && !crossMode) return;
   // WARDBREAK: the kill hook counts sources; attrition still resolves it
   // (every source death decrements, however it happened)
   if (O.type === 'wardbreak') return;
+  // BELLS: cross the three zones IN ORDER, holding each until it rings —
+  // pure positioning, works identically in every mode
+  if (O.type === 'bells') {
+    const zx = O.zones[Math.min(O.rung, O.zones.length - 1)];
+    if (Math.abs(G.paddle.x - zx) < O.zoneW / 2) {
+      O.dwellT += dt;
+      if (O.dwellT >= O.dwell) {
+        O.dwellT = 0;
+        O.rung++;
+        tone(560 + O.rung * 140, 0.35, 'sine', 0.09);
+        ringFx(zx, G.mode === 'junkie' ? shipY() : PADDLE_Y() - 30, '#ffd54f', 10, 110, 4, 0.55);
+        if (O.rung >= O.count) completeNonAttrition(O, O.name || 'BELLS RUNG');
+        else setCombatNotice('BELL ' + O.rung + '/' + O.count + ' RINGS!', '#ffd54f', 1.4);
+      }
+    } else O.dwellT = Math.max(0, O.dwellT - dt * 2);
+    O.progress = Math.min(1, (O.rung + O.dwellT / O.dwell) / O.count);
+    return;
+  }
   // LANES: the safe lane cycles between three slots; ONE marked target at a
   // time is vulnerable only from inside the lane
   if (O.type === 'lanes') {
@@ -3281,6 +3326,11 @@ function completeFinale() {
     // mastered = the trail's lesson learned — not one current hit taken
     F.mastery.mastered = F.mastery.countered && (F.mastery.counters.trailHits || 0) === 0;
   }
+  if (F.format === 'ladder' && F.ward) {
+    // countered = the memory broken at least once (two anchors denied);
+    // mastered = countered AND every memory echo escaped
+    F.mastery.mastered = F.mastery.countered && !(F.mastery.counters.echoHits > 0);
+  }
   const L = statsCur();
   if (L) {
     L.finaleFormat = F.format;
@@ -3565,6 +3615,7 @@ function updateFinaleDirector(dt) {
   if (!F || G.state !== 'play' || G.reveal) return;
   if (F.format === 'raid' && F.raid) updateRaid(dt);
   if (F.format === 'siege' && F.siege) updateSiege(dt);
+  if (F.format === 'ladder' && F.memory) updateLadderMemory(dt);
   if (F.format === 'relay' && F.relay) {
     const R = F.relay;
     if (R.deflectCD > 0) R.deflectCD -= dt;
@@ -3582,6 +3633,48 @@ function updateFinaleDirector(dt) {
       }
     }
     if (F.beat === 2) updateRelayCoda(dt);
+  }
+}
+// ---- THE FIRST COVENANT's authored rules (AFT-020 Phase 4, realm 1) ----
+// The TRIUNE WARD: the Heralds are one mechanism — each fallen Herald
+// permanently weakens the survivors' guard. VELMORA REMEMBERS: blink steps
+// record the player's position and echo back as delayed lane strikes;
+// denying two of the Sovereign's focus ANCHORS breaks the memory open.
+function wardGuardMul() {
+  const F = G.finale;
+  if (!F || !F.ward) return 0.55; // the classic sentinel guard everywhere else
+  return [0.55, 0.75, 0.9][Math.min(2, F.ward.fallen)] || 0.9;
+}
+function finaleAnchorDenied() {
+  const F = G.finale;
+  if (!F || !F.ward || F.beat !== 1) return;
+  F.ward.anchorsDown = (F.ward.anchorsDown || 0) + 1;
+  if (F.ward.anchorsDown < 2) return;
+  F.ward.anchorsDown = 0;
+  const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic && !b.secretBoss);
+  if (!boss) return;
+  boss.staggerT = Math.max(boss.staggerT || 0, 1.8);
+  F.mastery.counters.memoryBreaks = (F.mastery.counters.memoryBreaks || 0) + 1;
+  F.mastery.countered = true;
+  setCombatNotice('THE MEMORY BREAKS — STRIKE!', '#80d8ff', 1.8);
+  ringFx(boss.bx + G.fx, boss.by + G.fy, '#80d8ff', 8, 130, 4, 0.5);
+  SFX.wall();
+}
+function updateLadderMemory(dt) {
+  const F = G.finale;
+  if (!F || !F.memory || !F.memory.length) return;
+  for (let i = F.memory.length - 1; i >= 0; i--) {
+    const m = F.memory[i];
+    m.t += dt;
+    if (m.t < 1.4) continue;
+    F.memory.splice(i, 1);
+    if (m.taught || G.mode === 'classic') {
+      // the harmless demonstration (and classic's whole calm treatment):
+      // a ghost ring where the memory would have struck
+      ringFx(m.x, G.mode === 'junkie' ? shipY() : PADDLE_Y() - 40, '#ec407a', 6, 64, 3, 0.4);
+      continue;
+    }
+    G.columnStrikes.push({ x: m.x, w: 74, warn: 1.2, strike: 0.45, color: '#ec407a', echo: true });
   }
 }
 // ---- SIEGE OF THE DEEP CURRENT (AFT-020 Phase 4) ----
@@ -3806,7 +3899,11 @@ function gauntletSummonMythic(forceSecret = false) {
   // The final round used to be only 60% of the legendary and often vanished
   // to one charged splash. STARFIGHTER's three authored mythical phases need
   // enough runway to teach, transform and remix their signature pattern.
-  const mHp = Math.max(6, Math.round(gj.legendHp * (G.mode === 'junkie' ? 0.82 : 0.6)));
+  // the realm-1 coda is a SHORT mastery mirror — roughly 40% of the
+  // Sovereign's combat time, per the plan's 35–45% bracket
+  const codaTrim = !!(G.finale && G.finale.format === 'ladder' && G.finale.realm === 0);
+  const mHp = Math.max(6, Math.round(gj.legendHp
+    * (G.mode === 'junkie' ? (codaTrim ? 0.5 : 0.82) : (codaTrim ? 0.45 : 0.6))));
   G.bricks.push({
     bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
     w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
@@ -5240,7 +5337,10 @@ function update(dt) {
         const interceptDmg = L.charged ? 3 : 1;
         s.interceptHP = Math.max(0, (s.interceptHP || 1) - interceptDmg);
         const destroyed = s.interceptHP <= 0;
-        if (destroyed) { s.dead = true; statsIntercept(); }
+        if (destroyed) {
+          s.dead = true; statsIntercept();
+          if (s.orbit && s.boss) finaleAnchorDenied(); // realm-1 memory anchors
+        }
         L.hits = (L.hits || 0) + 1;
         if (L.hits > (L.charged ? 2 + upgN('intercept') : upgN('intercept'))) L.dead = true;
         // BULWARK BATTERY: every interception adds a wall segment (fusion)
@@ -5622,6 +5722,19 @@ function update(dt) {
           boss.bx = boss.hx;
           boss.flash = 1;
           burst(boss.bx + G.fx, boss.by + G.fy, '#ec407a', 34, 340, 0.7);
+          // VELMORA REMEMBERS (the realm-1 core rule): each blink step
+          // records where the player STOOD; the first memory is a harmless
+          // teach, later ones echo back as delayed lane strikes
+          if (G.finale && G.finale.memory && boss.isBoss && !boss.mythic && !boss.secretBoss
+            && G.finale.beat === 1) {
+            const F2 = G.finale;
+            F2.memory.push({ x: G.paddle.x, t: 0, taught: F2.memory.length === 0 && !F2.memoryTaught });
+            if (!F2.memoryTaught) {
+              F2.memoryTaught = true;
+              setCombatNotice('IT REMEMBERS WHERE YOU STOOD', '#ec407a', 2.2);
+            }
+            if (F2.memory.length > 2) F2.memory.shift();
+          }
         }
       }
       // sweep motion (Rayquaza crossing / Koraidon charging)
@@ -5812,9 +5925,11 @@ function update(dt) {
         cs.strike = 0;
         if (absorbHit(G.paddle.x, shipY())) continue;
         G.invuln = 2;
+        // a MEMORY ECHO landing marks the realm-1 mastery as escaped-no-more
+        if (cs.echo && G.finale) G.finale.mastery.counters.echoHits = (G.finale.mastery.counters.echoHits || 0) + 1;
         addFloater(G.paddle.x, shipY() - 50, 'HIT!', '#ff5252', 22);
         burst(G.paddle.x, shipY(), '#ffd54f', 30, 320);
-        loseLife('BOSS BEAM');
+        loseLife(cs.echo ? 'MEMORY ECHO' : 'BOSS BEAM');
         return;
       }
     }

@@ -560,6 +560,8 @@ const ENCOUNTER_OBJECTIVES = {
   // skin's words): Viridian's warded route, Aspertia's live traffic lanes.
   '0:1': { type: 'wardbreak', count: 3, name: 'BREAK THE ROUTE WARD',
     tip: 'DOWN THE THREE WARD KEEPERS — THE FLOCK SCATTERS' },
+  '1:0': { type: 'bells', count: 3, dwell: 1.2, name: 'RING THE BELL TOWERS',
+    tip: 'CROSS THE THREE BELL ZONES IN ORDER — HOLD EACH UNTIL IT RINGS' },
   '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
     tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
   '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
@@ -682,6 +684,13 @@ assembleSkins({
   names: NAMES, gens: GENS, habitatPacks: HABITAT_PACKS, typeClusters: TYPE_CLUSTERS,
   finaleProfiles: FINALE_PROFILES,
   stageTitles: STAGE_TITLES,
+  // AFT-020: Act-I challenge stages run authored conditions (this skin's words)
+  conditionAuthored: { 0: 'winds', 1: 'ambush', 2: 'swift' },
+  conditionNames: {
+    0: { winds: { name: 'ROUTE WARDLIGHT', desc: 'STRAY WARDLIGHT BENDS EVERY FLIGHT PATH' } },
+    1: { ambush: { name: 'ECRUTEAK CROSSWINDS', desc: 'THE GALE CARRIES THEIR FIRE IN EARLY AND OFTEN' } },
+    2: { swift: { name: 'RISING TIDE', desc: 'THE SEA PRESSES IN — EVERYTHING MOVES FASTER' } },
+  },
   starterMon: STARTER_MON, regionIntros: REGION_INTROS, stageFlavor: STAGE_FLAVOR,
   stageNames: STAGE_NAMES, acts: ACTS, junkieItems: JUNKIE_ITEMS,
   dexRewards: DEX_REWARDS, cheatItems: CHEAT_ITEMS,

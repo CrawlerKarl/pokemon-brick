@@ -1162,6 +1162,13 @@ function stageTitle(lvl) {
   const t = SKIN.stageTitles && SKIN.stageTitles[regionIdx(lvl)];
   return (t && t[stageIdx(lvl)]) || null;
 }
+// A realm may NAME a shared condition in its own words — the mechanics stay
+// the engine's MODIFIERS; only the player-facing label and clause reskin.
+function conditionInfo(mod, rIdx2) {
+  if (!mod) return null;
+  const t = SKIN.conditionNames && SKIN.conditionNames[rIdx2] && SKIN.conditionNames[rIdx2][mod.key];
+  return t ? { ...mod, name: t.name || mod.name, desc: t.desc || mod.desc } : mod;
+}
 
 // ---- CHEAT CODES (pause screen): grant any power-up combination. Using
 // one marks the run G.cheated — best score won't be recorded that run.

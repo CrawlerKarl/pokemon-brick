@@ -2813,6 +2813,31 @@ function drawRelayFx() {
     ctx.restore();
   }
 }
+// AFT-020 THE FIRST COVENANT: the TRIUNE WARD linking the living Heralds
+// — three make a triangle, two a strained line, one stands alone. The gap
+// a fallen Herald leaves is literally visible in the shape.
+function drawWardFx() {
+  const F = G.finale;
+  if (!F || !F.ward || F.beat !== 0 || F.mastery.clear) return;
+  if (G.state !== 'play' && G.state !== 'serve') return;
+  const heralds = G.bricks.filter(b => !b.dead && b.subBoss);
+  if (heralds.length < 2) return;
+  ctx.save();
+  ctx.setLineDash([9, 8]);
+  ctx.lineDashOffset = -(G.time * 24) % 17;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(140,224,138,0.5)';
+  ctx.beginPath();
+  for (let i = 0; i < heralds.length; i++) {
+    const a = heralds[i], b = heralds[(i + 1) % heralds.length];
+    if (heralds.length === 2 && i === 1) break; // two survivors: one strained line
+    ctx.moveTo(a.bx + G.fx, a.by + G.fy);
+    ctx.lineTo(b.bx + G.fx, b.by + G.fy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
 // AFT-020 SIEGE: the pressure-seal tethers (each living Colossus → the
 // Sovereign) during the stations beat, then the CURRENT TRAIL — warm
 // pulsing rings while it burns, faint cool ones while it rests. Shape and
@@ -2889,6 +2914,41 @@ function drawObjectiveFx() {
       ctx.beginPath(); ctx.arc(s2.bx + G.fx, s2.by + G.fy, r + 5, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
+  }
+  if (O.type === 'bells' && O.zones) {
+    const yB = G.mode === 'junkie' ? shipY() + 52 : PADDLE_Y() + 26;
+    for (let i = 0; i < O.zones.length; i++) {
+      const zx = O.zones[i];
+      const rung = i < O.rung, live = i === O.rung;
+      ctx.save();
+      // the bell arch: rung ones stay LIT (the scenery answers the play)
+      ctx.lineWidth = live ? 3 : 2;
+      ctx.strokeStyle = rung ? 'rgba(255,213,79,0.9)' : live ? 'rgba(255,213,79,0.75)' : 'rgba(176,190,197,0.35)';
+      ctx.beginPath();
+      ctx.arc(zx, yB, 16, Math.PI, 0);
+      ctx.moveTo(zx - 5, yB); ctx.lineTo(zx - 3, yB + 7);
+      ctx.moveTo(zx + 5, yB); ctx.lineTo(zx + 3, yB + 7);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(zx, yB + 8, 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+      if (live) {
+        // the zone rails + the dwell arc filling as you hold it
+        ctx.setLineDash([10, 8]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(zx - O.zoneW / 2, SAFE_T + 92); ctx.lineTo(zx - O.zoneW / 2, yB - 24);
+        ctx.moveTo(zx + O.zoneW / 2, SAFE_T + 92); ctx.lineTo(zx + O.zoneW / 2, yB - 24);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (O.dwellT > 0) {
+          ctx.lineWidth = 3.4;
+          ctx.beginPath();
+          ctx.arc(zx, yB, 22, -Math.PI / 2, -Math.PI / 2 + (O.dwellT / O.dwell) * Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
   }
   if (O.type === 'lanes' && O.laneX != null) {
     const x0 = O.laneX - O.laneW / 2, x1 = O.laneX + O.laneW / 2;
@@ -4963,9 +5023,10 @@ function drawHUD() {
   // live objective banner (the win condition) instead of stacking under it
   const objLive = G.objective && !G.objective.done && !G.objective.failed;
   if (G.modifier && !narrow && !objLive) {
-    const mb = fitLabel(G.modifier.name, (span0 + span1) / 2 + 4, 42,
-      { size: 10, min: 8.5, weight: 700, color: G.modifier.color, maxW: span1 - span0 - 28, zone: 'topHud' });
-    drawGlyph(ctx, G.modifier.icon, mb.x0 - 8, 42, 6, G.modifier.color);
+    const mInfo = conditionInfo(G.modifier, regionIdx(G.level));
+    const mb = fitLabel(mInfo.name, (span0 + span1) / 2 + 4, 42,
+      { size: 10, min: 8.5, weight: 700, color: mInfo.color, maxW: span1 - span0 - 28, zone: 'topHud' });
+    drawGlyph(ctx, mInfo.icon, mb.x0 - 8, 42, 6, mInfo.color);
   }
   drawPlayerHealthBar();
   drawBossLane(); // AFT-002: the docked boss name/health lane
@@ -5134,6 +5195,7 @@ function drawObjectiveBanner() {
   else if (O.type === 'escort') readout = Math.round((O.progress || 0) * 100) + '%';
   else if (O.type === 'wardbreak') readout = ((O.total || 0) - (O.left || 0)) + '/' + (O.total || 0);
   else if (O.type === 'lanes') readout = (O.hits || 0) + '/' + O.count;
+  else if (O.type === 'bells') readout = (O.rung || 0) + '/' + O.count;
   // PROTECT objectives inline the friendly's remaining heart pips
   const fr = O.friendly;
   if (fr && !fr.dead) label += '  ·  ' + '♥'.repeat(Math.max(0, fr.fhp));
@@ -9339,8 +9401,9 @@ function render() {
     drawTelegraphs();
     drawRelayFx(); // AFT-020: the gale-relay corridor + carrier cues (under the sprites)
     drawRaidFx();  // AFT-020: the raid's crown arcs, tethers + binding read
-    drawObjectiveFx(); // AFT-020: ward triangle + live-lane rails/marks
+    drawObjectiveFx(); // AFT-020: ward triangle + bells + live-lane rails/marks
     drawSiegeFx();     // AFT-020: seal tethers + the current trail
+    drawWardFx();      // AFT-020: the Triune Ward between the Heralds
     drawBricks();
     drawFragments();
     drawShield();

@@ -1480,6 +1480,7 @@ function fireCharge(c, resonant = false) {
   if (G.state !== 'play') return;
   if (!blasterArmed()) return; // no paddle gun in classic — the charge can never fire
   G.chargedEver = true; // the charge tutor banner retires once you've done it
+  G.lastChargeT = G.time; // the realm-1 DREAM MIRROR reads recent charges
   statsShotFired(true);
   if (resonant) statsResonant();
   // AEGIS LANCE: while shielded, a full charge SPENDS one real shield and the

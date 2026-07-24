@@ -1101,6 +1101,16 @@ function buildLevel(lvl) {
         getSprite(sid);
       }
       getSprite(gen.gauntlet.myth[0]);
+      // THE FIRST COVENANT (the one ladder, realm 1): the Heralds are ONE
+      // mechanism — the TRIUNE WARD. A fallen Herald leaves a permanent
+      // GAP: the survivors' guard visibly weakens (×0.55 → ×0.75 → ×0.9),
+      // and the Sovereign REMEMBERS — its blink steps record the player's
+      // position and echo back as delayed lane strikes; denying two of its
+      // focus anchors breaks the memory for a long punish window.
+      if (fmt === 'ladder' && rIdx === 0) {
+        G.finale.ward = { fallen: 0, anchorsDown: 0 };
+        G.finale.memory = [];
+      }
       // THE GALE RELAY (format 'relay'): the trio carries ONE storm core.
       // Vows never fall to damage — carrier hits feed the PASS METER
       // (3 passes × 0.14 BE of real work); the other two mark the wind
@@ -1657,10 +1667,23 @@ function buildLevel(lvl) {
     if (G.shieldCharges > preGuard) statsShieldGain('guard');
   }
   // ---- wave modifier: guaranteed on challenge stages, never on a region's arrival ----
-  G.modifier = stage === 1 && lvl >= 2
-    ? MODIFIERS[Math.floor(gameRand() * MODIFIERS.length)]
-    : (stage === 0 && lvl > STAGES && gameRand() < 0.25
-      ? MODIFIERS[Math.floor(gameRand() * MODIFIERS.length)] : null);
+  // AFT-020: realms with an AUTHORED condition run it on their Challenge
+  // stage every time — a realm identity, not a dice roll (same mechanics,
+  // this realm's name for them). Unauthored realms keep the random pool.
+  // The authored branch still consumes the SAME one gameRand() draw the
+  // random branch does, so the wave-build stream stays aligned per stage.
+  {
+    const authoredKey = SKIN.conditionAuthored && SKIN.conditionAuthored[rIdx];
+    if (stage === 1 && lvl >= 2) {
+      const roll = gameRand();
+      G.modifier = (authoredKey && MODIFIERS.some(m => m.key === authoredKey))
+        ? MODIFIERS.find(m => m.key === authoredKey)
+        : MODIFIERS[Math.floor(roll * MODIFIERS.length)];
+    } else {
+      G.modifier = (stage === 0 && lvl > STAGES && gameRand() < 0.25)
+        ? MODIFIERS[Math.floor(gameRand() * MODIFIERS.length)] : null;
+    }
+  }
   // ---- stage presentation ----
   if (hasBoss) {
     // gauntlet finales announce ROUND 1 instead — the legendary's own intro
@@ -1677,7 +1700,7 @@ function buildLevel(lvl) {
       [actTag, intro && intro.sub].filter(Boolean).join('  ·  '), null, false, true, 'region');
     SFX.regionIntro();
   } else if (G.modifier) {
-    const m = G.modifier;
+    const m = conditionInfo(G.modifier, rIdx); // the realm's own words for it
     setAnnounce(m.icon, m.color, m.name, m.desc, 3.2,
       [gen.name + ' 2/3', form && form.name + ' FORMATION', theme.name].filter(Boolean).join(' · '), null, false, false, 'region');
   } else {
@@ -1712,7 +1735,7 @@ function buildLevel(lvl) {
   // defend) and the beat director remain STARFIGHTER's.
   if (!hasBoss && G.mode !== 'junkie') {
     const oX = encounterObjective(lvl);
-    if (oX && (oX.type === 'wardbreak' || oX.type === 'lanes')) {
+    if (oX && (oX.type === 'wardbreak' || oX.type === 'lanes' || oX.type === 'bells')) {
       G.objective = { ...oX, t: 0, done: false, failed: false, progress: 0 };
     }
   }
@@ -1812,6 +1835,11 @@ function buildLevel(lvl) {
     if (O.type === 'lanes') {
       O.laneX = W / 2; O.laneW = Math.max(130, W * 0.17);
       O.laneT = 0; O.laneSlot = 1; O.hits = 0;
+    }
+    if (O.type === 'bells') {
+      O.rung = 0; O.dwellT = 0;
+      O.zoneW = Math.max(110, W * 0.15);
+      O.zones = [W * 0.25, W * 0.5, W * 0.75];
     }
   }
   // AFT-008: stamp the wave's WORK reference on the ledger record — total
@@ -1950,6 +1978,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.time = 0;
   G.laserCD = 0; G.blasterCD = 0; G.missileCD = 0; G.invuln = 0; G.seCD = 0;
   G.enemyShotCD = 6; G.bossShotCD = 4;
+  G.lastChargeT = null; // G.time reset makes stale charge stamps read as fresh
   G.stacks = freshStacks(); G.attackAnim = 0; G.upgradeFx = null;
   // starter partner locks in at run start; its ability tier matches how far
   // into the journey this run begins

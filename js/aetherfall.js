@@ -466,6 +466,8 @@
     // lane — the marked target is only vulnerable from inside it (Chrome).
     '0:1': { type: 'wardbreak', count: 3, name: 'CLEANSE THE WARD',
       tip: 'BREAK THE THREE WARD SOURCES — THE FLOCK SCATTERS' },
+    '1:0': { type: 'bells', count: 3, dwell: 1.2, name: 'RING THE SKY BELLS',
+      tip: 'CROSS THE THREE BELL ZONES IN ORDER — HOLD EACH UNTIL IT RINGS' },
     '4:1': { type: 'lanes', count: 4, name: 'RUN THE LIVE LANES',
       tip: 'THE MARKED TARGET ONLY YIELDS FROM INSIDE THE LIVE LANE' },
     '2:1': { type: 'survive', dur: 22, name: 'SURVIVE THE MIGRATION',
@@ -750,10 +752,21 @@
     ['THE SUNDERED ROAD', 'ECHOES OF EIGHT REALMS', FINALE_TITLES[8]],
   ];
 
+  // ---------- AFT-020 realm-authored conditions (Act I) ----------
+  // Same engine physics, this realm's WORDS — and a Challenge stage runs
+  // its realm's authored condition every time (identity, not dice).
+  const conditionAuthored = { 0: 'winds', 1: 'ambush', 2: 'swift' };
+  const conditionNames = {
+    0: { winds: { name: 'WANDERING WARDS', desc: 'LOOSE WARDLIGHT BENDS EVERY FLIGHT PATH' } },
+    1: { ambush: { name: 'BELLTOWER CROSSWINDS', desc: 'THE GALE CARRIES THEIR FIRE IN EARLY AND OFTEN' } },
+    2: { swift: { name: 'RISING CURRENT', desc: 'THE DEEP PRESSES IN — EVERYTHING MOVES FASTER' } },
+  };
+
   // ---------- assembly ----------
   Object.assign(AF, {
     finaleProfiles,
     stageTitles,
+    conditionAuthored, conditionNames,
     typeNames,
     edition: 'AETHERFALL EDITION',
     affinities: true, // unlocks the LIGHT/DARK setup pick (Round S6)

@@ -1989,6 +1989,102 @@ window.requestAnimationFrame = function () { return 0; };
     return 'seal ×0.12 · order 1,0,2 armed its weather · trail burns/calms · one wish shapes the draft · no third bar';
   });
 
+  // AFT-020 Phase 4: the FIRST COVENANT's authored rules — the Triune Ward
+  // weakens as Heralds fall, the Sovereign's blink steps RECORD the player
+  // (teach first, echo later), two denied anchors break the memory open,
+  // and the coda is a short DREAM MIRROR of the player's own weapon. Plus
+  // the Belltower sky bells (position-order objective, cross-mode).
+  test('AFT-020 P4: the FIRST COVENANT rules + the sky bells', async () => {
+    await resetBetween();
+    SETTINGS.mode = 'junkie'; SETTINGS.autoFire = false;
+    resetRun(3, true, { seed: 'COV1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const F = G.finale;
+    assert(F && F.ward && F.memory, 'the covenant rules arm on the realm-1 ladder');
+    const her = () => G.bricks.filter(b => b.subBoss && !b.dead);
+    const h0 = her()[0];
+    h0.openT = 0;
+    const hpA = h0.hp;
+    damageBrick(h0, 2, h0.bx, h0.by, null, { source: 'bolt' });
+    assert(Math.abs((hpA - h0.hp) - 1.1) < 0.01, 'the full ward guards ×0.55');
+    const kill = b => { b.hp = 0.5; damageBrick(b, 2, b.bx, b.by, null, { source: 'bolt' }); };
+    kill(her()[0]);
+    const h1 = her()[0];
+    h1.openT = 0;
+    const hpB = h1.hp;
+    damageBrick(h1, 2, h1.bx, h1.by, null, { source: 'bolt' });
+    assert(Math.abs((hpB - h1.hp) - 1.5) < 0.01,
+      'one gap weakens the guard to ×0.75 (lost ' + (hpB - h1.hp).toFixed(2) + ')');
+    for (const b of her()) kill(b);
+    await runFrames(30);
+    assert(G.gauntlet.phase === 1 && F.beatKey === 'core', 'the core beat opens');
+    const boss = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic);
+    if (G.gauntlet) G.gauntlet.entry = null; // entrance pauses boss updates — clear it like the duels do
+    G.bossIntro = 0;
+    // a blink landing records where the player STOOD — the first is a teach
+    G.paddle.x = W * 0.3;
+    boss.teleportAt = 0.01; boss.tpX = W * 0.7;
+    await runFrames(3);
+    assert(F.memory.length === 1 && F.memory[0].taught === true, 'the first memory is a harmless TEACH');
+    await runFrames(100);
+    assert(F.memory.length === 0 && !G.columnStrikes.some(cs => cs.echo), 'the teach resolves without a strike');
+    G.paddle.x = W * 0.4;
+    boss.teleportAt = 0.01; boss.tpX = W * 0.25;
+    await runFrames(3);
+    assert(F.memory.length === 1 && !F.memory[0].taught, 'later memories arm');
+    const echoX = F.memory[0].x;
+    await runFrames(100);
+    assert(G.columnStrikes.some(cs => cs.echo && Math.abs(cs.x - echoX) < 1),
+      'the memory echoes at the RECORDED lane');
+    G.columnStrikes.length = 0;
+    // MEMORY ANCHORS: denying two focus orbs breaks the memory (a stagger)
+    boss.staggerT = 0; boss.abilityCD = 0; boss.orbTurn = false; boss.fireQuietT = 99;
+    G.enemyShots = [];
+    await runFrames(1);
+    const orbs = G.enemyShots.filter(s => s.orbit);
+    assert(orbs.length >= 2, 'the focus anchors are live (' + orbs.length + ')');
+    boss.abilityCD = 99;
+    for (const s of orbs.slice(0, 2)) {
+      s.interceptHP = 1;
+      G.lasers = [{ basic: true, x: s.x, y: s.y }];
+      await runFrames(1);
+    }
+    assert(boss.staggerT > 1 && F.mastery.counters.memoryBreaks === 1,
+      'two denied anchors break the memory open (staggerT ' + boss.staggerT.toFixed(2) + ')');
+    // THE DREAM MIRROR coda: trimmed HP + volleys shaped by YOUR fire
+    boss.staggerT = 0;
+    for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
+    await runFrames(30);
+    const myth = G.bricks.find(b => b.isBoss && b.mythic && !b.dead);
+    assert(myth, 'the dream coda is a real (short) fight');
+    assert(myth.maxHp <= Math.round(G.gauntlet.legendHp * 0.5) + 1,
+      'the coda is trimmed to ~40% (maxHp ' + myth.maxHp + ' vs legend ' + G.gauntlet.legendHp + ')');
+    G.enemyShots = []; G.lastChargeT = null;
+    spawnBossFire(myth, myth.bx + G.fx, myth.by + G.fy, diff(), {});
+    assert(G.enemyShots.filter(s => s.classKey === 'micro').length === 3,
+      'sustained fire mirrors back as a slow three-bolt dream fan');
+    G.enemyShots = []; G.lastChargeT = G.time;
+    spawnBossFire(myth, myth.bx + G.fx, myth.by + G.fy, diff(), {});
+    assert(G.enemyShots.filter(s => s.classKey === 'heavy').length === 1,
+      'a recent charge mirrors back as one heavy dream orb');
+    // ---- THE SKY BELLS (Belltower arrival) in BLASTER — cross-mode proof ----
+    SETTINGS.mode = 'blaster';
+    resetRun(4, true, { seed: 'BELL1' });
+    G.state = 'play'; paused = false; G.freeze = 0;
+    const OB = G.objective;
+    assert(OB && OB.type === 'bells' && OB.zones.length === 3, 'bells arm on the Belltower arrival in BLASTER');
+    for (let i = 0; i < 3 && !OB.done; i++) {
+      await runFrames(110, () => {
+        mouseX = OB.zones[Math.min(OB.rung, 2)]; // the paddle STEERS toward the mouse
+        G.paddle.x = mouseX;
+        return OB.done ? false : undefined;
+      });
+    }
+    assert(OB.done === true && OB.rung === 3, 'three held zones ring the bells (rung ' + OB.rung + ')');
+    SETTINGS.mode = 'junkie';
+    return 'ward gaps ×0.55→0.75 · memories teach then echo · 2 anchors = the break · a mirrored dream coda at 0.5× · bells rung by position alone';
+  });
+
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,
   // and launches are CLEAN — a trial/round jump inherits no stale banners.
   test('AFT-004: announce priority queue + clean launches (27 stages, rounds, phases)', async () => {
@@ -4596,7 +4692,7 @@ window.requestAnimationFrame = function () { return 0; };
       jumpToGauntletRound(2, 2);
       let myth = G.bricks.find(b => b.isBoss && !b.dead && b.mythic);
       assert(myth && bossPhaseCount(myth) === 3, 'round-2 jump did not summon a 3-phase mythic');
-      assert(myth.phase === 2 && Math.abs(myth.hp / myth.maxHp - 0.5) < 0.03, 'mythic phase-2 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')');
+      assert(myth.phase === 2 && Math.abs(myth.hp / myth.maxHp - 0.5) < 0.06, 'mythic phase-2 band wrong (' + (myth.hp / myth.maxHp).toFixed(3) + ')'); // ±0.06: the trimmed realm-1 coda bar rounds coarsely
       assert(bossMusicHeat() === 1, 'mythic phase 2 (not last stand) should read heat 1');
       resetRun(3, true, { seed: 'phase-jump-myth3' });
       paused = false; G.freeze = 0; G.megaT = 0;
