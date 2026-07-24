@@ -1582,6 +1582,7 @@ function fireCharge(c, resonant = false) {
   G.muzzle = 0.18;
   G.shake = Math.min(G.shake + 2 + c * 4, 12);
   if (resonant) {
+    haptic('resonant'); // AFT-021 P8
     addFloater(G.paddle.x, shipY() - 72, 'RESONANT!', '#80ffea', 15);
     ringFx(G.paddle.x, shipY() - 20, '#80ffea', 5, 74, 3, 0.4);
     tone(1240, 0.16, 'sine', 0.06, 320); // the crystalline timing chime

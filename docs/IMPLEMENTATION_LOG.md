@@ -5,6 +5,30 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24o — AFT-021 Phase 8: verbs, thumbs, and a narration channel
+
+- **Each completion verb has a voice**: rescues chime upward, dispersals
+  whoosh away, stand-downs power off (at resolution entry, where the exits
+  play); results list the mastery counters as COMPLETED VERBS ('2 CLEAN
+  PASSES · 4 BLOOMS'), riding a new `finaleCounters` payload.
+- **No encounter name ellipsizes mid-combat**: if the full authored title
+  cannot fit the narrow HUD row at the readable floor, the row falls back
+  to the authored breadcrumb (realm + stage) — the complete name lives in
+  the reveal, results, and codex, where it has room.
+- **The charge arc speaks through the thumb**: distinct haptics for
+  promotion, full (the resonance window opening), and a resonant release —
+  alongside the existing tap/damage/boss/mega vocabulary.
+- **The accessibility narration channel** (AFT-010 groundwork): one polite
+  `aria-live` region carries announcements, hits with remaining health,
+  and stage-clear outcomes ('Stage clear. 12 defeated, 5 dispersed. Tap to
+  continue.') — throttled, deduplicated, and incapable of breaking play.
+- Sentence-case survey: body copy already rides `bodyFont`; the all-caps
+  label language is the art direction and stays (decision recorded).
+
+Suite 115/115 · gate green.
+
+---
+
 ## 2026-07-24n — AFT-021 Phases 5–7: the measured campaign rebalance
 
 Twenty-one iterations of implement → `npm run baseline` → refit, closing at

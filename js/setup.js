@@ -125,7 +125,10 @@ function haptic(kind = 'tap') {
   const now = performance.now();
   if (now - lastHapticAt < (kind === 'hit' ? 45 : 80)) return;
   lastHapticAt = now;
-  const patterns = { tap: 8, hit: 5, break: 12, warn: [9, 34, 14], item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35], mega: [16, 30, 16, 30, 44] };
+  const patterns = { tap: 8, hit: 5, break: 12, warn: [9, 34, 14], item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35], mega: [16, 30, 16, 30, 44],
+    // AFT-021 P8: the charge arc speaks through the thumb — promotion,
+    // full, and the resonant release each feel distinct
+    promote: [6, 18, 10], full: [14, 22, 20], resonant: [10, 16, 10, 16, 26] };
   navigator.vibrate(patterns[kind] || patterns.tap);
 }
 

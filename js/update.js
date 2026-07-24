@@ -2782,6 +2782,7 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
     return;
   }
   G.lastDamageCause = cause;
+  a11yAnnounce('Hit — ' + Math.max(0, G.lives - 1) + ' of ' + Math.max(1, G.livesMax) + ' health left', true); // AFT-021 P8
   if (G.runStats) G.runStats.damageTaken++;
   statsDamageIn(cause, shot);
   haptic('damage');
@@ -5200,6 +5201,7 @@ function update(dt) {
       // so touch and desktop reach full charge in the same time.
       G.charge = Math.max(G.charge, Math.min(1, (heldMs / 1000) * weaponScale() / chargeFillTime()));
       G.chargeCur = { pressMs: +heldMs.toFixed(1), t0: G.time, fullS: null };
+      haptic('promote'); // AFT-021 P8: the hold has become a charge — say so in the thumb
     }
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
@@ -5209,6 +5211,7 @@ function update(dt) {
       G.charge = Math.min(1, G.charge + dt * weaponScale() / chargeFillTime()); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
       if (G.charge >= 1 && G.chargeCur && G.chargeCur.fullS == null) {
         G.chargeCur.fullS = +(((G.chargeCur.pressMs || 0) / 1000) + (G.time - G.chargeCur.t0)).toFixed(3);
+        haptic('full'); // the resonance window opens NOW
       }
       // RESONANCE (Milestone 2): the instant the charge tops out, a short
       // sweet-spot window opens (RESONANCE_WINDOW) — release inside it for
@@ -7479,6 +7482,11 @@ function beginStageResolution() {
   }
   G.resolve = R;
   G.state = 'resolve'; G.stateT = 0;
+  // AFT-021 P8: each completion verb SOUNDS different — a dispersal
+  // whooshes away, a rescue chimes upward, a stand-down powers off
+  if (R.outcomes.rescued) { tone(620, 0.14, 'sine', 0.06, 340); tone(930, 0.16, 'sine', 0.05, 240); }
+  else if (R.outcomes.dispersed) { noiseBurst(0.28, 0.07); tone(420, 0.2, 'sine', 0.04, -180); }
+  else if (R.outcomes.neutralized) { tone(300, 0.22, 'square', 0.04, -160); }
   // the clear celebration plays over the departures, not behind a panel
   const palette = ['#ffd54f', '#66bb6a', '#42a5f5', '#ec407a', '#ab47bc', '#ff7043'];
   for (let i = 0; i < 6; i++) {
@@ -7554,6 +7562,14 @@ function settleStageResolution() {
     // BEFORE the draft. Built while statsCur() still points at the
     // cleared level and G.level is pre-increment.
     G.results = buildStageResults();
+    {
+      const oc = R.outcomes || {};
+      a11yAnnounce('Stage clear. ' + (G.results.kills || 0) + ' defeated'
+        + (oc.dispersed ? ', ' + oc.dispersed + ' dispersed' : '')
+        + (oc.rescued ? ', ' + oc.rescued + ' rescued' : '')
+        + (oc.neutralized ? ', ' + oc.neutralized + ' neutralized' : '')
+        + '. Tap to continue.', true);
+    }
     // AFT-021 P1: results speak the completion VERBS — what was defeated,
     // what fled, who was saved, what powered down (drawResults reads it)
     G.results.outcomes = R.outcomes || {};

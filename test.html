@@ -5828,6 +5828,36 @@ window.requestAnimationFrame = function () { return 0; };
     return 'goal owns its row · one transient at a time · notice clock queues · coach yields';
   });
 
+  test('AFT-021 P8: results speak verbs, the narration channel carries state', async () => {
+    // outcome verbs ride the results payload from the resolution beat
+    DEV.launch({ level: 5, mode: 'junkie', diff: 'normal', seed: 'AFT021-P8' });
+    paused = false; G.freeze = 0;
+    await runFrames(20);
+    G.objective = null;
+    const live = G.bricks.filter(b => !b.dead && !b.crosser && !b.friendly && !b.barrier);
+    live.slice(4).forEach(b => { b.dead = true; });
+    disperseSwarm();
+    G.powerups.length = 0; G.reinforce = 0;
+    for (let f = 0; f < 60 * 8 && G.state !== 'results'; f++) { paused = false; G.freeze = 0; update(1 / 60); }
+    assert(G.state === 'results' && G.results.outcomes && G.results.outcomes.dispersed >= 1,
+      'the dispersal verb did not reach results (' + JSON.stringify(G.results && G.results.outcomes) + ')');
+    // the aria-live region exists and carried the clear narration
+    const el = document.getElementById('a11y-live');
+    assert(el && el.getAttribute('aria-live') === 'polite', 'the accessibility live region is missing');
+    assert(/stage clear/i.test(el.textContent), 'the clear was not narrated (got "' + el.textContent + '")');
+    skipResults();
+    // finale mastery counters ride results as verbs
+    DEV.finale(2, 0, { mode: 'junkie', diff: 'normal', seed: 'AFT021-P8B' });
+    paused = false; G.freeze = 0;
+    await runFrames(10);
+    assert(typeof buildStageResults === 'function', 'results builder missing');
+    G.finale.mastery.counters.cleanPasses = 2;
+    const R = buildStageResults();
+    assert(R.finaleCounters && R.finaleCounters.cleanPasses === 2,
+      'mastery counters did not ride the results payload');
+    return 'dispersal verbs on results · aria-live narration · mastery counters as verbs';
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

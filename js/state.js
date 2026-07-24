@@ -651,6 +651,8 @@ function buildStageResults() {
     finaleMastery: (G.finale && stageIdx(lvl) === 2 && G.finale.mastery.clear)
       ? (G.finale.mastery.mastered ? 'mastered' : G.finale.mastery.countered ? 'countered' : 'clear') : null,
     finaleTitle: (G.finale && G.finale.profile && stageIdx(lvl) === 2) ? G.finale.profile.title : null,
+    // AFT-021 P8: the counters BEHIND the mastery word — results speak verbs
+    finaleCounters: (G.finale && stageIdx(lvl) === 2) ? { ...G.finale.mastery.counters } : null,
     shotsN: L.shotsN || 0, shotsC: L.shotsC || 0,
     overheats: L.overheats || 0, megas: L.megas || 0,
     catches: G.caughtRun, medalsSaved: !G.trial && !G.daily && !G.cheated,
@@ -709,6 +711,31 @@ function tryShieldGain(source) {
   return true;
 }
 
+// ── AFT-021 P8: THE ACCESSIBILITY LIVE REGION ──────────────────────────────
+// Groundwork for AFT-010's DOM layer: one polite aria-live element carries
+// the essential combat state (stage transitions, objectives, health, charge,
+// results) to screen readers. Canvas visuals are unchanged; this is the
+// narration channel. Throttled and deduplicated — a live region that spams
+// is worse than silence.
+let A11Y_EL = null, A11Y_LAST = '', A11Y_LAST_T = 0;
+function a11yAnnounce(text, force = false) {
+  try {
+    if (typeof document === 'undefined') return;
+    if (!A11Y_EL) {
+      A11Y_EL = document.createElement('div');
+      A11Y_EL.id = 'a11y-live';
+      A11Y_EL.setAttribute('aria-live', 'polite');
+      A11Y_EL.setAttribute('role', 'status');
+      A11Y_EL.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+      document.body.appendChild(A11Y_EL);
+    }
+    const now = Date.now();
+    if (!force && (text === A11Y_LAST || now - A11Y_LAST_T < 900)) return;
+    A11Y_LAST = text; A11Y_LAST_T = now;
+    A11Y_EL.textContent = text;
+  } catch (e) { /* narration must never break play */ }
+}
+
 // AFT-021 P1 — the ONE authority on whether damage can exist. Every path
 // that can cost a life, spawn hostile fire, or land a strike must pass this
 // gate: live combat is the 'play' state with no reveal holding the frame.
@@ -733,6 +760,7 @@ function romanTier(t) { return t >= 3 ? 'III' : t === 2 ? 'II' : ''; }
 const ANNOUNCE_PRIO = { boss: 5, trial: 4, objective: 3, region: 2, info: 1 };
 const ANNOUNCE_SINGLETON = { boss: true, trial: true };
 function setAnnounce(icon, color, name, desc, dur = 2.0, sub = null, spriteId = null, spriteShiny = false, hero = false, kind = null) {
+  a11yAnnounce(String(name) + (desc ? '. ' + desc : '')); // AFT-021 P8: the narration channel
   // untagged hero cards are boss-lane drama by convention (the reveal path)
   const k = kind || (hero ? 'boss' : 'info');
   const next = { icon, color, name, desc, sub, t: dur, max: dur, spriteId, spriteShiny, hero, kind: k };

@@ -5386,7 +5386,17 @@ function drawHUD() {
   // The two surfaces are designed into the same space; only one may claim it.
   const goalOwnsRow = narrow && goalSurfaceLive() && (G.state === 'play' || G.state === 'serve');
   if (!goalOwnsRow) {
-    const tb = fitLabel(waveText, (span0 + span1) / 2, waveY,
+    // AFT-021 P8: never ellipsize an encounter name mid-combat — if the full
+    // title cannot fit at the readable floor, fall back to the authored
+    // breadcrumb (realm + stage). The complete name lives in the reveal,
+    // results, and codex, where it has room.
+    let titleText = waveText;
+    ctx.font = '900 9.5px Orbitron, sans-serif';
+    if (ctx.measureText(waveText).width > (span1 - span0)) {
+      titleText = G.secret.vmax ? 'SECRET RIFT'
+        : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3';
+    }
+    const tb = fitLabel(titleText, (span0 + span1) / 2, waveY,
       { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
     claimSurface('waveTitle', tb.x0, SAFE_T + waveY - tb.size * 0.75, tb.w, tb.size * 1.5);
   }
@@ -9359,6 +9369,20 @@ function drawResults() {
     { size: short ? 11 : 13, min: 9, weight: 700,
       color: R.finaleMastery === 'mastered' ? '#ffd54f' : R.finaleMastery === 'countered' ? '#80d8ff' : '#b0bec5',
       maxW: W * 0.92, zone: 'results' });
+    // AFT-021 P8: mastery reads as COMPLETED VERBS, not another meter
+    if (R.finaleCounters) {
+      const verbMap = { cleanPasses: 'CLEAN PASSES', passes: 'PASSES', blooms: 'BLOOMS', stations: 'STATIONS',
+        segmentsBroken: 'SEGMENTS BROKEN', sibyls: 'CLOCKS WOKEN', marks: 'MARKS', tags: 'TAGS',
+        locks: 'LOCKS BROKEN', chains: 'CHAINS BROKEN', cells: 'REAL CELLS', freed: 'FREED', redirects: 'REDIRECTS', wish: 'WISH' };
+      const verbs = Object.entries(R.finaleCounters)
+        .filter(([k, v]) => verbMap[k] && v > 0).slice(0, 4)
+        .map(([k, v]) => v + ' ' + verbMap[k]);
+      if (verbs.length) {
+        fitLabel(verbs.join('   ·   '), W / 2, rowY + rowGap * (R.objective ? 3 : 2) + (short ? 16 : 20),
+          { size: short ? 10 : 11.5, min: 8.5, weight: 600, family: 'Verdana, sans-serif',
+            color: '#90a4ae', maxW: W * 0.9, zone: 'results' });
+      }
+    }
   }
   // objectives — the mastery list with medal states (pushed down one row when
   // the encounter-objective line above is present, so they never collide)
