@@ -137,7 +137,7 @@ setup → config → skin → audio → data → pokeworld → aetherfall
   Presentation + world data ride `SKIN.*`; the engine (type keys,
   effectiveness, modes, paths, the 50-node web) is shared. **pokemon** keeps
   LEGACY bare storage keys (`pkbrk-*`); **aetherfall** namespaces via
-  `storeKey()`. Checkpoints are schema v4 (`skin` + `affinity`).
+  `storeKey()`. Checkpoints are schema v5 (`skin`/`affinity` since v4; attune arc + Focus + Reforge since v5).
 - **AETHERFALL** (`js/aetherfall.js`) is an original sci-fi × fantasy world:
   18 classes across MAGIC/TECH/MAGITECH, 9 realms, 54 vessel lines, 27
   sentinels + 9 legendary + 9 mythic bosses cloning the M4 kit mechanics

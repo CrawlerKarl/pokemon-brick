@@ -673,10 +673,14 @@ Machine's pressure-fold weapon flow, Celestial Guardian's three-sector
 ward). The three mastery stacks dock as ranked **satellite nodes**. The
 draft deals Commit/Adapt/Explore (`rollUpgradeChoices`, update.js) with
 apex > fusion priority, ONE fusion/apex per hand, a newly-unlocked
-guarantee after evolving, reroll anti-repeat and pity; knockout burns only
-graph LEAVES (`webRegressibleLeaves` simulates every removal against
-`webBuildLegal`) so a defeat can never break a recipe; checkpoints are
-schema v3 with a never-throws v1/v2 migration (`migrateCheckpoint`,
+guarantee after evolving, reroll anti-repeat and pity — under the
+AFT-009R four-path cap, with hands arriving as ATTUNEMENT levels and the
+transformations at the realm AETHER FORGE. Knockout never uninstalls
+anything (a defeat costs unspent resonance, banked levels and one Focus
+Charge — the build survives); `webRegressibleLeaves` (which simulates
+every removal against `webBuildLegal` so nothing can break a recipe) is
+the REFORGE oracle; checkpoints are schema v5 (attune arc + focus +
+reforge) with a never-throws v1–v4 migration (`migrateCheckpoint`,
 state.js). The constellation screen addresses all 50 nodes — locked
 fusions stay compact silhouettes until 2 ranks in both paths, connectors
 draw only for owned/offered/selected nodes, and every locked node states
@@ -718,8 +722,10 @@ The draft cards lead with the upgrade NAME and a big high-contrast description
 (what it does) — the readable thing — over path/tier/pips; capstones glow.
 Card/tree/announce text is **mode-aware** (`tierDesc`, data.js — optional
 `sdesc` per tier), so a shooter-mode player never reads about paddles or balls.
-**FULL TREE** (`T` on desktop) opens a zoomable, draggable **tap-to-inspect
-constellation**. Only the three live choices carry bright white `OPTION 1/2/3`
+**VIEW BUILD** (`T` on desktop) opens the **non-installing JOURNAL** — a
+zoomable, draggable tap-to-inspect constellation with a phone LIST view
+(drag scroll, ALL/OWNED/NEXT filters, ??? recipe silhouettes; AFT-009R).
+Only the three live choices carry bright white `OPTION 1/2/3`
 tags; owned nodes are steady, reachable-but-not-offered nodes are muted, locked
 nodes recede, and inspecting an unavailable node adds a dashed ring without
 making it appear installable (`treeNodeVisualState`, render.js). The detail

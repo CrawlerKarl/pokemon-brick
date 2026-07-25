@@ -194,7 +194,7 @@ phone — flag anything only verifiable there.
   The pokemon skin must stay BIT-IDENTICAL (the suite is the guard) and
   keeps LEGACY bare storage keys; per-skin state goes through
   `storeKey()` (never call it for settings/music/v — those are global).
-  Checkpoints are schema v4 (`skin` + `affinity`); v1–v3 accepted
+  Checkpoints are schema v5 (`skin`/`affinity` since v4; attune/focus/reforge since v5 — AFT-009R); v1–v4 accepted
   forever; a checkpoint stamped by another skin is treated as absent.
   Easter eggs gate on `SKIN.id === 'pokemon'` with rand draws kept even
   across skins. AETHERFALL ships ZERO image assets: `SKIN.spriteMaker`
@@ -633,11 +633,12 @@ phone — flag anything only verifiable there.
   owned path/stack category docks as a fixed wing HARDPOINT chip under the
   junkie pilot (stable slots, never crossing the sprite); paddle modes show tiers
   on the build rail. Runs auto-save at each region (`saveCheckpoint`/
-  `RUN_CKPT`); knockout and true game over retain the latest checkpoint. One draft reroll per screen. The
-  draft cards lead with the upgrade name + a big description; **FULL TREE is
-  tap-to-inspect** — node rects come from `upgradeTreeLayout`, tap sets
-  `treeSel`, `drawTreeDetail` explains it. Keep render + hit-test using the
-  same `node(pi,ti)` rects.
+  `RUN_CKPT`); knockout and true game over retain the latest checkpoint.
+  Rerolls spend FOCUS CHARGES since AFT-009R (no per-screen freebie). The
+  draft cards lead with the upgrade name + a big description; **VIEW BUILD
+  opens the tap-to-inspect JOURNAL** (it never installs) — node rects come
+  from `upgradeTreeLayout`, tap sets `treeSel`, `drawTreeDetail` explains
+  it. Keep render + hit-test using the same `node(pi,ti)` rects.
 - **The upgrade WEB is additive and graph-safe.** The 24 tiers are anchor
   nodes with unchanged keys; `WEB_BRIDGES`/`WEB_FUSIONS`/`WEB_APEXES`/
   `WEB_SATELLITES` (data.js; design: FUSION_APEX_PLAN.md) add 26 more —
@@ -650,11 +651,13 @@ phone — flag anything only verifiable there.
   slot — **MAX 2 FUSIONS PER RUN**. An APEX (warmachine/celestial) needs
   stage 24+, two compatible installed Fusions, nine ranks across its three
   paths — **MAX 1 PER RUN**. These slot caps are the balance spine — never
-  lift them. Knockout burns only `webRegressibleLeaves()`, which SIMULATES
-  each removal against `webBuildLegal()` — a burn can never break a recipe
-  (grandfathered-illegal saves burn freely). Checkpoints are schema v3:
-  `migrateCheckpoint` (state.js) accepts v1/v2 forever, NEVER throws, and
-  grandfathers unknown-prereq nodes. `rollUpgradeChoices` deals Commit/
+  lift them. Knockout NEVER uninstalls anything since AFT-009R (it costs
+  unspent resonance, banked levels and one Focus); `webRegressibleLeaves()`
+  — which SIMULATES each removal against `webBuildLegal()` so a removal can
+  never break a recipe — is now the REFORGE eligibility oracle.
+  Checkpoints are schema v5 (attune/focus/reforge): `migrateCheckpoint`
+  (state.js) accepts v1–v4 forever, NEVER throws, derives the attunement
+  arc from the build, and grandfathers unknown-prereq nodes. `rollUpgradeChoices` deals Commit/
   Adapt/Explore (apex > fusion > bridge priority, ONE fusion/apex per hand,
   post-evolution guarantee, reroll anti-repeat, pity, low-health rescue,
   offense/non-offense guard); satellites only fill EMPTY slots. Proc

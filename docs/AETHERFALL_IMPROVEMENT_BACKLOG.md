@@ -73,13 +73,14 @@ items have since shipped.
   codex full-size sprite gallery, neutral-until-sworn selection, and
   per-channel `OATH_CH` evolution curves for tint, rim, aura, fittings,
   radiant blend, and runes.
-- The release gate passes 122/122 invariants (AFT-021 added the combat-state
+- The release gate passes 127/127 invariants (AFT-021 added the combat-state
   safety, visible-clear, overlay-collision, charge/projectile-time, and
   verb-results contracts; AFT-022 added the vent-assist, wrap, left-handed,
   footprint-clamp, offer-tap, notice-hygiene and seeded-launch determinism
-  fixtures) and runs headlessly via `npm test`
+  fixtures; AFT-009R added the card-anatomy, resonance, Forge, journal and
+  Focus/Reforge/v5-save fixtures) and runs headlessly via `npm test`
   in about 30–35s. It also verifies assets, both editions, the standalone
-  distribution, vocabulary/RESIDUE, 46 state-proving mobile scenes, and wave +
+  distribution, vocabulary/RESIDUE, 50 state-proving mobile scenes, and wave +
   boss stress ledgers. `npm run baseline` replays 142 deterministic campaign
   scenarios with the AFT-021 duration/spread/recovery budgets enforced.
 - The standalone runtime payload is about 37.4 MiB excluding its nested Git
@@ -138,7 +139,7 @@ items have since shipped.
 | AFT-008 | P1 | ✅ Shipped 07-24 (baseline + closeout) | Full-campaign balance matrix and regression budgets | Old-campaign baseline captured, Section-9 corrections landed and measured against the redesigned campaign | L | AFT-005A/B, AFT-007 |
 | AFT-020 | P1 | ✅ Shipped 07-24 | Realm finales and campaign variety program | All nine authored finale formats live, stage titles, non-attrition identities, mastery drafts, Preparation, crests, Spiral remixes | XL | AFT-008 baseline |
 | AFT-021 | P1, P0 defects first | ✅ Shipped 07-24 | Post-AFT-020 UX stabilization and balance reread | Stage wins resolve visibly (the `resolve` beat + combatIsLive), one layout authority + combat-safe viewport, one weapon clock, and the measured mode/path/progression rebalance (BASELINE GREEN, 142 scenarios) | XL | AFT-020, AFT-008 closeout |
-| AFT-009 | P1 | ⬜ Open | Mobile-first constellation redesign and build identity | Makes the updated web understandable and touch-friendly | L | AFT-007 |
+| AFT-009 | P1 | ✅ Superseded → shipped as AFT-009R (2026-07-24) | Mobile-first progression redesign: Attunement levels, the Aether Forge, the constellation journal | Frequent readable choices on phones; the full web becomes a build journal | XL | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
 | AFT-011 | P1 | ⬜ Open | Mobile loading, asset streaming, and WebP packaging | Faster startup and lower decoded-memory use on ordinary phones | L | AFT-005A |
