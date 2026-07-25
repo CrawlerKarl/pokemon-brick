@@ -75,7 +75,7 @@ const STARTER_KEYS = ['fire', 'water', 'grass', 'electric', 'normal', 'flying',
   'ice', 'fighting', 'poison', 'ground', 'psychic', 'bug',
   'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'];
 if (SETTINGS.starter !== 'none' && !STARTER_KEYS.includes(SETTINGS.starter)) SETTINGS.starter = 'none';
-if (SETTINGS.affinity !== 'light' && SETTINGS.affinity !== 'dark') SETTINGS.affinity = null;
+if (SETTINGS.affinity !== 'light' && SETTINGS.affinity !== 'dark' && SETTINGS.affinity !== 'none') SETTINGS.affinity = null; // AFT-023: 'none' = the explicit UNSWORN choice (null = not yet decided)
 
 // Runtime replacement for the old STARTERS literal: the setup grid's
 // [{key,label}] list, derived from the active skin's roster tables.

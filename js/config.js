@@ -146,7 +146,9 @@ const TOGGLES = [
   { key: 'fx', label: 'EFFECTS QUALITY', cycle: ['auto', 'full', 'reduced'] },
   { key: 'reduceShake', label: 'REDUCE SCREEN SHAKE' },
   { key: 'reduceFlash', label: 'REDUCE FLASHES' },
-  { key: 'hcBall', label: 'HIGH-CONTRAST BALL' },
+  // AFT-023: mode-neutral label; the toggle now also boosts hostile-shot
+  // and pickup contrast in the shooter modes (render-only)
+  { key: 'hcBall', label: 'HIGH-CONTRAST PROJECTILES' },
   { key: 'autoFire', label: 'AUTO-FIRE (SHOOTER MODES)' },
 ];
 const TOUCH_SLIDERS = [
@@ -174,6 +176,21 @@ function activeToggles() { return settingsPage === 1 ? TOUCH_TOGGLES : TOGGLES; 
 // to the menu resets to the featured title hub.
 let menuPage = 'modes';
 let setupStep = 'pilot'; // setup is a two-screen flow: all pilots → challenge
+// AFT-023 FIRST-SESSION ONBOARDING: a brand-new player (no checkpoint, no
+// codex progress) meets FOUR readable archetypes + FLY SOLO, with the full
+// 18-vessel catalog one deliberate tap away ("BROWSE ALL"). Returning
+// players land straight on the full grid they know.
+let pilotBrowseAll = false;
+const PILOT_ARCHETYPES = [
+  { key: 'fire', tag: 'SIMPLE DAMAGE', recommended: true },
+  { key: 'rock', tag: 'EXTRA HULL' },
+  { key: 'fairy', tag: 'HEALS & LUCK' },
+  { key: 'electric', tag: 'EXPERT TEMPO' },
+];
+function pilotFreshSession() {
+  return !(typeof RUN_CKPT !== 'undefined' && RUN_CKPT)
+    && (typeof DEX === 'undefined' || !DEX || DEX.size === 0);
+}
 // PAGE 1 — one selected-game hero. The old home screen repeated the featured
 // mode as both a quick-start button and a giant card, then surrounded it with
 // three dense status bands. This layout gives one idea the stage at a time:
@@ -268,6 +285,31 @@ function setupLayout() {
     const gap = short ? 4 : narrow ? 6 : 8;
     const labelH = short ? 11 : 16;
     const vgap = short ? 4 : 8;
+    // AFT-023: the guided FIRST-SESSION view — four archetype cards in a
+    // 2×2 grid plus a BROWSE ALL band, sharing the hero/none/next chrome.
+    // Render and hit-testing both key off L.simple, same-geometry rule.
+    if (!pilotBrowseAll && pilotFreshSession()) {
+      const browseH = short ? 22 : 28;
+      const browseY = noneY - browseH - (short ? 4 : 8);
+      const room = browseY - (short ? 4 : 10) - heroY; // hero + grid split the room above the browse band
+      const heroH = Math.max(short ? 56 : 102, Math.min(short ? 66 : 200, room * 0.44));
+      const hero = { x: cx - heroW / 2, y: heroY, w: heroW, h: heroH };
+      const archTop0 = hero.y + hero.h + (short ? 6 : 10);
+      const archRoom = browseY - (short ? 4 : 8) - archTop0;
+      const archW = (Math.min(contentW, 640) - gap) / 2;
+      const archH = Math.max(short ? 34 : 52, Math.min(short ? 44 : 104, (archRoom - gap) / 2));
+      // center the 2×2 block in its room — tall phones breathe evenly
+      const archTop = archTop0 + Math.max(0, (archRoom - (2 * archH + gap)) * 0.35);
+      const archX0 = cx - Math.min(contentW, 640) / 2;
+      return {
+        step: 'pilot', simple: true, s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
+        hero, info: hero,
+        arch: i => ({ x: archX0 + (i % 2) * (archW + gap), y: archTop + Math.floor(i / 2) * (archH + gap), w: archW, h: archH }),
+        browse: { x: cx - Math.min(340, contentW * 0.86) / 2, y: browseY, w: Math.min(340, contentW * 0.86), h: browseH },
+        none: { x: cx - Math.min(290, contentW * 0.72) / 2, y: noneY, w: Math.min(290, contentW * 0.72), h: noneH },
+        next: { x: cx - nextW / 2, y: nextY, w: nextW, h: nextH },
+      };
+    }
     // THE VESSEL SHOWCASE (2026-07-22): the shelves cap their tile size, so a
     // tall phone used to leave a dead band under the hero. Reserve what the
     // three shelves actually want, then hand the leftover to the HERO card —
@@ -319,6 +361,10 @@ function setupLayout() {
   // the LIGHT/DARK choice is a REQUIRED, ceremonial pick on affinity skins —
   // two tall mirrored cards, not a slim optional toggle (2026-07-21)
   const affH = hasAff ? (short ? 40 : 58) : 0;
+  // AFT-023: the UNSWORN chip — a quiet third way under the two oath cards.
+  // A first-session player may launch neutral and swear later; the two
+  // ceremonial cards keep their size and drama.
+  const affNoneH = hasAff ? (short ? 15 : 19) : 0;
   const affW = Math.min(summaryW, 560);
   const cols = narrow ? 2 : 4, rows = Math.ceil(Object.keys(PRESETS).length / cols);
   const gap = short ? 7 : 12;
@@ -330,12 +376,12 @@ function setupLayout() {
   // need at a comfortable size, then hand the remainder to the card (clamped).
   const chipWant = short ? 34 : narrow ? 96 : 108;
   const gapAff = short ? 6 : 10, gapLabel = short ? 14 : 25, gapChips = short ? 10 : 20;
-  const reserved = (hasAff ? affH + gapAff : 0) + gapLabel + gapChips
+  const reserved = (hasAff ? affH + gapAff + affNoneH + 3 : 0) + gapLabel + gapChips
     + rows * chipWant + gap * (rows - 1) + (short ? 8 : 18);
   const summaryH = Math.max(short ? 54 : narrow ? 84 : 96,
     Math.min(short ? 74 : narrow ? 230 : 210, startY - summaryY - reserved));
   const affY = summaryY + summaryH + gapAff;
-  const diffLabelY = summaryY + summaryH + (hasAff ? affH + (short ? 12 : 18) : 0) + gapLabel;
+  const diffLabelY = summaryY + summaryH + (hasAff ? affH + affNoneH + 3 + (short ? 12 : 18) : 0) + gapLabel;
   const chipY = diffLabelY + gapChips;
   const chipRoom = startY - (short ? 8 : 18) - chipY;
   const chipH = Math.max(short ? 34 : 58, Math.min(narrow ? 92 : 108, (chipRoom - gap * (rows - 1)) / rows));
@@ -349,6 +395,7 @@ function setupLayout() {
         : summaryY + summaryH / 2 - (short ? 13 : 17),
       w: editW, h: short ? 26 : 34 },
     affinity: hasAff ? i => ({ x: cx - affW / 2 + i * (affW / 2 + 5), y: affY, w: affW / 2 - 5, h: affH }) : null,
+    affNone: hasAff ? { x: cx - Math.min(300, affW * 0.7) / 2, y: affY + affH + 3, w: Math.min(300, affW * 0.7), h: affNoneH } : null,
     chipsLabelY: diffLabelY,
     chip: i => { const c = i % cols, r = Math.floor(i / cols);
       return { x: cx - contentW / 2 + c * (chipW + gap), y: chipY + r * (chipH + gap), w: chipW, h: chipH }; },
@@ -360,7 +407,12 @@ function setupLayout() {
 function advLayout() {
   const sliders = activeSliders(), toggles = activeToggles();
   const pw = Math.min(440, W * 0.92);
-  const compact = H < 560;
+  // AFT-023: compact engages whenever the FULL-SIZE panel would overflow the
+  // viewport, not only under a fixed height — a 320×568 portrait phone sat
+  // exactly in the gap (full panel 576px deep on a 568px screen, found by
+  // adding 320×568 to the viewport-fit sweep)
+  const fullPh = 132 + sliders.length * 52 + toggles.length * 40 + 36;
+  const compact = H < 560 || fullPh > H - 16;
   // AFT-018 added a fifth toggle row (EFFECTS QUALITY) — compact metrics
   // tightened so the panel still fits a 375-tall landscape phone (the
   // viewport-fit suite test guards this exact geometry).

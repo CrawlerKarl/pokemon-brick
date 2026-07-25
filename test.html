@@ -743,13 +743,14 @@ window.requestAnimationFrame = function () { return 0; };
     G.lives = 1; G.state = 'play';
     loseLife('WEB REGRESSION TEST');
     assert(totalBuildLevels() === build0, 'a knockout uninstalled an upgrade (' + totalBuildLevels() + '/' + build0 + ')');
-    assert(G.attune.res === 0 && G.attune.pending === 0, 'the knockout kept unspent resonance');
+    // AFT-023: HALF the loose res survives (spiral-breaker); banked levels burn
+    assert(G.attune.res === 6 && G.attune.pending === 0, 'the knockout cost is not half-res + all banked levels (res=' + G.attune.res + ')');
     assert(G.focus === 1, 'the knockout did not cost a Focus Charge');
     assert(G.state === 'serve' || G.state === 'play', 'the knockout did not retry the wave');
     const broken = legal();
     assert(!broken, 'knockout left an illegal build: ' + broken);
     assert(ERR.length === e0, 'errors during web regression: ' + ERR.slice(e0).join(' | '));
-    return 'knockout keeps every installed upgrade · costs res + banked levels + 1 focus · retry is live';
+    return 'knockout keeps every installed upgrade · costs half the loose res + banked levels + 1 focus · retry is live';
   });
 
   // 2w-iib) every bridge synergy and superskill actually FIRES in play, in
@@ -1180,7 +1181,10 @@ window.requestAnimationFrame = function () { return 0; };
     fireCharge(1);
     assert(Math.abs(G.mega - 0.3) < 1e-9 && Math.abs(G.cataCD - 20) < 0.01, 'the nova did not bank its cost');
     assert(cTarget.hp < 100, 'the nova missed the fodder');
-    assert(100 - cBoss.hp <= 3.01, 'the nova hit the boss too hard (' + (100 - cBoss.hp).toFixed(2) + ')');
+    // AFT-023: the boss sliver rose to 6% (cap 9) so the WAR MACHINE finale
+    // fusion matters against the one target a finale is about
+    assert(100 - cBoss.hp <= 9.01 && 100 - cBoss.hp >= 5.5,
+      'the nova boss sliver is off its 6%/cap-9 contract (' + (100 - cBoss.hp).toFixed(2) + ')');
     // AEGIS LANCE (shooter): a full charge SPENDS one shield, bolt pierces all
     G.upg.lance = 1;
     G.shieldCharges = 2; G.mega = 0; G.lasers = []; G.heat = 0; G.overheat = 0;
@@ -3487,11 +3491,26 @@ window.requestAnimationFrame = function () { return 0; };
     const bad = [];
     let count = 0;
     try {
-      for (const [w, h] of [[310, 670], [375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
+      for (const [w, h] of [[310, 670], [320, 568], [375, 812], [812, 375], [844, 390], [1280, 720], [667, 375]]) {
         W = w; H = h;
         treeZoom = defaultTreeZoom(); treePan.x = 0; treePan.y = 0;
-        setupStep = 'pilot'; const P = setupLayout();
-        setupStep = 'difficulty'; const D = setupLayout();
+        // AFT-023: the pilot step has TWO deliberate branches — the guided
+        // first-session view and the full grid. Assert both explicitly
+        // (browse-all forces the grid regardless of session freshness).
+        setupStep = 'pilot';
+        pilotBrowseAll = true; const P = setupLayout();
+        pilotBrowseAll = false;
+        const PS = (() => { // force the simple branch: pretend a fresh session
+          const d0 = new Set(DEX); DEX.clear();
+          const ck0 = RUN_CKPT; RUN_CKPT = null;
+          const PSim = setupLayout();
+          RUN_CKPT = ck0; for (const id of d0) DEX.add(id);
+          return PSim.simple ? PSim : null;
+        })();
+        setupStep = 'difficulty';
+        const aff0 = SKIN.affinities; SKIN.affinities = true; // assert the oath row's geometry under any skin
+        const D = setupLayout();
+        SKIN.affinities = aff0;
         const L = menuLayout(), U = upgradeLayout(), T = upgradeTreeLayout(), A = advLayout();
         const rects = { quick: L.quick, daily: L.daily, dex: L.dex, adv: L.adv,
           pilotBack: P.back, pilotNone: P.none, pilotNext: P.next,
@@ -3522,6 +3541,16 @@ window.requestAnimationFrame = function () { return 0; };
         }
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < skinStarters().length; i++) rects['starter(' + i + ')'] = P.starter(i);
+        // AFT-023 surfaces: archetype cards + browse (simple pilot view),
+        // the two oath cards and the UNSWORN chip, and the detail hero
+        if (PS) {
+          for (let i = 0; i < PILOT_ARCHETYPES.length; i++) rects['arch(' + i + ')'] = PS.arch(i);
+          rects.browse = PS.browse; rects.simpleHero = PS.hero;
+          rects.simpleNone = PS.none; rects.simpleNext = PS.next;
+        }
+        rects.pilotHero = P.hero;
+        if (D.affinity) { rects['affinity(0)'] = D.affinity(0); rects['affinity(1)'] = D.affinity(1); }
+        if (D.affNone) rects.affNone = D.affNone;
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
@@ -6210,9 +6239,18 @@ window.requestAnimationFrame = function () { return 0; };
     assert(A.res === mark, 'renewable/crosser kills paid resonance — the farm is open');
     resKill({ maxHp: 3 });
     assert(A.res > mark, 'an ordinary kill paid nothing');
-    // 2) levels queue; the curated hands arrive in order
+    // 2) levels queue — but AFT-023 caps INCOME PER STAGE, so one flood can
+    // never bank the whole opening (boss deciles + beats used to overpay)
     gainResonance(999, 'test');
-    assert(A.pending >= 3 && A.level >= 3, 'a big contribution did not bank levels (pending=' + A.pending + ')');
+    assert(G.resStageIn === attuneStageCap(), 'income did not saturate at the stage cap (' + G.resStageIn + ')');
+    const lvlAtCap = A.level, pendAtCap = A.pending;
+    gainResonance(50, 'test');
+    assert(A.level === lvlAtCap && A.pending === pendAtCap, 'income kept paying past the stage cap');
+    assert(A.pending >= 2 && A.level >= 2, 'a capped stage did not still bank early levels (pending=' + A.pending + ')');
+    // the next stage re-opens the budget (buildLevel resets it)
+    G.resStageIn = 0;
+    gainResonance(999, 'test');
+    assert(A.pending >= 3 && A.level >= 3, 'a fresh stage budget did not bank the next level (pending=' + A.pending + ')');
     const trio = h => G.upgradeChoices.map(c => c.pathKey).sort().join(',');
     presentAttunementLevel();
     assert(G.state === 'upgrade' && G.attuneLive, 'the level did not open the draft');
@@ -6241,6 +6279,15 @@ window.requestAnimationFrame = function () { return 0; };
     // 4) the combat-safe gate: never over a charge, a channel, or a dropping ball
     G.upgradeChoices = null; G.state = 'play'; G.stateT = 2; G.attune.pending = 1;
     paused = false; G.engageHold = 0; G.columnStrikes.length = 0; G.reveal = null; G.resolve = null;
+    // AFT-023 presentation discipline — each blocker refuses on its own
+    G.attuneCD = 0; G.attuneHoldT = 0; G.attuneStageN = 0; G.attuneBeatN = 0;
+    G.attuneCD = 5;
+    assert(!attuneSafeNow(), 'the spacing cooldown was ignored');
+    G.attuneCD = 0; G.attuneHoldT = 5;
+    assert(!attuneSafeNow(), 'the post-reveal/phase hold was ignored');
+    G.attuneHoldT = 0; G.attuneStageN = 1;
+    assert(!attuneSafeNow(), 'a second draft opened in one ordinary stage');
+    G.attuneStageN = 0;
     chargeHeld = true;
     assert(!attuneSafeNow(), 'a held charge was interruptible');
     chargeHeld = false; G.charge = 0; G.chargeCD = 0;
@@ -6405,6 +6452,74 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.attune.level === totalBuildLevels() && G.attune.level > 0,
       'the trial grant did not sync the attunement arc (' + G.attune.level + ' vs ' + totalBuildLevels() + ')');
     return 'focus 2→0 spends honestly · reforge legal, banked, once per realm · v5 save round-trip · trial sync';
+  });
+
+  test('AFT-023: draft pacing discipline + finale knockout checkpoint', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    // 1) a boss reveal holds drafts out of the next 16 combat seconds
+    window.__SUITE_REVEALS = true;
+    resetRun(3, true, { seed: 'AFT023-REVEAL' });
+    assert((G.attuneHoldT || 0) >= 15, 'the boss reveal did not arm the draft hold (' + G.attuneHoldT + ')');
+    if (G.reveal) revealSkip();
+    window.__SUITE_REVEALS = false;
+    // 2) two banked levels past the curated opening combine into ONE
+    //    choose-two hand (never two chained screens)
+    resetRun(5, true, { seed: 'AFT023-COMBINE', upg: 'arsenal:2,aegis:1' });
+    G.state = 'play'; G.stateT = 2; G.playT = 2; G.lives = G.livesMax = 99;
+    const A = G.attune;
+    A.presented = Math.max(3, A.presented); A.pending = 2;
+    presentAttunementLevel();
+    assert(G.state === 'upgrade' && G.attuneLive, 'the combined level did not open');
+    assert(G.bonusPicks === 2 && A.pending === 0, 'two banked levels did not combine (bonusPicks=' + G.bonusPicks + ' pending=' + A.pending + ')');
+    const lv0 = totalBuildLevels();
+    pickUpgrade(0);
+    assert(G.state === 'upgrade' && G.upgradeChoices && G.upgradeChoices.length >= 1,
+      'the second pick of a combined hand was not held open');
+    pickUpgrade(0);
+    assert(G.state === 'play' && !G.attuneLive && G.bonusPicks === 0, 'the combined hand did not resume play after two picks');
+    assert(totalBuildLevels() === lv0 + 2, 'two picks did not install two ranks');
+    // 3) ladder-family knockout resumes at the reached ROUND, not round 0
+    resetRun(3, false, { seed: 'AFT023-KO' });
+    G.state = 'play'; G.stateT = 2; G.playT = 2;
+    jumpToGauntletRound(1); // the fight reached the sovereign round
+    assert(G.finaleCkpt && G.finaleCkpt.lvl === 3 && G.finaleCkpt.beat === 1,
+      'the round advance did not record a knockout checkpoint');
+    G.attune.res = 12; G.attune.pending = 1;
+    G.lives = 1;
+    loseLife('AFT023 TEST KNOCKOUT');
+    assert(G.state === 'play' || G.state === 'serve', 'the knockout did not retry');
+    assert(G.gauntlet && G.gauntlet.phase === 1, 'the retry replayed round 0 (phase=' + (G.gauntlet && G.gauntlet.phase) + ')');
+    assert(G.finale && G.finale.beat === 1, 'the finale director did not resume at the reached beat');
+    assert(!G.bricks.some(b => b.subBoss && !b.dead), 'the beaten sentinels came back');
+    const sov = G.bricks.find(b => b.isBoss && !b.dead);
+    assert(sov && sov.hp === sov.maxHp, 'the current round boss did not restart at its round-entry HP');
+    assert(G.attune.res === 6 && G.attune.pending === 0, 'the knockout resume mispriced the bank (want half-res 6, got ' + G.attune.res + ')');
+    assert(G.invuln >= 2.4 && (G.enemyShotCD || 0) >= 2.1, 'the retry opened without post-knockout grace');
+    // 4) raid knockout resumes at the reached SEGMENT with the Seraph's damage kept
+    resetRun(24, false, { seed: 'AFT023-RAID' });
+    assert(G.finale && G.finale.format === 'raid', 'L24 is not the raid finale');
+    G.state = 'play'; G.stateT = 2; G.playT = 2;
+    const RD = G.finale.raid;
+    const seraph0 = G.bricks.find(b => b.raidSeraph);
+    seraph0.hp = Math.round(seraph0.maxHp * 0.6);
+    RD.segments[0].state = 'assembling';
+    raidResolveSegment('broken');
+    assert(G.finaleCkpt && G.finaleCkpt.raid && G.finaleCkpt.raid.seg === 1,
+      'the broken segment did not record a raid checkpoint');
+    G.lives = 1;
+    loseLife('AFT023 RAID KNOCKOUT');
+    assert(G.state === 'play' || G.state === 'serve', 'the raid knockout did not retry');
+    const RD2 = G.finale.raid;
+    assert(RD2.seg === 1 && RD2.segments[0].state !== 'waiting' && RD2.segments[1].state === 'assembling',
+      'the raid retry replayed segment 1 (seg=' + RD2.seg + ')');
+    const seraph1 = G.bricks.find(b => b.raidSeraph && !b.dead);
+    assert(seraph1 && Math.abs(seraph1.hp / seraph1.maxHp - 0.6) < 0.05,
+      'the Seraph did not keep its segment-entry damage (' + (seraph1 && (seraph1.hp / seraph1.maxHp).toFixed(2)) + ')');
+    // 5) leaving the finale drops the checkpoint
+    buildLevel(4);
+    assert(!G.finaleCkpt, 'the knockout checkpoint outlived its finale');
+    SETTINGS.starter = 'none';
+    return 'reveal holds drafts 16s · two banked levels = one choose-two hand · ladder KO resumes at round · raid KO resumes at segment with damage kept · ckpt scoped to its finale';
   });
 
   // ---- runner -------------------------------------------------------------

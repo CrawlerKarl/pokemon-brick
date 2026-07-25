@@ -5,6 +5,120 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24s — AFT-023: the STARFIGHTER improvement pass (pacing · knockout checkpoints · apex identities · duration curve · vessels/affinity · first-session onboarding)
+
+One autonomous program spanning six coordinated fronts, measured before and
+after with the harness (fresh labels; committed history untouched):
+
+- **DRAFT PACING (goal 1).** The AFT-009R economy dealt 30 drafts per
+  campaign — six inside realm 1, and hands-on play reproduced drafts 3.3s
+  after a legendary reveal. Now: `attuneNeed` rises 20/26/34 then
+  +8/level; resonance income is CAPPED PER STAGE (55 ordinary / 100
+  finale, `attuneStageCap`, saturation ledgered as `resCapped`);
+  presentation discipline adds one-draft-per-ordinary-stage,
+  one-per-finale-beat, a 24s spacing cooldown (14s in finales), and
+  16s/12s holds after reveals/phase turns that tick only in live combat.
+  Two banked levels past the curated opening COMBINE into one choose-two
+  hand (holdBonusPick reuse). Measured: 22-24 picks per campaign across
+  three seeds (was 30), realm 1 = 4 decisions (was 7), zero post-reveal
+  interruptions by construction. A knockout keeps HALF the loose
+  resonance (full confiscation made weak builds permanently weak —
+  measured 15-16 KO grindouts on the L24 raid before the change), and
+  from the THIRD knockout on the same finale the SOVEREIGN MERCY eases
+  the boss pool 8%/defeat (floor −25%; deterministic, scoped to that
+  finale's checkpoint) so degenerate builds converge instead of
+  bricking on an endurance wall. The curated opening, Forge, Focus, Reforge, four-path
+  cap, determinism and v5 saves are untouched.
+- **FINALE KNOCKOUT CHECKPOINTS (goal 2).** A knockout used to replay the
+  WHOLE finale (measured worst case 424.9s: four full replays on one L27
+  seed). `G.finaleCkpt` records every beat advance and raid segment
+  resolution; the knockout branch rebuilds and fast-forwards
+  (`jumpToGauntletRound` / `resumeRaidCheckpoint`, under `G.finaleResume`
+  so beat resonance never re-pays). Earlier rounds stay won; the current
+  round restarts at its own entry; the raid Seraph keeps its
+  segment-entry HP fraction. Measured: L27 knockouts now cost ~30-38s
+  each. Post-hit protection: survived hits floor hostile fire CDs at
+  1.6s; retries open with 2.5s invuln + 2.2s grace. The KNOCKED OUT
+  card states the cost AND the resume point. The checkpoint never
+  persists to storage (stored-checkpoint resume still restarts the
+  realm) and is scoped to its own finale.
+- **APEX IDENTITIES (goal 3).** The measured inversion (WAR MACHINE
+  284.8s/3 KOs vs CELESTIAL 59.2s/0 dmg) was two things at once: a
+  probe-grant collision (rank-3 grants let the seeded bank hand celestial
+  +5 net ranks incl. prismX/aegisX vs +1) and a real design gap (rail
+  pressure was pure heat relief; an efficient pilot never overheats).
+  WAR MACHINE's bar is offense now: +45% charge damage at full spend,
+  RAIL PLATING (1.3s grace) on a full-bar release, +15% gatling at full
+  pressure, meteors weight hard targets ×4 (single gameRand draw —
+  stream count identical), Cataclysm's boss sliver 3%→6% (cap 9).
+  CELESTIAL's ward re-arms on a 14s cooldown (full sectors wait; the
+  update poll releases them). Probes re-run at 4/4/4 grants × 3 seeds:
+  the 4.8× gross inversion is dead — the two apexes now trade the lead
+  inside late-finale seed noise (medians landed 58.9 vs 65.1, then 52 vs
+  50 across full-matrix runs; the run-to-run swing itself measures
+  ±10% at 3-seed granularity). The new E-apex budget rails the identity
+  permanently: a gross re-inversion (>15%) or celestial dominating BOTH
+  survival and damage hard-fails; the residual gap to the +10-15%
+  warmachine target is warn-tracked and owner-flagged (chasing it
+  further at this seed count is knob roulette).
+- **THE DURATION CURVE (goal 4).** Ordinary late stages sat at ~20-25s
+  (population-bound while build DPS grew ×15). `lateWaveMul` starts at
+  r2 (+17%/region); junkie reinforcement waves ramp 1/2/3/4 by act with
+  late packs up to 20 — sequential depth, the ≤26 simultaneous cap
+  untouched. ACE reads as PATTERN COMBINATIONS (heavy spearhead + two
+  micro escorts inside the threat budget, +2 swarm pellets), never
+  sponges; the massive siege shot enters at r6 (12%, 1.15s telegraph)
+  instead of the old r7 cliff. FINALE_WORK re-fit for the disciplined
+  economy WITH checkpoints (r5 4.3 / r6 16 / r7 24 / r8 9.0). The
+  baseline bands now encode the rising targets (early 20-32 / mid 26-48 /
+  late 34-65 warn bands; junkie finale target 60-100, hard ceiling 150).
+- **VESSELS · AFFINITY · AEGIS (goal 5).** Ground/poison trimmed at the
+  mechanism (armorDamage 1.10/1.18/1.26; corrosion 0.06/0.11/0.16 —
+  finales are armor-dominated, so the old numbers were unconditional
+  there); FIRE's ignite finally exists in the shooter modes (every
+  5th/4th/3rd basic hit KINDLES the target — its junkie kit was a bare
+  +15% with dead classic-only code); DARK gains its finisher half
+  (+15/25/40% vs targets under 35% HP — combos are structurally dead in
+  boss fights). LIGHT is measurably real: RADIANT WARD (every earned
+  ward emits a cleansing pulse that dissolves nearby ordinary fire) —
+  ward-fed sanctuary vs dark's kill-fed damage; UNSWORN ('none') is an
+  explicit, storage-stable neutral choice. AEGIS overflow smoothed:
+  denied/over-cap wards convert to a bounded Surge feed (≤3/stage) +
+  score, instead of score-only fizzle. Vessel probes are 3-seeded now
+  (single finale cells measured ±3s knob-independent noise). Heat: no
+  mechanical change — the manual charge/overcharge/resonant arc and the
+  5-10s spam band remain the skill layer; rail pressure adds a
+  heat-management payoff for the apex.
+- **FIRST-SESSION ONBOARDING (goal 6).** A brand-new player (no
+  checkpoint, empty codex) lands on a GUIDED vessel view: four archetype
+  cards (fire RECOMMENDED and pre-selected / rock / fairy / electric),
+  FLY SOLO, and a deliberate BROWSE ALL 18 door; returning players get
+  the full grid straight away. The oath row gains the quiet FLY UNSWORN
+  chip — launching neutral is legitimate, and 'none' never applies oath
+  treatments. Mode-correct strings: RESISTED · CATCH AN ELEMENT PICKUP
+  in the shooter modes (classic keeps the ball copy); HIGH-CONTRAST
+  PROJECTILES (key `hcBall` unchanged) now rings every hostile shot and
+  pickup with a black/white keyline (strokes only). Friendly bloom
+  YIELDS near threats (aura/rim/blur ×0.4 when hostile fire is inside
+  the ship band); the coach pill hides while a hazard crosses its band.
+  Vessel tile labels ride fitLabel with an 8px floor. The 320×568
+  viewport joined the fit sweep — and immediately caught a real
+  overflow (the settings panel ran 596px deep on a 568px screen; compact
+  metrics now engage whenever the full panel would not fit). Three new
+  gate scenes (vessel-select-guided / vessel-select-grid /
+  challenge-oath) close the setup-surface screenshot gap.
+
+Verification: suite 127 → 128 (AFT-023 fixture: reveal holds, combined
+hands, ladder + raid knockout resume, checkpoint scoping; updated P2 and
+cataclysm fixtures assert the new contracts); gate green end to end (56
+scenes); baseline GREEN at `matrix-aft023.json` with the E-apex identity
+budget, 3-seeded vessel/apex probes and the rising duration bands
+enforced. Deviations documented in-line: the blaster finale floor re-fit
+([40,150]) prices out the old full-restart overhead the checkpoint
+removed; the L21 rite stays owner-flagged fast.
+
+---
+
 ## 2026-07-24r — AFT-009R: the mobile-first progression redesign
 
 The upgrade system is now TWO connected loops (owner directive; supersedes

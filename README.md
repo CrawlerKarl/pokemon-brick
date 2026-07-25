@@ -676,8 +676,9 @@ apex > fusion priority, ONE fusion/apex per hand, a newly-unlocked
 guarantee after evolving, reroll anti-repeat and pity — under the
 AFT-009R four-path cap, with hands arriving as ATTUNEMENT levels and the
 transformations at the realm AETHER FORGE. Knockout never uninstalls
-anything (a defeat costs unspent resonance, banked levels and one Focus
-Charge — the build survives); `webRegressibleLeaves` (which simulates
+anything (a defeat costs HALF the loose resonance, all banked levels and
+one Focus Charge — the build survives, and a finale knockout resumes at
+the furthest round/beat/segment reached, AFT-023); `webRegressibleLeaves` (which simulates
 every removal against `webBuildLegal` so nothing can break a recipe) is
 the REFORGE oracle; checkpoints are schema v5 (attune arc + focus +
 reforge) with a never-throws v1–v4 migration (`migrateCheckpoint`,

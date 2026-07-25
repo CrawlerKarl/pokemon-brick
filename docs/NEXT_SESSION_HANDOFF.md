@@ -87,7 +87,23 @@
 > **AFT-022 (portrait round) and AFT-009R (the progression redesign —
 > Attunement / Aether Forge / journal) BOTH SHIPPED 2026-07-24** — see
 > log rounds 2026-07-24q/r and the numbered pickup list below.
-> **NEXT: AFT-019 (first-session phone pass).**
+>
+> **AFT-023 (the STARFIGHTER improvement pass) SHIPPED 2026-07-24s** —
+> draft pacing discipline (~23 picks/campaign, capped per-stage income,
+> reveal/phase holds, combined banked hands), FINALE KNOCKOUT CHECKPOINTS
+> (resume at the reached round/beat/segment — the 424.9s L27 replay class
+> is dead; KO overhead measured 30-38s), apex identity re-forge (WAR
+> MACHINE offense + plating vs CELESTIAL 14s ward cooldown; 3-seeded
+> fair probes + an enforced identity budget), the rising duration curve
+> (lateWaveMul from r2, reinforcement waves 1/2/3/4, Ace combo volleys,
+> massive shots enter r6 with a longer telegraph), vessel normalization
+> (ground/poison trims, fire kindle in shooters, dark execute, LIGHT
+> Radiant Ward, UNSWORN neutral launch, Aegis overflow → bounded Surge),
+> and the guided first-session vessel view + mode-correct strings +
+> HIGH-CONTRAST PROJECTILES + the 320×568 fit sweep (which caught a real
+> settings-panel overflow). Suite 129; gate 56 scenes; baseline
+> matrix-aft023. Log round 2026-07-24s has the full detail.
+> **NEXT: AFT-019 remainder (real-device first-session pass) + AFT-010.**
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 

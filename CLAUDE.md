@@ -80,7 +80,16 @@ cards); CONTINUE is a slim band under the header only when a checkpoint
 exists and OUTRANKS the skin pill in tap order; journey/research is one
 quiet desktop footer line. The edition pill (`skinPillRect`) toggles skins
 and must stay clamped above the content zone on short viewports.
-**The partner screen is one DETAIL HERO + three labeled shelves.** All the
+**The partner screen is one DETAIL HERO + three labeled shelves —
+and a BRAND-NEW player gets the GUIDED VIEW first (AFT-023):** four
+archetype cards (`PILOT_ARCHETYPES`: fire recommended / rock / fairy /
+electric) + FLY SOLO + a deliberate BROWSE ALL 18 door
+(`pilotBrowseAll`, `pilotFreshSession()` = no checkpoint AND empty
+codex; returning players land straight on the grid). The recommended
+vessel pre-selects on entry so CONTINUE works immediately. On affinity
+skins the oath row carries a quiet FLY UNSWORN chip (`SETTINGS.affinity
+= 'none'`, storage-stable) — launching unsworn is legitimate; 'none'
+never applies the halo footprint or any oath treatment. All the
 reading lives in a single hero card (sprite, name, ability + type, effect,
 evolution line); the 18 partners are small identity tiles (sprite + name
 only) on three shelves named by `SKIN.rosterGroups` (THE CLASSICS / WILD &
@@ -288,6 +297,15 @@ phone — flag anything only verifiable there.
   "0 balls → loseLife" gate (you only die to enemy fire), and fire from
   `shipY()` (junkie) — every "where is the player" check must use `shipY()`,
   not `PADDLE_Y()`.
+- **ACE pressure is PATTERN COMBINATIONS, never sponges (AFT-023).** On
+  hard only, r3+ volleys may ride a heavy spearhead with two micro
+  escorts (`P.escorts` — priced into `patternThreat`, inside the threat
+  budget); micro swarms run +2 pellets. The massive siege shot enters at
+  r6 (12%, 1.15s telegraph) before tightening at r7 — never a one-stage
+  cliff. Ordinary-stage durations ride a RISING curve (`lateWaveMul`
+  from r2 at +17%/region; junkie reinforcements 1/2/3/4 waves by act,
+  late packs up to 20) — sequential depth, never more simultaneous
+  actors (≤26 cap untouched).
 - **Enemy fire is TYPED and effectiveness-aware.** Each shot carries a `type`
   (firing mon's) and renders in that colour. `SHOT_CLASSES` keeps visual size,
   collision size, interception HP, and threat independent; micro / standard /
@@ -608,10 +626,37 @@ phone — flag anything only verifiable there.
   (a transformation can never break) and banks a level. Checkpoints are
   schema v5 (attune/focus/reforge; v1–v4 accepted forever, arc derived
   from the build); `syncAttuneToBuild()` covers trials/dev grants.
-  KNOCKOUT NEVER UNINSTALLS — it costs res + banked levels + 1 Focus and
-  retries. Every draft surface draws `draftCardModel` (the five-tag card
+  KNOCKOUT NEVER UNINSTALLS — it costs HALF the loose res + all banked
+  levels + 1 Focus and retries (half-res is the AFT-023 spiral-breaker). Every draft surface draws `draftCardModel` (the five-tag card
   anatomy). Suite + gate scenes (attune-level, forge-menu) lock all of
   this.
+- **Draft pacing is DISCIPLINED (AFT-023, 2026-07-24).** The economy targets
+  ~18-22 attunement levels per campaign (was 30): `attuneNeed` rises
+  20/26/34 then +8/level; resonance income is CAPPED PER STAGE
+  (`attuneStageCap()`: 55 ordinary / 100 finale — boss deciles + beats +
+  objectives can no longer flood the bank; excess saturates and is
+  ledgered as `resCapped`). Presentation discipline on top of combat
+  safety: ONE draft event per ordinary stage, one per finale beat, a
+  spacing cooldown (`G.attuneCD` 24s / 14s finale), and a hold after every
+  boss reveal (16s) and phase turn (12s) — `G.attuneHoldT`, decayed only
+  in live combat. Past the curated opening, two banked levels COMBINE
+  into one choose-two hand (the `holdBonusPick` machinery). Never re-add
+  per-draft freebies or unbounded queues.
+- **A finale knockout resumes at the furthest ROUND/BEAT/SEGMENT reached
+  (AFT-023).** `G.finaleCkpt` records beat advances (`startFinaleBeat`)
+  and raid segment resolutions; the knockout branch rebuilds, then
+  `jumpToGauntletRound(beat)` (ladder-family) or `resumeRaidCheckpoint`
+  (raid — segment states + the Seraph's segment-entry HP fraction)
+  fast-forwards under `G.finaleResume` (beat resonance is never re-paid).
+  Earlier rounds stay won; the current round restarts at its own entry.
+  The checkpoint lives exactly as long as its finale (buildLevel drops it
+  on any other level) and is NEVER persisted — a stored-checkpoint resume
+  restarts the realm as before. Trials and dailies share the contract.
+  Post-hit protection: every survived hit floors enemy/boss fire CDs at
+  1.6s; a knockout retry opens with 2.5s invuln + 2.2s fire grace.
+  SOVEREIGN MERCY: from the 3rd knockout on one finale the boss pool
+  eases 8%/defeat (floor −25%) via `G.finaleCkpt.kos` — deterministic,
+  never persisted, gone on clear or leave.
 - **Progression: paths + mastery + checkpoints.** Drafts advance the same
   6-path × 4-tier tree (two distinct offense paths; PRISM owns type-matchup mastery); junkie re-skins tiers as
   Pokémon items (`JUNKIE_ITEMS`). **The old BOND utility spoke is the
@@ -651,8 +696,18 @@ phone — flag anything only verifiable there.
   slot — **MAX 2 FUSIONS PER RUN**. An APEX (warmachine/celestial) needs
   stage 24+, two compatible installed Fusions, nine ranks across its three
   paths — **MAX 1 PER RUN**. These slot caps are the balance spine — never
-  lift them. Knockout NEVER uninstalls anything since AFT-009R (it costs
-  unspent resonance, banked levels and one Focus); `webRegressibleLeaves()`
+  lift them. APEX IDENTITIES (AFT-023): WAR MACHINE is the faster,
+  riskier apex — rail pressure rides the charged shot as damage
+  (+45% at full bar), a full-bar spend vents as RAIL PLATING (1.3s
+  grace), the gatling gains +15% at full pressure, meteors weight hard
+  targets ×4 (one gameRand draw, stream-identical) and the Cataclysm boss
+  sliver is 6% (cap 9); CELESTIAL is the safer apex whose ward re-arms on
+  a 14s cooldown (`G.celCD` — full sectors WAIT; the update-loop poll
+  releases them). The baseline enforces the identity (E-apex budget:
+  warmachine faster; celestial never dominates both survival and dps). Knockout NEVER uninstalls anything since AFT-009R (it costs
+  unspent resonance, banked levels and one Focus — and since AFT-023 a
+  finale knockout resumes at the reached round, never the whole finale);
+  `webRegressibleLeaves()`
   — which SIMULATES each removal against `webBuildLegal()` so a removal can
   never break a recipe — is now the REFORGE eligibility oracle.
   Checkpoints are schema v5 (attune/focus/reforge): `migrateCheckpoint`

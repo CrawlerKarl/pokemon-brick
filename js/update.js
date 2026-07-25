@@ -265,14 +265,26 @@ function starEnemyPattern(src) {
   // decision: a tanky rank-and-file enemy remains a readable rank-and-file.
   if (rank >= 3) return { classKey: 'heavy', kind, count: 3, spread: 0.28, aimed: true, speedMul: 0.68 };
   if (rank >= 2) return { classKey: 'heavy', kind, count: 1, spread: 0, aimed: true, speedMul: 0.72 };
+  // AFT-023: ACE pressure is PATTERN COMBINATIONS, never extra health — a
+  // heavy spearhead rides in with two micro escorts (threat 3.0, inside
+  // Ace's ×1.245 concurrency headroom), so higher difficulty reads as
+  // denser formations to weave, not spongier targets.
+  const ace = SETTINGS.preset === 'hard';
+  if (ace && ri >= 3 && roll >= 0.68 && roll < 0.82) {
+    return { classKey: 'heavy', kind, count: 1, spread: 0, aimed: true, speedMul: 0.66,
+      escorts: { classKey: 'micro', count: 2, spread: 0.3, speedMul: 0.78 } };
+  }
   // The late game alternates swarm and siege instead of stacking both. One
   // massive shot costs about the same as a twelve-pellet micro formation.
-  if (ri >= 7 && roll < 0.24) {
+  // AFT-023: the massive siege shot now ENTERS a region earlier with a
+  // longer telegraph, then tightens — the old r7 cliff went from zero
+  // massive fire to 24% in one stage (the "sudden lethal burst" report).
+  if (ri >= 6 && roll < (ri >= 7 ? 0.24 : 0.12)) {
     return { classKey: 'massive', kind, count: 1, spread: 0, aimed: ri >= 8, speedMul: 0.44,
-      warn: 0.9 };
+      warn: ri >= 7 ? 0.9 : 1.15 };
   }
   if (ri >= 5 && roll < 0.68) {
-    return { classKey: 'micro', kind, count: Math.min(12, 4 + ri), spread: 0.13,
+    return { classKey: 'micro', kind, count: Math.min(12, 4 + ri + (ace ? 2 : 0)), spread: 0.13,
       aimed: ri >= 6, speedMul: 0.72 };
   }
   if (ri >= 2) {
@@ -283,7 +295,11 @@ function starEnemyPattern(src) {
   return { classKey: 'micro', kind, count: ri === 0 ? 1 : 2, spread: 0.2,
     aimed: false, speedMul: 0.72 };
 }
-function patternThreat(P) { return enemyShotClass(P.classKey).threat * P.count; }
+function patternThreat(P) {
+  let t = enemyShotClass(P.classKey).threat * P.count;
+  if (P.escorts) t += enemyShotClass(P.escorts.classKey || 'micro').threat * P.escorts.count; // AFT-023: combo volleys price their escorts
+  return t;
+}
 function spawnStarEnemyPattern(src, P, bx, by, d, volleyId) {
   // PROTECT OBJECTIVES: while an escort/relay friendly is alive, every 2nd
   // AIMED MICRO volley redirects its aim onto the friendly instead of the
@@ -306,6 +322,19 @@ function spawnStarEnemyPattern(src, P, bx, by, d, volleyId) {
       type: src.poke.t, species: src.poke.id, kind: P.kind, classKey: P.classKey, volleyId,
       wave: P.classKey === 'micro' && regionIdx(G.level) >= 4 ? 10 + regionIdx(G.level) * 2 : 0,
       wavePhase: i * 0.8 });
+  }
+  // AFT-023 ACE combo volleys: the spearhead's escorts fly the same volley
+  // (one budget entry — patternThreat prices them together), flanking wide
+  // so the weave is a formation to read, never a pincer ambush
+  if (P.escorts) {
+    const E = P.escorts;
+    const esp = (225 + d.lv * 14) * d.shotSpeed * (E.speedMul || 0.78);
+    for (let i = 0; i < E.count; i++) {
+      const off = (i === 0 ? -1 : 1) * (E.spread || 0.3);
+      spawnEnemyShot({ x: bx, y: by, vx: Math.cos(base + off) * esp, vy: Math.sin(base + off) * esp,
+        type: src.poke.t, species: src.poke.id, kind: P.kind, classKey: E.classKey || 'micro', volleyId,
+        wave: 0, wavePhase: i * 0.8 });
+    }
   }
 }
 
@@ -638,7 +667,14 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (G.starter === 'ground' && (br.armored || br.shellArmor || br.barrier || br.isBoss)) { // SAND FORCE / SEISMIC RIG
       dmg *= starterMod('armorDamage', 1);
     }
-    if (G.starter === 'dark') dmg *= 1 + Math.min(G.combo, 20) * starterMod('comboDamage', 0); // MOXIE / BLOODLUST
+    if (G.starter === 'dark') {
+      dmg *= 1 + Math.min(G.combo, 20) * starterMod('comboDamage', 0); // MOXIE / BLOODLUST
+      // AFT-023: the FINISHER half of the dark identity — combos are
+      // structurally dead in a boss-dominated finale (kills reset on any
+      // hit taken), so dark now also executes weakened targets. Distinct
+      // from ground (armor) and poison (attrition): dark closes kills.
+      if (br.maxHp > 0 && br.hp / br.maxHp < 0.35) dmg *= starterMod('execute', 1);
+    }
     if (G.starter === 'poison') {
       br.starterCorrosion = Math.min(5, (br.starterCorrosion || 0) + 1);
       dmg *= 1 + (br.starterCorrosion - 1) * starterMod('corrosion', 0);
@@ -681,7 +717,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // resisted hits barely scratch — gentler on Easy, brutal beyond
       dmg *= SETTINGS.preset === 'easy' ? 0.5 : 0.25;
       if (G.seCD <= 0) {
-        setCombatNotice('RESISTED · CHANGE BALL TYPE', '#b0bec5');
+        // AFT-023: the advice must be actionable IN THIS MODE — the shooter
+        // modes have no ball; their answer is an element pickup
+        setCombatNotice(G.mode === 'classic' ? 'RESISTED · CHANGE BALL TYPE'
+          : 'RESISTED · CATCH AN ELEMENT PICKUP', '#b0bec5');
         tone(180, 0.1, 'sine', 0.04, -60);
         G.seCD = 0.45;
       }
@@ -689,7 +728,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       // soft-lock. PRISM TRANSFUSE keeps your element lit no matter what.
       if (!upgN('transfuse') && element === G.ballElement && ++G.resistStreak >= 4) {
         G.ballElement = null; G.resistStreak = 0;
-        setCombatNotice('ELEMENT WORE OFF · NEUTRAL BALL RESTORED', '#cfd8dc', 1.4);
+        setCombatNotice(G.mode === 'classic' ? 'ELEMENT WORE OFF · NEUTRAL BALL RESTORED'
+          : 'ELEMENT WORE OFF · YOUR OWN ' + typeWord() + ' RESTORED', '#cfd8dc', 1.4);
       }
     } else if (element === G.ballElement) G.resistStreak = 0;
   }
@@ -968,6 +1008,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (newPhase > br.phase) {
       statsBossPhaseMark(br, br.phase);
       resEvent('phase'); // AFT-009R P2: turning a boss phase is resonance
+      G.attuneHoldT = Math.max(G.attuneHoldT || 0, 12); // AFT-023: a phase turn is never talked over by a draft
       br.phase = newPhase;
       // The hit that ended one phase cannot spill straight through the next.
       // This short gate protects boss choreography without creating a long
@@ -2525,6 +2566,21 @@ function draftCardModel(c) {
 // strip the whole bank in one frame. Returns true if the hit was eaten.
 // (Shields used to burn at the FLOOR line, below the player — every shot they
 // "blocked" had already missed, so AEGIS did nothing in the shooter modes.)
+// AFT-023 LIGHT oath — RADIANT WARD: every EARNED ward answers with a
+// cleansing pulse. Ordinary enemy fire near the vessel dissolves (boss
+// shots hold); pure utility — light never copies dark's damage identity.
+// Bounded by the shield income budget that triggers it.
+function radiantPulse() {
+  const px = G.paddle.x, py = shipY();
+  let cleared = 0;
+  for (const s of G.enemyShots) {
+    if (s.dead || s.boss) continue;
+    if (Math.hypot(s.x - px, s.y - py) < 170) { s.dead = true; cleared++; }
+  }
+  ringFx(px, py, '#fff59d', 6, 150, 4, 0.45);
+  if (cleared) addFloater(px, py - 58, 'RADIANT WARD!', '#fff59d', 12);
+  SFX.shield();
+}
 function absorbHit(x, y, shotType = null, volleyId = null) {
   if (G.shieldCharges <= 0) return false;
   G.shieldCharges--;
@@ -2796,7 +2852,9 @@ function cataclysmNova() {
   for (const br of G.bricks) {
     if (br.dead || br.dormant || br.barrier) continue;
     const bx = br.bx + G.fx, by = br.by + G.fy;
-    const dmg = br.isBoss ? Math.min(2.5, br.maxHp * 0.03) : 2.5;
+    // AFT-023: the boss sliver rose 3% → 6% (cap 9) — a WAR MACHINE finale
+    // fusion has to matter against the one target a finale is about
+    const dmg = br.isBoss ? Math.min(9, br.maxHp * 0.06) : 2.5;
     damageBrick(br, dmg, bx, by, el, { noMega: true });
   }
   for (const s of G.enemyShots) if (!s.boss) s.dead = true;
@@ -2880,6 +2938,13 @@ function celestialSector(k) {
   else if (k === 's') G.celS = true;
   else G.celE = true;
   if (!(G.celT && G.celS && G.celE)) return;
+  // AFT-023: the ward re-arms on a COOLDOWN now (14s). With no floor it
+  // re-fired as fast as the three feeds cycled — the measured L24 probe
+  // read 0 damage taken at the highest damage rate in the game, i.e. the
+  // "safe" apex was dominating both identities at once. Full sectors WAIT
+  // (the poll in update() releases them the moment the halo cools).
+  if ((G.celCD || 0) > 0) return;
+  G.celCD = 14;
   G.celT = G.celS = G.celE = false;
   const el = counterElements(1)[0] || attackElement();
   const col = TYPE_COLORS[el] || '#b388ff';
@@ -2975,10 +3040,8 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
   G.shake = 16; G.flashT = 0.35;
   G.fx_fire = G.fx_laser = G.fx_draco = null;
   if (G.lives <= 0) {
-    // KNOCKOUT: the build absorbs the defeat. Burn two web LEAVES (nodes with
-    // no owned dependents — a removal can never orphan a bridge or a
-    // superskill's recipe), refill lives, and retry this wave — the run only
-    // truly ends once there's nothing left to burn.
+    // KNOCKOUT: the build absorbs the defeat — refill lives and retry. The
+    // run only truly ends once there is no build at all to carry it.
     if (totalBuildLevels() > 0 || (G.attune && G.attune.level > 0)) {
       statsKnockout(); // mark the failed attempt before the retry record opens
       // AFT-009R P5: DELIBERATE CHOICES STAY OWNED — a defeat never
@@ -2987,19 +3050,54 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
       // Charge evaporate; every rank and transformation survives the retry.
       const A = G.attune;
       const lostLvls = A ? A.pending : 0;
-      if (A) { A.res = 0; A.pending = 0; }
+      // AFT-023: keep HALF the loose resonance — a build that keeps dying
+      // must still be able to LEVEL ITS WAY OUT (full confiscation made a
+      // weak build permanently weak: measured 15-16 KO grindouts on the
+      // L24 raid once the bank zeroed every death). Banked LEVELS and the
+      // Focus Charge still burn; the consequence stays real.
+      if (A) { A.res = Math.floor(A.res * 0.5); A.pending = 0; }
       const lostFocus = G.focus > 0;
       if (lostFocus) G.focus--;
       G.lives = preset().lives + starterMod('bonusHp', 0);
       G.livesMax = Math.max(G.livesMax, G.lives);
       G.shieldCharges = Math.min(G.shieldCharges, shieldCap());
       SFX.gameOver();
+      // AFT-023: count knockouts on THIS finale (feeds the sovereign mercy
+      // in buildLevel — 8%/KO past the 2nd, floor −25%)
+      if (stageIdx(G.level) === 2) {
+        if (G.finaleCkpt && G.finaleCkpt.lvl === G.level) G.finaleCkpt.kos = (G.finaleCkpt.kos || 0) + 1;
+        else G.finaleCkpt = { lvl: G.level, beat: 0, kos: 1 };
+      }
       buildLevel(G.level);
       serve();
+      // AFT-023 KNOCKOUT CHECKPOINT: a finale knockout resumes at the
+      // furthest ROUND / BEAT / SEGMENT reached — never replays the whole
+      // finale (measured worst case before this: 424.9s, four full-finale
+      // replays on one L27 seed). Earlier rounds stay won; the current
+      // round restarts from its own entry. The confiscated bank above is
+      // the price; beat resonance is never re-paid (G.finaleResume).
+      const CK = G.finaleCkpt;
+      let resumeLine = null;
+      if (stageIdx(G.level) === 2 && CK && CK.lvl === G.level && (CK.beat > 0 || CK.raid)) {
+        G.finaleResume = true;
+        try {
+          if (G.finale && G.finale.format === 'raid') {
+            if (CK.raid) resumeRaidCheckpoint(CK.raid);
+          } else if (CK.beat > 0) jumpToGauntletRound(Math.min(2, CK.beat));
+        } finally { G.finaleResume = false; }
+        const F = G.finale;
+        const bLabel = F && F.profile && F.profile.beats && F.profile.beats[F.beat] && F.profile.beats[F.beat].label;
+        resumeLine = 'RESUMING AT ' + (bLabel || ('BEAT ' + ((F ? F.beat : 0) + 1)) ).toUpperCase();
+      }
+      // post-knockout grace: the retry never opens under immediate fire
+      G.invuln = Math.max(G.invuln, 2.5);
+      G.enemyShotCD = Math.max(G.enemyShotCD || 0, 2.2);
+      G.bossShotCD = Math.max(G.bossShotCD || 0, 2.2);
       setAnnounce('alert', '#ff8a65', 'KNOCKED OUT!',
-        'YOUR BUILD SURVIVES — UNSPENT RESONANCE LOST'
+        'BUILD SAFE — HALF YOUR LOOSE RESONANCE LOST'
         + (lostLvls ? ' · ' + lostLvls + ' BANKED LEVEL' + (lostLvls > 1 ? 'S' : '') : '')
-        + (lostFocus ? ' · 1 FOCUS' : ''), 3.6, 'RETRYING THE WAVE WITH FULL LIVES');
+        + (lostFocus ? ' · 1 FOCUS' : ''), 3.6,
+        resumeLine || 'RETRYING THE WAVE WITH FULL LIVES');
       return;
     }
     G.state = 'gameover'; G.stateT = 0;
@@ -3007,6 +3105,11 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
     finalizeRun();
   } else {
     G.hurtHud = 2.4; // show the remaining health around the player on respawn
+    // AFT-023: post-hit protection — a landed hit buys a short fire pause on
+    // top of the caller's i-frames, so a survived hit can never chain
+    // straight into the next heavy volley
+    G.enemyShotCD = Math.max(G.enemyShotCD || 0, 1.6);
+    G.bossShotCD = Math.max(G.bossShotCD || 0, 1.6);
     serve();
   }
 }
@@ -3602,6 +3705,10 @@ function beginBossReveal(kind, brs) {
   const reduced = !!SETTINGS.reduceFlash; // reduced-effects: dissolve, no sweep
   const gen = genFor(G.level);
   const primary = brs[0];
+  // AFT-023: the 16s after a reveal belong to the boss, never to a draft —
+  // the hold ticks down only in live combat, so it covers the whole
+  // post-dock engagement window regardless of how long the scene is held.
+  G.attuneHoldT = Math.max(G.attuneHoldT || 0, 16);
   const cue = kind === 'sentinels' ? 'STRIKE THE ONE THAT JUST ATTACKED — IT IS OPEN'
     : kind === 'secret' ? 'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE'
     : kind === 'mythic' ? 'THREE PHASES · DENY ITS SUMMONS — TWO HITS EACH'
@@ -3717,11 +3824,23 @@ function jumpToBossPhase(round, phase) {
 // Phase 2 flips the drive direction for the first non-ladder formats.
 function startFinaleBeat(i) {
   const F = G.finale; if (!F || i === F.beat) return;
-  if (i > F.beat) resEvent('beat'); // AFT-009R P2: an earned beat is resonance
+  if (i > F.beat && !G.finaleResume) resEvent('beat'); // AFT-009R P2: an earned beat is resonance (never re-paid on a knockout resume)
   F.beatClocks[F.beatKey] = +(((F.beatClocks[F.beatKey] || 0) + F.beatT)).toFixed(1);
   F.beat = i; F.beatT = 0;
   const fmt = FINALE_FORMATS[F.format] || FINALE_FORMATS.ladder;
   F.beatKey = fmt.beats[i] || ('beat' + i);
+  G.attuneBeatN = 0; // AFT-023: each finale beat admits at most one fresh draft
+  // AFT-023: the beat that just turned IS the fight's moment — hold drafts out
+  G.attuneHoldT = Math.max(G.attuneHoldT || 0, 6);
+  // AFT-023 KNOCKOUT CHECKPOINT: every run remembers the furthest beat this
+  // finale reached — a knockout resumes the fight here instead of replaying
+  // the whole finale. Trials and dailies keep the same recovery contract as
+  // a real journey (and the balance probes measure what players get).
+  if (i > 0 && stageIdx(G.level) === 2) {
+    const same = G.finaleCkpt && G.finaleCkpt.lvl === G.level;
+    const prev = same ? G.finaleCkpt.beat : 0;
+    G.finaleCkpt = { lvl: G.level, beat: Math.min(2, Math.max(prev, i)), kos: same ? G.finaleCkpt.kos || 0 : 0 };
+  }
 }
 function completeFinale() {
   const F = G.finale; if (!F || F.mastery.clear) return;
@@ -3998,10 +4117,42 @@ function raidResolveSegment(how) {
   }
   RD.seg++;
   if (RD.seg === 1 && F.beat === 0) startFinaleBeat(1);
+  // AFT-023 KNOCKOUT CHECKPOINT (raid flavor): each resolved segment is the
+  // raid's "round boundary" — a knockout resumes at this segment with the
+  // Seraph's damage kept, instead of replaying the whole assembly.
+  if (stageIdx(G.level) === 2) {
+    const seraph = G.bricks.find(b => b.raidSeraph && !b.dead);
+    const sameCk = G.finaleCkpt && G.finaleCkpt.lvl === G.level;
+    G.finaleCkpt = {
+      lvl: G.level, beat: F.beat, kos: sameCk ? G.finaleCkpt.kos || 0 : 0,
+      raid: {
+        seg: RD.seg, states: RD.segments.map(s => s.state),
+        frac: seraph ? Math.max(0.05, seraph.hp / seraph.maxHp) : 1,
+      },
+    };
+  }
   if (RD.seg >= RD.segments.length) { raidWeaponFails(); return; }
   const next = RD.segments[RD.seg];
   next.state = 'assembling'; next.t = 0;
   F.meter.value = 0;
+}
+// AFT-023: rebuild-then-fast-forward for a knocked-out raid — segment states
+// are restored WITHOUT side effects (no mastery credit, no cover debris, no
+// beat resonance), the current segment re-assembles from zero, and the
+// Seraph carries the damage it had when the segment opened.
+function resumeRaidCheckpoint(rk) {
+  const F = G.finale, RD = F && F.raid;
+  if (!F || !RD || !rk) return;
+  const n = Math.min(rk.seg || 0, RD.segments.length);
+  for (let i = 0; i < n; i++) RD.segments[i].state = (rk.states && rk.states[i]) || 'fired';
+  RD.seg = n;
+  if (n >= 1 && F.beat === 0) startFinaleBeat(1);
+  const seraph = G.bricks.find(b => b.raidSeraph && !b.dead);
+  if (seraph && rk.frac != null) seraph.hp = Math.max(1, Math.round(seraph.maxHp * Math.min(1, rk.frac)));
+  if (n >= RD.segments.length) { raidWeaponFails(); return; }
+  const cur = RD.segments[RD.seg];
+  cur.state = 'assembling'; cur.t = 0;
+  if (F.meter) F.meter.value = 0;
 }
 function raidSegmentFires(S) {
   // ONE heavy telegraphed lane punish through the shared lane primitive —
@@ -5223,6 +5374,19 @@ function update(dt) {
     G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14 * follow);
   } else G.shipYv = PADDLE_Y();
   G.invuln = Math.max(0, G.invuln - dt);
+  // AFT-023: draft pacing clocks tick only in LIVE combat — a reveal or a
+  // frozen draft never quietly burns the post-reveal hold window
+  if (G.state === 'play' && !G.reveal) {
+    G.attuneCD = Math.max(0, (G.attuneCD || 0) - dt);
+    G.attuneHoldT = Math.max(0, (G.attuneHoldT || 0) - dt);
+  }
+  G.emberFloatT = Math.max(0, (G.emberFloatT || 0) - dt); // AFT-023 fire-vessel kindle floater throttle
+  // AFT-023: the CELESTIAL ward cools here; sectors that filled during the
+  // cooldown release the moment the halo is ready again
+  if ((G.celCD || 0) > 0) {
+    G.celCD = Math.max(0, G.celCD - dt);
+    if (G.celCD <= 0 && G.celT && G.celS && G.celE && upgN('celestial')) celestialSector('t');
+  }
   G.blasterCD = Math.max(0, G.blasterCD - dt * weaponScale()); // AFT-021 P4: fire cadence rides the weapon clock
   G.muzzle = Math.max(0, G.muzzle - dt);
   G.wingFloatT = Math.max(0, (G.wingFloatT || 0) - dt); // wing-deflect floater throttle
@@ -6751,6 +6915,10 @@ function update(dt) {
         }
         let dmg = (L.charged ? L.power : (L.powerMul || 1)) * journeyDmgMul(); // AFT-021 P6: baseline growth
         if (G.afterglowT > 0 && !L.charged) dmg *= 1.3; // SURGE AFTERGLOW (P6)
+        // AFT-023 WAR MACHINE gatling form: a hot rail rides the basics too
+        // (+15% at full pressure) — the apex is a weapon-form dance, both
+        // halves of which now deal damage
+        if (!L.charged && upgN('warmachine')) dmg *= 1 + 0.22 * (G.railPressure || 0);
         if (L.heavy) dmg *= 1.15;
         if (L.nova) dmg *= 2;
         if (L.calib) dmg *= 1.6; // CALIBRATED BARRAGE: primed volley
@@ -6759,6 +6927,26 @@ function update(dt) {
         if (L.prism && br.isBoss) dmg *= 0.5; // PRISMSTORM boss cap (≈1.25 volleys)
         if (L.lance && (br.armored || br.shellArmor)) dmg *= 2; // AEGIS LANCE breaks armor
         if (L.mega) dmg *= megaBoltMul(); // journey + SURGE-rank scaled overdrive
+        // AFT-023: the FIRE vessel's ignite lives in the shooter modes too —
+        // its whole junkie kit used to be a bare +15% (the classic ember
+        // branch was dead code there; measured slowest vessel, ×1.68 vs
+        // ground). Every Nth basic hit KINDLES the target; kindled targets
+        // take bonus damage per hit while the mark burns (same +1/+2 flat
+        // grammar as the classic ember).
+        if (G.starter === 'fire' && G.mode !== 'classic' && L.basic && !L.charged) {
+          const every = 6 - G.starterLvl; // 5/4/3 hits
+          if (++G.emberN >= every) {
+            G.emberN = 0;
+            br.ember = Math.min(4, (br.ember || 0) + G.starterLvl + 1);
+            burst(L.x, L.y, '#ffab66', 8, 150, 0.35);
+            if ((G.emberFloatT || 0) <= 0) { G.emberFloatT = 2.2; addFloater(bx, by - br.h / 2 - 12, 'KINDLED!', '#ffab66', 11); }
+          }
+        }
+        if (br.ember > 0 && G.mode !== 'classic') {
+          br.ember--;
+          dmg += G.starterLvl >= 3 ? 2 : 1;
+          burst(L.x, L.y, '#ffab66', 6, 130, 0.3);
+        }
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'),
           { source: L.charged ? 'charge' : L.basic ? 'bolt' : 'other' });
@@ -6923,7 +7111,13 @@ function update(dt) {
       mr.n--;
       const targets = G.bricks.filter(b => !b.dead && !b.dormant && !b.barrier);
       if (targets.length) {
-        const br = targets[Math.floor(gameRand() * targets.length)];
+        // AFT-023: meteors PREFER the hard targets (boss-class/armored ×4
+        // weight) instead of spraying fodder uniformly — one gameRand draw
+        // exactly as before, so the seeded stream count is unchanged
+        const wOf = b => (b.isBoss || b.subBoss || b.mythic || b.secretBoss || b.armored || b.shellArmor) ? 4 : 1;
+        let wSum = 0; for (const b of targets) wSum += wOf(b);
+        let r = gameRand() * wSum, br = targets[targets.length - 1];
+        for (const b of targets) { r -= wOf(b); if (r <= 0) { br = b; break; } }
         const bx = br.bx + G.fx, by = br.by + G.fy;
         const col = TYPE_COLORS[mr.element] || '#40c4ff';
         damageBrick(br, 1.2, bx, by, mr.element);

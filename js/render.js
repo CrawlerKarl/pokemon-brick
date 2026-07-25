@@ -2112,6 +2112,19 @@ function drawPilotRig(x, py, preview = false) {
   const bob = Math.sin(G.time * 3.2) * (preview ? 1.2 : 2.5);
   const y = py + bob;
   const tilt = preview ? 0 : Math.max(-0.34, Math.min(0.34, G.paddle.speed * 0.00028));
+  // AFT-023: friendly bloom YIELDS to incoming fire — when a hostile shot
+  // is inside the ship band, the "this is you" glow dims (like padBusy())
+  // so the threat, not your own aura, owns the pixels near the vessel.
+  // Read-only scan; hostile art is untouched and stays on top of nothing —
+  // it draws UNDER the rig, so the rig's light is what must step back.
+  let threatNear = false;
+  if (!preview) {
+    for (const es of G.enemyShots) {
+      if (es.dead) continue;
+      if (Math.hypot(es.x - x, es.y - py) < s * 1.3 + 40) { threatNear = true; break; }
+    }
+  }
+  const bloomYield = threatNear ? 0.4 : 1;
   // element aura — the "this is you" glow (AFT-018b: baked once per colour,
   // drawn in local space so one sprite serves every position/size)
   {
@@ -2125,7 +2138,9 @@ function drawPilotRig(x, py, preview = false) {
       fxCache[gk] = c2;
     }
     const d = s * 1.6;
+    ctx.globalAlpha = bloomYield;
     ctx.drawImage(fxCache[gk], x - d / 2, y - d / 2, d, d);
+    ctx.globalAlpha = 1;
   }
   // AFFINITY HALO (light/dark skins): the chosen path rides the pilot — a
   // slow-breathing ring in radiant gold or umbral violet, brighter under Mega
@@ -2191,14 +2206,14 @@ function drawPilotRig(x, py, preview = false) {
   }
   if (rim) { // element rim light — brightens as the attack fires
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.3 + 0.45 * atk + (mega ? 0.2 : 0);
+    ctx.globalAlpha = (0.3 + 0.45 * atk + (mega ? 0.2 : 0)) * bloomYield; // AFT-023: yields to nearby hostile fire
     const rs = s * 1.07;
     ctx.drawImage(rim, -rs / 2, -rs / 2 - 1.5, rs, rs);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
   ctx.shadowColor = mega ? `hsl(${(G.time * 160) % 360},90%,60%)` : col;
-  ctx.shadowBlur = fxGlow(mega ? 26 : 12 + 14 * atk); // AFT-018b: whole-sprite blur
+  ctx.shadowBlur = fxGlow((mega ? 26 : 12 + 14 * atk) * bloomYield); // AFT-018b whole-sprite blur · AFT-023 yields near threats
   if (ok) drawAffinityVessel(pil.id, 0, 0, s);
   else {
     // Safe loading fallback for the authored neutral training drone.
@@ -4127,6 +4142,16 @@ function drawProjectiles() {
       ctx.beginPath(); ctx.moveTo(tailStartX, tailStartY);
       ctx.lineTo(s.x - ux * tail * 0.64, s.y - uy * tail * 0.64); ctx.stroke();
     }
+    // AFT-023: HIGH-CONTRAST PROJECTILES extends beyond the ball — every
+    // hostile shot gains a white keyline over a black backing ring
+    // (strokes only, render-only; collision untouched)
+    if (SETTINGS.hcBall) {
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 3.4;
+      ctx.beginPath(); ctx.arc(s.x, s.y, r * 0.72 + 2.2, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(s.x, s.y, r * 0.72 + 2.2, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.globalAlpha = 1;
     // effectiveness telegraph vs YOUR current type: a bright pulsing ring when
     // this attack is super-effective on you, a faint dashed ring when you resist
@@ -4242,6 +4267,14 @@ function drawPowerups() {
     // gentle bob + slight tilt — calmer than the old spin
     ctx.translate(pu.x, pu.y + Math.sin(pu.rot * 1.6) * 2);
     ctx.rotate(Math.sin(pu.rot) * 0.1);
+    // AFT-023: HIGH-CONTRAST PROJECTILES rings pickups too — a catchable
+    // thing must read at a glance against any sky (strokes only)
+    if (SETTINGS.hcBall) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.stroke();
+    }
     if (pu.p.key === 'riftShard') {
       const pulse = 0.5 + 0.5 * Math.sin(G.time * 5 + pu.shardIndex * 1.8);
       ctx.shadowColor = '#d780ff'; ctx.shadowBlur = 20 + pulse * 12;
@@ -7389,6 +7422,54 @@ function drawPilotSetup(L, mode) {
     }
     ctx.textAlign = 'center';
   }
+  // ---- AFT-023 FIRST-SESSION VIEW: four archetype cards + BROWSE ALL ----
+  if (L.simple) {
+    const roster0 = skinStarters();
+    for (let i = 0; i < PILOT_ARCHETYPES.length; i++) {
+      const A = PILOT_ARCHETYPES[i], r = L.arch(i);
+      const st = roster0.find(x => x.key === A.key);
+      const mon = SKIN.starterMon[A.key], col = TYPE_COLORS[A.key];
+      const sel = SETTINGS.starter === A.key, hov = inRect(mouseX, lastMouseY, r);
+      ctx.save();
+      if (sel) { ctx.shadowColor = col; ctx.shadowBlur = 16; }
+      roundRect(r.x, r.y, r.w, r.h, 12);
+      ctx.fillStyle = sel ? col + '30' : hov ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+      ctx.lineWidth = sel ? 2.2 : 1.1;
+      ctx.strokeStyle = sel ? col : 'rgba(255,255,255,0.18)'; ctx.stroke();
+      ctx.shadowBlur = 0;
+      const sp = Math.min(r.h - 8, 56);
+      const img = getSprite(mon.ids[0]);
+      if (img.complete && img.naturalWidth) ctx.drawImage(img, r.x + 8, r.y + r.h / 2 - sp / 2, sp, sp);
+      else drawGlyph(ctx, A.key, r.x + 8 + sp / 2, r.y + r.h / 2, sp * 0.3, col);
+      ctx.textAlign = 'left';
+      const tx3 = r.x + sp + 14, tw3 = r.x + r.w - tx3 - 8;
+      ctx.fillStyle = sel ? '#fff' : '#dde5ef';
+      fitLabel((st ? st.label : A.key), tx3, r.y + r.h * 0.40,
+        { maxW: tw3, align: 'left', min: 8, size: L.short ? 9 : 11.5, weight: 900 });
+      ctx.fillStyle = sel ? 'rgba(255,255,255,0.85)' : '#8fa0b5';
+      fitLabel(A.tag, tx3, r.y + r.h * 0.68,
+        { maxW: tw3, align: 'left', min: 6.5, size: L.short ? 6.5 : 8, weight: 600 });
+      if (A.recommended && r.h > 40) {
+        const bw2 = 92;
+        roundRect(r.x + r.w - bw2 - 8, r.y + 6, bw2, 13, 6);
+        ctx.fillStyle = '#64ffda'; ctx.fill();
+        ctx.textAlign = 'center';
+        ctx.font = '900 7px Orbitron, sans-serif'; ctx.fillStyle = '#00332a';
+        ctx.fillText('RECOMMENDED', r.x + r.w - bw2 / 2 - 8, r.y + 15.5);
+        ctx.textAlign = 'left';
+      }
+      ctx.restore();
+      ctx.textAlign = 'center';
+    }
+    { // the deliberate door to the full catalog
+      const b2 = L.browse, hovB = inRect(mouseX, lastMouseY, b2);
+      roundRect(b2.x, b2.y, b2.w, b2.h, b2.h / 2);
+      ctx.fillStyle = hovB ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1.1; ctx.stroke();
+      ctx.font = `800 ${L.short ? 8 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#b8c6d8';
+      ctx.fillText('BROWSE ALL 18 ' + SKIN.strings.partnerWord + 'S ›', b2.x + b2.w / 2, b2.y + b2.h / 2 + 0.5, b2.w - 12);
+    }
+  } else {
   // ---- three labeled shelves of six small tiles ----
   const roster = skinStarters();
   const groups = SKIN.rosterGroups || [];
@@ -7426,11 +7507,14 @@ function drawPilotSetup(L, mode) {
       ctx.font = '900 5.5px Orbitron, sans-serif'; ctx.fillStyle = '#181100';
       ctx.fillText('OP', pg.x + pg.w - 10, pg.y + 7.4);
     }
-    ctx.font = `800 ${Math.min(pg.h > 52 ? 8.5 : 7.5, pg.w / 7.4)}px Orbitron, sans-serif`;
+    // AFT-023: tile names ride fitLabel with a raised floor — at 320-wide
+    // portrait the raw formula fell to ~6px unreadable capitals
     ctx.fillStyle = sel ? '#fff' : hov ? '#e8edf4' : '#aeb9c9';
-    ctx.fillText(st.label, pg.x + pg.w / 2, pg.y + pg.h - (pg.h > 52 ? 8 : 6), pg.w - 4);
+    fitLabel(st.label, pg.x + pg.w / 2, pg.y + pg.h - (pg.h > 52 ? 8 : 6),
+      { maxW: pg.w - 4, min: 8, size: pg.h > 52 ? 8.5 : 7.5, weight: 800 });
     ctx.restore();
   }
+  } // end full-grid branch (AFT-023)
   {
     const pg = L.none, sel = SETTINGS.starter === 'none', hov = inRect(mouseX, lastMouseY, pg);
     roundRect(pg.x, pg.y, pg.w, pg.h, 8);
@@ -7552,6 +7636,21 @@ function drawDifficultySetup(L, mode) {
         ctx.globalAlpha = 1;
       }
       ctx.restore();
+    }
+    // AFT-023: the quiet third way — launch UNSWORN, decide the oath later.
+    // A ghost chip, deliberately not a third ceremonial card: the two oaths
+    // keep their drama; the neutral start is legitimate but understated.
+    if (L.affNone) {
+      const r = L.affNone, selN = SETTINGS.affinity === 'none';
+      const hovN = inRect(mouseX, lastMouseY, r);
+      roundRect(r.x, r.y, r.w, r.h, r.h / 2);
+      ctx.fillStyle = selN ? 'rgba(176,190,197,0.22)' : hovN ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)';
+      ctx.fill();
+      ctx.strokeStyle = selN ? '#b0bec5' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = selN ? 1.6 : 1; ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.font = `700 ${L.short ? 7.5 : 9}px Orbitron, sans-serif`;
+      ctx.fillStyle = selN ? '#eceff1' : '#90a4ae';
+      ctx.fillText((selN ? '◆ ' : '') + 'FLY UNSWORN · SWEAR YOUR OATH ANOTHER RUN', r.x + r.w / 2, r.y + r.h / 2 + 0.5, r.w - 12);
     }
   }
   ctx.font = `800 ${L.narrow ? 12 : 13}px Orbitron, sans-serif`; ctx.fillStyle = '#90a4ae';
@@ -9803,7 +9902,15 @@ function drawOverlays() {
         const B = touchButtons();
         if (B.fire) coachY = Math.max(SAFE_T + 96, B.fire.y - B.fire.r - 34);
       }
-      hintPill((hit ? '✓ ' : '') + txt, coachY, hit ? '#9df2b0' : '#ffd54f');
+      // AFT-023: the coach never talks over a live hazard — it hides while
+      // a lane strike is warned or a hostile shot flies through its band
+      // (or near the vessel; the pill can wait, the dodge cannot)
+      let hazard = G.columnStrikes.length > 0;
+      if (!hazard) for (const es of G.enemyShots) {
+        if (es.dead) continue;
+        if (Math.abs(es.y - coachY) < 64 || Math.hypot(es.x - G.paddle.x, es.y - shipY()) < 150) { hazard = true; break; }
+      }
+      if (!hazard) hintPill((hit ? '✓ ' : '') + txt, coachY, hit ? '#9df2b0' : '#ffd54f');
     }
   } else if (G.state === 'upgrade') {
     dim(0.55);
@@ -9830,7 +9937,10 @@ function drawOverlays() {
     if (liveAttune) {
       ctx.font = '700 11px Orbitron, sans-serif';
       ctx.fillStyle = '#9fb2c8';
-      ctx.fillText('THE FIGHT WAITS — CHOOSE, THEN RETURN', W / 2, clearY + (draftShort ? 22 : 24), W * 0.9);
+      const attuneSub = G.bonusPicks >= 2 ? 'TWO LEVELS BANKED — CHOOSE TWO CARDS'
+        : G.bonusPicks === 1 ? 'ONE MORE PICK — THE FIGHT WAITS'
+          : 'THE FIGHT WAITS — CHOOSE, THEN RETURN';
+      ctx.fillText(attuneSub, W / 2, clearY + (draftShort ? 22 : 24), W * 0.9);
     } else {
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
@@ -9865,8 +9975,13 @@ function drawOverlays() {
       const selC = draftSel != null && G.upgradeChoices[draftSel];
       if (!L.stacked) if (!selC) {
         // the Mew VMAX bounty is ONE hand, TWO picks — the header carries the count
-        const bounty = G.bonusPicks >= 2 ? 'RIFT BOUNTY — CHOOSE TWO'
-          : G.bonusPicks === 1 ? 'RIFT BOUNTY — ONE MORE PICK' : null;
+        // AFT-023: a combined attunement hand reuses the same machinery with
+        // its own voice (two banked levels → one choose-two decision)
+        const bounty = G.attuneLive
+          ? (G.bonusPicks >= 2 ? 'TWO LEVELS BANKED — CHOOSE TWO'
+            : G.bonusPicks === 1 ? 'ONE MORE PICK' : null)
+          : (G.bonusPicks >= 2 ? 'RIFT BOUNTY — CHOOSE TWO'
+            : G.bonusPicks === 1 ? 'RIFT BOUNTY — ONE MORE PICK' : null);
         if (bounty) { ctx.fillStyle = '#d780ff'; }
         ctx.fillText((bounty || (secretDraft ? 'CHOOSE A SECRET UPGRADE' : G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE')) +
           (IS_TOUCH ? ' — TAP A CARD TO INSPECT' : ' — INSPECT, THEN CONFIRM'), W / 2, headerY, W * 0.94);

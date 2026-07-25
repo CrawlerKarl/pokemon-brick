@@ -1006,6 +1006,7 @@ function holdBonusPick(remaining) {
 // so the resumed volley can't be an instant surprise.
 function resumeFromAttunement() {
   G.attuneLive = false;
+  G.bonusPicks = 0; // a combined hand never leaks picks into the next surface
   G.upgradeChoices = null;
   upgradeTreeOpen = false;
   G.state = 'play'; G.stateT = 0;
@@ -1013,6 +1014,10 @@ function resumeFromAttunement() {
   G.invuln = Math.max(G.invuln, 0.9);
   G.enemyShotCD = Math.max(G.enemyShotCD || 0, 0.9);
   G.bossShotCD = Math.max(G.bossShotCD || 0, 0.9);
+  // AFT-023: presentation spacing — the next draft keeps its distance so
+  // choices never chain seconds apart (tighter inside a finale, whose
+  // per-beat cap already limits volume)
+  G.attuneCD = Math.max(G.attuneCD || 0, stageIdx(G.level) === 2 ? 14 : 24);
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
@@ -1482,14 +1487,28 @@ function onPress(x, y) {
       }
       if (setupStep === 'pilot') {
         const roster = skinStarters();
-        for (let i = 0; i < roster.length; i++) {
-          if (inRect(x, y, L.starter(i))) { SETTINGS.starter = roster[i].key; saveSettings(); SFX.wall(); return; }
+        // AFT-023 first-session view: archetype cards + the BROWSE ALL door
+        if (L.simple) {
+          for (let i = 0; i < PILOT_ARCHETYPES.length; i++) {
+            if (inRect(x, y, L.arch(i))) { SETTINGS.starter = PILOT_ARCHETYPES[i].key; saveSettings(); SFX.wall(); return; }
+          }
+          if (inRect(x, y, L.browse)) { pilotBrowseAll = true; SFX.power(); return; }
+        } else {
+          for (let i = 0; i < roster.length; i++) {
+            if (inRect(x, y, L.starter(i))) { SETTINGS.starter = roster[i].key; saveSettings(); SFX.wall(); return; }
+          }
         }
         if (inRect(x, y, L.none)) { SETTINGS.starter = 'none'; saveSettings(); SFX.wall(); return; }
         if (inRect(x, y, L.next)) { setupStep = 'difficulty'; SFX.power(); return; }
       } else {
         if (inRect(x, y, L.editPilot)) { setupStep = 'pilot'; SFX.wall(); return; }
         if (L.affinity) {
+          // AFT-023: FLY UNSWORN — the explicit neutral choice unblocks the
+          // launch for a first session; the oath can be sworn on a later run
+          if (L.affNone && inRect(x, y, L.affNone)) {
+            SETTINGS.affinity = 'none';
+            saveSettings(); SFX.wall(); return;
+          }
           const affs = ['light', 'dark'];
           for (let i = 0; i < 2; i++) {
             if (inRect(x, y, L.affinity(i))) {
@@ -1534,6 +1553,14 @@ function onPress(x, y) {
       if (inRect(x, y, L.card(i))) {
         SETTINGS.mode = MODES[i].key; saveSettings();
         setupStep = 'pilot'; menuPage = 'setup'; SFX.power();
+        // AFT-023: a brand-new player lands on the guided archetype view
+        // with the recommended vessel pre-selected — CONTINUE works
+        // immediately; every choice stays one tap away
+        pilotBrowseAll = false;
+        if (pilotFreshSession() && (!SETTINGS.starter || SETTINGS.starter === 'none')) {
+          SETTINGS.starter = (PILOT_ARCHETYPES.find(a => a.recommended) || PILOT_ARCHETYPES[0]).key;
+          saveSettings();
+        }
         return;
       }
     }
@@ -1770,8 +1797,14 @@ function fireCharge(c, resonant = false) {
     addFloater(G.paddle.x, shipY() - 72, 'AEGIS LANCE!', '#d4e157', 14);
     SFX.shield();
   }
+  // AFT-023 WAR MACHINE re-forge: banked rail pressure is OFFENSE now — the
+  // spent bar rides the rail shot as up to +45% damage (on top of the heat
+  // discount below), so the apex reads as the faster, riskier weapon-form
+  // dance it was always meant to be, not a heat accessory a cool barrel
+  // never needs (measured inert: 0 overheats across the L24 probe).
+  const wmSpend = upgN('warmachine') ? G.railPressure : 0;
   const power = (1 + Math.round(c * 4)) * (upgN('impactX') ? 1.25 : 1) * (lanceShot ? 1.5 : 1)
-    * (resonant ? 1.25 : 1);
+    * (resonant ? 1.25 : 1) * (1 + 0.6 * wmSpend);
   const pierce = (lanceShot ? 99 : 1 + Math.round(c * 3)) + (resonant ? 1 : 0);  // drills through 1..4 blocks
   const pil = pilotInfo(); // every mode: the charge is the partner's big attack
   if (G.mode === 'junkie') G.attackAnim = 1.4; // charge release = the big attack animation
@@ -1785,8 +1818,8 @@ function fireCharge(c, resonant = false) {
   });
   // the big shot dumps a decent slug of heat — a full charge is ~0.6 of the
   // bar, so leaning on the charge (or chaining them) really can overheat you.
-  // WAR MACHINE spends banked rail pressure to run the shot far cooler.
-  const wmSpend = upgN('warmachine') ? G.railPressure : 0;
+  // WAR MACHINE spends banked rail pressure to run the shot far cooler
+  // (wmSpend is read above, where it also rides the shot as damage).
   const heatMods = (1 - 0.25 * upgN('coolant')) * Math.max(0.55, Math.pow(0.94, effStacks(G.stacks.ice || 0))) * starterMod('heat', 1)
     * (1 - 0.45 * wmSpend);
   addWeaponHeat((0.30 + 0.30 * c) * heatMods * (resonant ? 0.7 : 1));
@@ -1805,6 +1838,15 @@ function fireCharge(c, resonant = false) {
     if (wmSpend > 0.2) {
       ringFx(G.paddle.x, shipY() - 20, '#ff6e40', 5, 60, 3, 0.35);
       tone(120, 0.22, 'sawtooth', 0.07, 60); // the deeper rail report
+      addFloater(G.paddle.x, shipY() - 72, 'RAIL +' + Math.round(60 * wmSpend) + '%', '#ff6e40', 13);
+    }
+    // AFT-023: a FULL bar spent is the apex's bounded sustain — the fold
+    // vents as RAIL PLATING, a short grace so the all-in weapon form has a
+    // survival beat of its own (the restart-death-spiral answer; never
+    // stacks, never regenerates on its own)
+    if (wmSpend >= 0.95) {
+      G.invuln = Math.max(G.invuln, 1.3);
+      addFloater(G.paddle.x, shipY() - 88, 'RAIL PLATING!', '#ffab91', 13);
     }
     G.railPressure = 0;
   }

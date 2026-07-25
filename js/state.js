@@ -40,7 +40,13 @@ function journeyDmgMul() { return 1 + 0.06 * megaRegions(); }
 // the walled modes' slower early delivery. Attack RULES never change per
 // mode or skin — only the work budget. beUnit rides the same helper so a
 // Sovereign-equivalent stays ≈3 per finale in every mode.
-const FINALE_WORK = [1.15, 1.8, 2.3, 2.5, 4.2, 3.9, 16, 25, 9.3];
+// AFT-023: re-fit for the disciplined (~18-22 pick) economy WITH the
+// finale knockout checkpoint: r5 3.9→4.3 lifts L18 into the 60-100s
+// target, r6 stays 16 (the rite is chain-fast regardless — owner-flagged),
+// r7 25→24 and r8 9.3→9.0 price the raid/chase against the slightly
+// weaker builds without the old full-restart spirals (the checkpoint,
+// not the work vector, is what killed the 424.9s L27 outlier).
+const FINALE_WORK = [1.15, 1.95, 2.3, 2.7, 4.2, 4.8, 16, 24, 9.0];
 const FINALE_WORK_MODE = {
   classic: [0.28, 0.30, 0.55, 0.68, 0.85, 1.50, 0.85, 1.40, 0.90],
   blaster: [0.22, 1.0, 0.24, 0.85, 0.62, 2.75, 1.08, 0.45, 0.9],
@@ -54,8 +60,11 @@ function sovereignHp(rIdx, cycle) {
 // Late ordinary waves grow real durability too (the L23 6-second stage):
 // flyer/elite/reinforcement HP compounds past the campaign's midpoint —
 // and the OPENERS stop one-tapping (the 13-second L2/L5).
-function lateWaveMul(regionsIn) { return 1 + Math.max(0, regionsIn - 4) * 0.22; }
-function earlyWaveMul(regionsIn) { return regionsIn === 0 ? 1.5 : regionsIn === 1 ? 1.6 : regionsIn === 2 ? 1.35 : 1; } // AFT-022: r0 1.45→1.5 — the vent assist's lockout-free stream shaved the opening waves under the 20s floor
+// AFT-023: the curve starts earlier and rises through the whole back half —
+// the old (r-4)·0.22 left L10–L26 clearing in ~20-25s flat while build DPS
+// grew ×15 (measured, matrix-aft009r): midgame targets 30-45s, late 40-60s.
+function lateWaveMul(regionsIn) { return 1 + Math.max(0, regionsIn - 2) * 0.17; }
+function earlyWaveMul(regionsIn) { return regionsIn === 0 ? 1.5 : regionsIn === 1 ? 1.75 : regionsIn === 2 ? 1.35 : 1; } // AFT-023: r1 1.6→1.75 — J05 measured 17.2s under the re-timed draft stream // AFT-022: r0 1.45→1.5 — the vent assist's lockout-free stream shaved the opening waves under the 20s floor
 function starterTierValue(key, tier) {
   const value = SKIN.starterMon[G.starter]?.mods?.[key];
   if (value == null) return 0;
@@ -161,14 +170,28 @@ function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 // the level bands below read as pacing targets, not raw timers.
 // ============================================================
 const RESONANCE_MODE_MUL = { junkie: 1, blaster: 1, classic: 1 }; // calibrated by the P6 probes
+// AFT-023 PACING RE-TUNE: the flat six-band curve dealt ~30 drafts per
+// campaign (six inside the first realm alone — measured, matrix-aft009r).
+// The re-tuned curve keeps the first level ~20-30s in and the curated
+// realm-1 trio, then rises steadily so a full journey banks ~18-22 levels.
 function attuneNeed(level) { // seconds-of-contribution to REACH this level
-  return level <= 3 ? 22 : level <= 7 ? 35 : level <= 12 ? 50 : level <= 15 ? 67 : level <= 18 ? 90 : 115;
+  return level <= 1 ? 20 : level === 2 ? 26 : level === 3 ? 34
+    : Math.min(155, 34 + (level - 3) * 8);
 }
+// Per-stage RESONANCE INCOME CAP (AFT-023): boss deciles + beats + phase
+// turns + objectives + kills can no longer collectively flood the bank —
+// a finale pays at most ~2 levels' worth, an ordinary stage ~1's. Income
+// past the cap simply saturates (the meter reads full-for-this-stage).
+function attuneStageCap() { return stageIdx(G.level) === 2 ? 100 : 55; }
 function gainResonance(sec, why) {
   const A = G.attune;
   if (!A || typeof combatIsLive === 'function' && !combatIsLive()) return;
   if (G.trial && G.trialNoAttune) return; // deep-trial builds are granted, not earned
-  A.res += sec * (RESONANCE_MODE_MUL[G.mode] || 1);
+  const room = Math.max(0, attuneStageCap() - (G.resStageIn || 0));
+  const inc = Math.min(sec * (RESONANCE_MODE_MUL[G.mode] || 1), room);
+  if (inc <= 0) { statsResCapped(sec); return; }
+  G.resStageIn = (G.resStageIn || 0) + inc;
+  A.res += inc;
   let guard = 0;
   while (A.res >= A.need && guard++ < 6) {
     A.res -= A.need;
@@ -177,6 +200,10 @@ function gainResonance(sec, why) {
     A.need = attuneNeed(A.level + 1);
     statsAttuneLevel(A.level);
   }
+}
+function statsResCapped(sec) {
+  const L = statsCur();
+  if (L) L.resCapped = +((L.resCapped || 0) + sec).toFixed(1);
 }
 function statsAttuneLevel(lvl) {
   const L = statsCur();
@@ -202,9 +229,18 @@ function resEvent(kind) { // phase turns, finale beats, objective wins…
 // the combat-safe gate: a queued level NEVER interrupts a held charge, an
 // open desperation channel, live lane strikes, a chase rush, the engage
 // hold, the resolution beat — or a Breaker ball falling toward the paddle
+// AFT-023 adds PRESENTATION DISCIPLINE on top of combat safety:
+//   · one draft event per ordinary stage, one per finale beat
+//   · a spacing cooldown so choices never chain 10s apart
+//   · a hold window after every boss reveal and phase transition — the
+//     fight's biggest moments are never talked over by a draft
 function attuneSafeNow() {
   if (G.state !== 'play' || paused || G.reveal || G.resolve) return false;
   if (G.stateT < 1.2 || (G.engageHold || 0) > 0) return false;
+  if ((G.attuneCD || 0) > 0 || (G.attuneHoldT || 0) > 0) return false;
+  if (stageIdx(G.level) === 2) {
+    if ((G.attuneBeatN || 0) >= 1) return false; // one draft per finale beat
+  } else if ((G.attuneStageN || 0) >= 1) return false; // one per ordinary stage
   if (typeof chargeHeld !== 'undefined' && chargeHeld) return false;
   if (G.charge > 0 || G.chargeCD > 0.1) return false;
   if (G.columnStrikes.length) return false;
@@ -232,11 +268,18 @@ function syncAttuneToBuild() {
 function presentAttunementLevel() {
   const A = G.attune;
   if (!A || A.pending <= 0) return;
-  A.pending--;
-  A.presented = (A.presented || 0) + 1;
+  // AFT-023: banked levels COMBINE into one larger decision instead of
+  // chaining screens — past the curated opening, two banked levels present
+  // as a single choose-two hand (the Rift-bounty holdBonusPick machinery).
+  const combine = (A.presented || 0) >= 3 && A.pending >= 2 ? 2 : 1;
+  A.pending -= combine;
+  A.presented = (A.presented || 0) + combine;
   G.attuneLive = true;
   rollAttunementHand();
-  if (!G.upgradeChoices) { G.attuneLive = false; return; } // nothing left to offer
+  if (!G.upgradeChoices) { G.attuneLive = false; G.bonusPicks = 0; return; } // nothing left to offer
+  if (combine > 1 && G.upgradeChoices.length >= 2) G.bonusPicks = combine;
+  G.attuneStageN = (G.attuneStageN || 0) + 1;
+  G.attuneBeatN = (G.attuneBeatN || 0) + 1;
   G.state = 'upgrade'; G.stateT = 0;
   if (typeof draftSel !== 'undefined') draftSel = null;
   if (typeof upgradeTreeOpen !== 'undefined') upgradeTreeOpen = false;
@@ -253,7 +296,7 @@ function shipFootprintHalf() {
   if (G.mode !== 'junkie') return 26;
   const s = 54 + (G.starterLvl || 1) * 6;
   let half = s * 0.54; // sprite + rim light (drawn at 1.07× the sprite box)
-  if (SETTINGS.affinity) half = Math.max(half, s * 0.67 + 3); // oath halo ring
+  if (SETTINGS.affinity === 'light' || SETTINGS.affinity === 'dark') half = Math.max(half, s * 0.67 + 3); // oath halo ring ('none' = unsworn, no halo)
   let badges = 0;
   for (const pk of PATH_KEYS) if (pathLvl(pk)) badges++;
   for (const si of STACK_ITEMS) if ((G.stacks && G.stacks[si.key]) || 0) badges++;
@@ -560,6 +603,13 @@ const G = {
   attackAnim: 0,       // SPACE JUNKIE: pilot lunge/recoil timer on fire
   rerolled: false,     // one draft reroll per upgrade screen
   bonusPicks: 0,       // Mew VMAX bounty: picks remaining in the CURRENT hand (choose 2)
+  attuneCD: 0,         // AFT-023: spacing cooldown between draft presentations
+  attuneHoldT: 0,      // AFT-023: no-draft hold after a boss reveal / phase turn
+  attuneStageN: 0,     // AFT-023: draft events presented this stage (cap 1 ordinary)
+  attuneBeatN: 0,      // AFT-023: draft events presented this finale beat (cap 1)
+  resStageIn: 0,       // AFT-023: resonance income earned this stage (capped)
+  finaleCkpt: null,    // AFT-023: {lvl, beat, raid?} — knockout resumes here
+  finaleResume: false, // AFT-023: true while fast-forwarding after a knockout
   reinforce: 0,
   muzzle: 0, splashCD: 8, resistStreak: 0, ballElementT: 0,
   ballElement: null,
@@ -597,7 +647,7 @@ const G = {
   chorusTypes: [], chorusUsed: false, // BESTIARY CHORUS: recorded types, 1/wave
   syncMeter: 0, squadT: 0, squadCD: 0, // VICTORY FORMATION: sync + squadron
   railPressure: 0,                // WAR MACHINE apex: gatling→rail pressure
-  celT: false, celS: false, celE: false, // CELESTIAL GUARDIAN apex sectors
+  celT: false, celS: false, celE: false, celCD: 0, // CELESTIAL GUARDIAN apex sectors + AFT-023 ward cooldown
   regenLockT: 0,                  // IMMORTAL REACTOR: shield-regen stall
   wingCD: 0,                      // ACE INTERCEPTOR WING patrol cadence
   ascendT: 0,                     // ELEMENTAL ASCENSION retune clock during Mega
@@ -859,21 +909,37 @@ function blasterArmed() {
 // income — they bypass. A denied grant converts to a visible score credit,
 // so the proc still reads as an event instead of silently vanishing.
 function tryShieldGain(source) {
-  if (G.shieldCharges >= shieldCap()) return false;
+  if (G.shieldCharges >= shieldCap()) return shieldOverflow(source);
   const seed = source === 'guard' || source === 'starterTier' || source === 'prep';
   if (!seed) {
     const cap = (stageIdx(G.level) === 2 ? 4 : 2) + (pathLvl('aegis') >= 3 ? 1 : 0);
     G.shieldGrantN = G.shieldGrantN || 0;
-    if (G.shieldGrantN >= cap) {
-      G.score += Math.round(40 * (typeof scoreMult === 'function' ? scoreMult() : 1));
-      addFloater(G.paddle.x, shipY() - 44, 'WARD SATURATED · +40', '#9ccc65', 10);
-      return false;
-    }
+    if (G.shieldGrantN >= cap) return shieldOverflow(source);
     G.shieldGrantN++;
   }
   G.shieldCharges++;
   statsShieldGain(source);
+  // AFT-023 LIGHT oath — RADIANT WARD: a light-sworn vessel answers every
+  // earned ward with a cleansing pulse (nearby ordinary fire dissolves).
+  // Dark's identity is kill-fed damage; light's is ward-fed sanctuary —
+  // measurable, and never a copy of dark's damage line.
+  if (!seed && SETTINGS.affinity === 'light' && typeof radiantPulse === 'function') radiantPulse();
   return true;
+}
+// AFT-023: a denied or over-cap ward converts into something READABLE and
+// BOUNDED — a small Surge feed (≤3 per stage) plus the score nod, instead
+// of the old score-only fizzle. Smooths the AEGIS economy's hard edge.
+function shieldOverflow(source) {
+  G.score += Math.round(40 * (typeof scoreMult === 'function' ? scoreMult() : 1));
+  G.wardOverflowN = G.wardOverflowN || 0;
+  if (G.wardOverflowN < 3 && typeof gainMega === 'function') {
+    G.wardOverflowN++;
+    gainMega(0.04, 'wardOverflow');
+    addFloater(G.paddle.x, shipY() - 44, lex('WARD OVERFLOW · +MEGA'), '#9ccc65', 10);
+  } else {
+    addFloater(G.paddle.x, shipY() - 44, 'WARD SATURATED · +40', '#9ccc65', 10);
+  }
+  return false;
 }
 
 // ── AFT-021 P8: THE ACCESSIBILITY LIVE REGION ──────────────────────────────
@@ -1293,11 +1359,18 @@ function buildLevel(lvl) {
   G.secret.deferredChoices = null;
   if (stageIdx(lvl) !== 2) G.gauntlet = null;
   G.finale = null; // AFT-020: the finale director re-arms per wave (Phase 1+)
+  // AFT-023: the knockout checkpoint lives EXACTLY as long as its own
+  // finale — advancing to any other level (or a non-finale rebuild) drops it
+  if (!(stageIdx(lvl) === 2 && G.finaleCkpt && G.finaleCkpt.lvl === lvl)) G.finaleCkpt = null;
   // a rebuilt wave never inherits a reveal or a docked HP lane — a knockout
   // retry was showing the PREVIOUS attempt's boss bar over round one
   G.reveal = null; G.revealDock = null;
   G.resolve = null; G.arenaPlate = null; // AFT-021: a fresh wave never inherits a resolution beat
   G.shieldGrantN = 0; // AFT-021 P7: the shield income budget is per stage
+  // AFT-023: the resonance income cap and the one-draft-per-stage counter
+  // are per stage too; a knockout retry re-opens BOTH on purpose (the
+  // retried wave pays again — the knockout already confiscated the bank).
+  G.resStageIn = 0; G.attuneStageN = 0; G.attuneBeatN = 0; G.wardOverflowN = 0;
   // AFT-022 F6: notice hygiene is per stage — the first pickup of a power
   // (per element) and the first reinforcement wave announce; repeats within
   // the stage stay quiet local feedback instead of another banner
@@ -1368,7 +1441,15 @@ function buildLevel(lvl) {
     const bossY = 102 + bossH / 2;
     // real boss-fight durability: three phases need room to breathe
     // (AFT-021 P5: the measured work coefficients live in sovereignHp)
-    const bossHp = sovereignHp(rIdx, cycle);
+    // AFT-023 SOVEREIGN MERCY: from the THIRD knockout on the SAME finale,
+    // the boss pool eases 8% per further defeat (floor −25%) — a weak or
+    // scattered build converges instead of bricking on an endurance wall
+    // (measured: a spread-policy campaign ground 13+ knockouts on the L24
+    // raid without it). Deterministic, scoped to this finale's checkpoint,
+    // and gone the moment the finale is cleared or left.
+    const finaleKOs = (G.finaleCkpt && G.finaleCkpt.lvl === lvl && G.finaleCkpt.kos) || 0;
+    const mercyMul = 1 - Math.min(0.25, Math.max(0, finaleKOs - 2) * 0.08);
+    const bossHp = Math.max(9, Math.round(sovereignHp(rIdx, cycle) * mercyMul));
     G.bricks.push({
       bx: W / 2, by: bossY, w: bossW, h: bossH,
       hx: W / 2, hy: bossY, row: -1, col: -1,
@@ -2067,7 +2148,10 @@ function buildLevel(lvl) {
   }
   // late rounds shouldn't melt: reinforcement flights extend each wave,
   // arriving as pure flyers once the first formation falls
-  G.reinforce = hasBoss ? 0 : (junkie ? (regionsIn >= 3 ? 2 : 1)
+  // AFT-023: late STARFIGHTER stages add a third reinforcement wave — more
+  // SEQUENTIAL work (the readable duration lever) instead of more
+  // simultaneous actors; the ≤26-flyer readability cap is untouched.
+  G.reinforce = hasBoss ? 0 : (junkie ? (regionsIn >= 7 ? 4 : regionsIn >= 6 ? 3 : regionsIn >= 3 ? 2 : 1)
     : classic ? 0 : regionsIn >= 2 ? (regionsIn >= 5 ? 2 : 1) : 0);
   G.marchDir = gameRand() < 0.5 ? -1 : 1;
   // boxed bricks are a STATIC wall on every non-boss wave — only the Pokémon
@@ -2301,7 +2385,14 @@ function spawnReinforcement() {
   // same ecology, same motion family, a harder variation — never a new
   // random mini-wave that resets the wave's visual language mid-fight
   const theme = (junkie && G.waveThemeObj) ? G.waveThemeObj : pickWaveTheme(regionIdx(lvl));
-  const n = Math.min(16, 8 + regionsIn);
+  // AFT-023: late STARFIGHTER reinforcement beats run larger — sequential
+  // depth is the duration lever that never crowds the screen (each beat
+  // still enters as one flock; the ≤26 simultaneous cap is untouched)
+  // (early junkie packs +3: r0-r1 flyer HP is 2-3 and integer rounding
+  // swallows HP multipliers there — population is the honest floor lever;
+  // J05 measured 17.2s under the 19s trivialization floor)
+  const n = Math.min(junkie && regionsIn >= 5 ? 20 : 16,
+    8 + regionsIn + (junkie && regionsIn >= 5 ? 3 : 0) + (junkie && regionsIn <= 1 ? 3 : 0));
   const usable = W * 0.76;
   const kinds = ['ring', 'lane', 'chevron', 'arc', 'cross', 'carousel', 'swoop', 'diamond', 'helix', 'spiral', 'inf', 'liss', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain', 'clover', 'butterfly'];
   const kind = (junkie && G.encounter && G.encounter.squads.length)
@@ -2396,11 +2487,12 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   // mastery medals carry the old catch-score identity — cached so scoreMult
   // stays cheap; refreshed whenever a new medal lands (saveMedal)
   G.medalScoreBonus = Math.min(0.30, 0.01 * medalCount());
-  G.celT = false; G.celS = false; G.celE = false; G.regenLockT = 0;
+  G.celT = false; G.celS = false; G.celE = false; G.celCD = 0; G.regenLockT = 0;
   G.webSeen = {}; G.lastOfferKeys = [];
   G.lastDraftForm = 1; // re-baselined below once starterLvl is known
   G.secret = freshSecretState();
   G.bonusPicks = 0; // no half-spent Mew VMAX bounty leaks into a fresh run
+  G.attuneCD = 0; G.attuneHoldT = 0; G.attuneStageN = 0; G.attuneBeatN = 0; G.resStageIn = 0;
   // a fresh run never inherits the previous one's kill slow-mo or hit-stop —
   // lingering dramaticT slowed the first ~0.9s of a new run at ×0.3
   G.dramaticT = 0; G.freeze = 0;
@@ -2433,11 +2525,13 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.starterLvl = starterStage(startLevel, G.starter);
   G.lastDraftForm = webForm(); // a deep start is not a "fresh evolution"
   G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
+  G.emberN = 0; G.emberFloatT = 0; // AFT-023: fire-vessel shooter kindle counters
   G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
   G.chargedEver = false; G.chargeHintCD = 0; G.gauntlet = null; G.cheated = false;
   G.finale = null; G.prep = null; // AFT-020 director + preparation state
+  G.finaleCkpt = null; G.finaleResume = false; // AFT-023 knockout checkpoint
   G.specVeilTaught = false; // re-teach the veil once per journey
   G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
   G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0,

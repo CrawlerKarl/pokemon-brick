@@ -350,15 +350,18 @@ function starterKit(tiers, mods = {}, modeTiers = null) {
 const STARTER_KIT = {
   normal: starterKit(['+8% DAMAGE · +5% SCORE', '+15% DAMAGE · +10% SCORE', '+25% DAMAGE · +20% SCORE'],
     { damage: [1.08, 1.15, 1.25], score: [1.05, 1.1, 1.2] }),
+  // AFT-023: the ignite identity burns in EVERY mode now — the shooter kit
+  // was a bare +damage line (its ember branch was classic-only dead code)
+  // and measured slowest in the vessel probes.
   fire: starterKit(['RETURNS IGNITE 1 HIT · +5% DAMAGE', 'IGNITES 2 HITS · +10% DAMAGE', 'IGNITES 3 HITS · +15% DAMAGE'],
-    { damage: [1.05, 1.1, 1.15] }, {
+    { damage: [1.05, 1.1, 1.15], emberEvery: [5, 4, 3] }, {
       classic: [
         'PADDLE RETURNS IGNITE THE NEXT HIT · +5% DAMAGE',
         'PADDLE RETURNS IGNITE THE NEXT 2 HITS · +10% DAMAGE',
         'PADDLE RETURNS IGNITE THE NEXT 3 HITS · +15% DAMAGE',
       ],
-      blaster: ['+5% ALL DAMAGE', '+10% ALL DAMAGE', '+15% ALL DAMAGE'],
-      junkie: ['+5% ALL DAMAGE', '+10% ALL DAMAGE', '+15% ALL DAMAGE'],
+      blaster: ['EVERY 5TH HIT KINDLES THE TARGET · +5% DAMAGE', 'EVERY 4TH HIT KINDLES · +10% DAMAGE', 'EVERY 3RD HIT KINDLES HOTTER · +15% DAMAGE'],
+      junkie: ['EVERY 5TH HIT KINDLES THE TARGET · +5% DAMAGE', 'EVERY 4TH HIT KINDLES · +10% DAMAGE', 'EVERY 3RD HIT KINDLES HOTTER · +15% DAMAGE'],
     }),
   water: starterKit([
       '20% COOLER · SHIELD EVERY 5 RETURNS',
@@ -400,10 +403,15 @@ const STARTER_KIT = {
     { chillEvery: [10, 8, 6], chillDur: [3, 4, 5] }),
   fighting: starterKit(['+16% DAMAGE PER MISSING HP', '+24% PER MISSING HP · +20% VS BOSSES', '+34% PER MISSING HP · +30% VS BOSSES'],
     { guts: [0.16, 0.24, 0.34], bossDamage: [1, 1.2, 1.3] }),
-  poison: starterKit(['REPEATED HITS STACK +12% DAMAGE', 'STACKS +20% DAMAGE', 'STACKS +30% DAMAGE'],
-    { corrosion: [0.12, 0.2, 0.3] }),
-  ground: starterKit(['+25% VS ARMOR/BOSSES · QUAKE EVERY 10 HITS', '+40% · QUAKE EVERY 8', '+60% · QUAKE EVERY 6'],
-    { armorDamage: [1.25, 1.4, 1.6], quakeEvery: [10, 8, 6] }),
+  // AFT-023: 0.12/0.2/0.3 → 0.10/0.17/0.24 — the per-target stack never
+  // decays, so long boss fights converged on ×2.2 (measured −24% vs median).
+  poison: starterKit(['REPEATED HITS STACK +6% DAMAGE', 'STACKS +11% DAMAGE', 'STACKS +16% DAMAGE'],
+    { corrosion: [0.06, 0.11, 0.16] }),
+  // AFT-023: trimmed 1.25/1.4/1.6 → 1.18/1.3/1.42 — a finale is nothing but
+  // armored/boss targets, so this read as an unconditional multiplier there
+  // (measured fastest vessel, −28% vs median).
+  ground: starterKit(['+10% VS ARMOR/BOSSES · QUAKE EVERY 10 HITS', '+18% · QUAKE EVERY 8', '+26% · QUAKE EVERY 6'],
+    { armorDamage: [1.10, 1.18, 1.26], quakeEvery: [10, 8, 6] }),
   flying: starterKit(['+12% WIDTH · +20% FOLLOW', '+20% WIDTH · +35% FOLLOW', '+30% WIDTH · +50% FOLLOW'],
     { paddle: [1.12, 1.2, 1.3], follow: [1.2, 1.35, 1.5], fireRate: [0.95, 0.9, 0.82] }),
   psychic: starterKit(['EVERY 8TH HIT DEALS 1.75×', 'EVERY 6TH HIT DEALS 2×', 'EVERY 5TH HIT DEALS 2.25×'],
@@ -416,8 +424,11 @@ const STARTER_KIT = {
     { dodge: [0.15, 0.22, 0.3] }),
   dragon: starterKit(['START 20% MEGA · +1s DURATION', 'START 35% · +2s', 'START 50% · +3s'],
     { megaStart: [0.2, 0.35, 0.5], megaPassive: [0.008, 0.012, 0.018], megaDur: [1, 2, 3] }),
-  dark: starterKit(['COMBOS ADD +1.5% DAMAGE EACH', '+2.5% DAMAGE EACH', '+4% DAMAGE EACH'],
-    { comboDamage: [0.015, 0.025, 0.04], comboScore: [0.01, 0.015, 0.025] }),
+  // AFT-023: dark gains its FINISHER half — combo damage is structurally
+  // dead against bosses (kills reset on any hit), so weakened targets
+  // (<35% HP) now take execute damage. Measured 2nd-slowest vessel before.
+  dark: starterKit(['COMBOS +1.5% EACH · +15% VS WEAKENED', 'COMBOS +2.5% · +25% VS WEAKENED', 'COMBOS +4% · +40% VS WEAKENED'],
+    { comboDamage: [0.015, 0.025, 0.04], comboScore: [0.01, 0.015, 0.025], execute: [1.15, 1.25, 1.4] }),
   steel: starterKit(['START WITH 1 SHIELD', 'START WITH 2 SHIELDS', 'START WITH 3 SHIELDS'],
     { shieldStart: [1, 2, 3] }),
   fairy: starterKit(['POTION PITY 7 · +20% CATCHES', 'PITY 5 · +35% CATCHES', 'PITY 4 · +55% CATCHES'],

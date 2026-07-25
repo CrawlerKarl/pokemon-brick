@@ -198,10 +198,19 @@ const VOCAB_SCAN = `(() => {
 // silently captured a serve announcement for weeks). Each capture also emits
 // a metadata sidecar (<scene>-<viewport>.json) recording what was on screen.
 const SCENES = [
-  { name: 'home', js: `G.state='menu'; advOpen=false;`,
+  { name: 'home', js: `G.state='menu'; advOpen=false; trialOpen=false; menuPage='modes';`,
     expect: `G.state==='menu' && !advOpen` },
   { name: 'settings-save', js: `G.state='menu'; advOpen=true; settingsPage=2;`,
     expect: `G.state==='menu' && advOpen && settingsPage===2` },
+  // AFT-023: the setup surfaces were never screenshotted (flagged gap) —
+  // the guided first-session view, the full grid, and the oath row with
+  // the UNSWORN chip all ride the fitted-label containment contract now.
+  { name: 'vessel-select-guided', js: `G.state='menu'; advOpen=false; trialOpen=false; menuPage='setup'; setupStep='pilot'; pilotBrowseAll=false; window.__dex0=new Set(DEX); DEX.clear(); window.__ck0=RUN_CKPT; RUN_CKPT=null; SETTINGS.starter='fire';`,
+    expect: `G.state==='menu' && menuPage==='setup' && setupLayout().simple===true` },
+  { name: 'vessel-select-grid', js: `pilotBrowseAll=true; SETTINGS.starter='fire';`,
+    expect: `G.state==='menu' && setupStep==='pilot' && !setupLayout().simple` },
+  { name: 'challenge-oath', js: `setupStep='difficulty'; SETTINGS.affinity=null; if(window.__ck0!==undefined)RUN_CKPT=window.__ck0; if(window.__dex0)for(const id of window.__dex0)DEX.add(id); pilotBrowseAll=false;`,
+    expect: `G.state==='menu' && setupStep==='difficulty' && !!setupLayout().affNone` },
   { name: 'arrival', js: `advOpen=false; DEV.launch({level:1,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<40;i++)update(1/60);`,
     expect: `G.state==='play' && G.level===1 && G.mode==='junkie'` },
   { name: 'objective', js: `DEV.launch({level:8,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<100;i++)update(1/60);`,
