@@ -533,6 +533,7 @@ const G = {
   heat: 0, overheat: 0,
   autoVent: false, // AFT-022 F1: the auto-fire assist is holding its fire to cool
   attune: null, attuneLive: false, // AFT-009R P2: the frequent progression loop
+  forge: null, // AFT-009R P3: the realm-finale AETHER FORGE ({step, action, ...})
   upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
   // ---- upgrade-web runtime (bridges / superskills / offer memory) ----
   calibReturns: 0, calibShots: 0, // CALIBRATED BARRAGE: classic return count / primed volleys left
@@ -2327,7 +2328,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.paddle.x = W / 2; G.paddle.speed = 0; G.shipYv = PADDLE_Y();
   // AFT-009R P2: a new journey starts its attunement arc from zero
   G.attune = { level: 0, res: 0, need: attuneNeed(1), pending: 0, presented: 0 };
-  G.attuneLive = false;
+  G.attuneLive = false; G.forge = null;
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false; G.megaWasReady = false;

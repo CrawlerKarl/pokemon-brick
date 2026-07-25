@@ -9657,6 +9657,45 @@ function drawBuildMetaRow(L) {
   ctx.fillText(G.rerolled ? 'REROLL SPENT' : 'REROLL ×1', r0.x + r0.w - 2, y + 1);
   ctx.restore();
 }
+// AFT-009R P3: THE AETHER FORGE action menu — up to three big rows
+// (REFINE / LINK / EVOLVE); unavailable actions are OMITTED. The realm-3
+// first-link guarantee rides a ★ FIRST LINK chip on an ordered-first row.
+function drawForgeMenu(accent) {
+  const L = upgradeLayout();
+  const acts = forgeActions();
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '800 11px Orbitron, sans-serif';
+  ctx.fillStyle = '#9fb2c8';
+  const r0 = L.card(0);
+  ctx.fillText('THE AETHER FORGE — ONE DECISION SHAPES THE NEXT REALM', W / 2, r0.y - 16, W * 0.94);
+  for (let i = 0; i < acts.length; i++) {
+    const a = acts[i], r = L.card(i);
+    const hov = inRect(mouseX, lastMouseY, r);
+    if (hov) { ctx.shadowColor = a.color; ctx.shadowBlur = 20; }
+    roundRect(r.x, r.y, r.w, r.h, 14);
+    ctx.fillStyle = hov ? 'rgba(22,18,48,0.97)' : 'rgba(11,10,30,0.94)'; ctx.fill();
+    ctx.lineWidth = hov ? 2.6 : 1.8; ctx.strokeStyle = a.color; ctx.stroke();
+    ctx.shadowBlur = 0;
+    drawDraftBadge(a.icon, r.x + 36, r.y + r.h / 2, 18, a.color, hov, i);
+    ctx.textAlign = 'left';
+    ctx.font = '900 16px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
+    ctx.fillText(a.name, r.x + 68, r.y + r.h / 2 - 12, r.w - 80);
+    if (a.first) {
+      ctx.font = '900 8px Orbitron, sans-serif';
+      const fw = ctx.measureText('★ FIRST LINK').width + 12;
+      roundRect(r.x + 68 + ctx.measureText(a.name).width * 2 + 14, r.y + r.h / 2 - 18, fw, 13, 6.5);
+      ctx.fillStyle = a.color; ctx.fill();
+      ctx.fillStyle = '#0b0e20';
+      ctx.fillText('★ FIRST LINK', r.x + 74 + ctx.measureText(a.name).width * 2 + 14, r.y + r.h / 2 - 12);
+    }
+    ctx.font = bodyFont(10, 600); ctx.fillStyle = '#dde5ee';
+    wrapText(a.desc, r.w - 84).slice(0, 2).forEach((l, li) =>
+      ctx.fillText(l, r.x + 68, r.y + r.h / 2 + 8 + li * 12, r.w - 80));
+    ctx.textAlign = 'center';
+  }
+  ctx.restore();
+}
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
@@ -9718,9 +9757,14 @@ function drawOverlays() {
     const clearY = draftShort ? 36 : H * 0.16;
     const draftAccent = liveAttune ? '#80d8ff' : secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
     if (!liveAttune) drawDraftBackdrop(draftAccent);
-    title(liveAttune ? 'ATTUNEMENT ' + ((G.attune && G.attune.presented) || 1)
-      : secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!',
-      clearY, Math.min(draftShort ? 30 : 40, W / 12), draftAccent);
+    {
+      const tTxt = liveAttune ? 'ATTUNEMENT ' + ((G.attune && G.attune.presented) || 1)
+        : secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!';
+      // AFT-009R P3: long realm names must FIT the phone width — size caps
+      // by measured length, never by the fixed W/12 alone
+      const tSize = Math.min(draftShort ? 30 : 40, W / 12, (W * 0.94) / (tTxt.length * 0.68));
+      title(tTxt, clearY, tSize, draftAccent);
+    }
     if (liveAttune) {
       ctx.font = '700 11px Orbitron, sans-serif';
       ctx.fillStyle = '#9fb2c8';
@@ -9740,6 +9784,7 @@ function drawOverlays() {
       ctx.fillText('NEXT STOP: ' + genFor(G.level).name, W / 2, H * 0.16 + 62);
     }
     if (!secretDraft && !liveAttune) drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
+    if (G.forge && G.forge.step === 'menu' && G.stateT > 0.5) drawForgeMenu(draftAccent);
     if (G.upgradeChoices && G.stateT > 0.8) {
       const a = Math.min(1, (G.stateT - 0.8) / 0.4);
       ctx.globalAlpha = a;
@@ -10062,7 +10107,8 @@ function drawOverlays() {
       }
       // one reroll per draft — a dead hand shouldn't end the build
       const rr = L.reroll;
-      const canRR = !secretDraft && !G.rerolled;
+      const forgeBackBtn = G.forge && G.forge.step === 'hand' && G.forge.action !== 'refine';
+      const canRR = forgeBackBtn || (!secretDraft && !G.rerolled);
       const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
       ctx.globalAlpha = a * (canRR ? 1 : 0.35);
       roundRect(rr.x, rr.y, rr.w, rr.h, 16);
@@ -10073,7 +10119,7 @@ function drawOverlays() {
       ctx.stroke();
       ctx.font = '700 12px Orbitron, sans-serif';
       ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-      ctx.fillText(secretDraft ? 'FIXED SET' : canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+      ctx.fillText(forgeBackBtn ? '‹ BACK' : secretDraft ? 'FIXED SET' : canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
       // CONFIRM — the only thing that actually applies the inspected pick
       const cf = L.confirm, canCF = draftSel != null;
       const hovCF = canCF && inRect(mouseX, lastMouseY, cf);

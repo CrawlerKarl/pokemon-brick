@@ -973,6 +973,7 @@ function pickUpgrade(i) {
     SFX.power();
     if (holdBonusPick(remaining)) return;
     if (G.attuneLive) { resumeFromAttunement(); return; }
+    G.forge = null; // AFT-009R P3: one Forge decision per realm
     buildLevel(G.level);
     serve();
     if (G.justEvolved) { G.justEvolved = false; return; }
@@ -996,6 +997,7 @@ function pickUpgrade(i) {
     SFX.power();
     if (holdBonusPick(remaining)) return;
     if (G.attuneLive) { resumeFromAttunement(); return; }
+    G.forge = null; // AFT-009R P3: one Forge decision per realm
     buildLevel(G.level);
     serve();
     setAnnounce(c.stack.icon, c.stack.color,
@@ -1014,6 +1016,7 @@ function pickUpgrade(i) {
   SFX.power();
   if (holdBonusPick(remaining)) return;
   if (G.attuneLive) { resumeFromAttunement(); return; }
+  G.forge = null; // AFT-009R P3: one Forge decision per realm
   const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);
   serve();
@@ -1086,18 +1089,29 @@ function dexCloseGeom() { return { x: 14, y: 14, w: 110, h: 36 }; }
 // results interstitial: one tap/key moves on — to the pending act ceremony
 // if one queued behind it, otherwise straight to the draft. A short dwell
 // stops the killing blow's tap from skipping the screen unseen.
+// AFT-009R P3: after results, only a FINALE has a decision screen (the
+// Forge) — ordinary stages roll straight into the next wave; the frequent
+// picks ride the attunement levels now. The Rift bounty draft still shows.
+function afterResultsDestination() {
+  if (G.forge || G.upgradeChoices || (G.secret && G.secret.rewardDraft)) {
+    G.state = 'upgrade'; G.stateT = 0;
+  } else {
+    buildLevel(G.level);
+    serve();
+  }
+}
 function advanceResults() {
   if (G.state !== 'results' || G.stateT < 0.45) return;
   G.results = null;
   if (G.ceremony) { G.state = 'ceremony'; G.stateT = 0; }
-  else { G.state = 'upgrade'; G.stateT = 0; }
+  else afterResultsDestination();
   SFX.wall();
 }
 function advanceCeremony() {
   const c = G.ceremony;
-  if (!c) { G.state = 'upgrade'; G.stateT = 0; return; }
+  if (!c) { afterResultsDestination(); return; }
   const doneAt = c.evo ? 3.4 : 2.2;
-  if (c.t >= doneAt) { G.ceremony = null; G.state = 'upgrade'; G.stateT = 0; SFX.power(); }
+  if (c.t >= doneAt) { G.ceremony = null; afterResultsDestination(); SFX.power(); }
   else if (c.evo && c.t < 1.85) c.t = 1.85;
   else if (!c.evo) c.t = doneAt;
 }
@@ -1179,6 +1193,15 @@ function onPress(x, y) {
     return;
   }
   if (G.state === 'upgrade') {
+    // AFT-009R P3: the Forge's ACTION MENU — three big rows, tap = choose
+    if (G.forge && G.forge.step === 'menu' && G.stateT > 0.5) {
+      const FL = upgradeLayout();
+      const acts = forgeActions();
+      for (let i = 0; i < acts.length; i++) {
+        if (inRect(x, y, FL.card(i))) { forgeChoose(acts[i].key); return; }
+      }
+      return;
+    }
     if (G.upgradeChoices && G.stateT > 0.8) {
       const L = upgradeLayout();
       if (upgradeTreeOpen) {
@@ -1272,6 +1295,8 @@ function onPress(x, y) {
         }
       }
       if (draftSel != null && inRect(x, y, L.confirm)) { pickUpgrade(draftSel); return; }
+      // AFT-009R P3: on a focused LINK/EVOLVE hand the reroll slot is BACK
+      if (G.forge && G.forge.step === 'hand' && G.forge.action !== 'refine' && inRect(x, y, L.reroll)) { forgeBack(); return; }
       if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
       if (!G.secret.rewardDraft && inRect(x, y, L.tree)) { upgradeTreeOpen = true; syncTreeSelectionToDraft(); SFX.wall(); return; }
     }

@@ -2355,6 +2355,74 @@ function rollUpgradeChoices() {
     c.web ? c.web.key : c.stack ? 'stack:' + c.stack.key : c.pathKey || '?'));
 }
 
+// AFT-009R P3: THE AETHER FORGE — the realm-finale decision. Step one is
+// up to three simple ACTIONS (unavailable ones are OMITTED, never shown
+// disabled): REFINE (a rank or mastery — the mastery-sized hand keeps
+// AFT-020's wider-draft reward), LINK (an eligible Form II bridge), and
+// EVOLVE (an eligible Fusion or Apex). Choosing Link/Evolve opens a
+// focused second step of at most three recipes. Engine eligibility
+// (Form II / Final Form / stage 24+, the 2-fusion and 1-apex caps) is the
+// complexity schedule — the Forge never shows what the run cannot install.
+function forgeWebChoice(def, kind) {
+  return {
+    web: def, webKind: kind,
+    tags: kind === 'apex' ? ['APEX', ...def.paths.map(pk => skinPathName(pk))]
+      : kind === 'fusion' ? ['FUSION', ...def.paths.map(pk => skinPathName(pk))]
+        : [PATHS[def.paths[0]].name, PATHS[def.paths[1]].name],
+    synergy: kind === 'apex'
+      ? 'APEX: TWO OF ITS FUSIONS INSTALLED + NINE RANKS ACROSS ' + def.paths.map(pk => skinPathName(pk)).join(' / ')
+      : kind === 'fusion'
+        ? 'FUSION: ' + def.paths.map(pk => skinPathName(pk)).join(' × ') +
+          (def.bridge ? ' · VIA ' + webBridge(def.bridge).name : ' · CROSS-WEB') +
+          ' · SLOT ' + (fusionsOwnedCount() + 1) + '/2'
+        : 'BRIDGES ' + PATHS[def.paths[0]].name + ' AND ' + PATHS[def.paths[1]].name,
+    comparison: kind === 'apex' ? '★★ APEX TRANSFORMATION · STAGE 24+'
+      : kind === 'fusion' ? '★ RULE CHANGE · FUSION POWER' : 'NEW SYSTEM · FORM II BRIDGE',
+  };
+}
+function forgeActions() {
+  const bridges = WEB_BRIDGES.filter(bridgeEligible);
+  const fusions = WEB_FUSIONS.filter(fusionEligible);
+  const apexes = WEB_APEXES.filter(apexEligible);
+  const anyBridgeOwned = WEB_BRIDGES.some(b => upgN(b.key));
+  const acts = [{ key: 'refine', name: 'REFINE', color: '#80d8ff', icon: 'target',
+    desc: 'ADD A RANK TO AN ACTIVE PATH — OR TAKE A MASTERY' }];
+  if (bridges.length) acts.push({ key: 'link', name: 'LINK', color: '#ffd54f', icon: 'multi',
+    desc: 'INSTALL A FORM II BRIDGE — TWO PATHS LEARN TO WORK AS ONE',
+    first: !anyBridgeOwned && regionIdx(Math.max(1, G.level - 1)) >= 2 });
+  if (fusions.length || apexes.length) acts.push({ key: 'evolve', name: 'EVOLVE', color: '#d780ff', icon: 'mega',
+    desc: apexes.length ? 'AN APEX TRANSFORMATION IS WITHIN REACH' : 'FORGE A FUSION — A RULE OF YOUR BUILD CHANGES' });
+  return acts;
+}
+function forgeChoose(action) {
+  const F = G.forge; if (!F) return;
+  if (action === 'refine') {
+    rollUpgradeChoices();
+    if (G.upgradeChoices) {
+      const pure = G.upgradeChoices.filter(c => !c.web); // a rank or a mastery — transformations live behind LINK/EVOLVE
+      if (pure.length >= 2) G.upgradeChoices = pure;
+    }
+  } else if (action === 'link') {
+    G.upgradeChoices = WEB_BRIDGES.filter(bridgeEligible).slice(0, 3).map(d => forgeWebChoice(d, 'bridge'));
+  } else {
+    const apexes = WEB_APEXES.filter(apexEligible).map(d => forgeWebChoice(d, 'apex'));
+    const fusions = WEB_FUSIONS.filter(fusionEligible).map(d => forgeWebChoice(d, 'fusion'));
+    G.upgradeChoices = [...apexes, ...fusions].slice(0, 3);
+  }
+  if (!G.upgradeChoices || !G.upgradeChoices.length) { G.upgradeChoices = null; F.step = 'menu'; return; }
+  F.step = 'hand'; F.action = action;
+  if (typeof draftSel !== 'undefined') draftSel = null;
+  G.stateT = Math.max(G.stateT, 0.85); // the hand is immediately readable — no re-fade
+  SFX.wall();
+}
+function forgeBack() {
+  const F = G.forge; if (!F || F.step !== 'hand') return;
+  F.step = 'menu'; F.action = null;
+  G.upgradeChoices = null;
+  if (typeof draftSel !== 'undefined') draftSel = null;
+  SFX.wall();
+}
+
 // AFT-009R P2: the attunement hand. The OPENING is curated so complexity
 // arrives gradually — hand 1 offers the weapon trio (VOLLEY / IMPACT /
 // RELIC), hand 2 the support trio (PRISM / AEGIS / SURGE), hand 3 deepens
@@ -7723,8 +7791,13 @@ function settleStageResolution() {
       statsLifeGain('aegisX');
       addFloater(W / 2, H * 0.42, PATHS.aegis.tiers[3].name + ' — SEGMENT RESTORED', '#66bb6a', 20);
     }
-    // draft: advance one of up to three paths (skip maxed ones)
-    rollUpgradeChoices();
+    // AFT-009R P3: ordinary stages deal NO draft — the frequent picks ride
+    // the attunement levels now. A REALM FINALE opens THE AETHER FORGE
+    // (its mastery-sized Refine hand keeps AFT-020's wider-draft reward);
+    // the Rift's secret bounty draft is untouched.
+    G.upgradeChoices = null;
+    G.forge = (clearedStage === 2 && !secretVictory) ? { step: 'menu' } : null;
+    if (secretVictory) rollUpgradeChoices();
     if (secretVictory) {
       G.secret.completed = true;
       G.secret.vmax = false; // the fight is won — drop the rift background

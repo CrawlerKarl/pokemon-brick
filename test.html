@@ -444,35 +444,39 @@ window.requestAnimationFrame = function () { return 0; };
     const nans = nanScan();
     assert(nans.length === 0, 'NaN positions: ' + nans.join(', '));
     assert(ERR.length === e0, 'errors during sim: ' + ERR.slice(e0).join(' | '));
-    // real damage happened under AI control (bricks were destroyed)
-    assert(reachedUpgrade || aliveBricks() < startBricks,
+    // real damage happened under AI control — bricks fell, or the whole
+    // wave cleared and the run rolled into the next stage (P3 flow)
+    assert(G.level > 1 || aliveBricks() < startBricks,
       'no bricks destroyed in ' + frames + ' frames (alive=' + aliveBricks() + '/' + startBricks + ')');
-    // Deterministically FINISH the wave so the upgrade/draft flow is always
+    // Deterministically FINISH the wave so the clear flow is always
     // exercised — a dumb AI sinking the literal last flyer was flaky. Killing
     // the bricks routes through the same level-clear code the game uses.
-    if (!reachedUpgrade) {
-      G.reinforce = 0;
-      for (const b of G.bricks) b.dead = true;
-      // fireAction() LAUNCHES a racked serve in every mode (classic's serve
-      // branch releases the stuck ball) — but the old code only called it
-      // once BEFORE the loop, so a ball dropped mid-finish left the wave in
-      // 'serve' forever (the long-standing unseeded flake). Re-launch every
-      // frame instead.
-      await runFrames(400, () => {
-        if (G.state === 'serve') fireAction();
-        skipResults();
-        return G.state === 'upgrade' ? false : undefined;
-      });
-    }
-    // the upgrade draft must be usable
-    assert(G.state === 'upgrade', "expected 'upgrade' state, got '" + G.state + "'");
-    assert(G.upgradeChoices && G.upgradeChoices.length > 0, 'no upgrade choices offered');
+    // AFT-009R P3: an ORDINARY clear rolls straight into the next wave (no
+    // stage draft — attunement owns the frequent picks now), so the smoke
+    // expects level 2's serve, then exercises pickUpgrade via a presented
+    // attunement level instead.
+    G.reinforce = 0;
+    for (const b of G.bricks) b.dead = true;
+    await runFrames(400, () => {
+      if (G.state === 'serve' && G.level === 1) fireAction();
+      skipResults();
+      return (G.level >= 2 && (G.state === 'serve' || G.state === 'play')) ? false : undefined;
+    });
+    assert(G.level >= 2 && (G.state === 'serve' || G.state === 'play'),
+      'the ordinary clear did not roll into the next wave (L' + G.level + ' · ' + G.state + ')');
+    assert(!G.upgradeChoices, 'an ordinary stage clear dealt a draft — P3 removed those');
+    // the attunement pick path is the ordinary install flow now
+    G.state = 'play'; G.stateT = 2; G.playT = 2;
+    gainResonance(999, 'smoke');
+    presentAttunementLevel();
+    assert(G.state === 'upgrade' && G.upgradeChoices && G.upgradeChoices.length > 0,
+      'the attunement level did not open the draft');
     pickUpgrade(0);
-    assert(G.upgradeChoices === null, 'pickUpgrade(0) did not consume the draft');
-    assert(G.state === 'serve' || G.state === 'play',
-      "pickUpgrade(0) left state '" + G.state + "', expected serve/play");
+    assert(G.upgradeChoices === null, 'pickUpgrade(0) did not consume the hand');
+    assert(G.state === 'play', "pickUpgrade(0) left state '" + G.state + "', expected play (live resume)");
+    G.attune.pending = 0;
     assert(ERR.length === e0, 'errors during pickUpgrade: ' + ERR.slice(e0).join(' | '));
-    return (reachedUpgrade ? 'AI-cleared' : 'AI-progressed, finished') + ', pickUpgrade(0) OK → ' + G.state;
+    return 'AI-progressed · ordinary clear rolls on · attunement pick OK → ' + G.state;
   }
   test('mode smoke: classic', () => modeSmoke('classic', 4000));
   test('mode smoke: blaster', () => modeSmoke('blaster', 3000));
@@ -1879,12 +1883,14 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.state === 'results', 'challenge cleared (state ' + G.state + ')');
     assert(G.prep && G.prep.realm === 2, 'preparation banked from the completed challenge objective');
     G.stateT = 1; // clear the results dwell gate
-    advanceResults();
-    assert(G.state === 'upgrade', 'results advance to the draft');
     const shieldsBefore = G.shieldCharges;
-    pickUpgrade(0); // installs + builds the finale
+    advanceResults();
+    // AFT-009R P3: a CHALLENGE clear deals no draft — the run rolls straight
+    // into the finale build, spending the preparation on the way in
+    assert(G.state === 'serve' || G.state === 'play',
+      'results roll into the finale (state ' + G.state + ')');
     assert(G.level === 9 && G.prep === null, 'preparation spent (never outlives the build)');
-    assert(G.shieldCharges === shieldsBefore + 1 || G.mega > 0,
+    assert(G.shieldCharges >= shieldsBefore + 1 || G.mega > 0,
       'the readied defense arrived (shield or banked overdrive)');
     SETTINGS.starter = 'none'; G.starter = null;
     return '27 titles × 2 skins · hands 3/4/5 · pinned mastered reroll · preparation banked + spent';
@@ -3267,8 +3273,9 @@ window.requestAnimationFrame = function () { return 0; };
     assert(bars.length >= 1, 'region-2 junkie challenge should have a ROCK TOMB barrier');
     G.state = 'play'; G.reinforce = 0;
     for (const b of G.bricks) if (!b.barrier) b.dead = true;
-    await runFrames(300, () => { skipResults(); return G.state === 'upgrade' ? false : undefined; });
-    assert(G.state === 'upgrade', 'wave did not clear with only barriers left (state ' + G.state + ')');
+    await runFrames(300, () => { skipResults(); return (G.level >= 6 && (G.state === 'serve' || G.state === 'play')) ? false : undefined; });
+    assert(G.level >= 6 && (G.state === 'serve' || G.state === 'play'),
+      'wave did not clear with only barriers left (L' + G.level + ' · ' + G.state + ')');
     return '27 classic waves brick-only · paddle stays gunless (capstone/LASER/Mega) · boss guard bricks · junkie armor intact';
   });
 
@@ -4022,14 +4029,16 @@ window.requestAnimationFrame = function () { return 0; };
       assert(typeof R.flavor === 'string' && R.flavor.includes('FLIGHT LOG'),
         'Kanto results are missing their flight-log narrative line');
       assert(!R.medalsSaved, 'trial run claimed to save medals');
-      assert(G.level === 2 && G.upgradeChoices, 'level advance / draft roll did not happen behind results');
+      assert(G.level === 2 && !G.upgradeChoices,
+        'level advance behind results broke (P3: ordinary clears deal no draft)');
       drawResults(); // renders without throwing
       // dwell gate: an immediate tap must NOT skip the screen
       G.stateT = 0.1; advanceResults();
       assert(G.state === 'results', 'results skipped before the dwell gate');
       G.stateT = 1; advanceResults();
-      assert(G.state === 'upgrade', 'tap did not advance results to the draft');
-      return 'clear → results (ledger + objectives) → one tap → draft; arrival grace present';
+      assert(G.state === 'serve' || G.state === 'play',
+        'tap did not roll results into the next wave (' + G.state + ')');
+      return 'clear → results (ledger + objectives) → one tap → next wave; arrival grace present';
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
@@ -6239,6 +6248,59 @@ window.requestAnimationFrame = function () { return 0; };
     assert(attuneSafeNow(), 'a calm live beat did not admit the queued level');
     G.attune.pending = 0;
     return 'contribution accrues · farm pays nothing · trio → trio → deepen/branch · 4-path cap holds · safe gate honest · pick resumes play';
+  });
+
+  test('AFT-009R P3: the Aether Forge — finale-only, omitted actions, focused steps, caps', async () => {
+    SETTINGS.mode = 'blaster'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+    // 1) an ORDINARY clear arms no forge and deals no draft
+    resetRun(1, true, { seed: 'AFT009R-P3A' });
+    G.state = 'play'; G.reinforce = 0; G.objective = null;
+    for (const b of G.bricks) b.dead = true;
+    for (let f = 0; f < 600 && G.state !== 'results'; f++) { paused = false; G.freeze = 0; update(1/60); }
+    assert(G.state === 'results', 'arrival did not reach results');
+    assert(!G.forge && !G.upgradeChoices, 'an ordinary clear armed a forge or dealt a draft');
+    G.stateT = 1; advanceResults();
+    assert(G.level === 2 && (G.state === 'serve' || G.state === 'play'), 'ordinary clear did not roll on');
+    // 2) a FINALE opens the Forge menu; a fresh run omits Link/Evolve
+    resetRun(3, true, { seed: 'AFT009R-P3B' });
+    G.state = 'play'; G.reinforce = 0; G.objective = null;
+    for (let f = 0; f < 1200 && G.state !== 'results'; f++) {
+      for (const b of G.bricks) if (!b.dead) damageBrick(b, 9999, b.bx, b.by, null, { ignorePhaseGate: true });
+      paused = false; G.freeze = 0; update(1/60);
+    }
+    assert(G.state === 'results', 'finale did not reach results');
+    assert(G.forge && G.forge.step === 'menu', 'the finale did not arm the Forge');
+    G.stateT = 1; advanceResults();
+    assert(G.state === 'upgrade' && G.forge, 'results did not open the Forge');
+    let acts = forgeActions();
+    assert(acts.length === 1 && acts[0].key === 'refine',
+      'a fresh Form I run must offer ONLY Refine (got ' + acts.map(a => a.key).join(',') + ')');
+    // 3) Refine deals the mastery-sized hand of ranks/masteries only
+    forgeChoose('refine');
+    assert(G.forge.step === 'hand' && G.upgradeChoices && G.upgradeChoices.length >= 3,
+      'Refine did not deal a hand');
+    assert(G.upgradeChoices.every(c => !c.web), 'Refine leaked a transformation into the hand');
+    // 4) LINK appears once a bridge is eligible; its hand is ≤3 bridges; BACK works
+    G.starterLvl = 2;
+    G.path.arsenal = 2; G.path.impact = 2;
+    acts = forgeActions();
+    const link = acts.find(a => a.key === 'link');
+    assert(link, 'an eligible bridge did not surface the LINK action');
+    forgeChoose('link');
+    assert(G.upgradeChoices.length <= 3 && G.upgradeChoices.every(c => c.webKind === 'bridge'),
+      'LINK dealt something other than ≤3 bridges');
+    forgeBack();
+    assert(G.forge.step === 'menu' && !G.upgradeChoices, 'BACK did not return to the Forge menu');
+    // 5) installing from the Forge closes it and builds the next realm
+    forgeChoose('refine');
+    const lvl0 = G.level;
+    pickUpgrade(0);
+    assert(!G.forge, 'the Forge survived its one decision');
+    assert(G.level === lvl0 && (G.state === 'serve' || G.state === 'play'),
+      'the Forge install did not build the next realm');
+    // 6) the transformation caps stay the engine's: max 2 fusions, 1 apex
+    assert(typeof fusionsOwnedCount === 'function', 'fusion cap accounting missing');
+    return 'ordinary clears roll on · finale Forge · Refine-only fresh · pure hands · LINK/BACK · one decision per realm';
   });
 
   // ---- runner -------------------------------------------------------------
