@@ -5519,6 +5519,7 @@ function drawHUD() {
     }
   }
   drawHurtHealth();
+  drawResonanceMeter(); // AFT-009R P2: the attunement fill rides the HUD pass
 }
 function drawBrickBehaviorLegend() {
   if (G.mode !== 'classic' || stageIdx(G.level) === 2 || (G.state !== 'play' && G.state !== 'serve')) return;
@@ -9605,6 +9606,31 @@ function drawAttunementCard(c, r, i, a) {
 // SLOTS (the coming four-path cap's visual anchor), the current build
 // identity, and the reroll resource. Reads real state only; a run
 // grandfathered past four slots shows the overflow honestly.
+// AFT-009R P2: THE RESONANCE METER — a slim always-on readout of the next
+// attunement level: bottom-left above the status chips on touch, under the
+// score block on desktop. Reads state only; the fill is contribution, so
+// it visibly surges on kills, boss deciles, phases and objectives.
+function drawResonanceMeter() {
+  const A = G.attune;
+  if (!A || (G.state !== 'play' && G.state !== 'serve')) return;
+  const w = 92, h = 5;
+  // just above the status-chips row in every layout (the upper-left column
+  // belongs to score/COMBO/RIFT KEY — AFT-022 F3's rule)
+  const x = 14 + SAFE_L, y = FLOOR() - 52;
+  ctx.save();
+  roundRect(x, y, w, h, 2.5);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+  const frac = Math.max(0, Math.min(1, A.res / Math.max(1, A.need)));
+  if (frac > 0.01) {
+    roundRect(x, y, w * frac, h, 2.5);
+    ctx.fillStyle = A.pending > 0 ? '#ffd54f' : '#80d8ff'; ctx.fill();
+  }
+  ctx.font = '800 8px Orbitron, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = A.pending > 0 ? '#ffd54f' : '#9fb2c8';
+  ctx.fillText(A.pending > 0 ? 'ATTUNE READY' : 'ATTUNE ' + (A.level + 1), x + w + 7, y + 3);
+  ctx.restore();
+}
 function drawBuildMetaRow(L) {
   const r0 = L.card(0);
   const y = r0.y - 16;
@@ -9686,26 +9712,34 @@ function drawOverlays() {
     dim(0.55);
     const draftShort = H < 520;
     const secretDraft = !!G.secret.rewardDraft;
+    const liveAttune = !!G.attuneLive; // AFT-009R P2: a mid-wave level, not a stage clear
     const wasBossStage = G.clearedStage === 2;
     const clearedGen = SKIN.gens[regionIdx(Math.max(1, G.level - 1))];
     const clearY = draftShort ? 36 : H * 0.16;
-    const draftAccent = secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
-    drawDraftBackdrop(draftAccent);
-    title(secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!',
+    const draftAccent = liveAttune ? '#80d8ff' : secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
+    if (!liveAttune) drawDraftBackdrop(draftAccent);
+    title(liveAttune ? 'ATTUNEMENT ' + ((G.attune && G.attune.presented) || 1)
+      : secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!',
       clearY, Math.min(draftShort ? 30 : 40, W / 12), draftAccent);
+    if (liveAttune) {
+      ctx.font = '700 11px Orbitron, sans-serif';
+      ctx.fillStyle = '#9fb2c8';
+      ctx.fillText('THE FIGHT WAITS — CHOOSE, THEN RETURN', W / 2, clearY + (draftShort ? 26 : 32), W * 0.9);
+    } else {
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
     ctx.fillText(secretDraft ? '+3000 SECRET BOSS BONUS' : '+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS',
       W / 2, clearY + (draftShort ? 28 : 34));
+    }
     if (secretDraft && !draftShort) {
       ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
       ctx.fillText('CHOOSE ONE FORBIDDEN UPGRADE · THE NORMAL ' + (SKIN.secret.homeRegion || 'KANTO') + ' DRAFT FOLLOWS', W / 2, clearY + 60, W * 0.92);
-    } else if (stageIdx(G.level) === 0 && !draftShort) {
+    } else if (!liveAttune && stageIdx(G.level) === 0 && !draftShort) {
       ctx.font = '900 16px Orbitron, sans-serif';
       ctx.fillStyle = genFor(G.level).accent;
       ctx.fillText('NEXT STOP: ' + genFor(G.level).name, W / 2, H * 0.16 + 62);
     }
-    if (!secretDraft) drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
+    if (!secretDraft && !liveAttune) drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
     if (G.upgradeChoices && G.stateT > 0.8) {
       const a = Math.min(1, (G.stateT - 0.8) / 0.4);
       ctx.globalAlpha = a;

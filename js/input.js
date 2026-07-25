@@ -920,6 +920,19 @@ function holdBonusPick(remaining) {
   if (upgradeTreeOpen) syncTreeSelectionToDraft();
   return true;
 }
+// AFT-009R P2: a mid-wave attunement pick resumes the FROZEN wave exactly
+// where it stood — no rebuild, no serve. A short grace covers the re-entry
+// so the resumed volley can't be an instant surprise.
+function resumeFromAttunement() {
+  G.attuneLive = false;
+  G.upgradeChoices = null;
+  upgradeTreeOpen = false;
+  G.state = 'play'; G.stateT = 0;
+  G.rerolled = false;
+  G.invuln = Math.max(G.invuln, 0.9);
+  G.enemyShotCD = Math.max(G.enemyShotCD || 0, 0.9);
+  G.bossShotCD = Math.max(G.bossShotCD || 0, 0.9);
+}
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
@@ -959,6 +972,7 @@ function pickUpgrade(i) {
     upgradeTreeOpen = false;
     SFX.power();
     if (holdBonusPick(remaining)) return;
+    if (G.attuneLive) { resumeFromAttunement(); return; }
     buildLevel(G.level);
     serve();
     if (G.justEvolved) { G.justEvolved = false; return; }
@@ -981,6 +995,7 @@ function pickUpgrade(i) {
     upgradeTreeOpen = false;
     SFX.power();
     if (holdBonusPick(remaining)) return;
+    if (G.attuneLive) { resumeFromAttunement(); return; }
     buildLevel(G.level);
     serve();
     setAnnounce(c.stack.icon, c.stack.color,
@@ -998,6 +1013,7 @@ function pickUpgrade(i) {
   upgradeTreeOpen = false;
   SFX.power();
   if (holdBonusPick(remaining)) return;
+  if (G.attuneLive) { resumeFromAttunement(); return; }
   const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);
   serve();

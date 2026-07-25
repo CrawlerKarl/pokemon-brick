@@ -899,6 +899,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     return;
   }
   statsDmgOut(meta.source || 'other', Math.min(Math.max(0, br.hp), dmg));
+  resBossDamage(br, Math.min(Math.max(0, br.hp), dmg)); // AFT-009R P2: boss work pays resonance by deciles
   br.hp -= dmg;
   // THE FIRST FUSION: the chained pair SHARES every wound — half of any
   // hit mirrors to the partner (one linked work budget, never two bars)
@@ -966,6 +967,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     const newPhase = Math.min(phaseCount, 1 + Math.floor((1 - fracLeft) * phaseCount));
     if (newPhase > br.phase) {
       statsBossPhaseMark(br, br.phase);
+      resEvent('phase'); // AFT-009R P2: turning a boss phase is resonance
       br.phase = newPhase;
       // The hit that ended one phase cannot spill straight through the next.
       // This short gate protects boss choreography without creating a long
@@ -1034,6 +1036,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (br.hp <= 0) {
     br.dead = true;
     statsKill();
+    resKill(br); // AFT-009R P2: a non-renewable kill is resonance
     if (br.reinf) statsKillRenew(); // renewable-population kill (AFT-008 farm audit)
     // RAID: the last vine down frees the bound mythic (optional risk/reward)
     if (br.raidVine && raidState() && !G.bricks.some(b => b.raidVine && !b.dead && b !== br)) raidFreeBound();
@@ -2244,7 +2247,12 @@ function rollUpgradeChoices() {
     (needDefense && ['defense', 'utility'].includes(PATHS[k].family) ? 5 : 0) +
     (wish === 'commit' && pathLvl(k) > 0 && pathLvl(k) === maxInv ? 6 : 0) +
     (G.mode === 'classic' && PATHS[k].family === 'offense' && pathLvl(k) === 2 ? 4 : 0);
-  const rankedCont = PATH_KEYS.filter(k => pathLvl(k) < 4)
+  // AFT-009R P2: THE FOUR-PATH CAP — an ordinary journey runs at most four
+  // active paths. Once the slots are full, hands only strengthen owned
+  // paths (mastery stacks and transformations still flow); a checkpoint
+  // grandfathered past four keeps every owned path playable.
+  const ownedPathN = PATH_KEYS.filter(k => pathLvl(k) > 0).length;
+  const rankedCont = PATH_KEYS.filter(k => pathLvl(k) < 4 && (pathLvl(k) > 0 || ownedPathN < 4))
     .map(k => ({ k, s: scoreCont(k) })).sort((a, b) => b.s - a.s).map(x => x.k);
   const picked = [], webPicked = [], used = new Set();
   const takeCont = pred => {
@@ -2345,6 +2353,51 @@ function rollUpgradeChoices() {
   // AFT-008: record every dealt hand so offer frequency can normalize pick rates
   if (choices.length) statsOffer(choices.map(c =>
     c.web ? c.web.key : c.stack ? 'stack:' + c.stack.key : c.pathKey || '?'));
+}
+
+// AFT-009R P2: the attunement hand. The OPENING is curated so complexity
+// arrives gradually — hand 1 offers the weapon trio (VOLLEY / IMPACT /
+// RELIC), hand 2 the support trio (PRISM / AEGIS / SURGE), hand 3 deepens
+// an owned path or branches once; every later hand reuses the
+// strengthen/adapt/synergize roller under the four-path cap. Selecting a
+// NEW path installs its first tier (the normal tier-0 pick).
+function attuneTierChoice(k) {
+  const tierIdx = pathLvl(k);
+  if (tierIdx >= 4) return null;
+  return { pathKey: k, path: PATHS[k], tier: PATHS[k].tiers[tierIdx], tierIdx,
+    tags: tierTags(k, tierIdx), synergy: tierSynergy(k, tierIdx), comparison: tierComparison(k, tierIdx) };
+}
+function rollAttunementHand() {
+  const A = G.attune;
+  const hand = A ? A.presented : 99;
+  if (hand === 1 || hand === 2) {
+    const trio = hand === 1 ? ['arsenal', 'impact', 'bond'] : ['prism', 'aegis', 'surge'];
+    const backup = hand === 1 ? ['prism', 'aegis', 'surge'] : ['arsenal', 'impact', 'bond'];
+    const picks = trio.filter(k => pathLvl(k) === 0);
+    for (const k of backup) if (picks.length < 3 && pathLvl(k) === 0) picks.push(k);
+    const choices = picks.slice(0, 3).map(attuneTierChoice).filter(Boolean);
+    if (choices.length >= 2) {
+      G.upgradeChoices = choices;
+      G.lastOfferKeys = choices.map(c => 'path:' + c.pathKey + ':' + c.tierIdx);
+      statsOffer(choices.map(c => c.pathKey));
+      return;
+    } // dev grants already filled the trios — fall through to the roller
+  }
+  if (hand === 3) {
+    const owned = PATH_KEYS.filter(k => pathLvl(k) > 0 && pathLvl(k) < 4);
+    const unowned = ['aegis', 'prism', 'surge', 'bond', 'arsenal', 'impact'].filter(k => pathLvl(k) === 0);
+    const choices = [
+      ...owned.slice(0, 2).map(attuneTierChoice),
+      ...(unowned.length ? [attuneTierChoice(unowned[0])] : []),
+    ].filter(Boolean).slice(0, 3);
+    if (choices.length >= 2) {
+      G.upgradeChoices = choices;
+      G.lastOfferKeys = choices.map(c => 'path:' + c.pathKey + ':' + c.tierIdx);
+      statsOffer(choices.map(c => c.pathKey));
+      return;
+    }
+  }
+  rollUpgradeChoices();
 }
 
 // AFT-009R P1: ONE card anatomy for every draft offer — icon, name, a KIND
@@ -3193,6 +3246,7 @@ function disperseSwarm() {
 // disperse the swarm and let the crosser-exempt clear take the wave.
 function completeProtect(O, name) {
   O.done = true;
+  resEvent('objective'); // AFT-009R P2: a protected life is resonance
   const fr = O.friendly;
   const px = fr ? fr.bx + G.fx : W / 2, py = fr ? fr.by + G.fy : H * 0.3;
   G.score += 600;
@@ -3232,6 +3286,7 @@ function friendlyFaints(fr) {
 function completeNonAttrition(O, name) {
   O.done = true;
   O.progress = 1;
+  resEvent('objective'); // AFT-009R P2: an authored win is resonance
   statsObjective(O.type, true);
   G.score += Math.round(600 * scoreMult());
   if (G.mode === 'classic') {
@@ -3345,6 +3400,7 @@ function updateObjective(dt) {
     if (O.spawnT <= 0 && aliveFlyers < 14) { spawnReinforcement(); O.spawnT = 5.5; }
     if (O.t >= O.dur) {
       O.done = true;
+      resEvent('objective'); // AFT-009R P2: outlasting the swarm is resonance
       // the swarm DISPERSES: remaining flyers migrate away as fleeing
       // crossers (no flight slot → crosser-exempt clear takes the wave)
       for (const b of G.bricks) {
@@ -3570,6 +3626,7 @@ function jumpToBossPhase(round, phase) {
 // Phase 2 flips the drive direction for the first non-ladder formats.
 function startFinaleBeat(i) {
   const F = G.finale; if (!F || i === F.beat) return;
+  if (i > F.beat) resEvent('beat'); // AFT-009R P2: an earned beat is resonance
   F.beatClocks[F.beatKey] = +(((F.beatClocks[F.beatKey] || 0) + F.beatT)).toFixed(1);
   F.beat = i; F.beatT = 0;
   const fmt = FINALE_FORMATS[F.format] || FINALE_FORMATS.ladder;
@@ -5092,6 +5149,13 @@ function update(dt) {
       G.combatNotice.t -= dt;
       if (G.combatNotice.t <= 0) G.combatNotice = null;
     } else if (G.combatNotice.t > 2.2) G.combatNotice.t = 2.2; // never hoard a stale queue
+  }
+  // AFT-009R P2: a queued attunement level opens at the first combat-safe
+  // beat. DORMANT under the suite (like reveals) — tests opt in via
+  // window.__SUITE_ATTUNE, or drive presentAttunementLevel() directly.
+  if (G.attune && G.attune.pending > 0 && attuneSafeNow()
+    && !(typeof window !== 'undefined' && window.__SUITE && !window.__SUITE_ATTUNE)) {
+    presentAttunementLevel();
   }
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 

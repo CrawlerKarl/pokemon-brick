@@ -6178,6 +6178,69 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { W = w0; H = h0; G.upgradeChoices = null; resize(); }
   });
 
+  test('AFT-009R P2: resonance — curated opening, four-path cap, anti-farm, safe queue, live resume', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    resetRun(1, true, { seed: 'AFT009R-P2' });
+    G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999; G.playT = 2; G.stateT = 2;
+    const A = G.attune;
+    assert(A && A.level === 0 && A.need === attuneNeed(1), 'a fresh journey did not arm the attunement arc');
+    // 1) contribution fills it; renewable kills are worthless
+    const res0 = A.res;
+    gainResonance(5, 'test');
+    assert(A.res === res0 + 5, 'plain contribution did not accrue');
+    const mark = A.res;
+    resKill({ reinf: true, maxHp: 3 });
+    resKill({ crosser: {}, maxHp: 3 });
+    assert(A.res === mark, 'renewable/crosser kills paid resonance — the farm is open');
+    resKill({ maxHp: 3 });
+    assert(A.res > mark, 'an ordinary kill paid nothing');
+    // 2) levels queue; the curated hands arrive in order
+    gainResonance(999, 'test');
+    assert(A.pending >= 3 && A.level >= 3, 'a big contribution did not bank levels (pending=' + A.pending + ')');
+    const trio = h => G.upgradeChoices.map(c => c.pathKey).sort().join(',');
+    presentAttunementLevel();
+    assert(G.state === 'upgrade' && G.attuneLive, 'the level did not open the draft');
+    assert(trio() === 'arsenal,bond,impact', 'hand 1 is not the weapon trio (' + trio() + ')');
+    pickUpgrade(G.upgradeChoices.findIndex(c => c.pathKey === 'arsenal'));
+    assert(G.state === 'play' && !G.attuneLive, 'the pick did not resume the live wave');
+    assert(pathLvl('arsenal') === 1, 'the NEW pick did not install tier I');
+    presentAttunementLevel();
+    assert(trio() === 'aegis,prism,surge', 'hand 2 is not the support trio (' + trio() + ')');
+    pickUpgrade(G.upgradeChoices.findIndex(c => c.pathKey === 'aegis'));
+    presentAttunementLevel();
+    const h3 = G.upgradeChoices.map(c => c.pathKey);
+    assert(h3.includes('arsenal') || h3.includes('aegis'), 'hand 3 does not deepen an owned path');
+    assert(G.upgradeChoices.some(c => c.tierIdx === 0 && !['arsenal', 'aegis'].includes(c.pathKey)),
+      'hand 3 offers no complementary branch');
+    pickUpgrade(0);
+    // 3) the four-path cap: with four active paths, no hand offers a fifth
+    ['arsenal', 'aegis', 'prism', 'surge'].forEach(k => { if (pathLvl(k) === 0) G.path[k] = 1; });
+    for (let t = 0; t < 6; t++) {
+      rollUpgradeChoices();
+      for (const c of G.upgradeChoices || []) {
+        assert(!(c.pathKey && pathLvl(c.pathKey) === 0),
+          'a fifth path was offered past the cap (' + c.pathKey + ')');
+      }
+    }
+    // 4) the combat-safe gate: never over a charge, a channel, or a dropping ball
+    G.upgradeChoices = null; G.state = 'play'; G.stateT = 2; G.attune.pending = 1;
+    paused = false; G.engageHold = 0; G.columnStrikes.length = 0; G.reveal = null; G.resolve = null;
+    chargeHeld = true;
+    assert(!attuneSafeNow(), 'a held charge was interruptible');
+    chargeHeld = false; G.charge = 0; G.chargeCD = 0;
+    G.bricks.push({ channel: true, poke: { id: 1, t: 'fire', n: 'X' }, bx: 0, by: 0, w: 10, h: 10 });
+    assert(!attuneSafeNow(), 'an open desperation channel was interruptible');
+    G.bricks.pop();
+    const m0 = G.mode;
+    G.mode = 'classic';
+    G.balls.push({ x: W / 2, y: H * 0.7, vy: 200, vx: 0, dead: false, stuck: false, r: 9 });
+    assert(!attuneSafeNow(), 'a Breaker ball dropping to the paddle was interruptible');
+    G.balls.pop(); G.mode = m0;
+    assert(attuneSafeNow(), 'a calm live beat did not admit the queued level');
+    G.attune.pending = 0;
+    return 'contribution accrues · farm pays nothing · trio → trio → deepen/branch · 4-path cap holds · safe gate honest · pick resumes play';
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();
