@@ -2392,6 +2392,14 @@ function forgeActions() {
     first: !anyBridgeOwned && regionIdx(Math.max(1, G.level - 1)) >= 2 });
   if (fusions.length || apexes.length) acts.push({ key: 'evolve', name: 'EVOLVE', color: '#d780ff', icon: 'mega',
     desc: apexes.length ? 'AN APEX TRANSFORMATION IS WITHIN REACH' : 'FORGE A FUSION — A RULE OF YOUR BUILD CHANGES' });
+  // AFT-009R P5: one REFORGE per realm — refund a legal rank, bank a level.
+  // Only ranks whose removal keeps every installed transformation legal are
+  // offered (webRegressibleLeaves simulates each), so a Fusion or Apex can
+  // never be invalidated; blocked ranks simply do not appear.
+  if (!G.reforgeUsed && webRegressibleLeaves().some(l => l.kind === 'tier')) {
+    acts.push({ key: 'reforge', name: 'REFORGE', color: '#ff8a65', icon: 'warp',
+      desc: 'REFUND A RANK — ITS POWER RETURNS AS A BANKED ATTUNEMENT CHOICE' });
+  }
   return acts;
 }
 function forgeChoose(action) {
@@ -2404,6 +2412,9 @@ function forgeChoose(action) {
     }
   } else if (action === 'link') {
     G.upgradeChoices = WEB_BRIDGES.filter(bridgeEligible).slice(0, 3).map(d => forgeWebChoice(d, 'bridge'));
+  } else if (action === 'reforge') {
+    G.upgradeChoices = webRegressibleLeaves().filter(l => l.kind === 'tier').slice(0, 3)
+      .map(l => ({ reforge: { pathKey: l.pathKey, tierIdx: pathLvl(l.pathKey) - 1 } }));
   } else {
     const apexes = WEB_APEXES.filter(apexEligible).map(d => forgeWebChoice(d, 'apex'));
     const fusions = WEB_FUSIONS.filter(fusionEligible).map(d => forgeWebChoice(d, 'fusion'));
@@ -2475,6 +2486,14 @@ function rollAttunementHand() {
 // reaches into the choice payload's internals, so the level-up screen and
 // the Forge (P3) present identically shaped cards.
 function draftCardModel(c) {
+  if (c.reforge) {
+    const k = c.reforge.pathKey, n = pathLvl(k);
+    const tierName = G.mode === 'junkie' ? junkieTierName(k, n - 1) : PATHS[k].tiers[n - 1].name;
+    return { icon: PATHS[k].tiers[n - 1].icon, color: '#ff8a65', name: tierName,
+      tag: 'REFORGE', head: skinPathName(k) + ' · REFUND RANK ' + n + '/4',
+      sentence: 'REFUND THIS RANK — ITS POWER RETURNS AS A BANKED ATTUNEMENT CHOICE',
+      delta: 'RANK ' + n + ' → ' + (n - 1), hint: 'ONE REFORGE PER REALM · TRANSFORMATIONS ARE NEVER BROKEN' };
+  }
   if (c.secret) {
     return { icon: c.secret.icon, color: c.secret.color, name: c.secret.name,
       tag: 'EVOLVE', head: 'SECRET · RIFT EXCLUSIVE',
@@ -2960,15 +2979,17 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
     // no owned dependents — a removal can never orphan a bridge or a
     // superskill's recipe), refill lives, and retry this wave — the run only
     // truly ends once there's nothing left to burn.
-    if (totalBuildLevels() > 0) {
+    if (totalBuildLevels() > 0 || (G.attune && G.attune.level > 0)) {
       statsKnockout(); // mark the failed attempt before the retry record opens
-      const lost = [];
-      for (let i = 0; i < 2 && totalBuildLevels() > 0; i++) {
-        const leaves = webRegressibleLeaves();
-        if (!leaves.length) break;
-        const name = regressWebLeaf(leaves[Math.floor(gameRand() * leaves.length)]);
-        if (name) lost.push(name);
-      }
+      // AFT-009R P5: DELIBERATE CHOICES STAY OWNED — a defeat never
+      // uninstalls an upgrade. The cost is the UNSPENT progress: current
+      // resonance, banked (unpresented) attunement levels, and one Focus
+      // Charge evaporate; every rank and transformation survives the retry.
+      const A = G.attune;
+      const lostLvls = A ? A.pending : 0;
+      if (A) { A.res = 0; A.pending = 0; }
+      const lostFocus = G.focus > 0;
+      if (lostFocus) G.focus--;
       G.lives = preset().lives + starterMod('bonusHp', 0);
       G.livesMax = Math.max(G.livesMax, G.lives);
       G.shieldCharges = Math.min(G.shieldCharges, shieldCap());
@@ -2976,7 +2997,9 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
       buildLevel(G.level);
       serve();
       setAnnounce('alert', '#ff8a65', 'KNOCKED OUT!',
-        'THE TREE ABSORBED IT — LOST: ' + lost.join(' · '), 3.6, 'RETRYING THE WAVE WITH FULL LIVES');
+        'YOUR BUILD SURVIVES — UNSPENT RESONANCE LOST'
+        + (lostLvls ? ' · ' + lostLvls + ' BANKED LEVEL' + (lostLvls > 1 ? 'S' : '') : '')
+        + (lostFocus ? ' · 1 FOCUS' : ''), 3.6, 'RETRYING THE WAVE WITH FULL LIVES');
       return;
     }
     G.state = 'gameover'; G.stateT = 0;
@@ -7797,6 +7820,7 @@ function settleStageResolution() {
     // the Rift's secret bounty draft is untouched.
     G.upgradeChoices = null;
     G.forge = (clearedStage === 2 && !secretVictory) ? { step: 'menu' } : null;
+    if (clearedStage === 2) G.focus = Math.min(3, (G.focus || 0) + 1); // AFT-009R P5: +1 Focus per realm, cap 3
     if (secretVictory) rollUpgradeChoices();
     if (secretVictory) {
       G.secret.completed = true;

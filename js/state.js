@@ -217,6 +217,18 @@ function attuneSafeNow() {
   }
   return true;
 }
+// AFT-009R P5: a GRANTED build (deep-start trial, dev launch, a resumed
+// checkpoint without attune fields) reads as that many completed levels,
+// so the pacing bands continue from the build's real weight instead of
+// restarting the curated opening mid-journey.
+function syncAttuneToBuild() {
+  const A = G.attune; if (!A) return;
+  const lvl = totalBuildLevels();
+  if (lvl > A.level) {
+    A.level = lvl; A.presented = lvl; A.pending = 0; A.res = 0;
+    A.need = attuneNeed(lvl + 1);
+  }
+}
 function presentAttunementLevel() {
   const A = G.attune;
   if (!A || A.pending <= 0) return;
@@ -269,7 +281,7 @@ function shipFootprintHalf() {
 function migrateCheckpoint(c) {
   try {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
-    if (!(c.v >= 1 && c.v <= 4) || !(+c.lvl >= 4)) return null;
+    if (!(c.v >= 1 && c.v <= 5) || !(+c.lvl >= 4)) return null;
     const path = {};
     for (const k of PATH_KEYS) {
       const n = Math.max(0, Math.min(4, Math.floor(+((c.path || {})[k]) || 0)));
@@ -281,9 +293,24 @@ function migrateCheckpoint(c) {
     const stacks = freshStacks(); // all STACK_ITEMS keys incl. affinity satellites
     for (const k of Object.keys(stacks)) stacks[k] = Math.max(0, Math.floor(+((c.stacks && typeof c.stacks === 'object' ? c.stacks : {})[k]) || 0));
     const lives = Math.max(1, Math.floor(+c.lives) || 1);
+    // AFT-009R P5: derive the attunement arc for pre-v5 saves from the
+    // build's real weight — no owned upgrade is ever lost in migration
+    const ranks = Object.values(path).reduce((a, n) => a + n, 0)
+      + Object.keys(upg).filter(k => [...WEB_BRIDGE_KEYS, ...WEB_FUSION_KEYS, ...WEB_APEX_KEYS].includes(k)).length
+      + Object.values(stacks).reduce((a, n) => a + n, 0);
+    const at = c.attune && typeof c.attune === 'object' ? c.attune : null;
     return {
       // v4 (Round S1): + skin field — a pre-skin save is a pokemon save
-      v: 4, lvl: Math.floor(+c.lvl), score: Math.max(0, Math.floor(+c.score) || 0),
+      // v5 (AFT-009R): + attune / focus / reforgeUsed (derived when absent)
+      v: 5, lvl: Math.floor(+c.lvl), score: Math.max(0, Math.floor(+c.score) || 0),
+      attune: {
+        level: Math.max(0, Math.floor(+(at && at.level) || 0)) || ranks,
+        res: Math.max(0, +(at && at.res) || 0),
+        pending: Math.max(0, Math.floor(+(at && at.pending) || 0)),
+        presented: Math.max(0, Math.floor(+(at && at.presented) || 0)) || ranks,
+      },
+      focus: Math.max(0, Math.min(3, Math.floor(+c.focus) || 0)) || 2,
+      reforgeUsed: !!c.reforgeUsed,
       skin: typeof c.skin === 'string' ? c.skin : 'pokemon',
       lives, livesMax: Math.max(lives, Math.floor(+c.livesMax) || 0),
       mode: typeof c.mode === 'string' ? c.mode : 'junkie',
@@ -314,7 +341,10 @@ if (RUN_CKPT && RUN_CKPT.skin !== SKIN.id) RUN_CKPT = null;
 function saveCheckpoint() {
   if (G.daily) return;
   RUN_CKPT = {
-    v: 4, skin: SKIN.id,
+    // v5 (AFT-009R): + attune / focus / reforgeUsed
+    v: 5, skin: SKIN.id,
+    attune: G.attune ? { level: G.attune.level, res: +G.attune.res.toFixed(2), pending: G.attune.pending, presented: G.attune.presented } : null,
+    focus: G.focus, reforgeUsed: !!G.reforgeUsed,
     lvl: G.level, score: G.score, lives: G.lives, livesMax: G.livesMax, mode: G.mode,
     starter: G.starter, starterLvl: G.starterLvl,
     path: { ...G.path }, upg: { ...G.upg }, stacks: { ...G.stacks },
@@ -437,6 +467,15 @@ function resumeRun() {
   G.catchBonus = c.catchBonus || 0; G.caughtRun = c.caughtRun || 0;
   G.adapt = c.adapt || 1; G.mega = Math.max(G.mega, c.mega || 0);
   G.starterLvl = c.starterLvl || starterStage(c.lvl, G.starter);
+  // AFT-009R P5: the attunement arc rides the save; pre-v5 checkpoints
+  // arrive with fields derived from the build (migrateCheckpoint)
+  if (c.attune) {
+    G.attune = { level: c.attune.level, res: c.attune.res, pending: c.attune.pending,
+      presented: c.attune.presented, need: attuneNeed(c.attune.level + 1) };
+  }
+  syncAttuneToBuild();
+  G.focus = c.focus != null ? c.focus : 2;
+  G.reforgeUsed = !!c.reforgeUsed;
   G.lastDraftForm = webForm(); // resume never fakes a fresh-evolution draft
   maybeRelicNotice(); // AFT-007: a restored bond build learns about the reforge once
   if (c.secret) {
@@ -534,6 +573,7 @@ const G = {
   autoVent: false, // AFT-022 F1: the auto-fire assist is holding its fire to cool
   attune: null, attuneLive: false, // AFT-009R P2: the frequent progression loop
   forge: null, // AFT-009R P3: the realm-finale AETHER FORGE ({step, action, ...})
+  focus: 2, reforgeUsed: false, // AFT-009R P5: reroll charges + the one realm Reforge
   upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
   // ---- upgrade-web runtime (bridges / superskills / offer memory) ----
   calibReturns: 0, calibShots: 0, // CALIBRATED BARRAGE: classic return count / primed volleys left
@@ -1262,6 +1302,7 @@ function buildLevel(lvl) {
   // (per element) and the first reinforcement wave announce; repeats within
   // the stage stay quiet local feedback instead of another banner
   G.powerSeen = {}; G.reinforceAnnounced = false;
+  if (stageIdx(lvl) === 0) G.reforgeUsed = false; // AFT-009R P5: one Reforge per realm
   // AFT-021 P7: THE BLASTER HULL PLATE — the turret is the least mobile
   // mode and the only one whose every loss is enemy fire; it opens each
   // stage with one seeded absorb (a start-of-stage SEED, like AEGIS Guard —
@@ -2329,6 +2370,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   // AFT-009R P2: a new journey starts its attunement arc from zero
   G.attune = { level: 0, res: 0, need: attuneNeed(1), pending: 0, presented: 0 };
   G.attuneLive = false; G.forge = null;
+  G.focus = 2; G.reforgeUsed = false; // AFT-009R P5: two Focus Charges to start
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false; G.megaWasReady = false;
@@ -2457,6 +2499,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
     // cooldown floors.)
     G.engageHold = G.mode !== 'classic' ? 1.8 : 0;
   }
+  syncAttuneToBuild(); // AFT-009R P5: deep starts/trials read as completed levels
 }
 function startDailyRun() {
   SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';

@@ -1017,6 +1017,24 @@ function resumeFromAttunement() {
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
   if (!c) return;
+  // AFT-009R P5: a REFORGE pick refunds the rank and BANKS an attunement
+  // choice — legality was proven at offer time (webRegressibleLeaves), so
+  // no installed transformation can break here.
+  if (c.reforge) {
+    const k = c.reforge.pathKey;
+    statsUpgradePick('reforge:' + k);
+    const t = regressPath(k);
+    if (G.attune) G.attune.pending++;
+    G.reforgeUsed = true;
+    beginUpgradeInstallFx(t ? t.icon : 'warp', '#ff8a65', (t ? t.name : 'RANK') + ' REFUNDED', 'reforge', 1);
+    G.upgradeChoices = null; G.forge = null; draftSel = null;
+    upgradeTreeOpen = false;
+    SFX.power();
+    buildLevel(G.level);
+    serve();
+    setAnnounce('warp', '#ff8a65', 'REFORGED', 'THE RANK RETURNS AS A BANKED ATTUNEMENT CHOICE — IT OPENS AT THE NEXT SAFE BEAT', 3);
+    return;
+  }
   // the rest of the hand, for the Mew VMAX choose-2 bounty (holdBonusPick)
   const remaining = G.upgradeChoices.filter((_, j) => j !== i);
   draftSel = null;
@@ -1136,6 +1154,11 @@ function applyCheat(i) {
 }
 
 function rerollDraft() {
+  // AFT-009R P5: rerolls spend FOCUS CHARGES (2 to start, +1 per realm,
+  // cap 3) — multiple rerolls of one hand are legal while charges last;
+  // the rejected hand's keys stay avoided (the anti-repeat memory).
+  if ((G.focus || 0) <= 0) return;
+  G.focus--;
   G.rerolled = true;
   statsReroll();
   draftSel = null; // fresh hand, fresh inspection
@@ -1321,7 +1344,7 @@ function onPress(x, y) {
         // orients but never installs. The confirm slot returns to the cards
         // (the only installation surface); reroll stays available here.
         if (inRect(x, y, T.confirm)) { upgradeTreeOpen = false; SFX.wall(); return; }
-        if (!G.secret.rewardDraft && !G.rerolled && G.upgradeChoices && inRect(x, y, T.reroll)) { rerollDraft(); return; }
+        if (!G.secret.rewardDraft && (G.focus || 0) > 0 && G.upgradeChoices && inRect(x, y, T.reroll)) { rerollDraft(); return; }
         // Tap a node to inspect it. Offered nodes also become the active pick,
         // but still require the dedicated INSTALL action below the details.
         // Bridges, superskills and satellites are addressable exactly like
@@ -1402,7 +1425,7 @@ function onPress(x, y) {
       if (draftSel != null && inRect(x, y, L.confirm)) { pickUpgrade(draftSel); return; }
       // AFT-009R P3: on a focused LINK/EVOLVE hand the reroll slot is BACK
       if (G.forge && G.forge.step === 'hand' && G.forge.action !== 'refine' && inRect(x, y, L.reroll)) { forgeBack(); return; }
-      if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, L.reroll)) { rerollDraft(); return; }
+      if (!G.secret.rewardDraft && (G.focus || 0) > 0 && inRect(x, y, L.reroll)) { rerollDraft(); return; }
       if (!G.secret.rewardDraft && inRect(x, y, L.tree)) { upgradeTreeOpen = true; syncTreeSelectionToDraft(); SFX.wall(); return; }
     }
     return;

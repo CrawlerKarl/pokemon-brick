@@ -734,21 +734,22 @@ window.requestAnimationFrame = function () { return 0; };
       'a 3-rank fusion floor was offered as a leaf');
     assert(!leaves0.some(l => l.kind === 'tier' && l.pathKey === 'impact'),
       "meteor + cataclysm's only capstone was offered as a leaf");
-    let guard = 0;
-    while (totalBuildLevels() > 0 && guard++ < 40) {
-      G.lives = 1; G.state = 'play';
-      loseLife('WEB REGRESSION TEST');
-      const broken = legal();
-      assert(!broken, 'knockout left an illegal build: ' + broken);
-      if (G.state === 'gameover') break;
-    }
-    assert(totalBuildLevels() === 0 || G.state === 'gameover',
-      'the web never burned down (left ' + totalBuildLevels() + ')');
+    // AFT-009R P5: DELIBERATE CHOICES STAY OWNED. A knockout no longer
+    // burns web leaves — it clears unspent resonance, banked levels and a
+    // Focus Charge, refills lives, and retries. webRegressibleLeaves()
+    // remains the REFORGE legality oracle (asserted above).
+    const build0 = totalBuildLevels();
+    G.attune.res = 12; G.attune.pending = 2; G.focus = 2;
     G.lives = 1; G.state = 'play';
-    if (G.state !== 'gameover') loseLife('WEB REGRESSION TEST');
-    assert(G.state === 'gameover', 'empty web knockout should be a true game over');
+    loseLife('WEB REGRESSION TEST');
+    assert(totalBuildLevels() === build0, 'a knockout uninstalled an upgrade (' + totalBuildLevels() + '/' + build0 + ')');
+    assert(G.attune.res === 0 && G.attune.pending === 0, 'the knockout kept unspent resonance');
+    assert(G.focus === 1, 'the knockout did not cost a Focus Charge');
+    assert(G.state === 'serve' || G.state === 'play', 'the knockout did not retry the wave');
+    const broken = legal();
+    assert(!broken, 'knockout left an illegal build: ' + broken);
     assert(ERR.length === e0, 'errors during web regression: ' + ERR.slice(e0).join(' | '));
-    return 'rich build burned to 0 across ' + guard + ' knockouts — every intermediate state legal';
+    return 'knockout keeps every installed upgrade · costs res + banked levels + 1 focus · retry is live';
   });
 
   // 2w-iib) every bridge synergy and superskill actually FIRES in play, in
@@ -1347,7 +1348,10 @@ window.requestAnimationFrame = function () { return 0; };
       preset: 'normal',
     };
     const m = migrateCheckpoint(v2);
-    assert(m && m.v === 4 && m.skin === 'pokemon', 'v2 did not migrate to v4 + pokemon skin');
+    assert(m && m.v === 5 && m.skin === 'pokemon', 'v2 did not migrate to v5 + pokemon skin');
+    // AFT-009R P5: pre-v5 saves derive their attunement arc from the build
+    assert(m.attune && m.attune.level > 0 && m.focus === 2 && m.reforgeUsed === false,
+      'v2 migration did not derive the attunement arc (' + JSON.stringify(m.attune) + ')');
     assert(m.lvl === 13 && m.score === 51234 && m.lives === 3 && m.livesMax === 5 &&
       m.mode === 'junkie' && m.starter === 'fire' && m.starterLvl === 2 && m.preset === 'normal',
       'v2 scalar state was not preserved');
@@ -1362,7 +1366,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(m.secret.shards[0] && m.secret.shards[1] && !m.secret.shards[2] && m.secretUpg.heart,
       'secret state lost in migration');
     const m2 = migrateCheckpoint(m);
-    assert(JSON.stringify(m2) === JSON.stringify(m), 'migration is not idempotent on v4');
+    assert(JSON.stringify(m2) === JSON.stringify(m), 'migration is not idempotent on v5');
     // grandfather rule: a web node with missing prerequisites survives
     const grand = migrateCheckpoint({ v: 2, lvl: 10, lives: 2, upg: { meteor: 1, calibrated: 1 } });
     assert(grand && grand.upg.meteor === 1 && grand.upg.calibrated === 1,
@@ -1370,7 +1374,7 @@ window.requestAnimationFrame = function () { return 0; };
     // v1 minimal accepted with sane defaults
     const v1 = migrateCheckpoint({ v: 1, lvl: 4, score: 100, lives: 2, mode: 'classic',
       path: { arsenal: 2 }, upg: { coolant: 1, intercept: 1 } });
-    assert(v1 && v1.v === 4 && v1.path.arsenal === 2 && v1.upg.intercept === 1 &&
+    assert(v1 && v1.v === 5 && v1.path.arsenal === 2 && v1.upg.intercept === 1 &&
       v1.livesMax >= v1.lives && v1.stacks.orb === 0 && v1.adapt === 1,
       'v1 checkpoint did not normalize cleanly');
     // hostile shapes: reject or normalize, never throw, never brick startup
@@ -1379,10 +1383,10 @@ window.requestAnimationFrame = function () { return 0; };
       let out = null, threw = false;
       try { out = migrateCheckpoint(bad); } catch (e) { threw = true; }
       assert(!threw, 'migrateCheckpoint threw on ' + JSON.stringify(bad));
-      if (out) assert(out.v === 4 && typeof out.path === 'object' && typeof out.upg === 'object',
+      if (out) assert(out.v === 5 && typeof out.path === 'object' && typeof out.upg === 'object',
         'hostile shape produced a malformed checkpoint');
     }
-    return 'v2 lossless → v4 · idempotent · grandfathered web keys kept · v1 + 10 hostile shapes safe';
+    return 'v2 lossless → v5 (attune derived) · idempotent · grandfathered web keys kept · v1 + 10 hostile shapes safe';
   });
 
   // 2s-i) SKIN SPINE (Round S1): the pokemon skin keeps LEGACY bare storage
@@ -1419,9 +1423,9 @@ window.requestAnimationFrame = function () { return 0; };
       secret: { shards: [false, false, false], offered: [false, false, false], completed: false },
       secretUpg: { heart: false, lens: false, echo: false }, preset: 'normal' };
     const m = migrateCheckpoint(v3);
-    assert(m && m.v === 4 && m.skin === 'pokemon', 'v3 (no skin) must stamp skin:pokemon, got ' + JSON.stringify(m && { v: m.v, skin: m.skin }));
+    assert(m && m.v === 5 && m.skin === 'pokemon', 'v3 (no skin) must stamp skin:pokemon, got ' + JSON.stringify(m && { v: m.v, skin: m.skin }));
     const again = migrateCheckpoint(m);
-    assert(JSON.stringify(again) === JSON.stringify(m), 'v4 migration not idempotent');
+    assert(JSON.stringify(again) === JSON.stringify(m), 'v5 migration not idempotent');
     const af = migrateCheckpoint(Object.assign({}, v3, { v: 4, skin: 'aetherfall' }));
     assert(af && af.skin === 'aetherfall', 'v4 skin stamp was not preserved');
     let threw = false, out = null;
@@ -6276,8 +6280,9 @@ window.requestAnimationFrame = function () { return 0; };
     G.stateT = 1; advanceResults();
     assert(G.state === 'upgrade' && G.forge, 'results did not open the Forge');
     let acts = forgeActions();
-    assert(acts.length === 1 && acts[0].key === 'refine',
-      'a fresh Form I run must offer ONLY Refine (got ' + acts.map(a => a.key).join(',') + ')');
+    const keys = acts.map(a => a.key);
+    assert(keys.includes('refine') && !keys.includes('link') && !keys.includes('evolve'),
+      'a fresh Form I run may offer Refine (and Reforge for granted ranks) but never Link/Evolve (got ' + keys.join(',') + ')');
     // 3) Refine deals the mastery-sized hand of ranks/masteries only
     forgeChoose('refine');
     assert(G.forge.step === 'hand' && G.upgradeChoices && G.upgradeChoices.length >= 3,
@@ -6344,6 +6349,62 @@ window.requestAnimationFrame = function () { return 0; };
         'no next-reachable readout');
       return 'journal closes to cards without installing · full atlas · ??? silhouettes reveal · filters honest · next-reachable reads';
     } finally { treeListFilter = 'all'; treeListMode = false; upgradeTreeOpen = false; G.upgradeChoices = null; draftSel = null; }
+  });
+
+  test('AFT-009R P5: Focus Charges, the realm Reforge, v5 saves, trial sync', async () => {
+    SETTINGS.mode = 'blaster'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+    resetRun(1, true, { seed: 'AFT009R-P5' });
+    // 1) Focus economy: 2 to start; each reroll spends one; empty = no-op
+    assert(G.focus === 2, 'a fresh journey did not start with 2 Focus Charges');
+    G.state = 'upgrade'; G.stateT = 1;
+    rollUpgradeChoices();
+    rerollDraft();
+    assert(G.focus === 1, 'the reroll did not spend a Focus Charge');
+    rerollDraft();
+    assert(G.focus === 0, 'the second reroll did not spend the last charge');
+    const handRef = G.upgradeChoices;
+    rerollDraft();
+    assert(G.focus === 0 && G.upgradeChoices === handRef, 'an empty Focus bank still rerolled');
+    // 2) the Reforge: offered only while legal + unused; refund banks a level
+    G.path.arsenal = 2; G.upg[PATHS.arsenal.tiers[0].key] = 1; G.upg[PATHS.arsenal.tiers[1].key] = 1;
+    G.forge = { step: 'menu' }; G.reforgeUsed = false;
+    let acts = forgeActions().map(a => a.key);
+    assert(acts.includes('reforge'), 'a refundable rank did not surface REFORGE');
+    forgeChoose('reforge');
+    assert(G.upgradeChoices.every(c => c.reforge), 'the Reforge hand leaked non-refund cards');
+    const legalTiers = webRegressibleLeaves().filter(l => l.kind === 'tier').map(l => l.pathKey);
+    assert(G.upgradeChoices.every(c => legalTiers.includes(c.reforge.pathKey)),
+      'an illegal (transformation-breaking) refund was offered');
+    const m = draftCardModel(G.upgradeChoices[0]);
+    assert(m.tag === 'REFORGE' && /BANKED/.test(m.sentence), 'the Reforge card does not explain itself');
+    const rk = G.upgradeChoices[0].reforge.pathKey;
+    const ranks0 = pathLvl(rk);
+    const pending0 = G.attune.pending;
+    pickUpgrade(0);
+    assert(pathLvl(rk) === ranks0 - 1, 'the refund did not remove the rank');
+    assert(G.attune.pending === pending0 + 1, 'the refund did not bank an attunement choice');
+    assert(!G.forge, 'the Forge survived the Reforge decision — one decision per realm');
+    // within an OPEN forge, a spent Reforge disappears from the menu
+    G.forge = { step: 'menu' }; G.reforgeUsed = true;
+    assert(!forgeActions().some(a => a.key === 'reforge'), 'a spent Reforge stayed on the menu');
+    G.forge = null;
+    // 3) checkpoint v5 carries the new arc and restores it
+    G.attune.level = 7; G.attune.res = 13.5; G.attune.pending = 1; G.attune.presented = 6;
+    G.focus = 3; G.reforgeUsed = true; G.level = 10;
+    G.trial = false; G.daily = false;
+    saveCheckpoint();
+    assert(RUN_CKPT && RUN_CKPT.v === 5 && RUN_CKPT.attune.level === 7 && RUN_CKPT.focus === 3 && RUN_CKPT.reforgeUsed === true,
+      'the v5 checkpoint dropped the attunement arc');
+    G.attune = { level: 0, res: 0, need: attuneNeed(1), pending: 0, presented: 0 }; G.focus = 0;
+    resumeRun();
+    assert(G.attune.level >= 7 && G.focus === 3 && G.reforgeUsed === true,
+      'resume did not restore the attunement arc (' + G.attune.level + '/' + G.focus + ')');
+    clearCheckpoint();
+    // 4) a deep-start trial reads its granted build as completed levels
+    resetRun(14, true, { seed: 'AFT009R-P5T' });
+    assert(G.attune.level === totalBuildLevels() && G.attune.level > 0,
+      'the trial grant did not sync the attunement arc (' + G.attune.level + ' vs ' + totalBuildLevels() + ')');
+    return 'focus 2→0 spends honestly · reforge legal, banked, once per realm · v5 save round-trip · trial sync';
   });
 
   // ---- runner -------------------------------------------------------------

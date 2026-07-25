@@ -8797,14 +8797,14 @@ function drawTreeCameraControls(T) {
 // The shared REROLL / INSTALL action row at the panel's foot — tier and web
 // details both end in exactly these two actions.
 function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
-  const rr = T.reroll, canRR = !G.rerolled && !G.secret.rewardDraft;
+  const rr = T.reroll, canRR = (G.focus || 0) > 0 && !G.secret.rewardDraft && !!G.upgradeChoices;
   const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
   roundRect(rr.x, rr.y, rr.w, rr.h, 11);
   ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.07)'; ctx.fill();
   ctx.lineWidth = 1.3; ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,213,79,0.55)') : 'rgba(255,255,255,0.15)'; ctx.stroke();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = `800 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-  ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL · R') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+  ctx.fillText(canRR ? 'FOCUS ×' + G.focus + (IS_TOUCH ? '' : ' · R') : 'NO FOCUS', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
 
   // AFT-009R P4: the constellation is a JOURNAL — the action slot returns
   // to the cards (the one installation surface); selecting an offer here
@@ -9711,8 +9711,8 @@ function drawBuildMetaRow(L) {
   ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#9fb2c8';
   ctx.fillText(idName || 'FIRST ATTUNEMENT', x + 8, y + 1, Math.max(40, r0.x + r0.w - x - 96));
   ctx.textAlign = 'right';
-  ctx.fillStyle = G.rerolled ? '#546e7a' : '#80d8ff';
-  ctx.fillText(G.rerolled ? 'REROLL SPENT' : 'REROLL ×1', r0.x + r0.w - 2, y + 1);
+  ctx.fillStyle = (G.focus || 0) > 0 ? '#80d8ff' : '#546e7a';
+  ctx.fillText('FOCUS ×' + (G.focus || 0), r0.x + r0.w - 2, y + 1);
   ctx.restore();
 }
 // AFT-009R P3: THE AETHER FORGE action menu — up to three big rows
@@ -10166,7 +10166,7 @@ function drawOverlays() {
       // one reroll per draft — a dead hand shouldn't end the build
       const rr = L.reroll;
       const forgeBackBtn = G.forge && G.forge.step === 'hand' && G.forge.action !== 'refine';
-      const canRR = forgeBackBtn || (!secretDraft && !G.rerolled);
+      const canRR = forgeBackBtn || (!secretDraft && (G.focus || 0) > 0);
       const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
       ctx.globalAlpha = a * (canRR ? 1 : 0.35);
       roundRect(rr.x, rr.y, rr.w, rr.h, 16);
@@ -10177,7 +10177,7 @@ function drawOverlays() {
       ctx.stroke();
       ctx.font = '700 12px Orbitron, sans-serif';
       ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-      ctx.fillText(forgeBackBtn ? '‹ BACK' : secretDraft ? 'FIXED SET' : canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL (R)') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+      ctx.fillText(forgeBackBtn ? '‹ BACK' : secretDraft ? 'FIXED SET' : canRR ? 'FOCUS ×' + G.focus + (IS_TOUCH ? '' : ' (R)') : 'NO FOCUS', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
       // CONFIRM — the only thing that actually applies the inspected pick
       const cf = L.confirm, canCF = draftSel != null;
       const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
