@@ -55,7 +55,7 @@ function sovereignHp(rIdx, cycle) {
 // flyer/elite/reinforcement HP compounds past the campaign's midpoint —
 // and the OPENERS stop one-tapping (the 13-second L2/L5).
 function lateWaveMul(regionsIn) { return 1 + Math.max(0, regionsIn - 4) * 0.22; }
-function earlyWaveMul(regionsIn) { return regionsIn === 0 ? 1.45 : regionsIn === 1 ? 1.6 : regionsIn === 2 ? 1.35 : 1; }
+function earlyWaveMul(regionsIn) { return regionsIn === 0 ? 1.5 : regionsIn === 1 ? 1.6 : regionsIn === 2 ? 1.35 : 1; } // AFT-022: r0 1.45→1.5 — the vent assist's lockout-free stream shaved the opening waves under the 20s floor
 function starterTierValue(key, tier) {
   const value = SKIN.starterMon[G.starter]?.mods?.[key];
   if (value == null) return 0;
@@ -79,6 +79,21 @@ function barrierCharges() {
     + (G.mode === 'classic' && upgN('intercept') ? 1 : 0);
 }
 const OVERHEAT_DUR = 2.0; // blaster lockout after overheating, in seconds
+// AFT-022 F1: the AUTO-FIRE assist vents instead of cooking the barrel — it
+// lifts off the trigger at the vent line and, while VENTING, cools at an
+// accelerated rate down to the resume line. The resume line matches the old
+// post-overheat reset heat (0.3) ON PURPOSE: the barrel's rhythm and its
+// cool-charge windows (the moment a player charges from a cold barrel) stay
+// where the balance matrix calibrated them — the assist only removes the
+// lockout and the OVERHEATED! spam, never the breathing cycle.
+// The vent-cool multipliers are DUTY-MATCHED per mode to the old overheat
+// cycle (fire-fraction ≈ 71% junkie / 66% blaster, from build 0.42−cool
+// 0.28 and 0.40−0.22 plus the 2s lockout) so the assist's sustained output
+// is the same as before the vent existed — measured, not guessed.
+// Only the assist obeys these; manual fire may still ride over the redline.
+const AUTOFIRE_VENT_HEAT = 0.87;
+const AUTOFIRE_RESUME_HEAT = 0.3;
+function autofireVentCool() { return G.mode === 'junkie' ? 1.15 : 1.6; }
 // The perfect-release sweet spot: seconds after a charge tops out during
 // which releasing fires the RESONANT shot (Milestone 2). Wide enough to hit
 // on purpose on touch, narrow enough to stay a timing skill.
@@ -134,6 +149,32 @@ function shotEffect(shotType) {
 // paddle line outside junkie mode. The band gives ~120px of vertical flight.
 const SHIP_BAND = 120;
 function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
+// AFT-022 F4: the STARFIGHTER edge clamp must cover the ship's full RENDERED
+// footprint — the hull sprite grows with form (54 + 6·form px), the sworn
+// oath adds a halo ring, and the wing HARDPOINT rack fans chips outward per
+// owned path/stack category. The old fixed 26px half-width let a late-game
+// build park ~25% of itself offscreen on portrait phones. This mirrors
+// drawPilotRig's geometry (sprite/rim, halo, rack slots); update() clamps
+// steering with a 14px visual margin on top.
+function shipFootprintHalf() {
+  if (G.mode !== 'junkie') return 26;
+  const s = 54 + (G.starterLvl || 1) * 6;
+  let half = s * 0.54; // sprite + rim light (drawn at 1.07× the sprite box)
+  if (SETTINGS.affinity) half = Math.max(half, s * 0.67 + 3); // oath halo ring
+  let badges = 0;
+  for (const pk of PATH_KEYS) if (pathLvl(pk)) badges++;
+  for (const si of STACK_ITEMS) if ((G.stacks && G.stacks[si.key]) || 0) badges++;
+  for (const b of WEB_BRIDGES) if (upgN(b.key)) badges++;
+  for (const f of WEB_FUSIONS) if (upgN(f.key)) badges++;
+  for (const x of WEB_APEXES) if (upgN(x.key)) badges++;
+  const shown = Math.min(badges, IS_TOUCH ? 5 : 6);
+  if (shown) {
+    const rank = Math.floor((shown - 1) / 2);
+    // outermost chip center + half-diagonal + its count tag's overhang
+    half = Math.max(half, s * 0.42 + 12 + rank * 17 + 10);
+  }
+  return half;
+}
 // ---- REGION CHECKPOINTS: 27 stages is a long arcade run, so the run is
 // saved at every region's doorstep. CONTINUE on the title screen resumes it;
 // knockouts and true game-over retain the latest checkpoint. Trial runs never save.
@@ -409,6 +450,7 @@ const G = {
   hurtHud: 0,               // shows the health bar AROUND the player briefly after a hit
   // blaster heat: firing builds it, paddle returns vent it, 100% = overheat
   heat: 0, overheat: 0,
+  autoVent: false, // AFT-022 F1: the auto-fire assist is holding its fire to cool
   upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
   // ---- upgrade-web runtime (bridges / superskills / offer memory) ----
   calibReturns: 0, calibShots: 0, // CALIBRATED BARRAGE: classic return count / primed volleys left
@@ -909,7 +951,18 @@ function applyPower(p, srcType) {
   // has one — a Starfighter pilot never hears about a paddle it doesn't have.
   const pName = (G.mode !== 'classic' && p.sname) ? p.sname : p.name;
   const pDesc = (G.mode !== 'classic' && p.sdesc) ? p.sdesc : p.desc;
-  setAnnounce(p.icon, p.color, pName + (tier > 1 ? '  ' + romanTier(tier) : ''), pDesc, 2.0, sub);
+  // AFT-022 F6: a stage's FIRST pickup of a power (per element, per tier)
+  // gets the explanatory banner; repeats within the stage confirm locally at
+  // the ship instead — the playtest found the notice strip churning through
+  // duplicate pickup cards while formations needed the player's eyes.
+  const seenKey = p.key + ':' + tier + ':' + (srcType || '');
+  if (!G.powerSeen) G.powerSeen = {};
+  if (G.powerSeen[seenKey]) {
+    addFloater(G.paddle.x, shipY() - 44, pName, p.color, 11);
+  } else {
+    G.powerSeen[seenKey] = true;
+    setAnnounce(p.icon, p.color, pName + (tier > 1 ? '  ' + romanTier(tier) : ''), pDesc, 2.0, sub);
+  }
 }
 
 // ============================================================
@@ -1122,12 +1175,21 @@ function buildLevel(lvl) {
   G.reveal = null; G.revealDock = null;
   G.resolve = null; G.arenaPlate = null; // AFT-021: a fresh wave never inherits a resolution beat
   G.shieldGrantN = 0; // AFT-021 P7: the shield income budget is per stage
+  // AFT-022 F6: notice hygiene is per stage — the first pickup of a power
+  // (per element) and the first reinforcement wave announce; repeats within
+  // the stage stay quiet local feedback instead of another banner
+  G.powerSeen = {}; G.reinforceAnnounced = false;
   // AFT-021 P7: THE BLASTER HULL PLATE — the turret is the least mobile
   // mode and the only one whose every loss is enemy fire; it opens each
   // stage with one seeded absorb (a start-of-stage SEED, like AEGIS Guard —
   // outside the income budget). Measured: the reference build's mid-realm
   // knockout spirals came one hit at a time.
-  const plate = G.mode === 'blaster' ? (stageIdx(lvl) === 2 ? 2 : 1) : 0; // finales are the long exposures
+  // AFT-022: finale plate 2 → 3 — the vent assist redistributes auto-fire's
+  // silent windows across the fight (the old overheat lockout bunched them),
+  // and the long blaster finales price that exposure in seeded absorbs; the
+  // mid-campaign knockout spiral this plate was built for returned without
+  // the third charge (measured: L12-S3 416s gameover → cleared).
+  const plate = G.mode === 'blaster' ? (stageIdx(lvl) === 2 ? 3 : 1) : 0; // finales are the long exposures
   while (plate > 0 && G.shieldCharges < plate) { G.shieldCharges++; statsShieldGain('guard'); }
   G.gustT = 0; G.timeWarpT = 0; G.timeWarpClock = 0; G.gridRect = null;
   const gen = genFor(lvl), rIdx = regionIdx(lvl), stage = stageIdx(lvl);
@@ -1557,7 +1619,7 @@ function buildLevel(lvl) {
   G.maneuver = null; G.maneuverCD = 8;
   G.deathsThisWave = 0;
   G.dangerWarned = false;
-  G.heat = 0; G.overheat = 0; G.shieldRegenN = 0;
+  G.heat = 0; G.overheat = 0; G.autoVent = false; G.shieldRegenN = 0;
   statsBeginLevel(lvl); // one balance record per wave ATTEMPT (retries too)
   G.highGroundDone = false; G.waveFirstKill = false; G.elementOrbCD = 9;
   // motionTier drives the boss guard-ring shimmer (mt>=1, regions 3+).
@@ -2158,13 +2220,29 @@ function spawnReinforcement() {
   }
   G.fy = 0; G.fx = 0;
   SFX.roar();
-  setAnnounce('swift', gen.accent, 'REINFORCEMENTS!', 'A FRESH FLIGHT SWOOPS IN — FINISH THEM', 2.6);
+  // AFT-022 F6: the first reinforcement wave of a stage explains itself;
+  // later waves in the same stage get a compact call-out, not another banner
+  if (!G.reinforceAnnounced) {
+    G.reinforceAnnounced = true;
+    setAnnounce('swift', gen.accent, 'REINFORCEMENTS!', 'A FRESH FLIGHT SWOOPS IN — FINISH THEM', 2.6);
+  } else {
+    addFloater(W / 2, 140, 'REINFORCEMENTS!', gen.accent, 14);
+  }
 }
 
 function resetRun(startLevel = 1, trial = false, opts = {}) {
   if (typeof resetTreeCamera === 'function') resetTreeCamera();
   setRunSeed(opts.seed == null ? null : opts.seed);
   const p = preset();
+  // AFT-022: a NEW RUN homes the player to the fresh-boot pose. The serve
+  // ball is built at the paddle's position, so without this a seeded launch
+  // made mid-session (a daily, a trial, the baseline harness) served from
+  // wherever the LAST run parked the paddle — same seed, different run.
+  // Same defect class as the documented G.splashCD stream leak: run-entry
+  // state must not depend on what the page did before. Stage-to-stage
+  // buildLevel keeps the paddle where the player left it ON PURPOSE; only
+  // the run boundary homes.
+  G.paddle.x = W / 2; G.paddle.speed = 0; G.shipYv = PADDLE_Y();
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false; G.megaWasReady = false;
@@ -2199,7 +2277,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   // lingering dramaticT slowed the first ~0.9s of a new run at ×0.3
   G.dramaticT = 0; G.freeze = 0;
   G.secretUpg = { heart: false, lens: false, echo: false }; G.secretHit = 0;
-  G.heat = 0; G.overheat = 0; G.shieldRegenT = 10;
+  G.heat = 0; G.overheat = 0; G.autoVent = false; G.shieldRegenT = 10;
   G.charge = 0; G.chargeCD = 0; G.chargeFullT = 0;
   G.mode = SETTINGS.mode; // classic (ball) vs blaster (ball-less shooter)
   G.shipYv = PADDLE_Y(); G.maneuver = null; G.maneuverCD = 8;

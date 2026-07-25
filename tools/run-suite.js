@@ -242,6 +242,10 @@ const SCENES = [
     expect: `G.state==='ending'` },
   { name: 'gameover', js: `G.state='gameover'; G.stateT=1;`,
     expect: `G.state==='gameover'` },
+  // AFT-022 F3: LAST in the list — it flips leftHanded, and the per-viewport
+  // prep resets it before the next viewport's sweep begins
+  { name: 'left-handed-combat', js: `SETTINGS.leftHanded=true; upgradeTreeOpen=false; advOpen=false; DEV.launch({level:2,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<60;i++)update(1/60); G.combo=5;`,
+    expect: `G.state==='play' && SETTINGS.leftHanded===true && touchButtons().pause.x > W*0.7 && touchButtons().mega.x < W/2` },
 ];
 // the on-screen truth captured beside every screenshot — human review of
 // .gate-shots/ can trust what each artifact was actually showing
@@ -274,7 +278,7 @@ async function runScenes(cdp, port) {
   for (const [vw, vh] of SHOT_VIEWPORTS) {
     await cdp.send('Emulation.setDeviceMetricsOverride',
       { width: vw, height: vh, deviceScaleFactor: 2, mobile: true }, sid);
-    await page.evaluate(`resize(); ZONE_DEBUG = true; upgradeTreeOpen = false; advOpen = false; 'ok'`);
+    await page.evaluate(`resize(); ZONE_DEBUG = true; upgradeTreeOpen = false; advOpen = false; SETTINGS.leftHanded = false; 'ok'`);
     for (const sc of SCENES) {
       const res = await page.evaluate(`(() => {
         try {

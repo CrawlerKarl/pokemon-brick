@@ -313,12 +313,20 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 → AFT-012 visual pass
 ```
 
-1. **AFT-021 is DONE** (Phases 0–9, log rounds 2026-07-24i–p). What remains
-   from it is OWNER JUDGMENT, not code: blaster feel at mid-realm finales,
-   Ace's threat-heavy pacing, and the 1.8s trial briefing hold — collect
-   real-device impressions before touching those numbers again.
-2. **AFT-009 (constellation redesign)** is the next build item —
-   its acceptance criteria in the backlog are still the spec.
+1. **AFT-021 is DONE** (Phases 0–9, log rounds 2026-07-24i–p) and
+   **AFT-022 (the portrait-mobile playtest round) is DONE** (log round
+   2026-07-24q): auto-fire vents itself, must-read copy wraps, pause never
+   mirrors, the ship clamps by rendered footprint, constellation taps are
+   offered-first, notices dedupe — plus the seeded-launch position-
+   dependence fix and the baseline TRUTH RE-ZERO it forced (see the log).
+   OWNER-JUDGMENT items outstanding: blaster feel at mid-realm finales,
+   Ace pacing, the 1.8s briefing hold, the fast-rite seeds (L21), and the
+   two owner-flagged matrix deviations (L12-blaster-S3, rite floors).
+2. **AFT-009R (mobile-first progression redesign)** is IN FLIGHT — the
+   owner's directive (2026-07-24): Attunement levels (three-card combat
+   drafts), the realm Aether Forge, the constellation demoted to a build
+   journal, Focus Charges/Reforge, checkpoint migration. Supersedes the
+   old AFT-009 scope.
 3. **Cheap follow-ups spotted during the closeout** (noted, not started):
    - the ground vessel clears ~27% faster than the median vessel (matrix
      evidence in docs/baselines/AFT008_CLOSEOUT_REPORT.md) — candidate for

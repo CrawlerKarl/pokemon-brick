@@ -18,8 +18,11 @@
 > 2026-07-23e** → ~~AFT-008 baseline + AFT-020 realm finales + closeout~~
 > **shipped 2026-07-24** → ~~AFT-021 post-ship UX stabilization and balance
 > reread~~ **shipped 2026-07-24 (Phases 0–9 executed; suite 115/115,
-> baseline 142 scenarios GREEN)** → **AFT-009 (constellation) (NEXT)** →
-> AFT-019 → AFT-010 → AFT-011 → AFT-012. The executed AFT-021 spec is
+> baseline 142 scenarios GREEN)** → ~~AFT-022 portrait-mobile playtest
+> round~~ **shipped 2026-07-24 (suite 122/122; seeded-launch determinism
+> fix + baseline truth re-zero)** → **AFT-009R mobile-first progression
+> redesign (IN FLIGHT — owner directive 2026-07-24; supersedes AFT-009's
+> scope)** → AFT-019 → AFT-010 → AFT-011 → AFT-012. The executed AFT-021 spec is
 > `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its matrix
 > evidence is `baselines/AFT021_MATRIX_REPORT.md`.
 
@@ -68,11 +71,13 @@ items have since shipped.
   codex full-size sprite gallery, neutral-until-sworn selection, and
   per-channel `OATH_CH` evolution curves for tint, rim, aura, fittings,
   radiant blend, and runes.
-- The release gate passes 115/115 invariants (AFT-021 added the combat-state
+- The release gate passes 122/122 invariants (AFT-021 added the combat-state
   safety, visible-clear, overlay-collision, charge/projectile-time, and
-  verb-results contracts) and runs headlessly via `npm test`
+  verb-results contracts; AFT-022 added the vent-assist, wrap, left-handed,
+  footprint-clamp, offer-tap, notice-hygiene and seeded-launch determinism
+  fixtures) and runs headlessly via `npm test`
   in about 30–35s. It also verifies assets, both editions, the standalone
-  distribution, vocabulary/RESIDUE, 44 state-proving mobile scenes, and wave +
+  distribution, vocabulary/RESIDUE, 46 state-proving mobile scenes, and wave +
   boss stress ledgers. `npm run baseline` replays 142 deterministic campaign
   scenarios with the AFT-021 duration/spread/recovery budgets enforced.
 - The standalone runtime payload is about 37.4 MiB excluding its nested Git

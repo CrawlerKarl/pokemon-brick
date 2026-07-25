@@ -5858,6 +5858,280 @@ window.requestAnimationFrame = function () { return 0; };
     return 'dispersal verbs on results · aria-live narration · mastery counters as verbs';
   });
 
+  // ---- AFT-022: the portrait-mobile playtest round (2026-07-24) -----------
+
+  test('AFT-022 F1: auto-fire vents itself — 65 hands-off seconds, zero overheats', async () => {
+    const auto0 = SETTINGS.autoFire;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'easy'; SETTINGS.starter = 'none';
+      SETTINGS.autoFire = true; // the playtest config: Easy, assist on, nobody touching fire
+      resetRun(1, true, { seed: 'AFT022-F1' });
+      G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999;
+      for (const b of G.bricks) { b.hp = b.maxHp = 9999; b.shellArmor = false; }
+      let vents = 0, ventPrev = false, lockedFrames = 0, peak = 0;
+      for (let f = 0; f < 60 * 65; f++) {
+        G.lasers = []; G.enemyShots = []; G.telegraphs = [];
+        G.enemyShotCD = 999; G.bossShotCD = 999;
+        paused = false; G.freeze = 0; update(1 / 60);
+        peak = Math.max(peak, G.heat);
+        if (G.overheat > 0) lockedFrames++;
+        if (G.autoVent && !ventPrev) vents++;
+        ventPrev = G.autoVent;
+      }
+      assert(lockedFrames === 0, 'the assist overheated itself (' + lockedFrames +
+        ' locked frames, peak heat ' + peak.toFixed(2) + ') — the playtest defect reproduces');
+      assert(vents >= 2, 'the vent never cycled (' + vents + 'x) — the assist is not firing to the line');
+      assert(peak >= AUTOFIRE_VENT_HEAT - 0.02 && peak < 1,
+        'vent line missed: peak heat ' + peak.toFixed(2));
+      assert(G.shotsFired > 100, 'auto-fire barely fired (' + G.shotsFired + ' shots in 65s)');
+      // manual fire is NOT gated: a deliberate tap still fires mid-vent
+      G.autoVent = true; G.heat = 0.95; G.blasterCD = 0; G.overheat = 0;
+      const shots0 = G.shotsFired;
+      fireAction(false);
+      assert(G.shotsFired === shots0 + 1, 'a manual tap was blocked by the auto-vent');
+      return '65s assist run: 0 overheats · ' + vents + ' vent cycles · peak heat ' +
+        peak.toFixed(2) + ' · ' + shots0 + ' shots · manual tap unaffected';
+    } finally { SETTINGS.autoFire = auto0; }
+  });
+
+  test('AFT-022 F3: pause never mirrors — left-handed keeps the score column clear', async () => {
+    const lh0 = SETTINGS.leftHanded, m0 = G.mode;
+    try {
+      G.mode = 'junkie';
+      for (const lh of [false, true]) {
+        SETTINGS.leftHanded = lh;
+        const B = touchButtons();
+        // the upper-left column belongs to score/COMBO/RIFT KEY (x ≤ ~160)
+        assert(B.pause.x - B.pause.r > 170,
+          (lh ? 'left' : 'right') + '-handed pause covers the COMBO/RIFT KEY column (x=' + Math.round(B.pause.x) + ')');
+        assert(B.pause.x > W * 0.7, 'pause left its reserved upper-right slot');
+        if (lh) {
+          assert(B.mega.x < W / 2 && (!B.fire || B.fire.x < W / 2),
+            'left-handed thumb pads did not mirror to the lower-left');
+        }
+      }
+      return 'pause fixed upper-right in both handedness · lower thumb pads still mirror';
+    } finally { SETTINGS.leftHanded = lh0; G.mode = m0; }
+  });
+
+  test('AFT-022 F4: STARFIGHTER edge clamp covers the rendered footprint', async () => {
+    const aff0 = SETTINGS.affinity;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'electric';
+      resetRun(1, true, { seed: 'AFT022-F4' });
+      G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999;
+      assert(shipFootprintHalf() >= 26, 'bare footprint fell under the legacy 26px half-width');
+      // a decorated late-game hull: Form III, sworn oath, 6+ hardpoint chips
+      G.starterLvl = 3; SETTINGS.affinity = 'light';
+      PATH_KEYS.slice(0, 4).forEach(pk => { G.path[pk] = 1; });
+      STACK_ITEMS.slice(0, 2).forEach(si => { G.stacks[si.key] = 2; });
+      const half = shipFootprintHalf();
+      const s = 54 + 3 * 6;
+      assert(half >= s * 0.42 + 12 + 2 * 17 + 10 - 0.5,
+        'footprint ignores the outermost hardpoint rank (' + half.toFixed(1) + 'px)');
+      // steering hard into each wall keeps the whole footprint on-screen
+      // with the 12–16px visual margin the portrait playtest asked for
+      for (const [mx, side] of [[-500, 'left'], [W + 500, 'right']]) {
+        mouseX = mx; lastMouseY = G.shipYv;
+        for (let f = 0; f < 90; f++) {
+          G.enemyShots = []; G.enemyShotCD = 999; G.bossShotCD = 999;
+          paused = false; G.freeze = 0; update(1 / 60);
+        }
+        const edge = side === 'left' ? G.paddle.x - half : W - (G.paddle.x + half);
+        assert(edge >= 12, side + ' edge margin ' + edge.toFixed(1) + 'px < 12px — the rack would clip offscreen');
+      }
+      return 'decorated footprint ' + half.toFixed(0) + 'px half-width · ≥12px margin at both walls';
+    } finally { SETTINGS.affinity = aff0; }
+  });
+
+  test('AFT-022 F2: must-read copy wraps on portrait — reveal, results, settings', async () => {
+    const w0 = W, h0 = H, page0 = settingsPage, durable0 = STORAGE_HEALTH.durable;
+    const zd0 = ZONE_DEBUG, reveal0 = G.reveal, results0 = G.results, stateT0 = G.stateT;
+    // worst-case-length copy in the style of the real authored strings
+    const longTitle = 'SOVEREIGN OF THE SHATTERED CAUSEWAY — OMEGA SERAPH ASCENDANT';
+    const longCue = 'CHARGED SHOTS INTERRUPT THE CHANNEL — BREAK BOTH CONDUITS BEFORE THE THIRD VOLLEY LANDS';
+    const longNext = 'THE SHATTERED CAUSEWAY OF THE UMBRAL TIDE — CHALLENGE AWAITS';
+    const bad = [];
+    const sweep = (surface, w, mustKeep) => {
+      const joined = zoneLog.map(b => b.text).join(' ');
+      for (const tail of mustKeep) {
+        if (!joined.includes(tail)) bad.push(W + '×' + H + ' ' + surface + ' lost "' + tail + '"');
+      }
+      for (const b of zoneLog) {
+        if (/…$/.test(b.text) && mustKeep.some(tail => tail.split(' ').some(word => b.text.includes(word.slice(0, 5))))) {
+          bad.push(W + '×' + H + ' ' + surface + ' ellipsized: "' + b.text + '"');
+        }
+        if (b.x0 < -0.5 || b.x1 > w + 0.5) bad.push(W + '×' + H + ' ' + surface + ' label offscreen: "' + b.text + '"');
+      }
+    };
+    try {
+      ZONE_DEBUG = true;
+      for (const [w, h] of [[390, 844], [320, 568]]) {
+        W = w; H = h;
+        // 1) the boss reveal: hold-phase scene with maximal title + mechanic cue
+        G.reveal = { phase: 'hold', t: 1, flyDur: 0.8, kind: 'legendary', ids: [150],
+          brs: [{ poke: { id: 150, t: 'psychic', n: 'X' } }],
+          title: longTitle, sub: 'THE FINAL GUARDIAN OF THE NINTH REALM AWAITS THE WORTHY',
+          cue: longCue, reduced: true };
+        zoneLog = [];
+        drawBossReveal();
+        sweep('reveal', w, ['ASCENDANT', 'VOLLEY LANDS']);
+        G.reveal = reveal0;
+        // 2) results: the next-stage direction (used to overrun BOTH edges)
+        G.results = { lvl: 4, region: 'REALM', stage: 'ARRIVAL', stageTitle: null,
+          t: 30, kills: 5, score: 1000, hitsTaken: 0, shotsN: 10, shotsC: 2,
+          overheats: 0, objectives: [], medalsSaved: true, nextName: longNext };
+        G.stateT = 1;
+        zoneLog = [];
+        drawResults();
+        sweep('results', w, ['CHALLENGE AWAITS']);
+        G.results = results0; G.stateT = stateT0;
+        // 3) settings SAVE page: the eviction guidance keeps its actionable tail
+        settingsPage = 2; STORAGE_HEALTH.durable = false;
+        zoneLog = [];
+        drawSaveSettings(advLayout());
+        sweep('settings', w, ['EXPORT A FILE']);
+      }
+      assert(bad.length === 0, bad.join(' ; '));
+      return '390×844 + 320×568: reveal cue, results NEXT line and storage guidance all complete, on-screen, un-ellipsized';
+    } finally {
+      W = w0; H = h0; settingsPage = page0; STORAGE_HEALTH.durable = durable0;
+      ZONE_DEBUG = zd0; zoneLog = null; G.reveal = reveal0; G.results = results0; G.stateT = stateT0;
+      resize();
+    }
+  });
+
+  test('AFT-022 F5: constellation taps — offers win overlaps, OPTION tags are targets', async () => {
+    SETTINGS.mode = 'blaster';
+    resetRun(1, true, { seed: 'AFT022-F5' });
+    rollUpgradeChoices();
+    assert(G.upgradeChoices && G.upgradeChoices.length === 3, 'no fresh draft to test against');
+    G.state = 'upgrade'; G.stateT = 1;
+    upgradeTreeOpen = true; syncTreeSelectionToDraft();
+    try {
+      const T = upgradeTreeLayout();
+      // find an offered TIER node with a locked deeper neighbour on its spoke
+      let hit = null;
+      for (let pi = 0; pi < PATH_KEYS.length && !hit; pi++) {
+        for (let ti = 0; ti < 3 && !hit; ti++) {
+          const offer = choiceIndexForSel({ kind: 'tier', pi, ti });
+          if (offer >= 0 && choiceIndexForSel({ kind: 'tier', pi, ti: ti + 1 }) < 0) hit = { pi, ti, offer };
+        }
+      }
+      assert(hit, 'draft offered no tier node with a locked neighbour');
+      const n = T.node(hit.pi, hit.ti), nb = T.node(hit.pi, hit.ti + 1);
+      // 1) tapping the white OPTION tag itself selects the offer
+      n.pillInward = hit.ti === 3;
+      const P = T.offerPillRect(n);
+      draftSel = null; treeSel = { kind: 'tier', pi: 0, ti: 0 };
+      onPress(P.cx, P.cy);
+      assert(draftSel === hit.offer, 'a tap on the OPTION tag missed the offer (draftSel=' + draftSel + ')');
+      // 2) inside BOTH overlapping hit boxes but 2px NEARER THE LOCKED node,
+      // the offer still wins — rank beats raw order and raw distance
+      const dx = nb.cx - n.cx, dy = nb.cy - n.cy, dist = Math.hypot(dx, dy);
+      const ux = dx / dist, uy = dy / dist;
+      const px2 = n.cx + ux * (dist / 2 + 1), py2 = n.cy + uy * (dist / 2 + 1);
+      if (inRect(px2, py2, n) && inRect(px2, py2, nb)) {
+        draftSel = null;
+        onPress(px2, py2);
+        assert(draftSel === hit.offer,
+          'the overlap tap fell to the locked neighbour (draftSel=' + draftSel + ') — the playtest mistap reproduces');
+      }
+      // 3) a clean tap on a plain locked node still inspects it (unchanged)
+      draftSel = null;
+      onPress(nb.cx, nb.cy - Math.min(6, nb.hitR - 2));
+      assert(treeSel.kind === 'tier' && treeSel.pi === hit.pi && treeSel.ti === hit.ti + 1,
+        'plain locked-node inspection broke (' + JSON.stringify(treeSel) + ')');
+      assert(draftSel === null, 'inspecting a locked node stole the draft selection');
+      return 'OPTION tag tappable · offer wins the overlap against a nearer locked node · inspection intact';
+    } finally {
+      upgradeTreeOpen = false; G.upgradeChoices = null; draftSel = null;
+    }
+  });
+
+  test('AFT-022 F6: notice hygiene — docked tutor, deduped pickup + reinforcement banners', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    resetRun(1, true, { seed: 'AFT022-F6' });
+    G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999; G.playT = 1;
+    const pending = () => (G.announce ? 1 : 0) + G.announceQueue.length;
+    // 1) pickup banners announce ONCE per stage per power+element; repeats
+    // confirm locally at the ship instead of churning the notice strip
+    G.announce = null; G.announceQueue = [];
+    applyPower(POWERS.slow, null); // tier I
+    assert(pending() === 1, 'first pickup did not announce');
+    applyPower(POWERS.slow, null); // tier II — a HIGHER tier is new information
+    applyPower(POWERS.slow, null); // tier III (the cap)
+    const at3 = pending(), f0 = G.floaters.length;
+    applyPower(POWERS.slow, null); // tier III again — the true repeat
+    assert(pending() === at3, 'a same-tier repeat pickup queued another banner');
+    assert(G.floaters.length > f0, 'the repeat pickup lost its local confirmation');
+    G.announce = null; G.announceQueue = []; // drain — setAnnounce's own same-name guard is separate
+    applyPower(POWERS.slow, 'fire');
+    assert(pending() === 1, 'a NEW element was silenced — dedupe must key on the element too');
+    // a fresh stage re-arms the explanation
+    buildLevel(G.level);
+    G.state = 'play'; G.announce = null; G.announceQueue = [];
+    applyPower(POWERS.slow, null);
+    assert(pending() === 1, 'a new stage did not re-arm the pickup banner');
+    // 2) reinforcements: first wave explains, later waves are a call-out
+    G.announce = null; G.announceQueue = []; G.reinforceAnnounced = false;
+    spawnReinforcement();
+    assert(pending() === 1, 'the first reinforcement wave did not announce');
+    const f1 = G.floaters.length;
+    spawnReinforcement();
+    assert(pending() === 1, 'a second reinforcement wave queued another banner');
+    assert(G.floaters.length > f1, 'the second reinforcement wave lost its call-out');
+    // 3) the charge tutor is DOCKED control-adjacent, never mid-flight-lane
+    G.announce = null; G.announceQueue = []; G.jCoach = null; G.chargedEver = false; G.hurtHud = 0;
+    const armored = G.bricks.find(b => !b.dead);
+    assert(armored, 'no live target to arm the tutor with');
+    armored.shellArmor = true;
+    actorLabelLog = []; surfaceLog = [];
+    try {
+      drawShootHint();
+      const cs = surfaceLog.find(s => s.name === 'chargeTutor');
+      assert(cs, 'the charge tutor did not draw');
+      assert(cs.y > H * 0.55, 'the tutor is back in the flight lane (y=' + Math.round(cs.y) + ', H=' + H + ')');
+      assert(cs.y + cs.h <= shipY() - 50, 'the tutor crowds the ship band');
+    } finally { actorLabelLog = null; surfaceLog = null; armored.shellArmor = false; }
+    return 'pickup + reinforcement banners dedupe per stage (element-aware) · tutor docked at y>' + Math.round(H * 0.55);
+  });
+
+  test('AFT-022: a seeded launch is position-independent — same seed, same run', async () => {
+    // The serve ball is built at the paddle, and resetRun never homed the
+    // paddle — so a seeded run launched mid-session served from wherever the
+    // LAST run parked it: same seed, different trajectory (same defect class
+    // as the documented G.splashCD stream leak; found because the balance
+    // matrix's cells depended on which scenario ran before them).
+    const fingerprint = () => {
+      SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      resetRun(15, true, { seed: 'AFT022-POS' });
+      const b0 = G.balls[0];
+      const startX = b0 ? b0.x : -1;
+      let h = 0;
+      const mix = v => { h = (h * 31 + Math.round(v * 10)) >>> 0; };
+      mouseX = W / 2; lastMouseY = PADDLE_Y();
+      for (let f = 0; f < 240; f++) {
+        if (G.state === 'serve' && f > 5) fireAction();
+        paused = false; G.freeze = 0; update(1 / 60);
+        const b = G.balls[0];
+        if (b) { mix(b.x); mix(b.y); }
+        mix(G.paddle.x);
+      }
+      return { startX, h };
+    };
+    const A = fingerprint();
+    // park the paddle far off-center (as if the player just finished another
+    // run there), then relaunch the SAME seed
+    mouseX = W * 0.13;
+    for (let f = 0; f < 60; f++) { paused = false; G.freeze = 0; update(1 / 60); }
+    const B = fingerprint();
+    assert(A.startX === B.startX,
+      'the serve ball spawned at the stale paddle position (' + A.startX + ' vs ' + B.startX + ')');
+    assert(A.h === B.h, 'same-seed runs diverged after a mid-session relaunch (hash ' + A.h + ' vs ' + B.h + ')');
+    return 'serve @' + Math.round(A.startX) + ' both times · 240-frame trajectory hash identical';
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

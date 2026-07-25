@@ -4781,7 +4781,10 @@ function drawShootHint() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '800 15px Orbitron, sans-serif';
     const tw2 = Math.min(W - 24, ctx.measureText(txt).width + 44); // AFT-001: viewport cap
-    const hy2 = H * 0.62;
+    // AFT-022 F6: the tutor is DOCKED in the control-adjacent band (the same
+    // lane the movement hint and flight coach use), never mid-screen — at
+    // H·0.62 it sat across the portrait flight lane the player fights in
+    const hy2 = IS_TOUCH ? FLOOR() - 168 : shipY() - (G.mode === 'junkie' ? 96 : 72);
     claimSurface('chargeTutor', W / 2 - tw2 / 2, hy2 - 19, tw2, 38);
     ctx.globalAlpha = pa;
     ctx.shadowColor = '#4dd0e1'; ctx.shadowBlur = 18;
@@ -5771,18 +5774,23 @@ function drawTouchControls() {
     // AFT-001: SHORT state words on the pad face — the explanatory clause
     // lives on the sub-line, so nothing squishes inside the circle at any
     // buttonScale. The pad still names its state at every moment.
+    // AFT-022 F1: while the auto-fire assist is venting, the pad says so —
+    // a silent gun with AUTO ON on its face would read as a bug
+    const venting = shooter && SETTINGS.autoFire && G.autoVent && !hot && !charging;
     const label = hot ? 'COOLING'
       : charging ? (resonantNow ? 'RESONANT!' : overNow ? 'OVERCHARGE' : full ? 'RELEASE!' : Math.round(Math.min(1, G.charge) * 100) + '%')
+      : venting ? 'VENTING'
       : heatWarn ? 'HEAT HIGH'
       : shooter ? (SETTINGS.autoFire ? 'AUTO ON' : 'TAP') : 'FIRE';
     ctx.font = '900 9.5px Orbitron, sans-serif';
-    ctx.fillStyle = hot ? '#ff8a80' : charging ? (resonantNow ? '#80ffea' : overNow ? '#ffab66' : full ? '#e0ffff' : '#80deea') : heatWarn ? '#ffb74d' : '#b3e5fc';
+    ctx.fillStyle = hot ? '#ff8a80' : charging ? (resonantNow ? '#80ffea' : overNow ? '#ffab66' : full ? '#e0ffff' : '#80deea') : venting || heatWarn ? '#ffb74d' : '#b3e5fc';
     ctx.fillText(label, f.x, f.y + 12, f.r * 1.7);
     // second line: what HOLDING does right now (shooter modes only).
     // AFT-021 P4: Heavy Bolt's faster fill is a bought identity — the pad
     // names it persistently so the quicker arc reads as a feature.
     const sub = !shooter ? '' : hot ? Math.ceil(G.overheat) + 's · LOCKED'
       : charging ? (full ? '' : 'KEEP HOLDING')
+      : venting ? 'AUTO COOLING'
       : (upgN('heavy') ? 'HOLD = FAST CHARGE' : 'HOLD = CHARGE');
     if (sub) {
       ctx.font = '800 7px Orbitron, sans-serif';
@@ -6020,6 +6028,58 @@ function fitLabel(text, x, y, o = {}) {
   if (zoneLog) { b.zone = o.zone || null; zoneLog.push(b); }
   return b;
 }
+// AFT-022 F2: greedy word wrap at a fixed size — the shared computation
+// behind fitLabelWrap and its line-count predictor (the two must agree, or
+// a band sized by the predictor draws a different number of lines).
+function wrapAtSize(text, size, weight, family, maxW) {
+  ctx.font = `${weight} ${size}px ${family}`;
+  const words = String(text).split(/\s+/), lines = [];
+  let cur = '';
+  for (const wd of words) {
+    const cand = cur ? cur + ' ' + wd : wd;
+    if (cur && ctx.measureText(cand).width > maxW) { lines.push(cur); cur = wd; }
+    else cur = cand;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+// How many lines fitLabelWrap will actually use for this text+options —
+// callers that size a band BEFORE drawing (the reveal info panel) ask this.
+function wrapLinesNeeded(text, o = {}) {
+  if (!text) return 0;
+  const maxW = Math.max(24, o.maxW || W - 24);
+  const min = o.min || 9;
+  const weight = o.weight || 800, family = o.family || 'Orbitron, sans-serif';
+  ctx.font = `${weight} ${min}px ${family}`;
+  if (ctx.measureText(String(text)).width <= maxW) return 1; // shrink path covers it
+  return Math.min(Math.max(1, o.maxLines || 2), wrapAtSize(text, min, weight, family, maxW).length);
+}
+// AFT-022 F2: the wrapping variant of fitLabel for MUST-READ copy. fitLabel
+// shrinks to the readable floor then ELLIPSIZES — right for identity labels,
+// wrong for instructions (boss mechanic cues, next-step directions, storage
+// guidance), which on narrow portrait phones were losing their second half.
+// Behavior is IDENTICAL to fitLabel whenever the text fits at ≥min on one
+// line; only the previously-ellipsized case changes: the text wraps onto up
+// to maxLines floor-size lines extending DOWNWARD from y. Returns
+// {n, lineH, size} so callers can advance their layout.
+function fitLabelWrap(text, x, y, o = {}) {
+  const maxW = Math.max(24, o.maxW || W - 24);
+  const maxLines = Math.max(1, o.maxLines || 2);
+  const min = o.min || 9;
+  const weight = o.weight || 800, family = o.family || 'Orbitron, sans-serif';
+  ctx.font = `${weight} ${min}px ${family}`;
+  if (maxLines === 1 || ctx.measureText(String(text)).width <= maxW) {
+    const b = fitLabel(text, x, y, o);
+    return { n: 1, lineH: Math.round(b.size * 1.3), size: b.size, lines: [b] };
+  }
+  let lines = wrapAtSize(text, min, weight, family, maxW);
+  if (lines.length > maxLines) { // pathological: keep every word visible in the last line's ellipsis
+    lines = lines.slice(0, maxLines - 1).concat(lines.slice(maxLines - 1).join(' '));
+  }
+  const lineH = Math.round(min * 1.3);
+  const out = lines.map((ln, i) => fitLabel(ln, x, y + i * lineH, { ...o, size: min, min }));
+  return { n: lines.length, lineH, size: min, lines: out };
+}
 // dev overlay (?zones): zone bands + every fitted label's measured box; a
 // label outside the viewport or its declared band is flagged loud red.
 // NOTE: labels drawn inside the HUD's translate(0, SAFE_T) record local y.
@@ -6112,6 +6172,18 @@ function revealLatch(r) {
   r.artLatch.lockNow = r.t >= 0.35; // past the fade, the choice is final
   return r.artLatch;
 }
+// AFT-022 F2: how much taller the reveal's info band runs when its copy
+// wraps on narrow screens. The literal line heights are round(min·1.3) for
+// each row's floor size — they must stay in lockstep with the fitLabelWrap
+// calls in the hold branch, and BOTH reveal branches must use this (the art
+// square is sized from the band, and the fly must start from the square the
+// player was just shown).
+function revealBandExtras(r) {
+  const n1 = Math.max(1, wrapLinesNeeded(r.title, { min: 13, weight: 900, maxW: W - 56, maxLines: 3 }));
+  const n2 = Math.max(1, wrapLinesNeeded(r.sub, { min: 9, weight: 700, maxW: W - 64, maxLines: 3 }));
+  const n3 = Math.max(1, wrapLinesNeeded(r.cue, { min: 8.5, weight: 700, maxW: W - 64, maxLines: 3, family: 'Verdana, system-ui, sans-serif' }));
+  return { t: (n1 - 1) * 17, s: (n2 - 1) * 12, c: (n3 - 1) * 11 };
+}
 function drawBossReveal() {
   const r = G.reveal;
   if (!r) return;
@@ -6124,8 +6196,12 @@ function drawBossReveal() {
     const a = enter;
     ctx.fillStyle = 'rgba(3,6,18,' + (0.74 * a).toFixed(3) + ')';
     ctx.fillRect(0, 0, W, H);
-    // art zone: the largest square the safe area allows, panel BELOW the art
-    const panelH = 92;
+    // art zone: the largest square the safe area allows, panel BELOW the art.
+    // AFT-022 F2: on narrow portrait the band GROWS for wrapped copy — the
+    // boss name and its mechanic cue may each take a second line instead of
+    // ellipsizing, and the art square yields exactly that difference.
+    const ex = revealBandExtras(r);
+    const panelH = 92 + ex.t + ex.s + ex.c;
     const y0 = SAFE_T + 34;
     const side = Math.max(120, Math.min(W - 48, H - y0 - panelH - SAFE_B - 52));
     const pop = r.reduced ? 1 : 0.94 + 0.06 * (1 - Math.pow(1 - enter, 3));
@@ -6150,16 +6226,19 @@ function drawBossReveal() {
     } else {
       drawRevealPortrait(r.ids[0], W / 2, artCy, side * pop, a, revealLatch(r));
     }
-    // the info panel — a dedicated band, never over the art
+    // the info panel — a dedicated band, never over the art. Title, roster
+    // line and mechanic cue WRAP on narrow screens (AFT-022 F2): a boss's
+    // instructions are must-read copy and may never vanish behind an
+    // ellipsis. Row starts shift down by the extra lines above them.
     const py = y0 + side + 10;
     ctx.globalAlpha = a;
-    fitLabel(r.title, W / 2, py + 16, { size: 24, min: 13, weight: 900, color: col, maxW: W - 56 });
-    fitLabel(r.sub, W / 2, py + 40, { size: 11.5, min: 9, weight: 700, color: '#e3f2fd', maxW: W - 64 });
+    fitLabelWrap(r.title, W / 2, py + 16, { size: 24, min: 13, weight: 900, color: col, maxW: W - 56, maxLines: 3 });
+    fitLabelWrap(r.sub, W / 2, py + 40 + ex.t, { size: 11.5, min: 9, weight: 700, color: '#e3f2fd', maxW: W - 64, maxLines: 3 });
     ctx.font = bodyFont(11, 700);
-    fitLabel(r.cue, W / 2, py + 60, { size: 11, min: 8.5, weight: 700, color: '#ffe082', maxW: W - 64, family: 'Verdana, system-ui, sans-serif' });
+    fitLabelWrap(r.cue, W / 2, py + 60 + ex.t + ex.s, { size: 11, min: 8.5, weight: 700, color: '#ffe082', maxW: W - 64, family: 'Verdana, system-ui, sans-serif', maxLines: 3 });
     if (r.t > 0.55) {
       ctx.globalAlpha = a * (0.55 + 0.45 * Math.sin(G.time * 4));
-      fitLabel(IS_TOUCH ? 'TAP TO ENGAGE' : 'CLICK TO ENGAGE', W / 2, py + 80,
+      fitLabel(IS_TOUCH ? 'TAP TO ENGAGE' : 'CLICK TO ENGAGE', W / 2, py + 80 + ex.t + ex.s + ex.c,
         { size: 10, min: 9, weight: 800, color: '#90a4ae', maxW: W - 80 });
     }
   } else {
@@ -6169,7 +6248,10 @@ function drawBossReveal() {
     const e = k * k * (3 - 2 * k); // smoothstep
     ctx.fillStyle = 'rgba(3,6,18,' + (0.74 * (1 - e)).toFixed(3) + ')';
     ctx.fillRect(0, 0, W, H);
-    const panelH = 92;
+    // must mirror the hold branch's band height exactly, or the fly starts
+    // from a different art square than the one the player was just shown
+    const ex = revealBandExtras(r);
+    const panelH = 92 + ex.t + ex.s + ex.c;
     const y0 = SAFE_T + 34;
     const side = Math.max(120, Math.min(W - 48, H - y0 - panelH - SAFE_B - 52));
     const artCy = y0 + side / 2;
@@ -6229,8 +6311,9 @@ function drawRosterRail() {
   const y = G.revealDock ? (narrow ? 88 : 72) : (narrow ? 84 : 52);
   const r = 7, gap = 20;
   const n = Math.min(live.length, 7);
-  // touch: the pause circle owns the right corner — the rail slides left of it
-  const x1 = W - 20 - (IS_TOUCH && !SETTINGS.leftHanded ? 48 : 0);
+  // touch: the pause circle owns the right corner in EVERY handedness
+  // (AFT-022 F3: pause no longer mirrors) — the rail slides left of it
+  const x1 = W - 20 - (IS_TOUCH ? 48 : 0);
   claimSurface('rosterRail', x1 - n * gap, y - r - 2, n * gap + 4, r * 2 + 4, { bg: false });
   ctx.save();
   ctx.lineCap = 'round';
@@ -7927,10 +8010,14 @@ function drawSaveSettings(A) {
     : STORAGE_HEALTH.durable === true ? ['STORAGE: DURABLE (EVICTION-PROTECTED)', '#66bb6a']
     : STORAGE_HEALTH.durable === false ? ['STORAGE: BROWSER-MANAGED (MAY EVICT WHEN IDLE — EXPORT A FILE)', '#ffd54f']
     : ['STORAGE: BROWSER-MANAGED', '#90a4ae'];
-  fitLabel(health[0], A.px + A.pw / 2, A.saveStatusY, { size: A.compact ? 9 : 10, min: 8, weight: 700, color: health[1], maxW: A.pw - 48 });
+  // AFT-022 F2: the eviction guidance ("… EXPORT A FILE") is the actionable
+  // half of this line — it wraps on narrow phones instead of ellipsizing,
+  // and the autosave stamp below shifts down by the extra line.
+  const hb = fitLabelWrap(health[0], A.px + A.pw / 2, A.saveStatusY,
+    { size: A.compact ? 9 : 10, min: 8, weight: 700, color: health[1], maxW: A.pw - 48, maxLines: 2 });
   if (auto && auto.savedAt) {
     fitLabel('AUTOSAVE: ' + String(auto.savedAt).slice(0, 19).replace('T', ' '),
-      A.px + A.pw / 2, A.saveStatusY + (A.compact ? 15 : 18), { size: A.compact ? 8.5 : 9.5, min: 8, weight: 600, color: '#78909c', maxW: A.pw - 48 });
+      A.px + A.pw / 2, A.saveStatusY + (hb.n - 1) * hb.lineH + (A.compact ? 15 : 18), { size: A.compact ? 8.5 : 9.5, min: 8, weight: 600, color: '#78909c', maxW: A.pw - 48 });
   }
 }
 
@@ -8360,16 +8447,15 @@ function drawFullUpgradeTree() {
   const offerPills = [];
   const offerFlag = (n, offer, inward = false) => offerPills.push([n, offer, inward]);
   const drawOfferPill = (n, offer, inward) => {
-    const fw = Math.max(40, Math.min(54, n.r * 2.75)), fh = Math.max(13, Math.min(17, n.r * 0.8));
-    const a = Number.isFinite(n.a) ? n.a : -Math.PI / 2;
-    const dir = inward ? -1 : 1;
-    const fcX = n.cx + Math.cos(a) * dir * (n.r + fw * 0.42);
-    const fcY = n.cy + Math.sin(a) * dir * (n.r + fh * 0.68);
+    // AFT-022 F5: the pill's rect comes from the SHARED layout helper — the
+    // tag is a real tap target now, so render may not free-hand its box
+    n.pillInward = !!inward;
+    const P = T.offerPillRect(n);
+    const fcX = P.cx, fcY = P.cy, fw = P.fw, fh = P.fh;
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     // dark padding cushion — a hair larger than the tag on every side
-    const pad = 4;
-    roundRect(fcX - fw / 2 - pad, fcY - fh / 2 - pad, fw + pad * 2, fh + pad * 2, (fh + pad * 2) / 2);
+    roundRect(P.x, P.y, P.w, P.h, P.h / 2);
     ctx.fillStyle = 'rgba(4,9,22,0.85)'; ctx.fill();
     ctx.shadowColor = '#ffffff'; ctx.shadowBlur = SETTINGS.reduceFlash ? 8 : 12;
     roundRect(fcX - fw / 2, fcY - fh / 2, fw, fh, fh / 2);
@@ -9449,9 +9535,13 @@ function drawResults() {
       : G.daily ? 'DAILY RUN — MEDALS ARE NOT SAVED' : 'CHEATS USED — MEDALS ARE NOT SAVED', W / 2, belowObj);
   }
   if (R.nextName) {
-    ctx.font = '700 ' + (short ? 10.5 : 13) + 'px Orbitron, sans-serif';
+    // AFT-022 F2: the next-stage direction is must-read copy — on narrow
+    // portrait it used to run past BOTH screen edges (bare fillText, no
+    // width cap). It now fits, and wraps to a second line before shrinking
+    // below the readable floor.
     ctx.fillStyle = accent;
-    ctx.fillText('NEXT — ' + R.nextName, W / 2, belowObj + (short ? 16 : 24));
+    fitLabelWrap('NEXT — ' + R.nextName, W / 2, belowObj + (short ? 16 : 24),
+      { size: short ? 10.5 : 13, min: 9.5, weight: 700, color: accent, maxW: W * 0.92, maxLines: 2, zone: 'results' });
   }
   // the flight log: one line of expedition narrative — flavour, never a gate
   if (R.flavor && !short) {

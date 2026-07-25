@@ -107,8 +107,8 @@ suite test guards every rect across six sizes.
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 22 mobile scenes
-at two phone viewports (44 screenshots + metadata sidecars → `.gate-shots/`),
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 23 mobile scenes
+at two phone viewports (46 screenshots + metadata sidecars → `.gate-shots/`),
 each PROVING its named state via an `expect` assertion, under FITTED-LABEL
 CONTAINMENT plus the AFT-021 overlap and single-actor-label contracts → the
 WAVE and BOSS artifact-storm benchmarks
@@ -145,7 +145,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 115 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 122 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
@@ -162,10 +162,15 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   edit. Always pass `--label <provenance>`; `BASE_ONLY=<substring>` filters
   scenarios for tuning loops but an UNLABELED filtered run overwrites the
   committed old-campaign fixtures in `docs/baselines/` (they are history —
-  `git checkout --` them back, never regenerate over them). Three
+  `git checkout --` them back, never regenerate over them). The
   calibration deviations are documented in-code (classic-bot band = human
-  band ×1.8; ratio hard cap 2.5; ≤2 blaster seed-outliers) — don't "fix"
-  them without new evidence.
+  band ×1.8; ratio hard cap 2.5; the AFT-022 TRUTH RE-ZERO: ≤5 named
+  knife-edge finale seed-outliers with per-cell 2/3 majority and L3
+  absolute, widened L21 rite floors, A-floor 19) — don't "fix" them
+  without new evidence. Late-finale seed cells are chaotic at 3-seed
+  granularity: attribute regressions with a stashed control run before
+  tuning anything, and prefer per-cell `BASE_ONLY` probes (trustworthy
+  since the AFT-022 determinism fix) over full-run knob roulette.
 - `npm run check` (syntax all modules), `npm run verify-assets` (every roster id
   is named + has a local sprite). Run after roster/data changes.
 - Test mobile with `?touch` in the URL. Serve locally: `node serve.js`
@@ -385,6 +390,35 @@ phone — flag anything only verifiable there.
   failed protect wave reverts to a normal attrition clear. Friendlies
   render with the ally-pink ring + heart pips and must never enter
   formation/solver/overlap systems.
+- **The auto-fire assist VENTS; it never overheats itself (AFT-022).**
+  `G.autoVent` hysteresis in update.js: lift at `AUTOFIRE_VENT_HEAT`
+  (0.87), accelerated per-mode cooling (`autofireVentCool` — duty-matched
+  to the old overheat cycle; retune only with matrix evidence) down to
+  `AUTOFIRE_RESUME_HEAT` (0.30 — the old post-lockout reset heat, which
+  keeps the cool-barrel charge windows where they always were). Only the
+  assist obeys the vent: manual taps, held fire and charges still ride to
+  a real overheat, and the heat-fairness band is measured on manual fire.
+  The FIRE pad face names the state (VENTING / AUTO COOLING).
+- **A seeded launch is position-independent (AFT-022).** `resetRun` homes
+  the paddle/ship to the fresh-boot pose — the serve ball is built at the
+  paddle, and before this a seeded daily/trial launched mid-session served
+  from wherever the LAST run parked it (same class as the `G.splashCD`
+  stream-leak rule). Stage-to-stage buildLevel keeps the paddle put ON
+  PURPOSE; only the run boundary homes. Suite-locked.
+- **The STARFIGHTER edge clamp is the RENDERED footprint, not a constant.**
+  `shipFootprintHalf()` (state.js) mirrors drawPilotRig's geometry — hull
+  by form, oath halo, hardpoint-rack extent — and update() clamps with a
+  14px margin. If the rig gains new fittings, extend the footprint too.
+- **Must-read copy wraps; only identity labels may ellipsize (AFT-022).**
+  `fitLabelWrap`/`wrapLinesNeeded` (render.js) — identical to fitLabel
+  when the text fits at ≥min on one line, wraps up to maxLines floor-size
+  lines otherwise. The reveal band (`revealBandExtras` — BOTH reveal
+  branches), the results NEXT line, and the settings storage guidance ride
+  it; instructions never vanish behind an ellipsis on narrow portrait.
+- **Pause never mirrors.** Left-handed mode mirrors the LOWER thumb pads
+  only; pause keeps the upper-right slot in every handedness (the
+  upper-left column belongs to score/COMBO/RIFT KEY). Gate scene
+  'left-handed-combat' + suite fixture guard it.
 - **Charge has a full timing arc (M2).** `RESONANCE_WINDOW` (0.38s after
   the charge tops out) → resonant release (+25% power, +1 pierce, ×0.7
   heat). Past ~1.4s the barrel OVERCHARGES (heat outpaces cooling). The

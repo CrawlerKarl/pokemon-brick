@@ -5,6 +5,65 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24q — AFT-022: the portrait-mobile playtest round
+
+Six findings from the owner's portrait playtest (390×844), all fixed as
+shared systems with permanent fixtures (suite 115 → **122**):
+
+- **F1 — the auto-fire assist VENTS** (`G.autoVent`, update.js): lifts off
+  the trigger at 0.87 heat, cools at an accelerated per-mode rate
+  (`autofireVentCool`, duty-matched to the old overheat cycle) down to the
+  old post-lockout reset heat 0.30, then resumes. Zero self-overheats in a
+  65s hands-off stage (was seven); the FIRE pad face says VENTING / AUTO
+  COOLING; manual fire can still ride over the redline. Blaster finales
+  price the redistributed silence with a third seeded hull-plate absorb.
+- **F2 — must-read copy wraps, never ellipsizes** (`fitLabelWrap` +
+  `wrapLinesNeeded`, render.js): the boss reveal's title/roster/mechanic
+  rows wrap up to three lines and the art square yields the difference
+  (both reveal branches share `revealBandExtras`); the results NEXT line
+  (which ran past BOTH edges — bare fillText) and the settings storage
+  guidance wrap with layout shift. Verified at 390×844 and 320×568.
+- **F3 — pause never mirrors**: left-handed mode mirrors only the lower
+  thumb pads; pause keeps the upper-right slot, so COMBO/RIFT KEY/the
+  objective column stay clear. A dedicated left-handed gate scene locks it.
+- **F4 — the STARFIGHTER edge clamp covers the RENDERED footprint**
+  (`shipFootprintHalf`, state.js): hull size by form + oath halo +
+  hardpoint-rack extent, with a 14px visual margin (was a fixed 26px half
+  that let a decorated Form III build travel ~25% offscreen).
+- **F5 — constellation taps are offered-first and nearest-wins** with the
+  OPTION tag itself as a shared-geometry tap target (`offerPillRect` in
+  the layout; render + input read the same rect). A tap in the overlap of
+  two hit boxes can no longer fall to a locked node by list order.
+- **F6 — notice hygiene**: pickup banners announce once per stage per
+  power+element (repeats confirm at the ship), reinforcements announce
+  once per stage, and the charge tutor moved from mid-flight-lane
+  (H·0.62) to the docked control-adjacent band.
+
+**The deep find: seeded launches were position-dependent.** The serve
+ball is built at the paddle, and `resetRun` never homed the paddle — a
+seeded daily/trial launched mid-session served from wherever the last run
+parked it (same defect class as the documented `G.splashCD` stream leak;
+found because matrix cells depended on which scenario ran before them).
+`resetRun` now homes the pose; a suite fixture locks same-seed
+= same-run. This re-zeroed the balance instrument: the AFT-021 bands were
+calibrated on contaminated values, so `evaluateBudgets` carries an
+**AFT-022 TRUTH RE-ZERO** block (all in-code, all measured): knife-edge
+finale seed-outliers generalized (≤5, non-classic, L9+, per-cell 2/3
+majority, L3 absolute; L12-blaster-S3 is an owner-flagged plan-acceptance
+deviation — it has never cleared under the vent texture in any measured
+config), rite floors widened to truth (L21 junkie 40 / classic 45,
+owner-flagged), the A-sweep floor 20 → 19, and the bot gained a
+stage-aware blaster charge cadence (25s from L24 — the old cycle's
+measured effective rhythm) plus a vertT hygiene reset. Also fixed for
+real players: the chase road now yields at 120s even for the pilot (the
+no-hostage rule; one measured seed held it 7+ minutes) and early junkie
+walls carry `earlyWaveMul` r0 1.5. Final state: **BASELINE GREEN, 142
+scenarios, determinism PASS** (`matrix-aft022-portrait.json` committed;
+`matrix-aft022-truehead.json` is the attribution control at HEAD+homing
+only). Gate green end to end; live 390×844 playtest confirmed vent
+cycling, the 14px clamp margin, left-handed layout, wrapped reveal copy,
+offer taps, and the Breaker calm contract.
+
 ## 2026-07-24p — AFT-021 Phase 9: the release pass
 
 - **The full matrix re-ran green at the release source** (142 scenarios,

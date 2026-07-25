@@ -21,7 +21,13 @@ function touchButtons() {
   // zone; live combat keeps only what live combat needs).
   const b = {
     mega:  { x: edge(138), y: base - 40, r: 30 * scale }, // beside FIRE — paddle rides above both
-    pause: { x: edge(28), y: 86 + SAFE_T, r: 22 * scale }, // ≥44 px visible targets
+    // AFT-022 F3: pause NEVER mirrors. Only the lower thumb pads follow
+    // handedness — the upper-LEFT column belongs to score/COMBO/RIFT KEY and
+    // the objective band, and a mirrored pause circle sat right on top of
+    // them. Pause is a rare deliberate reach, not a thumb control; the
+    // upper-right slot under the lives cluster is reserved for it in every
+    // layout, so left- and right-handed play share one top row.
+    pause: { x: W - 28 - SAFE_R, y: 86 + SAFE_T, r: 22 * scale }, // ≥44 px visible targets
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
   // and the ball is launched by tapping the playfield, not this pad. In the
@@ -838,6 +844,18 @@ function upgradeTreeLayout() {
       const w = this.labelMaxW + 18, h = 32;
       return { x: l.x - w / 2, y: l.y - h / 2, w, h };
     },
+    // AFT-022 F5: the white OPTION tag's rect, computed HERE so render's
+    // pill and input's tap target are literally the same geometry (the
+    // shared-rects invariant). `inward` mirrors each section's offerFlag arg.
+    offerPillRect: n => {
+      const fw = Math.max(40, Math.min(54, n.r * 2.75)), fh = Math.max(13, Math.min(17, n.r * 0.8));
+      const a = Number.isFinite(n.a) ? n.a : -Math.PI / 2;
+      const dir = n.pillInward ? -1 : 1;
+      const cx2 = n.cx + Math.cos(a) * dir * (n.r + fw * 0.42);
+      const cy2 = n.cy + Math.sin(a) * dir * (n.r + fh * 0.68);
+      const pad = 4;
+      return { x: cx2 - fw / 2 - pad, y: cy2 - fh / 2 - pad, w: fw + pad * 2, h: fh + pad * 2, cx: cx2, cy: cy2, fw, fh };
+    },
     node: (pi, ti) => at(spokeA(pi), inner + ti * step, drawR + (ti === 3 ? 1 : 0)),
     // a bridge sits on the BOUNDARY between its two wedges at mid-ring height
     bridgeNode: bi => at(-Math.PI / 2 + bridgeHalfPos(WEB_BRIDGES[bi]) * Math.PI / 6,
@@ -1170,25 +1188,49 @@ function onPress(x, y) {
           if (offer >= 0) draftSel = offer;
           SFX.wall();
         };
-        for (let pi = 0; pi < PATH_KEYS.length; pi++) {
-          for (let ti = 0; ti < 4; ti++) {
-            if (inRect(x, y, T.node(pi, ti))) { selectMapNode({ kind: 'tier', pi, ti }); return; }
+        // AFT-022 F5: tap resolution is OFFERED-FIRST and NEAREST-WINS. The
+        // compact chart's enforced minimum scale makes neighbouring hit
+        // boxes overlap, and the old first-match-in-list-order loops could
+        // hand a tap aimed at a draft offer to a nearby LOCKED node (the
+        // portrait playtest's "aimed at Option 3, inspected a locked node").
+        // Non-offered nodes keep their exact rects; an OFFERED node's target
+        // additionally includes its white OPTION tag (the shared
+        // offerPillRect) and a slop ring matching its drawn halo.
+        {
+          const candidates = [];
+          for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+            for (let ti = 0; ti < 4; ti++) {
+              candidates.push({ sel: { kind: 'tier', pi, ti }, n: T.node(pi, ti), inward: ti === 3 });
+            }
           }
-        }
-        for (let fi = 0; fi < WEB_FUSIONS.length; fi++) {
-          if (inRect(x, y, T.fusionNode(fi))) { selectMapNode({ kind: 'fusion', fi, pi: 0, ti: 3 }); return; }
-        }
-        for (let ai = 0; ai < WEB_APEXES.length; ai++) {
-          if (inRect(x, y, T.apexNode(ai))) { selectMapNode({ kind: 'apex', ai, pi: 0, ti: 3 }); return; }
-        }
-        for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
-          if (inRect(x, y, T.bridgeNode(bi))) { selectMapNode({ kind: 'bridge', bi, pi: 0, ti: 0 }); return; }
-        }
-        for (let si = 0; si < activeSatellites().length; si++) {
-          if (inRect(x, y, T.satNode(si))) {
-            selectMapNode({ kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(activeSatellites()[si].path)), ti: 3 });
-            return;
+          for (let fi = 0; fi < WEB_FUSIONS.length; fi++) {
+            candidates.push({ sel: { kind: 'fusion', fi, pi: 0, ti: 3 }, n: T.fusionNode(fi), inward: true });
           }
+          for (let ai = 0; ai < WEB_APEXES.length; ai++) {
+            candidates.push({ sel: { kind: 'apex', ai, pi: 0, ti: 3 }, n: T.apexNode(ai), inward: true });
+          }
+          for (let bi = 0; bi < WEB_BRIDGES.length; bi++) {
+            candidates.push({ sel: { kind: 'bridge', bi, pi: 0, ti: 0 }, n: T.bridgeNode(bi), inward: false });
+          }
+          for (let si = 0; si < activeSatellites().length; si++) {
+            candidates.push({ sel: { kind: 'sat', si, pi: Math.max(0, PATH_KEYS.indexOf(activeSatellites()[si].path)), ti: 3 }, n: T.satNode(si), inward: true });
+          }
+          let best = null;
+          for (const c of candidates) {
+            const offer = choiceIndexForSel(c.sel);
+            const d = Math.hypot(x - c.n.cx, y - c.n.cy);
+            let hit = inRect(x, y, c.n);
+            if (!hit && offer >= 0) {
+              c.n.pillInward = c.inward;
+              hit = d <= c.n.hitR + 12 || inRect(x, y, T.offerPillRect(c.n));
+            }
+            if (!hit) continue;
+            // offers outrank non-offers wherever boxes overlap; distance to
+            // the node's center breaks the remaining ties deterministically
+            const score = (offer >= 0 ? 0 : 1e6) + d;
+            if (!best || score < best.score) best = { sel: c.sel, score };
+          }
+          if (best) { selectMapNode(best.sel); return; }
         }
         // Tap a wedge LABEL to jump the cursor to that path's frontier —
         // its next installable tier (or the capstone when maxed) — and pan

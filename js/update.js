@@ -113,8 +113,13 @@ function tickEffects(dt) {
     if (G.overheat <= 0) { G.overheat = 0; G.heat = 0.3; }
   } else {
     // vents on a pause — but slower than sustained fire builds, so holding the
-    // trigger (or spamming the charge shot) really can cook the barrel
-    G.heat = Math.max(0, G.heat - dt * weaponScale() * (G.mode === 'junkie' ? (preset().heatCool || 0.28) : 0.22));
+    // trigger (or spamming the charge shot) really can cook the barrel.
+    // AFT-022 F1: while the auto-fire assist is VENTING it cools at double
+    // rate — an active vent, not a passive pause — so the breathing cycle
+    // (and the cool-barrel charge windows the matrix calibrated against)
+    // matches the old overheat rhythm without the lockout.
+    const ventBoost = G.autoVent ? autofireVentCool() : 1;
+    G.heat = Math.max(0, G.heat - dt * weaponScale() * ventBoost * (G.mode === 'junkie' ? (preset().heatCool || 0.28) : 0.22));
   }
   G.gustT = Math.max(0, G.gustT - dt);
   // TIME DILATION metronome (Dialga): a dedicated, deterministic accumulator so
@@ -4093,10 +4098,15 @@ function updateChase(dt) {
   // AFT-021 P5: the WALLED modes cannot chase — if the floor turret/paddle
   // has not run the road down in 40s, the road YIELDS (the no-hostage rule;
   // the beat advances with no mastery credit). The flying pilot keeps the
-  // full pursuit.
+  // full pursuit — but AFT-022 gives even the pilot a LONG fuse: a healthy
+  // pursuit ends in 20–60s, and one measured seed held the road for 7+
+  // minutes (the route vessel's pattern parked it in a barely-hittable
+  // groove). Positional beats may never hold the stage hostage in ANY mode;
+  // at 120s the road yields with no mastery credit, exactly like the walled
+  // rule — pathology relief, never part of ordinary pursuit pacing.
   {
     const F0 = G.finale, C0 = F0 && F0.chase;
-    if (C0 && F0.beat === 0 && C0.chosen != null && G.mode !== 'junkie' && F0.beatT > 40) {
+    if (C0 && F0.beat === 0 && C0.chosen != null && F0.beatT > (G.mode !== 'junkie' ? 40 : 120)) {
       const duel = G.bricks.find(b => b.vesselRoute && !b.dead);
       if (duel) {
         setCombatNotice(chaseWord('routeWord', 'THE ROAD YIELDS'), '#ffcf5e', 2);
@@ -5011,11 +5021,15 @@ function update(dt) {
   // portrait lands and the HUD lane docks (update returns; render draws it)
   if (G.reveal && (G.state === 'play' || G.state === 'serve')) { updateReveal(dt); return; }
 
-  // STARFIGHTER's pilot is a small mon — its edge clamp is the SHIP's half
-  // width, never paddleW(): Tailwind/WIDE inflate the paddle stat to ~300px,
-  // which walled off half a phone screen (owner-reported, 2026-07-21)
-  const clampHalf = G.mode === 'junkie' ? 26 : paddleW() / 2;
-  const target = Math.max(clampHalf + 8, Math.min(W - clampHalf - 8, mouseX));
+  // STARFIGHTER's edge clamp is the ship's RENDERED footprint (AFT-022 F4:
+  // sprite + oath halo + hardpoint rack — a Form III build used to travel
+  // ~25% offscreen), never paddleW(): Tailwind/WIDE inflate the paddle stat
+  // to ~300px, which walled off half a phone screen (owner-reported,
+  // 2026-07-21). The paddle modes keep their classic 8px wall gap; the
+  // ship keeps a 14px visual margin beyond its widest fitting.
+  const clampHalf = G.mode === 'junkie' ? shipFootprintHalf() : paddleW() / 2;
+  const clampGap = G.mode === 'junkie' ? 14 : 8;
+  const target = Math.max(clampHalf + clampGap, Math.min(W - clampHalf - clampGap, mouseX));
   G.paddle.speed = (target - G.paddle.x) / Math.max(dt, 0.001);
   const follow = (IS_TOUCH ? SETTINGS.touchFollow : 1) * starterMod('follow', 1);
   G.paddle.x += (target - G.paddle.x) * Math.min(1, dt * 18 * follow);
@@ -5233,9 +5247,18 @@ function update(dt) {
   // setting does the same without a held pointer, but yields immediately when
   // a FIRE-pad touch may be turning into (or is already) a charged shot.
   const autoFiring = G.mode !== 'classic' && !!SETTINGS.autoFire;
+  // AFT-022 F1: the assist VENTS instead of overheating itself — a portrait
+  // playtest logged seven lockouts in one hands-off Easy stage. Hysteresis:
+  // lift off at AUTOFIRE_VENT_HEAT, resume at AUTOFIRE_RESUME_HEAT. Only the
+  // assist's trigger is gated — held desktop fire, taps and charges remain
+  // free to ride the barrel over the line on purpose.
+  if (autoFiring) {
+    if (G.autoVent) { if (G.heat <= AUTOFIRE_RESUME_HEAT) G.autoVent = false; }
+    else if (G.heat >= AUTOFIRE_VENT_HEAT) G.autoVent = true;
+  } else G.autoVent = false;
   const touchChargeIntent = touchFirePendingId !== null || chargeTouchId !== null;
   if (fireHeld && !charging && G.state === 'play') fireAction(true); // preserve desktop/CLASSIC held fire
-  else if (autoFiring && !charging && !chargedThisFrame && !touchChargeIntent && G.state === 'play') fireAction(true);
+  else if (autoFiring && !G.autoVent && !charging && !chargedThisFrame && !touchChargeIntent && G.state === 'play') fireAction(true);
   // SUPER SHIELD capstone: a floor-shield charge regrows on a timer.
   // IMMORTAL REACTOR's counterburst stalls regrowth briefly (its limiter).
   // AFT-008 §9.7: the capstone regen counts ACTIVE-THREAT seconds only and
