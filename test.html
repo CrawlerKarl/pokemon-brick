@@ -6132,6 +6132,52 @@ window.requestAnimationFrame = function () { return 0; };
     return 'serve @' + Math.round(A.startX) + ' both times · 240-frame trajectory hash identical';
   });
 
+  // ---- AFT-009R: the mobile-first progression redesign ---------------------
+
+  test('AFT-009R P1: every draft offer carries the full card anatomy on phones', async () => {
+    const TAGS = ['NEW', 'UPGRADE', 'CAPSTONE', 'MASTERY', 'EVOLVE'];
+    const w0 = W, h0 = H;
+    try {
+      const bad = [];
+      const checkHand = label => {
+        for (const c of G.upgradeChoices || []) {
+          const m = draftCardModel(c);
+          if (!m.icon || !m.name) bad.push(label + ': card missing icon/name');
+          if (!TAGS.includes(m.tag)) bad.push(label + ': bad tag "' + m.tag + '"');
+          if (!m.sentence || String(m.sentence).length < 8) bad.push(label + ': "' + m.name + '" has no effect sentence');
+        }
+      };
+      // a fresh hand (NEW-heavy), then a developed hand (UPGRADE/CAPSTONE/EVOLVE)
+      SETTINGS.mode = 'blaster';
+      resetRun(1, true, { seed: 'AFT009R-P1' });
+      rollUpgradeChoices();
+      checkHand('fresh');
+      G.starterLvl = 2;
+      ['arsenal', 'impact'].forEach(k => { while (pathLvl(k) < 3) advancePath(k); });
+      rollUpgradeChoices();
+      checkHand('developed');
+      // a capped run must surface MASTERY stacks through the same anatomy
+      for (const k of PATH_KEYS) while (pathLvl(k) < 4) advancePath(k);
+      rollUpgradeChoices();
+      checkHand('capped');
+      assert(bad.length === 0, bad.join(' ; '));
+      // the three-card surface fits 390×844 with the meta row and INSTALL
+      W = 390; H = 844;
+      const L = upgradeLayout();
+      assert(L.stacked, '390×844 did not use the stacked phone layout');
+      const last = L.card(2);
+      assert(L.card(0).y - 26 > 0, 'no room for the build-meta row above the cards');
+      assert(last.y + last.h <= L.confirm.y && L.confirm.y + L.confirm.h <= H,
+        'cards/INSTALL overflow 390×844');
+      G.state = 'upgrade'; G.stateT = 1;
+      const e0 = ERR.length;
+      drawBuildMetaRow(L);
+      G.upgradeChoices.slice(0, 3).forEach((c, i) => drawAttunementCard(c, L.card(i), i, 1));
+      assert(ERR.length === e0, 'card render threw: ' + ERR.slice(e0).join(' | '));
+      return '3 hands × full anatomy · stacked fit at 390×844 · meta row + INSTALL contained';
+    } finally { W = w0; H = h0; G.upgradeChoices = null; resize(); }
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

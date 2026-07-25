@@ -4580,6 +4580,10 @@ function drawAnnounce() {
   // AFT-002: the reveal scene owns the frame — its panel IS the boss card;
   // the strip would just bleed through the scrim underneath it.
   if (G.reveal) return;
+  // AFT-009R P1: the draft/Forge is a full-screen decision — a stale TRIAL
+  // or region card ghosting through the three-card stack is pure noise.
+  // The card's timer keeps draining in update, so nothing is hoarded.
+  if (G.state === 'upgrade') return;
   // LIVE COMBAT never gets a banner in the flight lane: while playing,
   // everything but a hero announcement (boss-round reveals) renders as a
   // compact strip tucked under the HUD, sliding in from the top. The centre
@@ -9554,6 +9558,79 @@ function drawResults() {
   if (t > 0.6) pulse(IS_TOUCH ? 'TAP TO CONTINUE' : 'CLICK TO CONTINUE', H * (short ? 0.9 : 0.88));
 }
 
+// AFT-009R P1: THE ATTUNEMENT CARD — one anatomy for every offer on the
+// phone draft: KIND tag (NEW / UPGRADE / CAPSTONE / MASTERY / EVOLVE),
+// name, one plain effect sentence, current → new value, and a synergy
+// hint. Drawn from draftCardModel(); render never reaches into the choice
+// payload here, so tiers, web nodes, stacks and secrets read identically.
+function drawAttunementCard(c, r, i, a) {
+  const m = draftCardModel(c);
+  const sel = draftSel === i;
+  const hov = sel || inRect(mouseX, lastMouseY, r);
+  ctx.save();
+  ctx.globalAlpha = a * (draftSel != null && !sel ? 0.55 : 1);
+  if (hov) { ctx.shadowColor = sel ? '#ffffff' : m.color; ctx.shadowBlur = sel ? 26 : 20; }
+  roundRect(r.x, r.y, r.w, r.h, 14);
+  ctx.fillStyle = hov ? 'rgba(22,18,48,0.97)' : 'rgba(11,10,30,0.94)'; ctx.fill();
+  ctx.lineWidth = sel ? 3 : hov ? 2.4 : 1.6;
+  ctx.strokeStyle = sel ? '#ffffff' : m.color; ctx.stroke();
+  ctx.shadowBlur = 0;
+  drawDraftCardEnergy(r, m.color, hov, sel, i);
+  drawDraftBadge(m.icon, r.x + 34, r.y + r.h / 2, 18, m.color, hov, i);
+  const tx = r.x + 64, tw = r.w - 74;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = '900 8px Orbitron, sans-serif';
+  const tagW = ctx.measureText(m.tag).width + 12;
+  roundRect(tx, r.y + 8, tagW, 13, 6.5);
+  ctx.fillStyle = m.color; ctx.fill();
+  ctx.fillStyle = '#0b0e20';
+  ctx.fillText(m.tag, tx + 6, r.y + 15);
+  ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = '#8fa4bd';
+  ctx.fillText(m.head || '', tx + tagW + 8, r.y + 15, tw - tagW - 10);
+  ctx.font = '900 14.5px Orbitron, sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText(m.name, tx, r.y + 33, tw);
+  ctx.font = bodyFont(10, 600); ctx.fillStyle = '#dde5ee';
+  wrapText(m.sentence || '', tw).slice(0, 2).forEach((l, li) => ctx.fillText(l, tx, r.y + 50 + li * 12, tw));
+  if (r.h >= 92 && m.delta) {
+    ctx.font = '800 8.5px Orbitron, sans-serif'; ctx.fillStyle = m.color;
+    ctx.fillText(m.delta, tx, r.y + r.h - 24, tw);
+  }
+  if (r.h >= 80 && m.hint) {
+    ctx.font = bodyFont(8.5, 600); ctx.fillStyle = '#7e93ad';
+    ctx.fillText(m.hint, tx, r.y + r.h - 11, tw);
+  }
+  ctx.restore();
+}
+// AFT-009R P1: the build-context row above the phone draft — four path
+// SLOTS (the coming four-path cap's visual anchor), the current build
+// identity, and the reroll resource. Reads real state only; a run
+// grandfathered past four slots shows the overflow honestly.
+function drawBuildMetaRow(L) {
+  const r0 = L.card(0);
+  const y = r0.y - 16;
+  const owned = PATH_KEYS.filter(k => pathLvl(k) > 0);
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  let x = r0.x + 2;
+  for (let s = 0; s < 4; s++) {
+    const k = owned[s];
+    ctx.beginPath(); ctx.arc(x + 7, y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = k ? PATHS[k].color : 'rgba(255,255,255,0.10)'; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = k ? '#ffffffaa' : 'rgba(255,255,255,0.25)'; ctx.stroke();
+    x += 20;
+  }
+  if (owned.length > 4) {
+    ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#ffd54f';
+    ctx.fillText('+' + (owned.length - 4), x + 2, y + 1); x += 18;
+  }
+  const idName = owned.slice().sort((a, b) => pathLvl(b) - pathLvl(a)).slice(0, 2).map(skinPathName).join(' · ');
+  ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#9fb2c8';
+  ctx.fillText(idName || 'FIRST ATTUNEMENT', x + 8, y + 1, Math.max(40, r0.x + r0.w - x - 96));
+  ctx.textAlign = 'right';
+  ctx.fillStyle = G.rerolled ? '#546e7a' : '#80d8ff';
+  ctx.fillText(G.rerolled ? 'REROLL SPENT' : 'REROLL ×1', r0.x + r0.w - 2, y + 1);
+  ctx.restore();
+}
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
@@ -9639,9 +9716,13 @@ function drawOverlays() {
       // inspected it becomes THAT pick's place in its path — owned tiers
       // filled, the pick glowing, future tiers dim — so the player sees the
       // upgrade path right here without flipping to the FULL TREE screen
+      // AFT-009R P1: on the stacked PHONE draft the legacy header/tier-chain
+      // is replaced by the build-meta row + per-card RANK line — two
+      // authorities over one band was the exact P2-class collision AFT-021
+      // outlawed
       const headerY = L.card(0).y - (L.stacked || L.short ? 16 : 22);
       const selC = draftSel != null && G.upgradeChoices[draftSel];
-      if (!selC) {
+      if (!L.stacked) if (!selC) {
         // the Mew VMAX bounty is ONE hand, TWO picks — the header carries the count
         const bounty = G.bonusPicks >= 2 ? 'RIFT BOUNTY — CHOOSE TWO'
           : G.bonusPicks === 1 ? 'RIFT BOUNTY — ONE MORE PICK' : null;
@@ -9691,8 +9772,11 @@ function drawOverlays() {
           ctx.fillText((ti === 3 ? '★ ' : '') + junkieTierName(selC.pathKey, ti), nx + nw / 2, headerY, nw - 8);
         }
       }
+      if (L.stacked) drawBuildMetaRow(L);
       for (let i = 0; i < G.upgradeChoices.length; i++) {
         const c = G.upgradeChoices[i], r = L.card(i);
+        // AFT-009R P1: phones draw EVERY offer through the one card anatomy
+        if (L.stacked) { drawAttunementCard(c, r, i, a); continue; }
         if (c.secret) {
           const scol = c.secret.color, sel = draftSel === i;
           const hov = sel || inRect(mouseX, lastMouseY, r);
@@ -9970,14 +10054,14 @@ function drawOverlays() {
       ctx.stroke();
       ctx.font = '800 12px Orbitron, sans-serif';
       ctx.fillStyle = canCF ? '#d7ffd9' : '#546e7a';
-      ctx.fillText(canCF ? (IS_TOUCH ? '✓ CONFIRM' : '✓ CONFIRM (ENTER)') : 'PICK A CARD', cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
+      ctx.fillText(canCF ? (IS_TOUCH ? '✓ INSTALL' : '✓ INSTALL (ENTER)') : 'PICK A CARD', cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
       ctx.globalAlpha = a;
       const tr = L.tree, hovTR = !secretDraft && inRect(mouseX, lastMouseY, tr);
       roundRect(tr.x, tr.y, tr.w, tr.h, 16);
       ctx.fillStyle = hovTR ? 'rgba(128,216,255,0.2)' : 'rgba(255,255,255,0.07)'; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = secretDraft ? 'rgba(255,255,255,0.15)' : hovTR ? '#80d8ff' : 'rgba(255,255,255,0.35)'; ctx.stroke();
       ctx.font = '700 11px Orbitron, sans-serif'; ctx.fillStyle = secretDraft ? '#546e7a' : hovTR ? '#e0f7ff' : '#80d8ff';
-      ctx.fillText(secretDraft ? 'SECRET ONLY' : IS_TOUCH ? 'FULL TREE' : 'FULL TREE (T)', tr.x + tr.w / 2, tr.y + tr.h / 2 + 1, tr.w - 12);
+      ctx.fillText(secretDraft ? 'SECRET ONLY' : IS_TOUCH ? 'VIEW BUILD' : 'VIEW BUILD (T)', tr.x + tr.w / 2, tr.y + tr.h / 2 + 1, tr.w - 12);
       ctx.globalAlpha = 1;
       ctx.textAlign = 'center';
       if (upgradeTreeOpen) drawFullUpgradeTree();

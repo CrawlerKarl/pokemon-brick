@@ -2347,6 +2347,39 @@ function rollUpgradeChoices() {
     c.web ? c.web.key : c.stack ? 'stack:' + c.stack.key : c.pathKey || '?'));
 }
 
+// AFT-009R P1: ONE card anatomy for every draft offer — icon, name, a KIND
+// tag from the fixed five (NEW / UPGRADE / CAPSTONE / MASTERY / EVOLVE),
+// one plain-language effect sentence, a current → new value where one
+// exists, and a short synergy hint. Render draws THIS model; it never
+// reaches into the choice payload's internals, so the level-up screen and
+// the Forge (P3) present identically shaped cards.
+function draftCardModel(c) {
+  if (c.secret) {
+    return { icon: c.secret.icon, color: c.secret.color, name: c.secret.name,
+      tag: 'EVOLVE', head: 'SECRET · RIFT EXCLUSIVE',
+      sentence: c.secret.desc, delta: null, hint: 'ONE-TIME RIFT REWARD' };
+  }
+  if (c.web) {
+    const head = c.webKind === 'apex' ? '★★ APEX · STAGE 24+'
+      : c.webKind === 'fusion' ? '★ FUSION · FINAL FORM' : 'BRIDGE · FORM II';
+    return { icon: c.web.icon, color: c.web.color, name: c.web.name,
+      tag: 'EVOLVE', head,
+      sentence: webNodeDesc(c.web), delta: c.comparison || null, hint: c.synergy || null };
+  }
+  if (c.stack) {
+    const owned = (G.stacks && G.stacks[c.stack.key]) || 0;
+    return { icon: c.stack.icon, color: c.stack.color, name: c.stack.name,
+      tag: 'MASTERY', head: 'MASTERY STACK',
+      sentence: (G.mode !== 'classic' && c.stack.sdesc) ? c.stack.sdesc : c.stack.desc,
+      delta: '×' + owned + ' → ×' + (owned + 1), hint: c.stack.hint || null };
+  }
+  const tag = c.tierIdx === 0 ? 'NEW' : c.tierIdx === 3 ? 'CAPSTONE' : 'UPGRADE';
+  const tierName = G.mode === 'junkie' ? junkieTierName(c.pathKey, c.tierIdx) : c.tier.name;
+  return { icon: c.tier.icon, color: c.path.color, name: tierName,
+    tag, head: skinPathName(c.pathKey) + ' · RANK ' + (c.tierIdx + 1) + '/4',
+    sentence: tierDesc(c.pathKey, c.tierIdx), delta: c.comparison || null, hint: c.synergy || null };
+}
+
 // A shield charge absorbs one lethal hit on the player (enemy shot or column
 // strike) — consumed at impact, with a moment of grace so a shot cluster can't
 // strip the whole bank in one frame. Returns true if the hit was eaten.
