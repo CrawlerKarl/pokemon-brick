@@ -10,8 +10,9 @@
 > (baked hot loops + the adaptive effects budget), and AFT-005B mobile
 > scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 115/115 (103 at this closeout; AFT-021 added 12 invariants).
-> `npm test` (~30–35s headless) ran green before every commit.** Production art: 259 base + 259 radiant + 54 previews +
+> **Suite: 127/127 (103 at the 07-23 closeout; AFT-021 +12, AFT-022 +7,
+> AFT-009R +5). `npm test` (~30–35s headless) ran green before every
+> commit.** Production art: 259 base + 259 radiant + 54 previews +
 > **43 boss reveals** + 21 weapon sprites. Both sites live:
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
 > - dist `CrawlerKarl/aetherfall` → the standalone AETHERFALL build
@@ -83,7 +84,10 @@
 >   finales, Ace's threat-heavy pacing (+~2× bot duration), and the
 >   1.8s trial briefing hold's feel.
 >
-> **NEXT: AFT-009 (constellation redesign)** per the backlog sequence.
+> **AFT-022 (portrait round) and AFT-009R (the progression redesign —
+> Attunement / Aether Forge / journal) BOTH SHIPPED 2026-07-24** — see
+> log rounds 2026-07-24q/r and the numbered pickup list below.
+> **NEXT: AFT-019 (first-session phone pass).**
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -102,7 +106,7 @@ Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 - `../CLAUDE.md` — workflow + the design invariants you must not regress.
 - `../README.md` — file map + system tour + gotchas.
 - `IMPLEMENTATION_LOG.md` — newest-first record of every shipped round and
-  the reasoning behind it. Newest entries run through **2026-07-24p**.
+  the reasoning behind it. Newest entries run through **2026-07-24r**.
 - `FULL_GAME_ROADMAP.md` — milestone history (useful design context; the
   backlog wins on open items).
 - `archive/` — historical plan docs for shipped features (see its README).
@@ -322,11 +326,17 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
    OWNER-JUDGMENT items outstanding: blaster feel at mid-realm finales,
    Ace pacing, the 1.8s briefing hold, the fast-rite seeds (L21), and the
    two owner-flagged matrix deviations (L12-blaster-S3, rite floors).
-2. **AFT-009R (mobile-first progression redesign)** is IN FLIGHT — the
-   owner's directive (2026-07-24): Attunement levels (three-card combat
-   drafts), the realm Aether Forge, the constellation demoted to a build
-   journal, Focus Charges/Reforge, checkpoint migration. Supersedes the
-   old AFT-009 scope.
+2. **AFT-009R (mobile-first progression redesign) is DONE** (log round
+   2026-07-24r): Attunement levels (Resonance-driven three-card combat
+   drafts with a combat-safe queue and a curated opening), the realm
+   AETHER FORGE (Refine/Link/Evolve/Reforge — ordinary stage drafts are
+   GONE), the constellation as a non-installing journal with a phone
+   list view, Focus Charges, checkpoint schema v5 with lossless
+   migration, and knockout that never uninstalls. Suite 127/127; matrix
+   GREEN at `matrix-aft009r.json`. OWNER-JUDGMENT: the attunement pacing
+   feel on a real phone (22 bot-levels/journey vs the ~18 target), the
+   L3-blaster floor re-fit, and the Forge's one-decision-per-realm feel.
+3. **AFT-019 (first-session phone pass)** is the next backlog item.
 3. **Cheap follow-ups spotted during the closeout** (noted, not started):
    - the ground vessel clears ~27% faster than the median vessel (matrix
      evidence in docs/baselines/AFT008_CLOSEOUT_REPORT.md) — candidate for

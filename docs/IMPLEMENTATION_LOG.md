@@ -5,6 +5,63 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-24r — AFT-009R: the mobile-first progression redesign
+
+The upgrade system is now TWO connected loops (owner directive; supersedes
+the old AFT-009 scope), shipped in six phases with the gate green after
+each:
+
+- **ATTUNEMENT LEVELS (P1/P2).** A RESONANCE meter fills through
+  normalized encounter contribution (non-renewable kills, boss-damage
+  deciles, phase turns, finale beats, objective wins — `br.reinf`/crosser
+  kills pay nothing, so farming is worthless). A completed level queues
+  and opens a THREE-CARD draft at the first combat-safe beat (never over
+  a held charge, an open channel, lane strikes, a rush, the engage hold,
+  the resolve beat, or a dropping Breaker ball); the wave freezes and
+  resumes in place. Every offer draws ONE card anatomy
+  (`draftCardModel`): NEW / UPGRADE / CAPSTONE / MASTERY / EVOLVE tag,
+  name, one effect sentence, value → value, synergy hint. The opening is
+  curated (weapon trio → support trio → deepen-or-branch); later hands
+  ride the strengthen/adapt/synergize roller under the FOUR-PATH CAP
+  (grandfathered saves keep every owned path). Measured pacing: 22
+  levels across a full continuous journey (target ≈18), modes within ±1
+  level at the same finale.
+- **THE AETHER FORGE (P3).** Ordinary Arrival/Challenge clears deal no
+  draft — results roll straight into the next wave. A realm finale opens
+  the Forge: REFINE (rank/mastery; its hand keeps AFT-020's mastery-sized
+  4/5-card reward), LINK (Form II bridge), EVOLVE (Fusion/Apex), REFORGE
+  (P5) — unavailable actions OMITTED; Link/Evolve open a ≤3-recipe
+  focused step with BACK; engine eligibility is the complexity schedule;
+  one decision per realm. The Rift bounty draft is untouched.
+- **THE JOURNAL (P4).** The constellation no longer installs: its action
+  slot returns to the cards, and a LIST view (big rows, drag scroll, no
+  pinch, ALL/OWNED/NEXT filters, build identity + NEXT-REACHABLE header)
+  reads the whole atlas — undiscovered fusions as ??? silhouettes whose
+  hint is the reveal condition (2 ranks in both parents records the
+  recipe forever).
+- **ECONOMY + SAVES (P5).** FOCUS CHARGES replace the per-draft reroll
+  (2 start, +1/realm, cap 3, full-hand reroll, anti-repeat, mastered pin
+  kept). REFORGE refunds a rank whose removal keeps every transformation
+  legal (webRegressibleLeaves is the oracle) and banks an attunement
+  choice. Checkpoints are schema v5 (attune arc + focus + reforge;
+  v1–v4 accepted forever, the arc derived from the build so nothing owned
+  is ever lost); deep trials/dev grants sync via `syncAttuneToBuild`.
+  KNOCKOUT NO LONGER UNINSTALLS: a defeat costs unspent resonance,
+  banked levels and one Focus, then retries.
+- **VERIFY + REBALANCE (P6).** Suite 122 → 127 (anatomy, resonance,
+  forge, journal, focus/reforge/v5 fixtures); 50 gate scenes (attune-live
+  + forge-menu added); the bot handles the Forge and DEEPENS on 'commit';
+  the aegis-specialist shield cap reads the END build (attunement
+  installs mid-run). Full matrix GREEN — 142 scenarios, determinism
+  PASS (`matrix-aft009r.json` committed). Two measured re-fits: blaster
+  L21 work 0.85 → 1.08 (mid-fight strengthening is real), and the
+  L3-blaster floor 55 → 48 documented in-evaluator (its pace is
+  sentinel-dominated; the ~6hp region-1 legend gives the work vectors no
+  purchase). Live playtests at 390×844 AND 320×568 (an attune-header/
+  card-stack collision found and fixed at 320): curated opening, forge
+  refine/link/evolve/back, apex EVOLVE offer on a late build, focus
+  spend, v5 resume round-trip, deep-trial sync.
+
 ## 2026-07-24q — AFT-022: the portrait-mobile playtest round
 
 Six findings from the owner's portrait playtest (390×844), all fixed as

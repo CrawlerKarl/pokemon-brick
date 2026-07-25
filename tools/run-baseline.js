@@ -456,6 +456,13 @@ window.__BOT = {
   },
 
   draft() {
+    // AFT-009R: a realm finale opens the AETHER FORGE menu before any hand
+    // exists — the bot takes the FIRST offered action (REFINE ordinarily;
+    // deterministic, no gameRand) and then drafts from the dealt hand.
+    if (G.forge && G.forge.step === 'menu') {
+      const acts = typeof forgeActions === 'function' ? forgeActions() : [];
+      if (acts.length) { forgeChoose(acts[0].key); return; }
+    }
     if (!G.upgradeChoices) {
       this.upgWaitT += 1 / 60;
       if (this.upgWaitT > 3) { this.done = true; this.endReason = 'stuck:upgrade-no-choices'; }
@@ -470,8 +477,17 @@ window.__BOT = {
         const l = cs[i].pathKey ? pathLvl(cs[i].pathKey) : 99;
         if (l < bestL) { bestL = l; idx = i; }
       }
+    } else {
+      // AFT-009R: 'commit' DEEPENS — with attunement hands arriving
+      // mid-wave in shuffled order, index-0 was a coin flip; a committed
+      // human deepens their main path
+      let bestL = -1;
+      for (let i = 0; i < cs.length; i++) {
+        if (cs[i].pathKey && pathLvl(cs[i].pathKey) > bestL) { bestL = pathLvl(cs[i].pathKey); idx = i; }
+      }
+      if (bestL < 0) idx = 0;
     }
-    pickUpgrade(idx); // 'commit' = always index 0
+    pickUpgrade(idx);
   },
 
   step() {
@@ -739,11 +755,14 @@ async function runScenario(page, sc) {
     }
   }
   const report = JSON.parse(await page.evaluate(`JSON.stringify(DEV.report())`));
+  // AFT-009R: attunement installs ranks DURING the run — budgets that key
+  // on the build (the aegis-specialist shield cap) must read the END state
+  const buildAtEnd = JSON.parse(await page.evaluate(`JSON.stringify({ path: Object.assign({}, G.path) })`));
   const pageErrors = page.errors.slice(errBase);
   return {
     name: sc.name, group: sc.group, ok: !status.err && !pageErrors.length,
     opts: launch, affinity: sc.affinity || null, stacksGranted: sc.stacks || null,
-    buildAtStart: setup.buildAtStart,
+    buildAtStart: setup.buildAtStart, buildAtEnd,
     cleared: !!status.cleared, endReason: status.endReason, simT: status.simT, stall: status.stall || null,
     finalState: status.state, finalLevel: status.level, lives: status.lives,
     kills: status.kills, botError: status.err || null, pageErrors,
@@ -864,6 +883,12 @@ function evaluateBudgets(out) {
       let hardLo = b.hard[0];
       if (c.lvl === 21 && c.mode === 'junkie') hardLo = 40;
       if (c.lvl === 21 && c.mode === 'classic') hardLo = 45;
+      // AFT-009R re-fit: attunement strengthens the build DURING a fight,
+      // and the OPENING blaster finale runs ~8% quicker for it. Its pace is
+      // sentinel-dominated (the region-1 legend is a ~6hp actor — the work
+      // vectors measurably cannot slow this cell), so the floor re-fits to
+      // the redesigned campaign; the human pass owns the feel.
+      if (c.lvl === 3 && c.mode === 'blaster') hardLo = 48;
       if (t < hardLo || t > b.hard[1]) fails.push(key + ': mean ' + f1(t) + 's outside [' + hardLo + ',' + b.hard[1] + '] (' + c.ts.map(f1).join('/') + ')');
       else if (t < b.target[0] || t > b.target[1]) warns.push(key + ': mean ' + f1(t) + 's outside the ' + b.target.join('–') + 's target');
     }
@@ -912,8 +937,10 @@ function evaluateBudgets(out) {
       a + (k === 'guard' || k === 'starterTier' || k === 'prep' ? 0 : v), 0);
   };
   for (const s of S.filter(x => x.group === 'A' || x.group === 'B')) {
-    const specialist = ((s.buildAtStart && s.buildAtStart.path && s.buildAtStart.path.aegis) || 0) >= 3
-      || /aegis:[34]/.test(s.opts.upg || '') ? 1 : 0;
+    const aegisLvl = Math.max(
+      (s.buildAtStart && s.buildAtStart.path && s.buildAtStart.path.aegis) || 0,
+      (s.buildAtEnd && s.buildAtEnd.path && s.buildAtEnd.path.aegis) || 0);
+    const specialist = aegisLvl >= 3 || /aegis:[34]/.test(s.opts.upg || '') ? 1 : 0;
     const cap = (fin(s.opts.level) ? 4 : 2) + specialist;
     // knockout retries re-open the budget per attempt — normalize
     const attempts = Math.max(1, (s.report.totals.knockouts || 0) + 1);

@@ -43,7 +43,7 @@ function journeyDmgMul() { return 1 + 0.06 * megaRegions(); }
 const FINALE_WORK = [1.15, 1.8, 2.3, 2.5, 4.2, 3.9, 16, 25, 9.3];
 const FINALE_WORK_MODE = {
   classic: [0.28, 0.30, 0.55, 0.68, 0.85, 1.50, 0.85, 1.40, 0.90],
-  blaster: [0.22, 1.00, 0.24, 0.85, 0.62, 2.75, 0.85, 0.45, 0.90],
+  blaster: [0.22, 1.0, 0.24, 0.85, 0.62, 2.75, 1.08, 0.45, 0.9],
 };
 function sovereignHp(rIdx, cycle) {
   const p = preset();

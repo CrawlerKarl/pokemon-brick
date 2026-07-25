@@ -66,6 +66,9 @@ function devGrantBuild(spec) {
     else unknown.push(key);
   }
   if (unknown.length) console.warn('[DEV] unknown upgrade keys ignored:', unknown.join(', '));
+  // AFT-009R P5: the granted build reads as completed attunement levels —
+  // a deep trial's pacing bands continue from its real weight
+  if (typeof syncAttuneToBuild === 'function') syncAttuneToBuild();
 }
 
 // The one launch entry — console: DEV.launch({level: 6, round: 2, seed: 'A'})

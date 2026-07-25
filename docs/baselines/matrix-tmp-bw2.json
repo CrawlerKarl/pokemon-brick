@@ -1,0 +1,2197 @@
+{
+ "generated": "2026-07-25T01:42:44.344Z",
+ "gitHead": "440b41960a29193f24bb8ab2e7fa26a1cb3df304",
+ "quick": false,
+ "label": "tmp-bw2",
+ "harness": {
+  "viewport": "1280x900@1",
+  "skin": "aetherfall",
+  "chunkFrames": 2400,
+  "normalizations": [
+   "G.time=0 after each DEV.launch (resetRun leaves the page clock running; boss volley geometry reads it)",
+   "G.freeze parked at 999 between evaluate chunks; zeroed per bot frame (hit-stop excluded from sim time)",
+   "determinism pair DEX/DEXS snapshot-restored",
+   "affinity satellite stacks granted via direct G.stacks writes (DEV.grant lookup covers only WEB_SATELLITES)"
+  ]
+ },
+ "determinism": {
+  "pass": false,
+  "a": null,
+  "b": null,
+  "note": "totals diverged — investigate bot state derivation or a game-side leak"
+ },
+ "scenarios": [
+  {
+   "name": "B-finale-L3-blaster",
+   "group": "B",
+   "ok": true,
+   "opts": {
+    "level": 3,
+    "mode": "blaster",
+    "diff": "normal",
+    "seed": "BASE-F-3-blaster",
+    "starter": "fire"
+   },
+   "affinity": null,
+   "stacksGranted": null,
+   "buildAtStart": {
+    "path": {
+     "prism": 1,
+     "surge": 1
+    },
+    "web": [
+     "attune",
+     "momentum"
+    ],
+    "stacks": {}
+   },
+   "buildAtEnd": {
+    "path": {
+     "prism": 4,
+     "surge": 3
+    }
+   },
+   "cleared": true,
+   "endReason": "cleared",
+   "simT": 67.42,
+   "stall": null,
+   "finalState": "results",
+   "finalLevel": 4,
+   "lives": 4,
+   "kills": 30,
+   "botError": null,
+   "pageErrors": [],
+   "wallMs": 660,
+   "report": {
+    "generated": "2026-07-25T01:42:41.363Z",
+    "build": "wavebreaker-dev-report-v2",
+    "run": {
+     "mode": "blaster",
+     "preset": "normal",
+     "starter": "fire",
+     "seed": "BASE-F-3-blaster",
+     "trial": true,
+     "daily": false,
+     "cheated": false,
+     "startLevel": 3,
+     "level": 4,
+     "state": "results",
+     "score": 7179,
+     "lives": "4/4",
+     "playT": 63.6,
+     "ended": null,
+     "lastDamage": "PSI HEAVY ATTACK"
+    },
+    "totals": {
+     "kills": 30,
+     "damageTaken": 2,
+     "hitsByFamily": {
+      "star/heavy": 1,
+      "boss:prism/heavy": 1
+     },
+     "shotsNormal": 120,
+     "shotsCharged": 7,
+     "chargeHits": 10,
+     "chargeWasted": 1,
+     "dmgNormal": 42.1,
+     "dmgCharge": 17.9,
+     "dmgBall": 0,
+     "dmgSplash": 0,
+     "dmgOther": 0,
+     "overheats": 0,
+     "coolingTime": 0,
+     "absorbs": 5,
+     "deflects": 4,
+     "knockouts": 0,
+     "megas": 0,
+     "rerolls": 0,
+     "dmgRelic": 0,
+     "dmgSurgeWindow": 0,
+     "playTime": 63.6,
+     "progressTime": 62.7,
+     "activeThreatTime": 62.7,
+     "workHp": 44,
+     "bossEquivalents": 4.89,
+     "dmgByCategory": {
+      "vessel": 5.106,
+      "matchup": 11.379,
+      "guard": -5.844
+     },
+     "surgeBySource": {
+      "kills": 0.616,
+      "momentum": 0.216,
+      "bossHits": 0.028
+     },
+     "shieldsBySource": {
+      "drop": 3
+     },
+     "livesBySource": {
+      "potion": 2
+     },
+     "dropsByKey": {
+      "shield": 4,
+      "heal": 2
+     },
+     "killsRenewable": 0,
+     "channelsOpen": 0,
+     "channelsBroken": 0
+    },
+    "session": {
+     "restarts": 0,
+     "quits": 0
+    },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
+    "upgrades": [
+     {
+      "afterLevel": 3,
+      "pick": "prism:2"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "prism:3"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "prism:4"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "surge:2"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "surge:3"
+     }
+    ],
+    "offers": [
+     {
+      "lv": 3,
+      "keys": [
+       "prism",
+       "surge",
+       "aegis"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "surge",
+       "prism",
+       "arsenal"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "aegis",
+       "arsenal",
+       "prism"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "bond",
+       "surge",
+       "arsenal"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "surge",
+       "impact",
+       "aegis"
+      ]
+     }
+    ],
+    "levels": [
+     {
+      "lv": 3,
+      "region": 1,
+      "stage": 3,
+      "t": 63.633333333331,
+      "cleared": true,
+      "kills": 30,
+      "knockout": false,
+      "dmgInBy": {
+       "star/heavy": 1,
+       "boss:prism/heavy": 1
+      },
+      "hits": [
+       {
+        "t": 31.4,
+        "cause": "FEY HEAVY ATTACK",
+        "kind": "star",
+        "cls": "heavy",
+        "type": "fairy",
+        "species": 106,
+        "boss": false
+       },
+       {
+        "t": 40.3,
+        "cause": "PSI HEAVY ATTACK",
+        "kind": "prism",
+        "cls": "heavy",
+        "type": "psychic",
+        "species": 180,
+        "boss": true
+       }
+      ],
+      "absorbs": 5,
+      "deflects": 4,
+      "shotsN": 120,
+      "shotsC": 7,
+      "chargeHits": 10,
+      "chargeWasted": 1,
+      "dmgN": 42.096875,
+      "dmgC": 17.903125,
+      "dmgBall": 0,
+      "dmgSplash": 0,
+      "dmgOther": 0,
+      "overheats": 0,
+      "coolT": 0,
+      "megas": 0,
+      "rerolls": 0,
+      "upgrades": [
+       "prism:2",
+       "prism:3",
+       "prism:4",
+       "surge:2",
+       "surge:3"
+      ],
+      "bossPhases": {
+       "Velmora P1": 3.1,
+       "Velmora P3": 5.6,
+       "Lumine, the First Dream P1": 1.9,
+       "Lumine, the First Dream P2": 3.9
+      },
+      "tProg": 62.73333333333105,
+      "tActive": 62.73333333333105,
+      "workHp": 44,
+      "beUnit": 9,
+      "dmgSurge": 0,
+      "dmgCat": {
+       "vessel": 5.106249999999996,
+       "matchup": 11.379375000000003,
+       "guard": -5.84390625
+      },
+      "surgeBy": {
+       "kills": 0.6160000000000001,
+       "momentum": 0.21600000000000016,
+       "bossHits": 0.028
+      },
+      "shieldBy": {
+       "drop": 3
+      },
+      "lifeBy": {
+       "potion": 2
+      },
+      "dropsBy": {
+       "shield": 4,
+       "heal": 2
+      },
+      "resonants": 7,
+      "attuneAt": [
+       1.8,
+       11.7,
+       21.8,
+       32.7,
+       41.1
+      ],
+      "intercepts": 12,
+      "finaleFormat": "ladder",
+      "finaleBeatT": {
+       "opening": 30.8,
+       "core": 10.2,
+       "coda": 22.6
+      },
+      "finaleCounters": {},
+      "finaleMastery": "clear"
+     }
+    ]
+   }
+  },
+  {
+   "name": "B-finale-L3-blaster-S2",
+   "group": "B",
+   "ok": true,
+   "opts": {
+    "level": 3,
+    "mode": "blaster",
+    "diff": "normal",
+    "seed": "BASE-F-3-blaster-S2",
+    "starter": "fire"
+   },
+   "affinity": null,
+   "stacksGranted": null,
+   "buildAtStart": {
+    "path": {
+     "arsenal": 1,
+     "aegis": 1
+    },
+    "web": [
+     "coolant",
+     "guard"
+    ],
+    "stacks": {}
+   },
+   "buildAtEnd": {
+    "path": {
+     "arsenal": 4,
+     "aegis": 4
+    }
+   },
+   "cleared": true,
+   "endReason": "cleared",
+   "simT": 46.4,
+   "stall": null,
+   "finalState": "results",
+   "finalLevel": 4,
+   "lives": 5,
+   "kills": 35,
+   "botError": null,
+   "pageErrors": [],
+   "wallMs": 403,
+   "report": {
+    "generated": "2026-07-25T01:42:41.766Z",
+    "build": "wavebreaker-dev-report-v2",
+    "run": {
+     "mode": "blaster",
+     "preset": "normal",
+     "starter": "fire",
+     "seed": "BASE-F-3-blaster-S2",
+     "trial": true,
+     "daily": false,
+     "cheated": false,
+     "startLevel": 3,
+     "level": 4,
+     "state": "results",
+     "score": 12269,
+     "lives": "5/5",
+     "playT": 40.6,
+     "ended": null,
+     "lastDamage": "MISSED BALL"
+    },
+    "totals": {
+     "kills": 35,
+     "damageTaken": 0,
+     "hitsByFamily": {},
+     "shotsNormal": 124,
+     "shotsCharged": 3,
+     "chargeHits": 4,
+     "chargeWasted": 1,
+     "dmgNormal": 62.4,
+     "dmgCharge": 7.6,
+     "dmgBall": 0,
+     "dmgSplash": 0,
+     "dmgOther": 0,
+     "overheats": 0,
+     "coolingTime": 0,
+     "absorbs": 2,
+     "deflects": 1,
+     "knockouts": 0,
+     "megas": 0,
+     "rerolls": 0,
+     "dmgRelic": 0,
+     "dmgSurgeWindow": 0,
+     "playTime": 40.6,
+     "progressTime": 39.7,
+     "activeThreatTime": 40.6,
+     "workHp": 44,
+     "bossEquivalents": 4.89,
+     "dmgByCategory": {
+      "vessel": 5.21,
+      "matchup": 9.306,
+      "guard": -3.439
+     },
+     "surgeBySource": {
+      "kills": 0.504,
+      "bossHits": 0.1
+     },
+     "shieldsBySource": {
+      "drop": 4
+     },
+     "livesBySource": {
+      "aegisX": 1
+     },
+     "dropsByKey": {
+      "shield": 6
+     },
+     "killsRenewable": 0,
+     "channelsOpen": 0,
+     "channelsBroken": 0
+    },
+    "session": {
+     "restarts": 0,
+     "quits": 0
+    },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 13.1
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
+    "upgrades": [
+     {
+      "afterLevel": 3,
+      "pick": "arsenal:2"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "arsenal:3"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "arsenal:4"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "aegis:2"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "aegis:3"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "aegis:4"
+     }
+    ],
+    "offers": [
+     {
+      "lv": 3,
+      "keys": [
+       "arsenal",
+       "aegis",
+       "prism"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "arsenal",
+       "aegis",
+       "impact"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "arsenal",
+       "aegis",
+       "prism"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "prism",
+       "aegis",
+       "impact"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "aegis",
+       "impact",
+       "bond"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "prism",
+       "impact",
+       "aegis"
+      ]
+     }
+    ],
+    "levels": [
+     {
+      "lv": 3,
+      "region": 1,
+      "stage": 3,
+      "t": 40.59999999999898,
+      "cleared": true,
+      "kills": 35,
+      "knockout": false,
+      "dmgInBy": {},
+      "hits": [],
+      "absorbs": 2,
+      "deflects": 1,
+      "shotsN": 124,
+      "shotsC": 3,
+      "chargeHits": 4,
+      "chargeWasted": 1,
+      "dmgN": 62.42187500000002,
+      "dmgC": 7.578125,
+      "dmgBall": 0,
+      "dmgSplash": 0,
+      "dmgOther": 0,
+      "overheats": 0,
+      "coolT": 0,
+      "megas": 0,
+      "rerolls": 0,
+      "upgrades": [
+       "arsenal:2",
+       "arsenal:3",
+       "arsenal:4",
+       "aegis:2",
+       "aegis:3",
+       "aegis:4"
+      ],
+      "bossPhases": {
+       "Velmora P1": 1.5,
+       "Velmora P2": 1.3,
+       "Velmora P3": 4.5,
+       "Lumine, the First Dream P1": 0,
+       "Lumine, the First Dream P2": 3.2,
+       "Lumine, the First Dream P3": 4.9
+      },
+      "tProg": 39.716666666665695,
+      "tActive": 40.59999999999898,
+      "workHp": 44,
+      "beUnit": 9,
+      "dmgSurge": 0,
+      "dmgCat": {
+       "vessel": 5.210000000000024,
+       "matchup": 9.305625000000012,
+       "guard": -3.4387499999999998
+      },
+      "surgeBy": {
+       "kills": 0.5040000000000001,
+       "bossHits": 0.10000000000000006
+      },
+      "shieldBy": {
+       "drop": 4
+      },
+      "lifeBy": {
+       "aegisX": 1
+      },
+      "dropsBy": {
+       "shield": 6
+      },
+      "resonants": 3,
+      "attuneAt": [
+       1.8,
+       9.2,
+       15.1,
+       21.7,
+       27.5,
+       39.7
+      ],
+      "intercepts": 29,
+      "finaleFormat": "ladder",
+      "finaleBeatT": {
+       "opening": 21.3,
+       "core": 6.3,
+       "coda": 13.1
+      },
+      "finaleCounters": {},
+      "finaleMastery": "clear"
+     }
+    ]
+   }
+  },
+  {
+   "name": "B-finale-L3-blaster-S3",
+   "group": "B",
+   "ok": true,
+   "opts": {
+    "level": 3,
+    "mode": "blaster",
+    "diff": "normal",
+    "seed": "BASE-F-3-blaster-S3",
+    "starter": "fire"
+   },
+   "affinity": null,
+   "stacksGranted": null,
+   "buildAtStart": {
+    "path": {
+     "prism": 1,
+     "arsenal": 1
+    },
+    "web": [
+     "attune",
+     "coolant"
+    ],
+    "stacks": {}
+   },
+   "buildAtEnd": {
+    "path": {
+     "prism": 4,
+     "arsenal": 4
+    }
+   },
+   "cleared": true,
+   "endReason": "cleared",
+   "simT": 54.52,
+   "stall": null,
+   "finalState": "results",
+   "finalLevel": 4,
+   "lives": 4,
+   "kills": 35,
+   "botError": null,
+   "pageErrors": [],
+   "wallMs": 371,
+   "report": {
+    "generated": "2026-07-25T01:42:42.140Z",
+    "build": "wavebreaker-dev-report-v2",
+    "run": {
+     "mode": "blaster",
+     "preset": "normal",
+     "starter": "fire",
+     "seed": "BASE-F-3-blaster-S3",
+     "trial": true,
+     "daily": false,
+     "cheated": false,
+     "startLevel": 3,
+     "level": 4,
+     "state": "results",
+     "score": 13039,
+     "lives": "4/4",
+     "playT": 50.7,
+     "ended": null,
+     "lastDamage": "MISSED BALL"
+    },
+    "totals": {
+     "kills": 35,
+     "damageTaken": 0,
+     "hitsByFamily": {},
+     "shotsNormal": 157,
+     "shotsCharged": 3,
+     "chargeHits": 7,
+     "chargeWasted": 0,
+     "dmgNormal": 59.4,
+     "dmgCharge": 10.6,
+     "dmgBall": 0,
+     "dmgSplash": 0,
+     "dmgOther": 0,
+     "overheats": 0,
+     "coolingTime": 0,
+     "absorbs": 3,
+     "deflects": 2,
+     "knockouts": 0,
+     "megas": 0,
+     "rerolls": 0,
+     "dmgRelic": 0,
+     "dmgSurgeWindow": 0,
+     "playTime": 50.7,
+     "progressTime": 49.8,
+     "activeThreatTime": 49.8,
+     "workHp": 44,
+     "bossEquivalents": 4.89,
+     "dmgByCategory": {
+      "vessel": 5.768,
+      "matchup": -4.058,
+      "guard": -3.67
+     },
+     "surgeBySource": {
+      "kills": 0.504,
+      "bossHits": 0.152
+     },
+     "shieldsBySource": {
+      "drop": 1
+     },
+     "livesBySource": {},
+     "dropsByKey": {
+      "shield": 3
+     },
+     "killsRenewable": 0,
+     "channelsOpen": 0,
+     "channelsBroken": 0
+    },
+    "session": {
+     "restarts": 0,
+     "quits": 0
+    },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 21.9
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 21.9
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": false,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 21.9
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
+    "upgrades": [
+     {
+      "afterLevel": 3,
+      "pick": "arsenal:2"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "arsenal:3"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "arsenal:4"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "prism:2"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "prism:3"
+     },
+     {
+      "afterLevel": 3,
+      "pick": "prism:4"
+     }
+    ],
+    "offers": [
+     {
+      "lv": 3,
+      "keys": [
+       "arsenal",
+       "prism",
+       "aegis"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "aegis",
+       "prism",
+       "arsenal"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "prism",
+       "arsenal",
+       "bond"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "impact",
+       "surge",
+       "prism"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "impact",
+       "prism",
+       "aegis"
+      ]
+     },
+     {
+      "lv": 3,
+      "keys": [
+       "bond",
+       "prism",
+       "impact"
+      ]
+     }
+    ],
+    "levels": [
+     {
+      "lv": 3,
+      "region": 1,
+      "stage": 3,
+      "t": 50.71666666666507,
+      "cleared": true,
+      "kills": 35,
+      "knockout": false,
+      "dmgInBy": {},
+      "hits": [],
+      "absorbs": 3,
+      "deflects": 2,
+      "shotsN": 157,
+      "shotsC": 3,
+      "chargeHits": 7,
+      "chargeWasted": 0,
+      "dmgN": 59.35546875000004,
+      "dmgC": 10.64453125,
+      "dmgBall": 0,
+      "dmgSplash": 0,
+      "dmgOther": 0,
+      "overheats": 0,
+      "coolT": 0,
+      "megas": 0,
+      "rerolls": 0,
+      "upgrades": [
+       "arsenal:2",
+       "arsenal:3",
+       "arsenal:4",
+       "prism:2",
+       "prism:3",
+       "prism:4"
+      ],
+      "bossPhases": {
+       "Velmora P1": 0.5,
+       "Velmora P2": 1.3,
+       "Velmora P3": 1.6,
+       "Lumine, the First Dream P1": 3.5,
+       "Lumine, the First Dream P2": 6.4,
+       "Lumine, the First Dream P3": 11
+      },
+      "tProg": 49.83333333333179,
+      "tActive": 49.83333333333179,
+      "workHp": 44,
+      "beUnit": 9,
+      "dmgSurge": 0,
+      "dmgCat": {
+       "vessel": 5.768125000000024,
+       "matchup": -4.057593750000001,
+       "guard": -3.66975
+      },
+      "surgeBy": {
+       "kills": 0.5040000000000001,
+       "bossHits": 0.1520000000000001
+      },
+      "shieldBy": {
+       "drop": 1
+      },
+      "lifeBy": {},
+      "dropsBy": {
+       "shield": 3
+      },
+      "resonants": 3,
+      "attuneAt": [
+       1.8,
+       5.9,
+       14.1,
+       18.6,
+       22.6,
+       49.8
+      ],
+      "intercepts": 55,
+      "finaleFormat": "ladder",
+      "finaleBeatT": {
+       "opening": 17.3,
+       "core": 4.2,
+       "coda": 29.2
+      },
+      "finaleCounters": {},
+      "finaleMastery": "clear"
+     }
+    ]
+   }
+  },
+  {
+   "name": "B-finale-L21-blaster",
+   "group": "B",
+   "ok": true,
+   "opts": {
+    "level": 21,
+    "mode": "blaster",
+    "diff": "normal",
+    "seed": "BASE-F-21-blaster",
+    "starter": "fire",
+    "upg": "arsenal:4,aegis:3,surge:2"
+   },
+   "affinity": null,
+   "stacksGranted": null,
+   "buildAtStart": {
+    "path": {
+     "surge": 4,
+     "prism": 4,
+     "impact": 4,
+     "bond": 2,
+     "arsenal": 4,
+     "aegis": 4
+    },
+    "web": [
+     "momentum",
+     "attune",
+     "heavy",
+     "magnetize",
+     "aurora",
+     "rally",
+     "demo",
+     "coolant",
+     "pulse",
+     "singularity",
+     "impactX",
+     "guard",
+     "amplify",
+     "calibrated",
+     "reactive",
+     "salvage",
+     "bond",
+     "rescue",
+     "transfuse",
+     "prismX",
+     "intercept",
+     "twin",
+     "hyper",
+     "bulwark",
+     "wide",
+     "aegisX",
+     "blaze",
+     "megaX"
+    ],
+    "stacks": {}
+   },
+   "buildAtEnd": {
+    "path": {
+     "surge": 4,
+     "prism": 4,
+     "impact": 4,
+     "bond": 3,
+     "arsenal": 4,
+     "aegis": 4
+    }
+   },
+   "cleared": true,
+   "endReason": "cleared",
+   "simT": 56.22,
+   "stall": null,
+   "finalState": "results",
+   "finalLevel": 22,
+   "lives": 5,
+   "kills": 38,
+   "botError": null,
+   "pageErrors": [],
+   "wallMs": 764,
+   "report": {
+    "generated": "2026-07-25T01:42:42.905Z",
+    "build": "wavebreaker-dev-report-v2",
+    "run": {
+     "mode": "blaster",
+     "preset": "normal",
+     "starter": "fire",
+     "seed": "BASE-F-21-blaster",
+     "trial": true,
+     "daily": false,
+     "cheated": false,
+     "startLevel": 21,
+     "level": 22,
+     "state": "results",
+     "score": 26180,
+     "lives": "5/5",
+     "playT": 53.5,
+     "ended": null,
+     "lastDamage": "MISSED BALL"
+    },
+    "totals": {
+     "kills": 38,
+     "damageTaken": 0,
+     "hitsByFamily": {},
+     "shotsNormal": 196,
+     "shotsCharged": 9,
+     "chargeHits": 10,
+     "chargeWasted": 2,
+     "dmgNormal": 931.3,
+     "dmgCharge": 145.2,
+     "dmgBall": 0,
+     "dmgSplash": 133.2,
+     "dmgOther": 156.7,
+     "overheats": 0,
+     "coolingTime": 0,
+     "absorbs": 1,
+     "deflects": 1,
+     "knockouts": 0,
+     "megas": 3,
+     "rerolls": 0,
+     "dmgRelic": 182.2,
+     "dmgSurgeWindow": 1005,
+     "playTime": 53.5,
+     "progressTime": 51.5,
+     "activeThreatTime": 52.6,
+     "workHp": 1554,
+     "bossEquivalents": 1.19,
+     "dmgByCategory": {
+      "vessel": 210.217,
+      "guard": -131.863,
+      "matchup": 277.047
+     },
+     "surgeBySource": {
+      "kills": 0.62,
+      "momentum": 0.644,
+      "aurora": 0.69,
+      "wasted": 0.048,
+      "bossHits": 1.264,
+      "reactive": 0.15
+     },
+     "shieldsBySource": {
+      "reactive": 1,
+      "regen": 1,
+      "rescue": 1
+     },
+     "livesBySource": {
+      "aegisX": 1
+     },
+     "dropsByKey": {
+      "slow": 1,
+      "shield": 1
+     },
+     "killsRenewable": 0,
+     "channelsOpen": 0,
+     "channelsBroken": 0
+    },
+    "session": {
+     "restarts": 0,
+     "quits": 0
+    },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 30.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 30.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 30.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 30.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 30.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 30.3
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 28.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 28.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 28.8
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
+    "upgrades": [
+     {
+      "afterLevel": 21,
+      "pick": "bond:3"
+     }
+    ],
+    "offers": [
+     {
+      "lv": 21,
+      "keys": [
+       "bond",
+       "mirror",
+       "stack:ice"
+      ]
+     }
+    ],
+    "levels": [
+     {
+      "lv": 21,
+      "region": 7,
+      "stage": 3,
+      "t": 53.51666666666491,
+      "cleared": true,
+      "kills": 38,
+      "knockout": false,
+      "dmgInBy": {},
+      "hits": [],
+      "absorbs": 1,
+      "deflects": 1,
+      "shotsN": 196,
+      "shotsC": 9,
+      "chargeHits": 10,
+      "chargeWasted": 2,
+      "dmgN": 931.2905198450013,
+      "dmgC": 145.22284687499996,
+      "dmgBall": 0,
+      "dmgSplash": 133.204248,
+      "dmgOther": 156.73160800000008,
+      "overheats": 0,
+      "coolT": 0,
+      "megas": 3,
+      "rerolls": 0,
+      "upgrades": [
+       "bond:3"
+      ],
+      "bossPhases": {
+       "The Pale Eclipse P1": 13.6,
+       "The Pale Eclipse P2": 10.1,
+       "The Pale Eclipse P3": 15.5
+      },
+      "tProg": 51.49999999999836,
+      "tActive": 52.599999999998296,
+      "workHp": 1554,
+      "beUnit": 1308,
+      "dmgSurge": 1004.9523984779996,
+      "dmgCat": {
+       "vessel": 210.21733294500024,
+       "guard": -131.86267839,
+       "matchup": 277.0470865919998
+      },
+      "surgeBy": {
+       "kills": 0.6200000000000002,
+       "momentum": 0.6440000000000005,
+       "aurora": 0.6900000000000005,
+       "wasted": 0.04800000000000204,
+       "bossHits": 1.264000000000001,
+       "reactive": 0.15
+      },
+      "shieldBy": {
+       "reactive": 1,
+       "regen": 1,
+       "rescue": 1
+      },
+      "lifeBy": {
+       "aegisX": 1
+      },
+      "dropsBy": {
+       "slow": 1,
+       "shield": 1
+      },
+      "resonants": 9,
+      "dmgRelic": 182.19264,
+      "intercepts": 44,
+      "attuneAt": [
+       11.8
+      ],
+      "finaleFormat": "rite",
+      "finaleBeatT": {
+       "rites": 14.5,
+       "eclipse": 38.2,
+       "reclaim": 0.9
+      },
+      "finaleCounters": {
+       "marks": 2
+      },
+      "finaleMastery": "clear"
+     }
+    ]
+   }
+  },
+  {
+   "name": "B-finale-L21-blaster-S2",
+   "group": "B",
+   "ok": true,
+   "opts": {
+    "level": 21,
+    "mode": "blaster",
+    "diff": "normal",
+    "seed": "BASE-F-21-blaster-S2",
+    "starter": "fire",
+    "upg": "arsenal:4,aegis:3,surge:2"
+   },
+   "affinity": null,
+   "stacksGranted": null,
+   "buildAtStart": {
+    "path": {
+     "bond": 4,
+     "arsenal": 4,
+     "aegis": 4,
+     "impact": 2,
+     "prism": 3,
+     "surge": 2
+    },
+    "web": [
+     "magnetize",
+     "coolant",
+     "salvage",
+     "guard",
+     "bulwark",
+     "bond",
+     "heavy",
+     "calibrated",
+     "fortune",
+     "revive",
+     "demo",
+     "attune",
+     "singularity",
+     "amplify",
+     "intercept",
+     "transfuse",
+     "twin",
+     "wide",
+     "chorus",
+     "acewing",
+     "hyper",
+     "aegisX",
+     "momentum",
+     "rally"
+    ],
+    "stacks": {}
+   },
+   "buildAtEnd": {
+    "path": {
+     "bond": 4,
+     "arsenal": 4,
+     "aegis": 4,
+     "impact": 2,
+     "prism": 4,
+     "surge": 2
+    }
+   },
+   "cleared": true,
+   "endReason": "cleared",
+   "simT": 71.23,
+   "stall": null,
+   "finalState": "results",
+   "finalLevel": 22,
+   "lives": 5,
+   "kills": 37,
+   "botError": null,
+   "pageErrors": [],
+   "wallMs": 895,
+   "report": {
+    "generated": "2026-07-25T01:42:43.799Z",
+    "build": "wavebreaker-dev-report-v2",
+    "run": {
+     "mode": "blaster",
+     "preset": "normal",
+     "starter": "fire",
+     "seed": "BASE-F-21-blaster-S2",
+     "trial": true,
+     "daily": false,
+     "cheated": false,
+     "startLevel": 21,
+     "level": 22,
+     "state": "results",
+     "score": 41289,
+     "lives": "5/5",
+     "playT": 66.8,
+     "ended": null,
+     "lastDamage": "MISSED BALL"
+    },
+    "totals": {
+     "kills": 37,
+     "damageTaken": 0,
+     "hitsByFamily": {},
+     "shotsNormal": 240,
+     "shotsCharged": 6,
+     "chargeHits": 10,
+     "chargeWasted": 0,
+     "dmgNormal": 792.8,
+     "dmgCharge": 108.7,
+     "dmgBall": 0,
+     "dmgSplash": 177.8,
+     "dmgOther": 231.8,
+     "overheats": 0,
+     "coolingTime": 0,
+     "absorbs": 6,
+     "deflects": 5,
+     "knockouts": 0,
+     "megas": 3,
+     "rerolls": 0,
+     "dmgRelic": 262.9,
+     "dmgSurgeWindow": 665.8,
+     "playTime": 66.8,
+     "progressTime": 65.3,
+     "activeThreatTime": 66.8,
+     "workHp": 1554,
+     "bossEquivalents": 1.19,
+     "dmgByCategory": {
+      "vessel": 166.979,
+      "matchup": 581.293,
+      "guard": -116.683
+     },
+     "surgeBySource": {
+      "kills": 0.86,
+      "momentum": 1.136,
+      "bossHits": 1.488,
+      "wasted": 0,
+      "reclaim": 0.25
+     },
+     "shieldsBySource": {
+      "regen": 3,
+      "drop": 1
+     },
+     "livesBySource": {
+      "aegisX": 1
+     },
+     "dropsByKey": {
+      "star": 3,
+      "shield": 1
+     },
+     "killsRenewable": 0,
+     "channelsOpen": 0,
+     "channelsBroken": 0
+    },
+    "session": {
+     "restarts": 0,
+     "quits": 0
+    },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 27.6
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 27.6
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 26.6
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 26.6
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 26.6
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 26.6
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
+    "upgrades": [
+     {
+      "afterLevel": 21,
+      "pick": "prism:4"
+     }
+    ],
+    "offers": [
+     {
+      "lv": 21,
+      "keys": [
+       "rescue",
+       "impact",
+       "prism"
+      ]
+     }
+    ],
+    "levels": [
+     {
+      "lv": 21,
+      "region": 7,
+      "stage": 3,
+      "t": 66.8499999999975,
+      "cleared": true,
+      "kills": 37,
+      "knockout": false,
+      "dmgInBy": {},
+      "hits": [],
+      "absorbs": 6,
+      "deflects": 5,
+      "shotsN": 240,
+      "shotsC": 6,
+      "chargeHits": 10,
+      "chargeWasted": 0,
+      "dmgN": 792.7871367199998,
+      "dmgC": 108.65046889999999,
+      "dmgBall": 0,
+      "dmgSplash": 177.82487200000006,
+      "dmgOther": 231.80233888000018,
+      "overheats": 0,
+      "coolT": 0,
+      "megas": 3,
+      "rerolls": 0,
+      "upgrades": [
+       "prism:4"
+      ],
+      "bossPhases": {
+       "The Pale Eclipse P1": 15.8,
+       "The Pale Eclipse P2": 19.6,
+       "The Pale Eclipse P3": 9.6
+      },
+      "tProg": 65.34999999999758,
+      "tActive": 66.8499999999975,
+      "workHp": 1554,
+      "beUnit": 1308,
+      "dmgSurge": 665.8359734072008,
+      "dmgCat": {
+       "vessel": 166.97940631199975,
+       "matchup": 581.2931484591999,
+       "guard": -116.6826915
+      },
+      "surgeBy": {
+       "kills": 0.8600000000000003,
+       "momentum": 1.1360000000000008,
+       "bossHits": 1.488000000000001,
+       "wasted": 1.9984014443252818e-15,
+       "reclaim": 0.25
+      },
+      "shieldBy": {
+       "regen": 3,
+       "drop": 1
+      },
+      "lifeBy": {
+       "aegisX": 1
+      },
+      "dropsBy": {
+       "star": 3,
+       "shield": 1
+      },
+      "resonants": 6,
+      "dmgRelic": 262.8986,
+      "intercepts": 45,
+      "attuneAt": [
+       20.5
+      ],
+      "finaleFormat": "rite",
+      "finaleBeatT": {
+       "rites": 20.5,
+       "eclipse": 14,
+       "reclaim": 32.4
+      },
+      "finaleCounters": {
+       "marks": 2,
+       "tags": 3,
+       "reclaimed": 1
+      },
+      "finaleMastery": "countered"
+     }
+    ]
+   }
+  },
+  {
+   "name": "B-finale-L21-blaster-S3",
+   "group": "B",
+   "ok": true,
+   "opts": {
+    "level": 21,
+    "mode": "blaster",
+    "diff": "normal",
+    "seed": "BASE-F-21-blaster-S3",
+    "starter": "fire",
+    "upg": "arsenal:4,aegis:3,surge:2"
+   },
+   "affinity": null,
+   "stacksGranted": null,
+   "buildAtStart": {
+    "path": {
+     "aegis": 4,
+     "arsenal": 4,
+     "surge": 4,
+     "prism": 2,
+     "bond": 3,
+     "impact": 1
+    },
+    "web": [
+     "guard",
+     "coolant",
+     "bulwark",
+     "momentum",
+     "reactive",
+     "wide",
+     "attune",
+     "magnetize",
+     "salvage",
+     "amplify",
+     "rally",
+     "aegisX",
+     "intercept",
+     "heavy",
+     "rescue",
+     "calibrated",
+     "singularity",
+     "aurora",
+     "bond",
+     "fortune",
+     "twin",
+     "hyper",
+     "blaze",
+     "megaX"
+    ],
+    "stacks": {}
+   },
+   "buildAtEnd": {
+    "path": {
+     "aegis": 4,
+     "arsenal": 4,
+     "surge": 4,
+     "prism": 2,
+     "bond": 4,
+     "impact": 1
+    }
+   },
+   "cleared": true,
+   "endReason": "cleared",
+   "simT": 42.18,
+   "stall": null,
+   "finalState": "results",
+   "finalLevel": 22,
+   "lives": 5,
+   "kills": 39,
+   "botError": null,
+   "pageErrors": [],
+   "wallMs": 424,
+   "report": {
+    "generated": "2026-07-25T01:42:44.226Z",
+    "build": "wavebreaker-dev-report-v2",
+    "run": {
+     "mode": "blaster",
+     "preset": "normal",
+     "starter": "fire",
+     "seed": "BASE-F-21-blaster-S3",
+     "trial": true,
+     "daily": false,
+     "cheated": false,
+     "startLevel": 21,
+     "level": 22,
+     "state": "results",
+     "score": 28555,
+     "lives": "5/5",
+     "playT": 39.5,
+     "ended": null,
+     "lastDamage": "MISSED BALL"
+    },
+    "totals": {
+     "kills": 39,
+     "damageTaken": 0,
+     "hitsByFamily": {},
+     "shotsNormal": 144,
+     "shotsCharged": 7,
+     "chargeHits": 7,
+     "chargeWasted": 1,
+     "dmgNormal": 1126.1,
+     "dmgCharge": 89.4,
+     "dmgBall": 0,
+     "dmgSplash": 0,
+     "dmgOther": 160.7,
+     "overheats": 0,
+     "coolingTime": 0,
+     "absorbs": 1,
+     "deflects": 1,
+     "knockouts": 0,
+     "megas": 3,
+     "rerolls": 0,
+     "dmgRelic": 187.8,
+     "dmgSurgeWindow": 966.8,
+     "playTime": 39.5,
+     "progressTime": 37.6,
+     "activeThreatTime": 38.6,
+     "workHp": 1554,
+     "bossEquivalents": 1.19,
+     "dmgByCategory": {
+      "vessel": 124.115,
+      "matchup": 958.341,
+      "guard": -86.117
+     },
+     "surgeBySource": {
+      "kills": 0.54,
+      "momentum": 0.504,
+      "aurora": 1.35,
+      "wasted": 0.18,
+      "bossHits": 0.664,
+      "reactive": 0.15
+     },
+     "shieldsBySource": {
+      "reactive": 2,
+      "rescue": 1
+     },
+     "livesBySource": {},
+     "dropsByKey": {
+      "laser": 2,
+      "shield": 1
+     },
+     "killsRenewable": 0,
+     "channelsOpen": 0,
+     "channelsBroken": 0
+    },
+    "session": {
+     "restarts": 0,
+     "quits": 0
+    },
+    "chargeTelemetry": [
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     },
+     {
+      "pressMs": 0,
+      "fullS": null,
+      "strength": 1,
+      "resonant": true,
+      "fastFill": true,
+      "domains": {
+       "speed": 1,
+       "slow": false,
+       "chill": false,
+       "dramatic": false
+      },
+      "boltPxPerS": 900,
+      "cadenceMs": 25.8
+     }
+    ],
+    "timeDomains": {
+     "settings": 1,
+     "hostile": 1,
+     "cinematic": 1,
+     "weapon": 1
+    },
+    "upgrades": [
+     {
+      "afterLevel": 21,
+      "pick": "bond:4"
+     }
+    ],
+    "offers": [
+     {
+      "lv": 21,
+      "keys": [
+       "bond",
+       "immortal",
+       "impact"
+      ]
+     }
+    ],
+    "levels": [
+     {
+      "lv": 21,
+      "region": 7,
+      "stage": 3,
+      "t": 39.483333333332375,
+      "cleared": true,
+      "kills": 39,
+      "knockout": false,
+      "dmgInBy": {},
+      "hits": [],
+      "absorbs": 1,
+      "deflects": 1,
+      "shotsN": 144,
+      "shotsC": 7,
+      "chargeHits": 7,
+      "chargeWasted": 1,
+      "dmgN": 1126.0581425919986,
+      "dmgC": 89.43062929999999,
+      "dmgBall": 0,
+      "dmgSplash": 0,
+      "dmgOther": 160.66854260799929,
+      "overheats": 0,
+      "coolT": 0,
+      "megas": 3,
+      "rerolls": 0,
+      "upgrades": [
+       "bond:4"
+      ],
+      "bossPhases": {
+       "The Pale Eclipse P1": 8,
+       "The Pale Eclipse P2": 4.4,
+       "The Pale Eclipse P3": 8.3
+      },
+      "tProg": 37.649999999999146,
+      "tActive": 38.56666666666576,
+      "workHp": 1554,
+      "beUnit": 1308,
+      "dmgSurge": 966.8274111175974,
+      "dmgCat": {
+       "vessel": 124.11541504799997,
+       "matchup": 958.3406098280021,
+       "guard": -86.11731631199999
+      },
+      "surgeBy": {
+       "kills": 0.5400000000000001,
+       "momentum": 0.5040000000000003,
+       "aurora": 1.3499999999999985,
+       "wasted": 0.18000000000000216,
+       "bossHits": 0.6640000000000005,
+       "reactive": 0.15
+      },
+      "shieldBy": {
+       "reactive": 2,
+       "rescue": 1
+      },
+      "lifeBy": {},
+      "dropsBy": {
+       "laser": 2,
+       "shield": 1
+      },
+      "resonants": 7,
+      "dmgRelic": 187.84268549999993,
+      "intercepts": 35,
+      "attuneAt": [
+       25.9
+      ],
+      "finaleFormat": "rite",
+      "finaleBeatT": {
+       "rites": 16.9,
+       "eclipse": 21.8,
+       "reclaim": 0.9
+      },
+      "finaleCounters": {
+       "marks": 2
+      },
+      "finaleMastery": "clear"
+     }
+    ]
+   }
+  }
+ ],
+ "budgets": {
+  "fails": [
+   "L3-blaster: mean 50.7s outside [55,120] (63.6/40.6/50.7)",
+   "L21-blaster: mean 53.5s outside [55,120] (53.5/66.8/39.5)"
+  ],
+  "warns": []
+ }
+}

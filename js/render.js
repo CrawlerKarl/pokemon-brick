@@ -9812,7 +9812,11 @@ function drawOverlays() {
     const liveAttune = !!G.attuneLive; // AFT-009R P2: a mid-wave level, not a stage clear
     const wasBossStage = G.clearedStage === 2;
     const clearedGen = SKIN.gens[regionIdx(Math.max(1, G.level - 1))];
-    const clearY = draftShort ? 36 : H * 0.16;
+    // AFT-009R P6: the mid-wave attune header may never collide with the
+    // card stack on small phones — it anchors to the top card when the
+    // stack rides high (320×568 measured collision)
+    const attuneTopY = liveAttune && G.upgradeChoices ? upgradeLayout().card(0).y : H;
+    const clearY = draftShort ? 36 : Math.min(H * 0.16, Math.max(34, attuneTopY - 58));
     const draftAccent = liveAttune ? '#80d8ff' : secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
     if (!liveAttune) drawDraftBackdrop(draftAccent);
     {
@@ -9826,7 +9830,7 @@ function drawOverlays() {
     if (liveAttune) {
       ctx.font = '700 11px Orbitron, sans-serif';
       ctx.fillStyle = '#9fb2c8';
-      ctx.fillText('THE FIGHT WAITS — CHOOSE, THEN RETURN', W / 2, clearY + (draftShort ? 26 : 32), W * 0.9);
+      ctx.fillText('THE FIGHT WAITS — CHOOSE, THEN RETURN', W / 2, clearY + (draftShort ? 22 : 24), W * 0.9);
     } else {
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';

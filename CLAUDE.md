@@ -107,8 +107,8 @@ suite test guards every rect across six sizes.
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 23 mobile scenes
-at two phone viewports (46 screenshots + metadata sidecars → `.gate-shots/`),
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 25 mobile scenes
+at two phone viewports (50 screenshots + metadata sidecars → `.gate-shots/`),
 each PROVING its named state via an `expect` assertion, under FITTED-LABEL
 CONTAINMENT plus the AFT-021 overlap and single-actor-label contracts → the
 WAVE and BOSS artifact-storm benchmarks
@@ -145,7 +145,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 122 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 127 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
@@ -586,6 +586,32 @@ phone — flag anything only verifiable there.
   Pokémon that belong together appear together, spanning evolution tiers. Pack
   ids are constrained to their region's roster — `verify-assets` + the test
   suite catch stragglers. Evolved species are bigger + tankier elites.
+- **Progression is TWO connected loops (AFT-009R, 2026-07-24) — never
+  re-add per-stage drafts.** ATTUNEMENT: `G.attune` fills by normalized
+  contribution (`gainResonance`/`resKill`/`resBossDamage`/`resEvent`,
+  state.js) — renewable `br.reinf`/crosser kills pay NOTHING (anti-farm,
+  tested); a completed level queues and presents only at
+  `attuneSafeNow()` beats (never over a charge/channel/strike/rush/
+  engage-hold/resolve/dropping ball), freezing the wave and resuming in
+  place (`G.attuneLive`, `resumeFromAttunement`). Hands 1–3 are CURATED
+  (weapon trio → support trio → deepen-or-branch); later hands ride the
+  roller under the FOUR-PATH CAP (`ownedPathN < 4` in rankedCont —
+  grandfathered saves keep every owned path). THE AETHER FORGE
+  (`G.forge`, `forgeActions`/`forgeChoose`, update.js) is the ONLY
+  realm-finale decision: Refine (mastery-sized hand — AFT-020's reward
+  survives here) / Link / Evolve / Reforge, unavailable actions OMITTED,
+  ≤3 recipes per focused step, one decision per realm. The constellation
+  is a NON-INSTALLING JOURNAL (cards are the one install surface; the
+  list view + filters + ??? silhouettes ride `treeListEntries`,
+  input.js). FOCUS CHARGES (`G.focus`: 2 start, +1/realm, cap 3) are the
+  reroll currency; REFORGE refunds only `webRegressibleLeaves()` tiers
+  (a transformation can never break) and banks a level. Checkpoints are
+  schema v5 (attune/focus/reforge; v1–v4 accepted forever, arc derived
+  from the build); `syncAttuneToBuild()` covers trials/dev grants.
+  KNOCKOUT NEVER UNINSTALLS — it costs res + banked levels + 1 Focus and
+  retries. Every draft surface draws `draftCardModel` (the five-tag card
+  anatomy). Suite + gate scenes (attune-level, forge-menu) lock all of
+  this.
 - **Progression: paths + mastery + checkpoints.** Drafts advance the same
   6-path × 4-tier tree (two distinct offense paths; PRISM owns type-matchup mastery); junkie re-skins tiers as
   Pokémon items (`JUNKIE_ITEMS`). **The old BOND utility spoke is the

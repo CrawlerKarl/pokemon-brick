@@ -20,9 +20,11 @@
 > reread~~ **shipped 2026-07-24 (Phases 0–9 executed; suite 115/115,
 > baseline 142 scenarios GREEN)** → ~~AFT-022 portrait-mobile playtest
 > round~~ **shipped 2026-07-24 (suite 122/122; seeded-launch determinism
-> fix + baseline truth re-zero)** → **AFT-009R mobile-first progression
-> redesign (IN FLIGHT — owner directive 2026-07-24; supersedes AFT-009's
-> scope)** → AFT-019 → AFT-010 → AFT-011 → AFT-012. The executed AFT-021 spec is
+> fix + baseline truth re-zero)** → ~~AFT-009R mobile-first progression
+> redesign~~ **shipped 2026-07-24 (suite 127/127; Attunement + Aether
+> Forge + journal; matrix GREEN `baselines/matrix-aft009r.json`;
+> supersedes AFT-009's scope)** → **AFT-019 (NEXT)** → AFT-010 →
+> AFT-011 → AFT-012. The executed AFT-021 spec is
 > `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its matrix
 > evidence is `baselines/AFT021_MATRIX_REPORT.md`.
 
