@@ -5388,6 +5388,17 @@ function update(dt) {
     if (G.celCD <= 0 && G.celT && G.celS && G.celE && upgN('celestial')) celestialSector('t');
   }
   G.blasterCD = Math.max(0, G.blasterCD - dt * weaponScale()); // AFT-021 P4: fire cadence rides the weapon clock
+  // AFT-023c: a buffered manual tap releases the instant the barrel is ready
+  // — three quick taps are three shots, never two (the buffer holds one tap
+  // for 0.35s — longer than any barrel cooldown; releasing rides the auto
+  // flag so there is no denial beep)
+  if ((G.fireBufT || 0) > 0) {
+    G.fireBufT = Math.max(0, G.fireBufT - dt);
+    if (G.fireBufT > 0 && G.blasterCD <= 0 && G.overheat <= 0 && G.state === 'play') {
+      G.fireBufT = 0;
+      fireAction(true);
+    }
+  }
   G.muzzle = Math.max(0, G.muzzle - dt);
   G.wingFloatT = Math.max(0, (G.wingFloatT || 0) - dt); // wing-deflect floater throttle
   G.shieldFlash = Math.max(0, (G.shieldFlash || 0) - dt * 3); // shield-bubble flare after an absorb

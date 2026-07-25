@@ -5,6 +5,31 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-25 — AFT-023c: manual fire never drops a tap, and active tapping outpaces the assist
+
+Owner report: "I tap quickly three times and it only fires twice" — a tap
+landing inside the 0.3s barrel cooldown was silently swallowed
+(`if (G.blasterCD > 0) return`), while the assist re-polls every frame and
+never misses a window, so hands-off fire genuinely outperformed play.
+
+- **Tap buffering:** a manual tap inside the cooldown queues (one pending
+  shot, `G.fireBufT`) and releases the instant the barrel is ready; a
+  direct fire while a tap is queued refreshes the queue's lifetime so the
+  owed shot survives the new cooldown. Three taps are three shots, always.
+- **The manual edge:** a tap in the final 0.075s of the cooldown fires
+  immediately — deliberate tapping runs up to ~25% faster than the
+  assist (measured 4.4 vs 3.3 shots/s), paying the honest per-second heat
+  price. The cadence floor holds: tap-mashing cannot exceed it.
+- **The `auto` path is byte-identical** — every existing heat invariant
+  (the 6.5-8.8s Adventure band, the vent test, the fairness rails)
+  measures that path and stays untouched. The queue clears on overheat,
+  stage build, and run reset — no ghost shots.
+- New fixture (suite 129): three-tap scenario, edge-window fire, auto-path
+  identity, overheat/reset hygiene. Full gate green; assist cadence and
+  baseline bots unchanged (they ride the assist).
+
+---
+
 ## 2026-07-25 — AFT-023b: the codex speaks the skin's language, and the gate now forbids franchise vocabulary outright
 
 Owner report: "the game still refers to a Pokedex." The literal word never

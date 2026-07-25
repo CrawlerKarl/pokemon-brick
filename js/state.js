@@ -608,6 +608,7 @@ const G = {
   attuneStageN: 0,     // AFT-023: draft events presented this stage (cap 1 ordinary)
   attuneBeatN: 0,      // AFT-023: draft events presented this finale beat (cap 1)
   resStageIn: 0,       // AFT-023: resonance income earned this stage (capped)
+  fireBufT: 0,         // AFT-023c: one buffered manual tap awaiting the barrel
   finaleCkpt: null,    // AFT-023: {lvl, beat, raid?} — knockout resumes here
   finaleResume: false, // AFT-023: true while fast-forwarding after a knockout
   reinforce: 0,
@@ -1371,6 +1372,7 @@ function buildLevel(lvl) {
   // are per stage too; a knockout retry re-opens BOTH on purpose (the
   // retried wave pays again — the knockout already confiscated the bank).
   G.resStageIn = 0; G.attuneStageN = 0; G.attuneBeatN = 0; G.wardOverflowN = 0;
+  G.fireBufT = 0; // AFT-023c: a queued tap never crosses a stage boundary as a ghost shot
   // AFT-022 F6: notice hygiene is per stage — the first pickup of a power
   // (per element) and the first reinforcement wave announce; repeats within
   // the stage stay quiet local feedback instead of another banner
@@ -2526,6 +2528,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.lastDraftForm = webForm(); // a deep start is not a "fresh evolution"
   G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
   G.emberN = 0; G.emberFloatT = 0; // AFT-023: fire-vessel shooter kindle counters
+  G.fireBufT = 0; // AFT-023c: no tap buffer crosses a run boundary
   G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;

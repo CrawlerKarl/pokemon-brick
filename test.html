@@ -6522,6 +6522,42 @@ window.requestAnimationFrame = function () { return 0; };
     return 'reveal holds drafts 16s · two banked levels = one choose-two hand · ladder KO resumes at round · raid KO resumes at segment with damage kept · ckpt scoped to its finale';
   });
 
+  test('AFT-023c: manual fire — no tap is ever swallowed, and tapping outpaces the assist', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    resetRun(2, true, { seed: 'AFT023C-TAPS' });
+    G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999;
+    G.heat = 0; G.overheat = 0; G.blasterCD = 0; G.fireBufT = 0; G.megaT = 0;
+    const step = n => { for (let i = 0; i < n; i++) { paused = false; G.freeze = 0; G.enemyShotCD = 999; G.bossShotCD = 999; update(1 / 60); } };
+    // 1) three quick taps (~0.15s apart, inside the 0.3s cooldown) = THREE shots
+    const s0 = G.shotsFired;
+    fireAction(); step(9);   // tap 2 lands with ~0.15s cooldown left → buffered
+    fireAction(); step(9);   // buffer released at expiry; tap 3 buffers again
+    fireAction(); step(30);  // everything settles
+    assert(G.shotsFired - s0 === 3, 'three quick taps fired ' + (G.shotsFired - s0) + ' shots (want 3)');
+    // 2) the manual edge: a tap in the last 0.075s fires IMMEDIATELY
+    G.blasterCD = 0; G.fireBufT = 0; step(1);
+    G.blasterCD = 0;
+    fireAction();
+    const s1 = G.shotsFired;
+    G.blasterCD = 0.06; // inside the edge window
+    fireAction();
+    assert(G.shotsFired === s1 + 1, 'an edge-window tap did not fire immediately');
+    assert(G.blasterCD > 0.2, 'the edge shot did not restart the cooldown');
+    // 3) the ASSIST path is byte-identical: no early fire, no buffer
+    G.blasterCD = 0.06; G.fireBufT = 0;
+    const s2 = G.shotsFired;
+    fireAction(true);
+    assert(G.shotsFired === s2 && G.fireBufT === 0, 'the auto path gained the manual edge or buffer');
+    // 4) a buffered tap never survives an overheat or a run boundary
+    G.fireBufT = 0.2; G.overheat = 1; step(3);
+    assert(G.shotsFired === s2, 'a buffered tap fired through an overheat');
+    G.overheat = 0;
+    resetRun(2, true, { seed: 'AFT023C-TAPS2' });
+    assert(G.fireBufT === 0, 'a tap buffer crossed a run boundary');
+    SETTINGS.starter = 'none';
+    return 'three taps = three shots · edge tap fires now (+~25% over the assist) · auto path untouched · buffer respects overheat + reset';
+  });
+
   // ---- runner -------------------------------------------------------------
   async function main() {
     await tick();

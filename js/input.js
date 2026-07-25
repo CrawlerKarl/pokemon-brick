@@ -1618,6 +1618,7 @@ function addWeaponHeat(amount) {
   }
   if (G.heat >= 1 && G.overheat <= 0) {
     G.overheat = OVERHEAT_DUR;
+    G.fireBufT = 0; // AFT-023c: an overheat swallows the queued tap — no ghost shot after the lockout
     statsOverheat();
     addFloater(G.paddle.x, shipY() - 44, 'OVERHEATED!', '#ff7043', 15);
     noiseBurst(0.3, 0.09);
@@ -1625,6 +1626,10 @@ function addWeaponHeat(amount) {
 }
 
 // button. `auto` marks held-button repeat fire (no denial beep spam).
+// AFT-023c: the manual tap edge — a tap this close to the end of the fire
+// cooldown fires immediately (0.075s on a 0.3s barrel ≈ a 25% cadence edge
+// for active tapping over the assist's polled rhythm).
+const MANUAL_FIRE_EDGE = 0.075;
 function fireAction(auto = false) {
   if (paused) { paused = false; return; }
   if (G.state === 'serve') {
@@ -1653,7 +1658,20 @@ function fireAction(auto = false) {
   // offense path, a short LASER pickup, or Mega. Pressing fire otherwise no-ops.
   if (!blasterArmed()) return;
   if (G.overheat > 0) { if (!auto) tone(110, 0.09, 'sawtooth', 0.05, -40); return; }
-  if (G.blasterCD > 0) return;
+  // AFT-023c: a MANUAL tap is never swallowed by the cooldown (owner report:
+  // "I tap three times and it fires twice"). A tap in the final stretch of
+  // the cooldown fires NOW — deliberate tapping outpaces the frame-polled
+  // assist by up to ~25%, paying the honest per-second heat price — and an
+  // earlier tap is BUFFERED and released the instant the barrel is ready
+  // (update.js). The assist keeps its exact polled cadence: every heat
+  // invariant measures the `auto` path, which is byte-identical.
+  if (G.blasterCD > 0) {
+    if (auto || G.blasterCD > MANUAL_FIRE_EDGE) {
+      if (!auto) G.fireBufT = 0.35; // outlasts the longest barrel cooldown (0.3s) — a tap anywhere in the CD always lands
+      return;
+    }
+    // manual tap inside the edge window — fall through and fire early
+  }
   // HYPERNOVA CYCLE: during Mega an unbroken stream spins through 3 cadence
   // stages (the stream breaks — see tickEffects — and the stages fall away)
   // AFT-021 P6: HYPER's cadence bonus trims 25% → 18% (the VOLLEY probe ran
@@ -1674,6 +1692,11 @@ function fireAction(auto = false) {
     }
   }
   G.blasterCD = cd;
+  // AFT-023c: a tap that fires DIRECTLY while another tap is still queued
+  // consumed the window the queued tap was waiting for — refresh the queued
+  // tap's lifetime so the owed shot survives the new cooldown and releases
+  // at the next ready-barrel moment (three taps are three shots, always)
+  if (!auto && G.fireBufT > 0) G.fireBufT = 0.35;
   G.shotsFired++;
   statsShotFired(false);
   G.muzzle = 0.12;
