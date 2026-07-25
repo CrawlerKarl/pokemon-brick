@@ -174,16 +174,26 @@ async function waitFor(evaluate, expr, timeoutMs, label, onPoll) {
 
 // the AFT-003 vocabulary enforcement: walk the shared copy tables AT RUNTIME
 // under the aetherfall skin — player-facing \bMEGA\b anywhere is a failure.
+// AFT-023b widens the ban to franchise vocabulary (POKÉDEX/POKÉMON in any
+// casing or accent, and the SKIN.strings table joins the walked roots) so a
+// dex-flavored string can never again reach an AETHERFALL player unnoticed.
 const VOCAB_SCAN = `(() => {
   const roots = { PATHS, STARTER_KIT, STACK_ITEMS, AFFINITIES, SECRET_UPGRADES,
-    WEB_BRIDGES, WEB_FUSIONS, WEB_APEXES, WEB_SATELLITES, CHEAT_ITEMS, MODES };
+    WEB_BRIDGES, WEB_FUSIONS, WEB_APEXES, WEB_SATELLITES, CHEAT_ITEMS, MODES,
+    SKIN_STRINGS: SKIN.strings };
+  const BAD = /\\bMEGA\\b|pok[e\u00e9]mon|pok[e\u00e9]dex|pok[e\u00e9]ball/i;
   const leftover = []; const seen = new Set();
+  // identifier keys are ENGINE vocabulary (icon: 'pokeball' is a glyph key
+  // the renderer remaps per skin at draw time) — only COPY keys are scanned,
+  // the same split applyLexicon honors
+  const IDENT = new Set(['icon', 'key', 'family', 'kind', 'glyph', 'dexGlyph', 'pattern']);
   const walk = (o, p) => {
     if (!o || typeof o !== 'object' || seen.has(o)) return; seen.add(o);
     for (const k of Object.keys(o)) {
+      if (IDENT.has(k)) continue;
       const v = o[k];
-      if (typeof v === 'string') { if (/\\bMEGA\\b/.test(v)) leftover.push(p + '.' + k); }
-      else if (Array.isArray(v) && v.every(x => typeof x === 'string')) v.forEach((s, i) => { if (/\\bMEGA\\b/.test(s)) leftover.push(p + '.' + k + '[' + i + ']'); });
+      if (typeof v === 'string') { if (BAD.test(v)) leftover.push(p + '.' + k); }
+      else if (Array.isArray(v) && v.every(x => typeof x === 'string')) v.forEach((s, i) => { if (BAD.test(s)) leftover.push(p + '.' + k + '[' + i + ']'); });
       else walk(v, p + '.' + k);
     }
   };

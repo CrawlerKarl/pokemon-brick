@@ -5,6 +5,27 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-25 — AFT-023b: the codex speaks the skin's language, and the gate now forbids franchise vocabulary outright
+
+Owner report: "the game still refers to a Pokedex." The literal word never
+reached an AETHERFALL surface (verified by a fillText-hook sweep across
+every screen plus six live production stages), but the hunt found the real
+leak: the CODEX header rendered raw pokemon VOCABULARY — "12 / 196 CAUGHT ·
+1 SHINY" — as hardcoded literals. Fixes:
+
+- `SKIN.strings.caughtWord` (pokemon CAUGHT / aetherfall RECORDED) and the
+  existing `shinyTag` (SHINY / RADIANT) now compose the codex tally —
+  pokemon output is byte-identical; AETHERFALL reads
+  "1 / 196 RECORDED · 1 RADIANT".
+- The runtime vocabulary scan (gate step 5) widens from \bMEGA\b to the
+  whole franchise family — POKÉMON / POKÉDEX / POKEBALL in any casing or
+  accent — across every shared copy table PLUS `SKIN.strings`, skipping
+  identifier keys (icon/key/family/glyph — the applyLexicon split). The
+  dist RESIDUE scanner gains plain-ASCII `pok[eé]dex`.
+- Verified in-browser on both skins; full gate green.
+
+---
+
 ## 2026-07-24s — AFT-023: the STARFIGHTER improvement pass (pacing · knockout checkpoints · apex identities · duration curve · vessels/affinity · first-session onboarding)
 
 One autonomous program spanning six coordinated fronts, measured before and

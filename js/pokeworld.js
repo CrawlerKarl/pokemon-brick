@@ -834,7 +834,7 @@ assembleSkins({
     researched: ' POKÉMON RESEARCHED',
     newEntry: 'NEW! ADDED TO YOUR POKÉDEX · +100 PTS',
     dupEntry: 'ALREADY IN YOUR POKÉDEX · +250 PTS',
-    shinyBang: 'SHINY POKÉMON!', shinyTag: 'SHINY',
+    shinyBang: 'SHINY POKÉMON!', shinyTag: 'SHINY', caughtWord: 'CAUGHT',
     shinyDrop: '+500 · GUARANTEED POKÉBALL DROP',
     follows: 'YOUR POKÉMON FOLLOWS',
     evolvesIn: 'EVOLVES IN REGIONS 4 AND 7',

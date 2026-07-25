@@ -8206,7 +8206,11 @@ function drawDex() {
   ctx.font = '700 12px Orbitron, sans-serif';
   ctx.fillStyle = '#b0bec5';
   const total = dexTotal();
-  ctx.fillText(DEX.size + ' / ' + total + ' CAUGHT' + (DEXS.size ? '  ·  ' + DEXS.size + ' SHINY' : '') + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, 82);
+  // AFT-023b: the tally words are SKIN voice — 'CAUGHT'/'SHINY' are pokemon
+  // vocabulary and were reaching the AETHERFALL codex as raw literals
+  ctx.fillText(DEX.size + ' / ' + total + ' ' + (SKIN.strings.caughtWord || 'CAUGHT')
+    + (DEXS.size ? '  ·  ' + DEXS.size + ' ' + SKIN.strings.shinyTag : '')
+    + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, 82);
   const nextResearch = nextDexReward();
   if (nextResearch) {
     const prevAt = SKIN.dexRewards.filter(r => r.at < nextResearch.at).reduce((n, r) => Math.max(n, r.at), 0);

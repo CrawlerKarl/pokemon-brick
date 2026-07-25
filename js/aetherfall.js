@@ -506,7 +506,7 @@
     researched: ' AETHERKIN RECORDED',
     newEntry: 'NEW! ADDED TO YOUR CODEX · +100 PTS',
     dupEntry: 'ALREADY IN YOUR CODEX · +250 PTS',
-    shinyBang: 'RADIANT AETHERKIN!', shinyTag: 'RADIANT',
+    shinyBang: 'RADIANT AETHERKIN!', shinyTag: 'RADIANT', caughtWord: 'RECORDED',
     shinyDrop: '+500 · GUARANTEED SIGIL DROP',
     follows: 'YOUR VESSEL FOLLOWS',
     evolvesIn: 'ASCENDS IN REALMS 4 AND 7',

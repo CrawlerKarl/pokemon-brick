@@ -32,7 +32,7 @@ const out = path.join(root, 'dist-aetherfall');
 const TERM = /\bpok[eé]|pikachu|raichu|mewtwo|\bmew\b|kanto|johto|hoenn|sinnoh|unova|kalos|alola|galar|paldea|nintendo|game\s?freak|charizard|charmander|togepi|porygon|dratini|machop|gastly|magnemite|lumiose/i;
 // residue report: only STRONG franchise terms (identifiers like br.poke and
 // the 'pokeball' glyph key are engine vocabulary and ship intentionally)
-const STRONG = /pok[eé]mon|poké|pikachu|raichu|mewtwo|\bmew\b|kanto|johto|hoenn|sinnoh|unova|kalos|alola|galar|paldea|nintendo|lumiose|charizard|charmander|togepi|dratini|machop|gastly|magnemite/i;
+const STRONG = /pok[eé]mon|pok[eé]dex|poké|pikachu|raichu|mewtwo|\bmew\b|kanto|johto|hoenn|sinnoh|unova|kalos|alola|galar|paldea|nintendo|lumiose|charizard|charmander|togepi|dratini|machop|gastly|magnemite/i;
 
 // the nine music-table region labels → the nine AETHERFALL realm tags
 const AUDIO_SWAPS = [
