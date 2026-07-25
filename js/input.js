@@ -50,8 +50,14 @@ window.addEventListener('mousemove', e => {
     const dx = e.clientX - treeDrag.x, dy = e.clientY - treeDrag.y;
     if (treeDrag.moved || Math.hypot(dx, dy) >= 7) {
       treeDrag.moved = true;
-      treePan.x = treeDrag.sx + dx;
-      treePan.y = treeDrag.sy + dy;
+      if (treeListMode) {
+        const T2 = upgradeTreeLayout();
+        const LL2 = treeListLayout(T2);
+        treeListScroll = Math.max(0, Math.min(LL2.maxScroll(treeListEntries().length), (treeDrag.ls || 0) - dy));
+      } else {
+        treePan.x = treeDrag.sx + dx;
+        treePan.y = treeDrag.sy + dy;
+      }
     }
   }
 });
@@ -101,7 +107,7 @@ window.addEventListener('mousedown', e => {
   if (G.state === 'upgrade' && upgradeTreeOpen) {
     const T = upgradeTreeLayout();
     if (inRect(e.clientX, e.clientY, T.map)) {
-      treeDrag = { x: e.clientX, y: e.clientY, sx: treePan.x, sy: treePan.y, id: 'mouse', moved: false };
+      treeDrag = { x: e.clientX, y: e.clientY, sx: treePan.x, sy: treePan.y, ls: treeListScroll, id: 'mouse', moved: false };
       return;
     }
   }
@@ -148,7 +154,7 @@ window.addEventListener('touchstart', e => {
       if (inRect(x, y, T.map)) {
         treeTouches.set(t.identifier, { x, y, startX: x, startY: y });
         if (treeTouches.size === 1) {
-          treeDrag = { x, y, sx: treePan.x, sy: treePan.y, id: t.identifier, moved: false };
+          treeDrag = { x, y, sx: treePan.x, sy: treePan.y, ls: treeListScroll, id: t.identifier, moved: false };
         } else {
           const pts = Array.from(treeTouches.entries()).slice(0, 2);
           const a = pts[0][1], b = pts[1][1];
@@ -259,8 +265,14 @@ window.addEventListener('touchmove', e => {
       const dx = t.clientX - treeDrag.x, dy = t.clientY - treeDrag.y;
       if (treeDrag.moved || Math.hypot(dx, dy) >= 7) {
         treeDrag.moved = true;
-        treePan.x = treeDrag.sx + dx;
-        treePan.y = treeDrag.sy + dy;
+        if (treeListMode) { // AFT-009R P4: list mode scrolls, never pans
+          const T2 = upgradeTreeLayout();
+          const LL2 = treeListLayout(T2);
+          treeListScroll = Math.max(0, Math.min(LL2.maxScroll(treeListEntries().length), (treeDrag.ls || 0) - dy));
+        } else {
+          treePan.x = treeDrag.sx + dx;
+          treePan.y = treeDrag.sy + dy;
+        }
       }
       continue;
     }
@@ -744,6 +756,74 @@ function syncTreeSelectionToDraft() {
 // wedges (WEB_SPOKE_ORDER makes the bridge cycle adjacent), one superskill
 // crowning each spoke and three mastery satellites docked on their home
 // wedges — 39 addressable nodes. Render and hit-testing share these rects.
+// AFT-009R P4: the JOURNAL LIST — the phone-first reading of the same
+// state the map shows: big rows, filters, no pinch anywhere. Entries are
+// derived HERE (shared by render + hit-testing); undiscovered
+// transformations read as ??? silhouettes with their first unmet
+// requirement as the hint, and stay fully recorded once discovered
+// (2 ranks in both parent paths, or owned).
+let treeListMode = false, treeListScroll = 0, treeListFilter = 'all';
+function fusionDiscovered(f) {
+  return !!upgN(f.key) || f.paths.every(pk => pathLvl(pk) >= 2);
+}
+function treeListEntries() {
+  const out = [];
+  for (let pi = 0; pi < PATH_KEYS.length; pi++) {
+    const k = PATH_KEYS[pi], lvl = pathLvl(k);
+    out.push({ sel: { kind: 'tier', pi, ti: Math.min(3, lvl) }, icon: PATHS[k].tiers[Math.max(0, Math.min(3, lvl))].icon,
+      color: PATHS[k].color, name: skinPathName(k),
+      status: lvl ? 'RANK ' + lvl + '/4' + (lvl >= 4 ? ' · CAPPED' : '') : 'NOT TAKEN',
+      hint: lvl < 4 ? (G.mode === 'junkie' ? junkieTierName(k, lvl) : PATHS[k].tiers[lvl].name) + ' NEXT' : 'MASTERY STACKS FLOW HERE',
+      owned: lvl > 0, reachable: lvl > 0 && lvl < 4 });
+  }
+  WEB_BRIDGES.forEach((b, bi) => {
+    const owned = !!upgN(b.key), el = bridgeEligible(b);
+    out.push({ sel: { kind: 'bridge', bi, pi: 0, ti: 0 }, icon: b.icon, color: b.color, name: b.name,
+      status: owned ? 'LINKED' : el ? 'READY AT THE FORGE' : 'LOCKED',
+      hint: owned ? webNodeDesc(b) : el ? 'LINK IT AT THE NEXT REALM FORGE' : (webLockReason(b, 'bridge')[0] || ''),
+      owned, reachable: el });
+  });
+  WEB_FUSIONS.forEach((f, fi) => {
+    const owned = !!upgN(f.key), el = fusionEligible(f), known = fusionDiscovered(f);
+    out.push({ sel: { kind: 'fusion', fi, pi: 0, ti: 3 }, icon: known ? f.icon : 'warp', color: known ? f.color : '#546e7a',
+      name: known ? f.name : '???',
+      status: owned ? '★ FUSION ONLINE' : el ? 'READY AT THE FORGE' : known ? 'RECIPE KNOWN' : 'UNDISCOVERED',
+      hint: owned ? webNodeDesc(f) : known ? (el ? 'EVOLVE IT AT THE NEXT REALM FORGE' : (webLockReason(f, 'fusion')[0] || ''))
+        : 'GROW ' + f.paths.map(pk => skinPathName(pk)).join(' + ') + ' TO REVEAL THIS RECIPE',
+      owned, reachable: el });
+  });
+  WEB_APEXES.forEach((x, ai) => {
+    const owned = !!upgN(x.key), el = apexEligible(x);
+    out.push({ sel: { kind: 'apex', ai, pi: 0, ti: 3 }, icon: x.icon, color: x.color, name: x.name,
+      status: owned ? '★★ APEX ONLINE' : el ? 'READY AT THE FORGE' : 'LATE ACT III',
+      hint: owned ? webNodeDesc(x) : (webLockReason(x, 'apex')[0] || ''),
+      owned, reachable: el });
+  });
+  if (treeListFilter === 'owned') return out.filter(e => e.owned);
+  if (treeListFilter === 'next') return out.filter(e => e.reachable && !e.owned || (e.owned && e.reachable));
+  return out;
+}
+function nextReachableTransformation() {
+  const all = [
+    ...WEB_BRIDGES.map(b => ({ d: b, kind: 'bridge', el: bridgeEligible(b), owned: !!upgN(b.key) })),
+    ...WEB_FUSIONS.map(f => ({ d: f, kind: 'fusion', el: fusionEligible(f), owned: !!upgN(f.key) })),
+    ...WEB_APEXES.map(x => ({ d: x, kind: 'apex', el: apexEligible(x), owned: !!upgN(x.key) })),
+  ].filter(e => !e.owned);
+  const ready = all.find(e => e.el);
+  if (ready) return ready.d.name + ' — READY AT THE FORGE';
+  const near = all.find(e => e.kind === 'bridge') || all[0];
+  return near ? near.d.name + ' — ' + ((webLockReason(near.d, near.kind)[0] || 'KEEP GROWING')) : 'EVERY TRANSFORMATION INSTALLED';
+}
+function treeListLayout(T) {
+  const rowH = Math.max(46, Math.min(56, T.map.h / 8));
+  const chipW = (Math.min(T.map.w, 420) - 16) / 3;
+  const chips = ['all', 'owned', 'next'].map((f, i) => ({ f,
+    x: T.map.x + 8 + i * (chipW + 4), y: T.map.y + 40, w: chipW, h: 26 }));
+  const top = T.map.y + 74;
+  return { rowH, chips, top,
+    row: i => ({ x: T.map.x + 6, y: top + i * rowH - treeListScroll, w: T.map.w - 12, h: rowH - 6 }),
+    maxScroll: n => Math.max(0, n * rowH - (T.map.y + T.map.h - top) + 8) };
+}
 function upgradeTreeLayout() {
   const panel = { x: Math.max(8 + SAFE_L, W * 0.02), y: Math.max(8 + SAFE_T, H * 0.025),
     w: Math.min(W - 16 - SAFE_L - SAFE_R, W * 0.96), h: Math.min(H - 16 - SAFE_T - SAFE_B, H * 0.95) };
@@ -820,6 +900,7 @@ function upgradeTreeLayout() {
     zoomIn: { x: camX + 30 + camGap, y: camY, w: 30, h: camH },
     fit: { x: camX + 60 + camGap * 2, y: camY, w: 42, h: camH },
     focus: { x: camX + 102 + camGap * 3, y: camY, w: 52, h: camH },
+    list: { x: camX + 154 + camGap * 4, y: camY, w: 44, h: camH }, // AFT-009R P4: the phone list view
     reroll: { x: detail.x + 10, y: buttonY, w: buttonW, h: buttonH },
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
     spokeA,
@@ -916,7 +997,7 @@ function holdBonusPick(remaining) {
   if (!G.upgradeChoices) { G.bonusPicks = 0; return false; } // nothing left anywhere → resume play
   G.state = 'upgrade'; G.stateT = 0;
   draftSel = null;
-  upgradeTreeOpen = G.mode === 'junkie' && G.upgradeChoices.every(x => x.pathKey || x.web || x.stack);
+  upgradeTreeOpen = false; // AFT-009R P4: cards are the one installation surface
   if (upgradeTreeOpen) syncTreeSelectionToDraft();
   return true;
 }
@@ -948,7 +1029,7 @@ function pickUpgrade(i) {
     G.secret.vmax = false;
     G.upgradeChoices = G.secret.deferredChoices;
     G.secret.deferredChoices = null;
-    upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices && G.upgradeChoices.every(x => x.pathKey || x.web || x.stack);
+    upgradeTreeOpen = false; // AFT-009R P4: cards are the one installation surface
     if (upgradeTreeOpen) syncTreeSelectionToDraft();
     G.stateT = 0;
     G.rerolled = false;
@@ -1215,8 +1296,32 @@ function onPress(x, y) {
           treeZoom = defaultTreeZoom(); treePan.x = 0; treePan.y = 0;
           ensureTreeSelVisible(); SFX.wall(); return;
         }
-        if (draftSel != null && inRect(x, y, T.confirm)) { pickUpgrade(draftSel); return; }
-        if (!G.secret.rewardDraft && !G.rerolled && inRect(x, y, T.reroll)) { rerollDraft(); return; }
+        // AFT-009R P4: the JOURNAL LIST — big rows and filters; while it is
+        // up, the map underneath takes no taps
+        if (inRect(x, y, T.list)) { treeListMode = !treeListMode; treeListScroll = 0; SFX.wall(); return; }
+        if (treeListMode) {
+          const LL = treeListLayout(T);
+          for (const ch of LL.chips) {
+            if (inRect(x, y, ch)) { treeListFilter = ch.f; treeListScroll = 0; SFX.wall(); return; }
+          }
+          const entries = treeListEntries();
+          for (let i = 0; i < entries.length; i++) {
+            const r = LL.row(i);
+            if (r.y + r.h < LL.top - 2 || r.y > T.map.y + T.map.h) continue;
+            if (inRect(x, y, r)) {
+              treeSel = entries[i].sel;
+              const off = choiceIndexForSel(treeSel);
+              if (off >= 0) draftSel = off;
+              SFX.wall(); return;
+            }
+          }
+          return;
+        }
+        // AFT-009R P4: the constellation is a JOURNAL — it inspects and
+        // orients but never installs. The confirm slot returns to the cards
+        // (the only installation surface); reroll stays available here.
+        if (inRect(x, y, T.confirm)) { upgradeTreeOpen = false; SFX.wall(); return; }
+        if (!G.secret.rewardDraft && !G.rerolled && G.upgradeChoices && inRect(x, y, T.reroll)) { rerollDraft(); return; }
         // Tap a node to inspect it. Offered nodes also become the active pick,
         // but still require the dedicated INSTALL action below the details.
         // Bridges, superskills and satellites are addressable exactly like

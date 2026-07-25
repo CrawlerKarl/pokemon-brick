@@ -2641,7 +2641,7 @@ function beginTimeSpiral() {
   G.state = 'upgrade'; G.stateT = 0;
   G.clearedStage = 2;
   rollUpgradeChoices();
-  upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices && G.upgradeChoices.every(x => x.pathKey || x.web || x.stack);
+  upgradeTreeOpen = false; // AFT-009R P4: cards are the one installation surface
   if (upgradeTreeOpen) syncTreeSelectionToDraft();
   draftSel = null; G.rerolled = false;
   setAnnounce('warp', '#d780ff', 'TIME SPIRAL', 'THE JOURNEY LOOPS — HARDER SKIES AHEAD', 3.2);

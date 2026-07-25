@@ -7809,8 +7809,7 @@ function settleStageResolution() {
     }
     // The constellation is the primary choice surface for every normal hand —
     // tiers, bridges, superskills, and satellites all live on the map now.
-    upgradeTreeOpen = G.mode === 'junkie' && !!G.upgradeChoices &&
-      G.upgradeChoices.every(c => c.pathKey || c.web || c.stack);
+    upgradeTreeOpen = false; // AFT-009R P4: cards are the one installation surface
     draftSel = null; // nothing inspected yet on a fresh draft
     if (upgradeTreeOpen) syncTreeSelectionToDraft();
     G.rerolled = false; // bonus drafts are normal, rerollable hands

@@ -8708,6 +8708,7 @@ function drawFullUpgradeTree() {
   // three installable choices are always fully legible
   offerPills.forEach(p => drawOfferPill(p[0], p[1], p[2]));
 
+  if (treeListMode) drawTreeList(T); // AFT-009R P4: the phone list reading covers the map
   drawTreeCameraControls(T);
   drawTreeDetail(T);
   const cb = T.close;
@@ -8720,8 +8721,60 @@ function drawFullUpgradeTree() {
   ctx.restore();
 }
 
+// AFT-009R P4: THE JOURNAL LIST — every path, bridge, fusion and apex as a
+// big touch row over an opaque sheet (the map keeps its camera underneath;
+// LIST/MAP toggles, drag scrolls — no pinch anywhere). Filters ALL / OWNED /
+// NEXT; undiscovered fusions are ??? silhouettes with their reveal
+// condition as the hint; the header carries the build identity and the
+// NEXT REACHABLE transformation.
+function drawTreeList(T) {
+  const LL = treeListLayout(T);
+  ctx.save();
+  roundRect(T.map.x, T.map.y, T.map.w, T.map.h, 14);
+  ctx.fillStyle = 'rgba(7,12,32,0.985)'; ctx.fill();
+  ctx.clip();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const ownedPaths = PATH_KEYS.filter(k => pathLvl(k) > 0);
+  const idName = ownedPaths.slice().sort((a, b) => pathLvl(b) - pathLvl(a)).slice(0, 2).map(skinPathName).join(' · ');
+  fitLabel((idName || 'FIRST ATTUNEMENT') + '  ·  NEXT: ' + nextReachableTransformation(),
+    T.map.x + 10, T.map.y + 28, { size: 9, min: 7.5, weight: 800, color: '#9fb2c8', align: 'left', maxW: T.map.w - 20 });
+  for (const ch of LL.chips) {
+    const on = treeListFilter === ch.f;
+    roundRect(ch.x, ch.y, ch.w, ch.h, 13);
+    ctx.fillStyle = on ? 'rgba(128,216,255,0.26)' : 'rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = on ? '#80d8ff' : 'rgba(255,255,255,0.25)'; ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = on ? '#e0f7ff' : '#8fa4bd';
+    ctx.fillText(ch.f.toUpperCase(), ch.x + ch.w / 2, ch.y + ch.h / 2 + 1);
+  }
+  const entries = treeListEntries();
+  for (let i = 0; i < entries.length; i++) {
+    const r = LL.row(i);
+    if (r.y + r.h < LL.top - 2 || r.y > T.map.y + T.map.h) continue;
+    const en = entries[i];
+    const sel = sameTreeSel(treeSel, en.sel);
+    roundRect(r.x, r.y, r.w, r.h, 10);
+    ctx.fillStyle = sel ? 'rgba(26,22,56,0.95)' : 'rgba(12,16,38,0.85)'; ctx.fill();
+    ctx.lineWidth = sel ? 2 : 1.1;
+    ctx.strokeStyle = sel ? '#ffffff' : en.owned ? en.color : en.reachable ? en.color + '99' : 'rgba(255,255,255,0.14)';
+    ctx.stroke();
+    const bd = iconBadge(en.icon, en.color, 13, en.owned || en.reachable ? 'lit' : 'dim');
+    ctx.globalAlpha = en.owned ? 1 : en.reachable ? 0.85 : 0.5;
+    ctx.drawImage(bd, r.x + 10, r.y + r.h / 2 - bd.height / 2);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+    ctx.font = '900 11px Orbitron, sans-serif';
+    ctx.fillStyle = en.owned ? '#fff' : en.reachable ? '#e3f2fd' : '#7e93ad';
+    ctx.fillText(en.name, r.x + 44, r.y + r.h / 2 - 9, r.w * 0.5);
+    ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = en.color;
+    ctx.fillText(en.status, r.x + 44, r.y + r.h / 2 + 5, r.w * 0.45);
+    fitLabel(en.hint || '', r.x + r.w - 10, r.y + r.h / 2 + 5,
+      { size: 8.5, min: 7, weight: 600, family: 'Verdana, sans-serif', color: '#7e93ad', align: 'right', maxW: r.w * 0.42 });
+  }
+  ctx.restore();
+}
 function drawTreeCameraControls(T) {
-  const controls = [[T.zoomOut, '−'], [T.zoomIn, '+'], [T.fit, 'FIT'], [T.focus, 'FOCUS']];
+  const controls = [[T.zoomOut, '−'], [T.zoomIn, '+'], [T.fit, 'FIT'], [T.focus, 'FOCUS'], [T.list, treeListMode ? 'MAP' : 'LIST']];
   ctx.save();
   for (const [b, label] of controls) {
     const hov = inRect(mouseX, lastMouseY, b);
@@ -8732,10 +8785,11 @@ function drawTreeCameraControls(T) {
     ctx.font = `800 ${label.length > 1 ? 7.5 : 15}px Orbitron, sans-serif`;
     ctx.fillStyle = '#e3f2fd'; ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + (label === '−' ? -1 : 0));
   }
-  const last = T.focus;
+  const last = T.list;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '700 7.5px Orbitron, sans-serif';
   ctx.fillStyle = 'rgba(179,229,252,0.75)';
-  ctx.fillText(Math.round(treeZoom * 100) + '% · DRAG · PINCH', last.x + last.w + 8, last.y + last.h / 2,
+  ctx.fillText(treeListMode ? 'DRAG SCROLLS' : Math.round(treeZoom * 100) + '% · DRAG · PINCH',
+    last.x + last.w + 8, last.y + last.h / 2,
     Math.max(0, T.map.x + T.map.w - (last.x + last.w + 14)));
   ctx.restore();
 }
@@ -8752,15 +8806,19 @@ function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
   ctx.font = `800 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
   ctx.fillText(canRR ? (IS_TOUCH ? 'REROLL' : 'REROLL · R') : 'REROLLED', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
 
-  const cf = T.confirm, canCF = chosen;
-  const hovCF = canCF && inRect(mouseX, lastMouseY, cf);
-  if (canCF) { ctx.shadowColor = accent; ctx.shadowBlur = hovCF ? 18 : 10; }
+  // AFT-009R P4: the constellation is a JOURNAL — the action slot returns
+  // to the cards (the one installation surface); selecting an offer here
+  // still primes the card screen's INSTALL.
+  const cf = T.confirm;
+  const hovCF = inRect(mouseX, lastMouseY, cf);
+  const hasHand = !!G.upgradeChoices;
+  if (chosen) { ctx.shadowColor = accent; ctx.shadowBlur = hovCF ? 18 : 10; }
   roundRect(cf.x, cf.y, cf.w, cf.h, 11);
-  ctx.fillStyle = canCF ? (hovCF ? accent + '55' : accent + '34') : 'rgba(255,255,255,0.06)'; ctx.fill();
+  ctx.fillStyle = hovCF ? accent + '3c' : 'rgba(255,255,255,0.08)'; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.lineWidth = canCF ? 2 : 1.2; ctx.strokeStyle = canCF ? '#ffffff' : 'rgba(255,255,255,0.15)'; ctx.stroke();
-  ctx.font = `900 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canCF ? '#fff' : '#607d8b';
-  ctx.fillText(canCF ? (IS_TOUCH ? 'INSTALL OPTION ' + (offer + 1) : 'INSTALL · ENTER') : offered ? 'SELECT THIS OPTION' : 'CHOOSE AN OPTION TAG',
+  ctx.lineWidth = chosen ? 2 : 1.3; ctx.strokeStyle = chosen ? '#ffffff' : 'rgba(255,255,255,0.3)'; ctx.stroke();
+  ctx.font = `900 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.fillText(hasHand ? (chosen ? 'BACK TO CARDS — INSTALL THERE' : 'BACK TO CARDS') : 'CLOSE JOURNAL',
     cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
 }
 

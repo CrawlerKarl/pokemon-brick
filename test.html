@@ -633,7 +633,10 @@ window.requestAnimationFrame = function () { return 0; };
       rollUpgradeChoices();
       const cs = G.upgradeChoices || [];
       assert(cs.length === 3, 'iter ' + iter + ': hand size ' + cs.length);
-      const authoredEligible = PATH_KEYS.filter(k => pathLvl(k) < 4).length +
+      // AFT-009R P2: the four-path cap — a fresh path is only an eligible
+      // continuation while a slot remains open
+      const ownedPathN2 = PATH_KEYS.filter(k => pathLvl(k) > 0).length;
+      const authoredEligible = PATH_KEYS.filter(k => pathLvl(k) < 4 && (pathLvl(k) > 0 || ownedPathN2 < 4)).length +
         WEB_BRIDGES.filter(bridgeEligible).length + WEB_FUSIONS.filter(fusionEligible).length +
         WEB_APEXES.filter(apexEligible).length;
       for (const c of cs) {
@@ -6301,6 +6304,46 @@ window.requestAnimationFrame = function () { return 0; };
     // 6) the transformation caps stay the engine's: max 2 fusions, 1 apex
     assert(typeof fusionsOwnedCount === 'function', 'fusion cap accounting missing');
     return 'ordinary clears roll on · finale Forge · Refine-only fresh · pure hands · LINK/BACK · one decision per realm';
+  });
+
+  test('AFT-009R P4: the constellation is a JOURNAL — non-installing, listed, discovered', async () => {
+    SETTINGS.mode = 'blaster';
+    resetRun(1, true, { seed: 'AFT009R-P4' });
+    rollUpgradeChoices();
+    assert(G.upgradeChoices && G.upgradeChoices.length === 3, 'no hand to journal against');
+    G.state = 'upgrade'; G.stateT = 1;
+    upgradeTreeOpen = true; syncTreeSelectionToDraft(); draftSel = 0;
+    try {
+      // 1) the journal's action slot NEVER installs — it returns to the cards
+      const T = upgradeTreeLayout();
+      const before = JSON.stringify(G.upgradeChoices.map(c => c.pathKey || (c.web && c.web.key) || (c.stack && c.stack.key)));
+      onPress(T.confirm.x + T.confirm.w / 2, T.confirm.y + T.confirm.h / 2);
+      assert(!upgradeTreeOpen, 'the journal did not close back to the cards');
+      assert(G.upgradeChoices && JSON.stringify(G.upgradeChoices.map(c => c.pathKey || (c.web && c.web.key) || (c.stack && c.stack.key))) === before,
+        'the journal INSTALLED — it must only inspect');
+      // 2) the list covers everything; unknown fusions are silhouettes
+      treeListFilter = 'all';
+      const all = treeListEntries();
+      assert(all.length === PATH_KEYS.length + WEB_BRIDGES.length + WEB_FUSIONS.length + WEB_APEXES.length,
+        'the list dropped entries (' + all.length + ')');
+      assert(all.every(e => e.name && e.status && e.hint !== undefined), 'a list row lost its copy');
+      const hidden = all.filter(e => e.name === '???');
+      assert(hidden.length > 0 && hidden.every(e => /REVEAL/.test(e.hint)),
+        'undiscovered fusions are not hinted silhouettes');
+      // 3) discovery: 2 ranks in both parents reveals the recipe permanently
+      const f0 = WEB_FUSIONS[0];
+      f0.paths.forEach(pk => { G.path[pk] = Math.max(G.path[pk] || 0, 2); });
+      assert(treeListEntries().find(e => e.sel.kind === 'fusion' && e.sel.fi === 0).name === f0.name,
+        'a discovered recipe stayed hidden');
+      // 4) filters narrow honestly; the next-reachable line always reads
+      treeListFilter = 'owned';
+      assert(treeListEntries().every(e => e.owned), 'OWNED filter leaked');
+      treeListFilter = 'next';
+      assert(treeListEntries().every(e => e.reachable), 'NEXT filter leaked');
+      assert(typeof nextReachableTransformation() === 'string' && nextReachableTransformation().length > 4,
+        'no next-reachable readout');
+      return 'journal closes to cards without installing · full atlas · ??? silhouettes reveal · filters honest · next-reachable reads';
+    } finally { treeListFilter = 'all'; treeListMode = false; upgradeTreeOpen = false; G.upgradeChoices = null; draftSel = null; }
   });
 
   // ---- runner -------------------------------------------------------------
