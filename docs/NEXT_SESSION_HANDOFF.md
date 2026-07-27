@@ -103,6 +103,13 @@
 > HIGH-CONTRAST PROJECTILES + the 320×568 fit sweep (which caught a real
 > settings-panel overflow). Suite 129; gate 56 scenes; baseline
 > matrix-aft023. Log round 2026-07-24s has the full detail.
+>
+> **AFT-024 (THE STAGE DIVIDEND) SHIPPED 2026-07-27** — upgrades now
+> arrive ONE PER STAGE CLEAR (owner directive: per level, not per XP
+> threshold). 3 decisions per realm = 2 stage hands + 1 Forge, 26 per
+> journey; resonance repurposed from FREQUENCY to HAND WIDTH (3/4/5
+> cards); the mid-wave draft path deleted outright; a RECOVERY HAND
+> cashes banked resonance when you're knocked out on a finale. Suite 129.
 > **NEXT: AFT-019 remainder (real-device first-session pass) + AFT-010.**
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.

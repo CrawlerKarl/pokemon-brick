@@ -630,18 +630,27 @@ phone — flag anything only verifiable there.
   levels + 1 Focus and retries (half-res is the AFT-023 spiral-breaker). Every draft surface draws `draftCardModel` (the five-tag card
   anatomy). Suite + gate scenes (attune-level, forge-menu) lock all of
   this.
-- **Draft pacing is DISCIPLINED (AFT-023, 2026-07-24).** The economy targets
-  ~18-22 attunement levels per campaign (was 30): `attuneNeed` rises
-  20/26/34 then +8/level; resonance income is CAPPED PER STAGE
-  (`attuneStageCap()`: 55 ordinary / 100 finale — boss deciles + beats +
-  objectives can no longer flood the bank; excess saturates and is
-  ledgered as `resCapped`). Presentation discipline on top of combat
-  safety: ONE draft event per ordinary stage, one per finale beat, a
-  spacing cooldown (`G.attuneCD` 24s / 14s finale), and a hold after every
-  boss reveal (16s) and phase turn (12s) — `G.attuneHoldT`, decayed only
-  in live combat. Past the curated opening, two banked levels COMBINE
-  into one choose-two hand (the `holdBonusPick` machinery). Never re-add
-  per-draft freebies or unbounded queues.
+- **THE STAGE DIVIDEND owns draft cadence (AFT-024, 2026-07-27) — one
+  guaranteed draft per stage clear, and NOTHING interrupts combat.** Every
+  ordinary stage clear deals a hand at the results beat
+  (`dealStageDividend`, state.js, called from the clear block in update.js);
+  every realm finale opens the AETHER FORGE instead. A campaign is
+  therefore exactly **3 decisions per realm — 2 stage hands + 1 Forge, 26
+  per journey** — and the interval RISES for free because stage durations
+  do (20-32s early → 34-65s late). RESONANCE no longer decides WHEN a hand
+  arrives; it decides HOW WIDE it is: banked levels widen the stage hand
+  (3 base, +1 each, cap 5) and the surplus rolls forward, priced against
+  `attuneStageCap()` (55 ordinary / 100 finale) via `attuneNeed` (38, +4).
+  The mid-wave presentation path is GONE — `attuneSafeNow`,
+  `presentAttunementLevel`, `resumeFromAttunement`, `G.attuneLive` and the
+  AFT-023 pacing clocks were all removed with it. **Never re-introduce a
+  draft that opens during live combat** — that was the defect this
+  replaced, and the suite asserts a full bank cannot open one. A finale
+  KNOCKOUT deals a RECOVERY HAND (banked resonance cashed in, capped 2
+  per stage) over the already-built retry: it installs via
+  `resumeRecoveryDraft` (never `buildLevel`, which would undo the AFT-023
+  round resume) and it DROPS any armed reveal — **a draft freezes
+  `update()`, so an entrance armed behind one can never finish.**
 - **A finale knockout resumes at the furthest ROUND/BEAT/SEGMENT reached
   (AFT-023).** `G.finaleCkpt` records beat advances (`startFinaleBeat`)
   and raid segment resolutions; the knockout branch rebuilds, then

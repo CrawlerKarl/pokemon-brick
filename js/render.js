@@ -9788,8 +9788,12 @@ function drawResonanceMeter() {
   }
   ctx.font = '800 8px Orbitron, sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  // AFT-024: the meter promises the NEXT STAGE HAND's width — banked levels
+  // are extra cards to choose from, never an interruption mid-fight
   ctx.fillStyle = A.pending > 0 ? '#ffd54f' : '#9fb2c8';
-  ctx.fillText(A.pending > 0 ? 'ATTUNE READY' : 'ATTUNE ' + (A.level + 1), x + w + 7, y + 3);
+  const extra = Math.min(2, A.pending || 0);
+  ctx.fillText(extra > 0 ? '+' + extra + ' CARD' + (extra > 1 ? 'S' : '') + ' NEXT STAGE'
+    : 'RESONANCE', x + w + 7, y + 3);
   ctx.restore();
 }
 function drawBuildMetaRow(L) {
@@ -9920,46 +9924,33 @@ function drawOverlays() {
     dim(0.55);
     const draftShort = H < 520;
     const secretDraft = !!G.secret.rewardDraft;
-    const liveAttune = !!G.attuneLive; // AFT-009R P2: a mid-wave level, not a stage clear
     const wasBossStage = G.clearedStage === 2;
     const clearedGen = SKIN.gens[regionIdx(Math.max(1, G.level - 1))];
-    // AFT-009R P6: the mid-wave attune header may never collide with the
-    // card stack on small phones — it anchors to the top card when the
-    // stack rides high (320×568 measured collision)
-    const attuneTopY = liveAttune && G.upgradeChoices ? upgradeLayout().card(0).y : H;
-    const clearY = draftShort ? 36 : Math.min(H * 0.16, Math.max(34, attuneTopY - 58));
-    const draftAccent = liveAttune ? '#80d8ff' : secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
-    if (!liveAttune) drawDraftBackdrop(draftAccent);
+    // AFT-024: every draft is a STAGE-BOUNDARY draft now — there is no
+    // mid-wave variant to anchor around
+    const clearY = draftShort ? 36 : Math.min(H * 0.16, 34);
+    const draftAccent = secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
+    drawDraftBackdrop(draftAccent);
     {
-      const tTxt = liveAttune ? 'ATTUNEMENT ' + ((G.attune && G.attune.presented) || 1)
-        : secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!';
+      const tTxt = secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!';
       // AFT-009R P3: long realm names must FIT the phone width — size caps
       // by measured length, never by the fixed W/12 alone
       const tSize = Math.min(draftShort ? 30 : 40, W / 12, (W * 0.94) / (tTxt.length * 0.68));
       title(tTxt, clearY, tSize, draftAccent);
     }
-    if (liveAttune) {
-      ctx.font = '700 11px Orbitron, sans-serif';
-      ctx.fillStyle = '#9fb2c8';
-      const attuneSub = G.bonusPicks >= 2 ? 'TWO LEVELS BANKED — CHOOSE TWO CARDS'
-        : G.bonusPicks === 1 ? 'ONE MORE PICK — THE FIGHT WAITS'
-          : 'THE FIGHT WAITS — CHOOSE, THEN RETURN';
-      ctx.fillText(attuneSub, W / 2, clearY + (draftShort ? 22 : 24), W * 0.9);
-    } else {
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
     ctx.fillText(secretDraft ? '+3000 SECRET BOSS BONUS' : '+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS',
       W / 2, clearY + (draftShort ? 28 : 34));
-    }
     if (secretDraft && !draftShort) {
       ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
       ctx.fillText('CHOOSE ONE FORBIDDEN UPGRADE · THE NORMAL ' + (SKIN.secret.homeRegion || 'KANTO') + ' DRAFT FOLLOWS', W / 2, clearY + 60, W * 0.92);
-    } else if (!liveAttune && stageIdx(G.level) === 0 && !draftShort) {
+    } else if (stageIdx(G.level) === 0 && !draftShort) {
       ctx.font = '900 16px Orbitron, sans-serif';
       ctx.fillStyle = genFor(G.level).accent;
       ctx.fillText('NEXT STOP: ' + genFor(G.level).name, W / 2, H * 0.16 + 62);
     }
-    if (!secretDraft && !liveAttune) drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
+    if (!secretDraft) drawJourneyMap(clearY + (draftShort ? 56 : 86), draftShort || W < 560);
     if (G.forge && G.forge.step === 'menu' && G.stateT > 0.5) drawForgeMenu(draftAccent);
     if (G.upgradeChoices && G.stateT > 0.8) {
       const a = Math.min(1, (G.stateT - 0.8) / 0.4);
@@ -9979,13 +9970,8 @@ function drawOverlays() {
       const selC = draftSel != null && G.upgradeChoices[draftSel];
       if (!L.stacked) if (!selC) {
         // the Mew VMAX bounty is ONE hand, TWO picks — the header carries the count
-        // AFT-023: a combined attunement hand reuses the same machinery with
-        // its own voice (two banked levels → one choose-two decision)
-        const bounty = G.attuneLive
-          ? (G.bonusPicks >= 2 ? 'TWO LEVELS BANKED — CHOOSE TWO'
-            : G.bonusPicks === 1 ? 'ONE MORE PICK' : null)
-          : (G.bonusPicks >= 2 ? 'RIFT BOUNTY — CHOOSE TWO'
-            : G.bonusPicks === 1 ? 'RIFT BOUNTY — ONE MORE PICK' : null);
+        const bounty = G.bonusPicks >= 2 ? 'RIFT BOUNTY — CHOOSE TWO'
+          : G.bonusPicks === 1 ? 'RIFT BOUNTY — ONE MORE PICK' : null;
         if (bounty) { ctx.fillStyle = '#d780ff'; }
         ctx.fillText((bounty || (secretDraft ? 'CHOOSE A SECRET UPGRADE' : G.mode === 'junkie' ? 'CHOOSE A HELD ITEM' : 'CHOOSE AN UPGRADE')) +
           (IS_TOUCH ? ' — TAP A CARD TO INSPECT' : ' — INSPECT, THEN CONFIRM'), W / 2, headerY, W * 0.94);

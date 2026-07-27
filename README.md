@@ -674,8 +674,10 @@ ward). The three mastery stacks dock as ranked **satellite nodes**. The
 draft deals Commit/Adapt/Explore (`rollUpgradeChoices`, update.js) with
 apex > fusion priority, ONE fusion/apex per hand, a newly-unlocked
 guarantee after evolving, reroll anti-repeat and pity — under the
-AFT-009R four-path cap, with hands arriving as ATTUNEMENT levels and the
-transformations at the realm AETHER FORGE. Knockout never uninstalls
+AFT-009R four-path cap, with hands arriving as the STAGE DIVIDEND (AFT-024: one
+draft per ordinary stage clear, banked resonance widening it to 4 or 5
+cards) and the transformations at the realm AETHER FORGE — 3 decisions
+per realm, and never one during a live fight. Knockout never uninstalls
 anything (a defeat costs HALF the loose resonance, all banked levels and
 one Focus Charge — the build survives, and a finale knockout resumes at
 the furthest round/beat/segment reached, AFT-023); `webRegressibleLeaves` (which simulates

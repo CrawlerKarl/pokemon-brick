@@ -1008,7 +1008,6 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (newPhase > br.phase) {
       statsBossPhaseMark(br, br.phase);
       resEvent('phase'); // AFT-009R P2: turning a boss phase is resonance
-      G.attuneHoldT = Math.max(G.attuneHoldT || 0, 12); // AFT-023: a phase turn is never talked over by a draft
       br.phase = newPhase;
       // The hit that ended one phase cannot spill straight through the next.
       // This short gate protects boss choreography without creating a long
@@ -2267,8 +2266,10 @@ function rollUpgradeChoices() {
   // VISIBILITY and reroll control only, never rank count, and the
   // one-fusion/apex-per-hand rule holds at every hand size (only the
   // EXPLORE slot ever deals a web special).
-  const handN = (G.clearedStage === 2 && G.finale && G.finale.mastery && G.finale.mastery.clear)
-    ? (G.finale.mastery.countered ? 5 : 4) : 3;
+  // AFT-024: the STAGE DIVIDEND's banked resonance widens the hand (cap 5),
+  // the same currency the finale mastery bonus spends
+  const handN = Math.min(5, ((G.clearedStage === 2 && G.finale && G.finale.mastery && G.finale.mastery.clear)
+    ? (G.finale.mastery.countered ? 5 : 4) : 3) + (G.dividendBonus || 0));
   const rerolledFrom = G.rerolled ? (G.lastOfferKeys || []) : [];
   const bridges = WEB_BRIDGES.filter(bridgeEligible);
   const fusions = WEB_FUSIONS.filter(fusionEligible);
@@ -3049,13 +3050,24 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
       // resonance, banked (unpresented) attunement levels, and one Focus
       // Charge evaporate; every rank and transformation survives the retry.
       const A = G.attune;
-      const lostLvls = A ? A.pending : 0;
+      // AFT-024 THE RECOVERY HAND: with drafts pinned to stage clears, a
+      // player stuck on a finale would otherwise earn NOTHING while they
+      // learn it. Resonance banked during the failed attempt cashes in as a
+      // real hand on the retry — the same currency, spendable when it
+      // matters most. Dying never CREATES resonance and still costs half
+      // the loose bank plus a Focus Charge, so it cannot be farmed for
+      // value — but it IS capped at TWO per stage so a long grind tops up
+      // a struggling build without quietly out-earning a clean clear
+      // (measured: an unbounded rule paid a 22-knockout seed 8 hands in
+      // one realm, against the designed 3).
+      if (G.recoverStageLvl !== G.level) { G.recoverStageLvl = G.level; G.recoverN = 0; }
+      const recover = !!(A && A.pending > 0) && (G.recoverN || 0) < 2;
+      if (recover) G.recoverN = (G.recoverN || 0) + 1;
       // AFT-023: keep HALF the loose resonance — a build that keeps dying
       // must still be able to LEVEL ITS WAY OUT (full confiscation made a
       // weak build permanently weak: measured 15-16 KO grindouts on the
-      // L24 raid once the bank zeroed every death). Banked LEVELS and the
-      // Focus Charge still burn; the consequence stays real.
-      if (A) { A.res = Math.floor(A.res * 0.5); A.pending = 0; }
+      // L24 raid once the bank zeroed every death).
+      if (A) { A.res = Math.floor(A.res * 0.5); }
       const lostFocus = G.focus > 0;
       if (lostFocus) G.focus--;
       G.lives = preset().lives + starterMod('bonusHp', 0);
@@ -3095,9 +3107,28 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
       G.bossShotCD = Math.max(G.bossShotCD || 0, 2.2);
       setAnnounce('alert', '#ff8a65', 'KNOCKED OUT!',
         'BUILD SAFE — HALF YOUR LOOSE RESONANCE LOST'
-        + (lostLvls ? ' · ' + lostLvls + ' BANKED LEVEL' + (lostLvls > 1 ? 'S' : '') : '')
         + (lostFocus ? ' · 1 FOCUS' : ''), 3.6,
-        resumeLine || 'RETRYING THE WAVE WITH FULL LIVES');
+        recover ? 'YOUR BANKED RESONANCE ANSWERS — CHOOSE AN UPGRADE'
+          : (resumeLine || 'RETRYING THE WAVE WITH FULL LIVES'));
+      // the recovery hand rides the ordinary dividend path (banked width
+      // included) and presents over the rebuilt, frozen retry
+      if (recover) {
+        G.upgradeChoices = null;
+        dealStageDividend();
+        if (G.upgradeChoices) {
+          // A DRAFT FREEZES update(), so an armed entrance could never play
+          // out behind it — the hand would sit forever waiting on a
+          // cinematic that cannot advance (measured as an unbounded stall).
+          // The retry is a CONTINUATION anyway: you met this boss seconds
+          // ago, so the entrance is dropped rather than deferred.
+          G.reveal = null; G.revealDock = null;
+          // the retry is ALREADY built (and, on a finale, already
+          // fast-forwarded to its checkpoint round) — the pick must RESUME
+          // it, never rebuild it, or the resume would be undone
+          G.recoveryDraft = { back: G.state };
+          G.state = 'upgrade'; G.stateT = 0; draftSel = null;
+        }
+      }
       return;
     }
     G.state = 'gameover'; G.stateT = 0;
@@ -3702,13 +3733,15 @@ function beginBossReveal(kind, brs) {
   // the invariant suite drives update() headless — reveals arm only for real
   // sessions (or the dedicated reveal test, which opts back in)
   if (typeof window !== 'undefined' && window.__SUITE && !window.__SUITE_REVEALS) return;
+  // AFT-024: a KNOCKOUT CHECKPOINT RESUME never replays the entrance — you
+  // have already met this boss, and the recovery hand opens over the retry.
+  // (A draft freezes update(), so an armed reveal could never finish: the
+  // hand sat behind a cinematic that never played out — measured as an
+  // unbounded stall in the campaign bot.)
+  if (G.finaleResume) return;
   const reduced = !!SETTINGS.reduceFlash; // reduced-effects: dissolve, no sweep
   const gen = genFor(G.level);
   const primary = brs[0];
-  // AFT-023: the 16s after a reveal belong to the boss, never to a draft —
-  // the hold ticks down only in live combat, so it covers the whole
-  // post-dock engagement window regardless of how long the scene is held.
-  G.attuneHoldT = Math.max(G.attuneHoldT || 0, 16);
   const cue = kind === 'sentinels' ? 'STRIKE THE ONE THAT JUST ATTACKED — IT IS OPEN'
     : kind === 'secret' ? 'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE'
     : kind === 'mythic' ? 'THREE PHASES · DENY ITS SUMMONS — TWO HITS EACH'
@@ -3829,9 +3862,6 @@ function startFinaleBeat(i) {
   F.beat = i; F.beatT = 0;
   const fmt = FINALE_FORMATS[F.format] || FINALE_FORMATS.ladder;
   F.beatKey = fmt.beats[i] || ('beat' + i);
-  G.attuneBeatN = 0; // AFT-023: each finale beat admits at most one fresh draft
-  // AFT-023: the beat that just turned IS the fight's moment — hold drafts out
-  G.attuneHoldT = Math.max(G.attuneHoldT || 0, 6);
   // AFT-023 KNOCKOUT CHECKPOINT: every run remembers the furthest beat this
   // finale reached — a knockout resumes the fight here instead of replaying
   // the whole finale. Trials and dailies keep the same recovery contract as
@@ -5374,12 +5404,6 @@ function update(dt) {
     G.shipYv += (ty - G.shipYv) * Math.min(1, dt * 14 * follow);
   } else G.shipYv = PADDLE_Y();
   G.invuln = Math.max(0, G.invuln - dt);
-  // AFT-023: draft pacing clocks tick only in LIVE combat — a reveal or a
-  // frozen draft never quietly burns the post-reveal hold window
-  if (G.state === 'play' && !G.reveal) {
-    G.attuneCD = Math.max(0, (G.attuneCD || 0) - dt);
-    G.attuneHoldT = Math.max(0, (G.attuneHoldT || 0) - dt);
-  }
   G.emberFloatT = Math.max(0, (G.emberFloatT || 0) - dt); // AFT-023 fire-vessel kindle floater throttle
   // AFT-023: the CELESTIAL ward cools here; sectors that filled during the
   // cooldown release the moment the halo is ready again
@@ -5416,13 +5440,10 @@ function update(dt) {
       if (G.combatNotice.t <= 0) G.combatNotice = null;
     } else if (G.combatNotice.t > 2.2) G.combatNotice.t = 2.2; // never hoard a stale queue
   }
-  // AFT-009R P2: a queued attunement level opens at the first combat-safe
-  // beat. DORMANT under the suite (like reveals) — tests opt in via
-  // window.__SUITE_ATTUNE, or drive presentAttunementLevel() directly.
-  if (G.attune && G.attune.pending > 0 && attuneSafeNow()
-    && !(typeof window !== 'undefined' && window.__SUITE && !window.__SUITE_ATTUNE)) {
-    presentAttunementLevel();
-  }
+  // AFT-024: the mid-combat presentation is RETIRED. Banked attunement
+  // levels no longer interrupt a live wave at all — they widen the next
+  // STAGE-CLEAR hand (dealStageDividend, state.js). A fight is never
+  // paused by a draft; the choice always waits for the stage boundary.
   updateAmbient(dt, G.state === 'menu' || G.state === 'dex' ? 0 : regionIdx(G.level));
 
   for (const p of G.particles) {
@@ -8019,12 +8040,15 @@ function settleStageResolution() {
       statsLifeGain('aegisX');
       addFloater(W / 2, H * 0.42, PATHS.aegis.tiers[3].name + ' — SEGMENT RESTORED', '#66bb6a', 20);
     }
-    // AFT-009R P3: ordinary stages deal NO draft — the frequent picks ride
-    // the attunement levels now. A REALM FINALE opens THE AETHER FORGE
-    // (its mastery-sized Refine hand keeps AFT-020's wider-draft reward);
-    // the Rift's secret bounty draft is untouched.
+    // AFT-024 THE STAGE DIVIDEND: every ORDINARY stage clear deals a draft
+    // — one guaranteed decision per stage, at the results beat, never
+    // mid-fight. A REALM FINALE opens THE AETHER FORGE instead (its
+    // mastery-sized Refine hand keeps AFT-020's wider-draft reward), so the
+    // campaign runs 18 stage hands + 9 realm decisions. The Rift's secret
+    // bounty draft is untouched.
     G.upgradeChoices = null;
     G.forge = (clearedStage === 2 && !secretVictory) ? { step: 'menu' } : null;
+    if (clearedStage !== 2 && !secretVictory) dealStageDividend();
     if (clearedStage === 2) G.focus = Math.min(3, (G.focus || 0) + 1); // AFT-009R P5: +1 Focus per realm, cap 3
     if (secretVictory) rollUpgradeChoices();
     if (secretVictory) {

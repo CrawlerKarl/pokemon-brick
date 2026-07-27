@@ -5,6 +5,71 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-07-27 — AFT-024: THE STAGE DIVIDEND — upgrades arrive per stage, and nothing interrupts a fight
+
+Owner directive: upgrades should arrive **after each level** rather than on
+an experience threshold. Implemented as the STAGE DIVIDEND, with the
+cadence question settled by measurement rather than preference:
+
+- **Per stage, not per wave.** A stage already contains 2-5 reinforcement
+  waves, so per-wave would deal 60-100 choices per campaign, and a
+  reinforcement beat is not a natural pause (it flows straight out of the
+  previous one). Per STAGE gives **exactly 3 decisions per realm — 2 stage
+  hands + 1 Aether Forge, 26 per journey** — every one at a real break.
+- **The interval rises for free.** Stage durations already climb across
+  the campaign (AFT-023's rising curve: 20-32s early → 34-65s late), so
+  the gap between choices widens on its own without a second schedule.
+- **Resonance was repurposed, not deleted.** It no longer decides WHEN a
+  hand arrives (that was the interruption defect AFT-023 was still
+  managing) — it decides HOW WIDE it is: banked levels widen the stage
+  hand (3 base, +1 each, cap 5) and the surplus rolls forward.
+  `attuneNeed` re-priced to 38 (+4/level) against the per-stage income
+  cap, so a 4-card hand reads as a strong stage and a 5-card hand as an
+  exceptional one.
+- **The mid-wave path is GONE, not merely disabled.** `attuneSafeNow`,
+  `presentAttunementLevel`, `resumeFromAttunement`, `G.attuneLive` and the
+  whole AFT-023 pacing-clock family (`attuneCD`/`attuneHoldT`/
+  `attuneStageN`/`attuneBeatN`) were removed — those existed only to make
+  interruptions tolerable, and there are none left to manage. The suite
+  asserts a full bank cannot open a draft during live combat.
+- **THE RECOVERY HAND** closes the regression this exposed: with drafts
+  pinned to stage clears, a player stuck on a finale would earn nothing
+  at all while learning it. Resonance banked during a failed attempt now
+  cashes in as a real hand on the retry, presented over the already-built
+  (and, on a finale, already checkpoint-resumed) wave —
+  `resumeRecoveryDraft` hands that exact wave back rather than rebuilding
+  it, which would otherwise have silently undone the AFT-023 round
+  resume. Dying never creates resonance and still costs half the loose
+  bank plus a Focus Charge, and the hand is capped at **two per stage**
+  (an unbounded rule paid a 22-knockout seed 8 hands in one realm against
+  the designed 3).
+- **A soft-lock found while verifying, and worth recording.** A draft
+  FREEZES `update()`, so an entrance armed by the knockout rebuild could
+  never play out behind the recovery hand — the draft sat forever waiting
+  on a cinematic that could not advance. The campaign bot surfaced it as
+  a runaway (625,920 simulated seconds in one scenario, which the
+  harness's wall-clock guard reported as `wallguard` — an easy symptom to
+  misread as machine load). A recovery hand now DROPS any armed reveal
+  (the retry is a continuation — that boss was fought seconds ago), and
+  `beginBossReveal` additionally skips while `G.finaleResume` is set so a
+  checkpoint resume never replays an entrance. Both are suite-locked.
+
+Verification: suite 129/129, full gate green (56 scenes; the retired
+`attune-level` scene replaced by `stage-dividend`, which captures the
+earned 5-card hand). Isolated finale durations are unchanged from AFT-023
+(L3 71s / L6 52 / L9 64 / L12 55 / L15 58 / L18 59 / L21 26 / L24 46 /
+L27 63, zero budget fails). Measured cadence: 26 picks per campaign,
+3 per realm, every seed.
+
+**Known, pre-existing:** the campaign bot still grinds the L24 Seraph raid
+(it shoots the crown-shielded Sovereign instead of breaking segments) —
+the same pathology recorded in AFT-023 (13/14 knockouts on that level).
+Targeting its captains directly was tried and measured WORSE (30/29), so
+it stays deferred and flagged; the raid itself clears in 46s with zero
+knockouts under a granted build.
+
+---
+
 ## 2026-07-25 — AFT-023c: manual fire never drops a tap, and active tapping outpaces the assist
 
 Owner report: "I tap quickly three times and it only fires twice" — a tap

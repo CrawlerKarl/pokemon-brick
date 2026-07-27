@@ -420,9 +420,14 @@ window.requestAnimationFrame = function () { return 0; };
   // step through the stage-results interstitial (and any pending ceremony)
   // the same way a player's tap would — used wherever a test expects the
   // draft right after a clear
-  function skipResults() {
+  function skipResults(keepDraft) {
     if (G.state === 'results') { G.stateT = 1; advanceResults(); }
     if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); }
+    // AFT-024 THE STAGE DIVIDEND: an ordinary clear now deals a hand as part
+    // of the between-stage flow. Tests that only want to ADVANCE take it;
+    // tests inspecting the hand pass keepDraft.
+    if (!keepDraft && G.state === 'upgrade' && G.upgradeChoices && !G.forge
+      && !(G.secret && G.secret.rewardDraft)) pickUpgrade(0);
   }
   // 2) mode smoke ×3
   async function modeSmoke(mode, frames) {
@@ -432,10 +437,9 @@ window.requestAnimationFrame = function () { return 0; };
     G.lives = 99; // smoke test: survive shots — we're testing sim health, not skill
     if (mode !== 'classic') fireHeld = true;
     const startBricks = G.bricks.length;
-    let reachedUpgrade = false;
     await runFrames(frames, () => {
-      if (G.state === 'results') skipResults();
-      if (G.state === 'upgrade') { reachedUpgrade = true; return false; }
+      if (G.state === 'results') skipResults(true);
+      if (G.state === 'upgrade') return false; // a dealt hand pauses the run — that IS the flow now
       if (G.state === 'serve') fireAction();
       // classic is ball-only now (no gun) — holding fire would be a no-op
       steerBallOrAim(mode);
@@ -451,30 +455,25 @@ window.requestAnimationFrame = function () { return 0; };
     // Deterministically FINISH the wave so the clear flow is always
     // exercised — a dumb AI sinking the literal last flyer was flaky. Killing
     // the bricks routes through the same level-clear code the game uses.
-    // AFT-009R P3: an ORDINARY clear rolls straight into the next wave (no
-    // stage draft — attunement owns the frequent picks now), so the smoke
-    // expects level 2's serve, then exercises pickUpgrade via a presented
-    // attunement level instead.
+    // AFT-024 THE STAGE DIVIDEND: an ORDINARY clear deals ONE hand at the
+    // results beat; taking it rolls into the next wave.
+    if (G.state === 'upgrade' && G.upgradeChoices) pickUpgrade(0); // clear any hand already on screen
+    const lvl0 = G.level;
     G.reinforce = 0;
+    G.objective = null; // a later stage may carry one; the smoke tests the CLEAR flow
     for (const b of G.bricks) b.dead = true;
     await runFrames(400, () => {
-      if (G.state === 'serve' && G.level === 1) fireAction();
-      skipResults();
-      return (G.level >= 2 && (G.state === 'serve' || G.state === 'play')) ? false : undefined;
+      if (G.state === 'serve') fireAction();
+      skipResults(true); // keep the dealt hand for inspection
+      return G.state === 'upgrade' ? false : undefined;
     });
-    assert(G.level >= 2 && (G.state === 'serve' || G.state === 'play'),
-      'the ordinary clear did not roll into the next wave (L' + G.level + ' · ' + G.state + ')');
-    assert(!G.upgradeChoices, 'an ordinary stage clear dealt a draft — P3 removed those');
-    // the attunement pick path is the ordinary install flow now
-    G.state = 'play'; G.stateT = 2; G.playT = 2;
-    gainResonance(999, 'smoke');
-    presentAttunementLevel();
-    assert(G.state === 'upgrade' && G.upgradeChoices && G.upgradeChoices.length > 0,
-      'the attunement level did not open the draft');
+    assert(G.level > lvl0, 'the ordinary clear did not advance the level (L' + G.level + ')');
+    assert(G.upgradeChoices && G.upgradeChoices.length >= 3,
+      'the ordinary stage clear did not deal its dividend hand (' + G.state + ')');
     pickUpgrade(0);
     assert(G.upgradeChoices === null, 'pickUpgrade(0) did not consume the hand');
-    assert(G.state === 'play', "pickUpgrade(0) left state '" + G.state + "', expected play (live resume)");
-    G.attune.pending = 0;
+    assert(G.state === 'serve' || G.state === 'play',
+      "pickUpgrade(0) left state '" + G.state + "', expected the next wave");
     assert(ERR.length === e0, 'errors during pickUpgrade: ' + ERR.slice(e0).join(' | '));
     return 'AI-progressed · ordinary clear rolls on · attunement pick OK → ' + G.state;
   }
@@ -744,13 +743,18 @@ window.requestAnimationFrame = function () { return 0; };
     loseLife('WEB REGRESSION TEST');
     assert(totalBuildLevels() === build0, 'a knockout uninstalled an upgrade (' + totalBuildLevels() + '/' + build0 + ')');
     // AFT-023: HALF the loose res survives (spiral-breaker); banked levels burn
-    assert(G.attune.res === 6 && G.attune.pending === 0, 'the knockout cost is not half-res + all banked levels (res=' + G.attune.res + ')');
+    assert(G.attune.res === 6, 'the knockout cost is not half the loose resonance (res=' + G.attune.res + ')');
     assert(G.focus === 1, 'the knockout did not cost a Focus Charge');
+    // AFT-024 THE RECOVERY HAND: resonance banked during the failed attempt
+    // cashes in as a real draft on the retry
+    assert(G.state === 'upgrade' && G.upgradeChoices, 'banked resonance did not answer the knockout');
+    assert(G.attune.pending === 0, 'the recovery hand did not spend the bank');
+    pickUpgrade(0);
     assert(G.state === 'serve' || G.state === 'play', 'the knockout did not retry the wave');
     const broken = legal();
     assert(!broken, 'knockout left an illegal build: ' + broken);
     assert(ERR.length === e0, 'errors during web regression: ' + ERR.slice(e0).join(' | '));
-    return 'knockout keeps every installed upgrade · costs half the loose res + banked levels + 1 focus · retry is live';
+    return 'knockout keeps every installed upgrade · costs half the loose res + 1 focus · banked width answers as a recovery hand · retry is live';
   });
 
   // 2w-iib) every bridge synergy and superskill actually FIRES in play, in
@@ -1896,8 +1900,10 @@ window.requestAnimationFrame = function () { return 0; };
     G.stateT = 1; // clear the results dwell gate
     const shieldsBefore = G.shieldCharges;
     advanceResults();
-    // AFT-009R P3: a CHALLENGE clear deals no draft — the run rolls straight
-    // into the finale build, spending the preparation on the way in
+    // AFT-024: a CHALLENGE clear deals its stage hand; taking it builds the
+    // finale, spending the preparation on the way in
+    assert(G.state === 'upgrade' && G.upgradeChoices, 'the challenge clear dealt no stage hand');
+    pickUpgrade(0);
     assert(G.state === 'serve' || G.state === 'play',
       'results roll into the finale (state ' + G.state + ')');
     assert(G.level === 9 && G.prep === null, 'preparation spent (never outlives the build)');
@@ -4065,16 +4071,19 @@ window.requestAnimationFrame = function () { return 0; };
       assert(typeof R.flavor === 'string' && R.flavor.includes('FLIGHT LOG'),
         'Kanto results are missing their flight-log narrative line');
       assert(!R.medalsSaved, 'trial run claimed to save medals');
-      assert(G.level === 2 && !G.upgradeChoices,
-        'level advance behind results broke (P3: ordinary clears deal no draft)');
+      assert(G.level === 2 && G.upgradeChoices,
+        'level advance + stage dividend behind results broke (AFT-024)');
       drawResults(); // renders without throwing
       // dwell gate: an immediate tap must NOT skip the screen
       G.stateT = 0.1; advanceResults();
       assert(G.state === 'results', 'results skipped before the dwell gate');
       G.stateT = 1; advanceResults();
+      // AFT-024: the tap lands on the stage dividend; taking it rolls on
+      assert(G.state === 'upgrade' && G.upgradeChoices, 'the tap did not present the stage hand');
+      pickUpgrade(0);
       assert(G.state === 'serve' || G.state === 'play',
-        'tap did not roll results into the next wave (' + G.state + ')');
-      return 'clear → results (ledger + objectives) → one tap → next wave; arrival grace present';
+        'the stage pick did not roll into the next wave (' + G.state + ')');
+      return 'clear → results (ledger + objectives) → tap → stage hand → next wave; arrival grace present';
     } finally { SETTINGS.preset = oldPreset; SETTINGS.mode = 'classic'; }
   });
 
@@ -6223,7 +6232,7 @@ window.requestAnimationFrame = function () { return 0; };
     } finally { W = w0; H = h0; G.upgradeChoices = null; resize(); }
   });
 
-  test('AFT-009R P2: resonance — curated opening, four-path cap, anti-farm, safe queue, live resume', async () => {
+  test('AFT-024: resonance — curated opening, four-path cap, anti-farm, hand width', async () => {
     SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
     resetRun(1, true, { seed: 'AFT009R-P2' });
     G.state = 'play'; G.lives = G.livesMax = 99; G.invuln = 999; G.playT = 2; G.stateT = 2;
@@ -6246,22 +6255,24 @@ window.requestAnimationFrame = function () { return 0; };
     const lvlAtCap = A.level, pendAtCap = A.pending;
     gainResonance(50, 'test');
     assert(A.level === lvlAtCap && A.pending === pendAtCap, 'income kept paying past the stage cap');
-    assert(A.pending >= 2 && A.level >= 2, 'a capped stage did not still bank early levels (pending=' + A.pending + ')');
+    assert(A.pending >= 1 && A.level >= 1, 'a capped stage banked no width at all (pending=' + A.pending + ')');
     // the next stage re-opens the budget (buildLevel resets it)
+    const pend1 = A.pending;
     G.resStageIn = 0;
     gainResonance(999, 'test');
-    assert(A.pending >= 3 && A.level >= 3, 'a fresh stage budget did not bank the next level (pending=' + A.pending + ')');
+    assert(A.pending > pend1, 'a fresh stage budget did not bank more width (pending=' + A.pending + ')');
     const trio = h => G.upgradeChoices.map(c => c.pathKey).sort().join(',');
-    presentAttunementLevel();
-    assert(G.state === 'upgrade' && G.attuneLive, 'the level did not open the draft');
+    // AFT-024: hands arrive at STAGE CLEARS via the dividend — the curated
+    // opening order is unchanged, but nothing interrupts a live wave
+    dealStageDividend();
+    assert(G.upgradeChoices && G.upgradeChoices.length >= 3, 'the dividend dealt no hand');
     assert(trio() === 'arsenal,bond,impact', 'hand 1 is not the weapon trio (' + trio() + ')');
     pickUpgrade(G.upgradeChoices.findIndex(c => c.pathKey === 'arsenal'));
-    assert(G.state === 'play' && !G.attuneLive, 'the pick did not resume the live wave');
     assert(pathLvl('arsenal') === 1, 'the NEW pick did not install tier I');
-    presentAttunementLevel();
+    dealStageDividend();
     assert(trio() === 'aegis,prism,surge', 'hand 2 is not the support trio (' + trio() + ')');
     pickUpgrade(G.upgradeChoices.findIndex(c => c.pathKey === 'aegis'));
-    presentAttunementLevel();
+    dealStageDividend();
     const h3 = G.upgradeChoices.map(c => c.pathKey);
     assert(h3.includes('arsenal') || h3.includes('aegis'), 'hand 3 does not deepen an owned path');
     assert(G.upgradeChoices.some(c => c.tierIdx === 0 && !['arsenal', 'aegis'].includes(c.pathKey)),
@@ -6276,44 +6287,36 @@ window.requestAnimationFrame = function () { return 0; };
           'a fifth path was offered past the cap (' + c.pathKey + ')');
       }
     }
-    // 4) the combat-safe gate: never over a charge, a channel, or a dropping ball
-    G.upgradeChoices = null; G.state = 'play'; G.stateT = 2; G.attune.pending = 1;
-    paused = false; G.engageHold = 0; G.columnStrikes.length = 0; G.reveal = null; G.resolve = null;
-    // AFT-023 presentation discipline — each blocker refuses on its own
-    G.attuneCD = 0; G.attuneHoldT = 0; G.attuneStageN = 0; G.attuneBeatN = 0;
-    G.attuneCD = 5;
-    assert(!attuneSafeNow(), 'the spacing cooldown was ignored');
-    G.attuneCD = 0; G.attuneHoldT = 5;
-    assert(!attuneSafeNow(), 'the post-reveal/phase hold was ignored');
-    G.attuneHoldT = 0; G.attuneStageN = 1;
-    assert(!attuneSafeNow(), 'a second draft opened in one ordinary stage');
-    G.attuneStageN = 0;
-    chargeHeld = true;
-    assert(!attuneSafeNow(), 'a held charge was interruptible');
-    chargeHeld = false; G.charge = 0; G.chargeCD = 0;
-    G.bricks.push({ channel: true, poke: { id: 1, t: 'fire', n: 'X' }, bx: 0, by: 0, w: 10, h: 10 });
-    assert(!attuneSafeNow(), 'an open desperation channel was interruptible');
-    G.bricks.pop();
-    const m0 = G.mode;
-    G.mode = 'classic';
-    G.balls.push({ x: W / 2, y: H * 0.7, vy: 200, vx: 0, dead: false, stuck: false, r: 9 });
-    assert(!attuneSafeNow(), 'a Breaker ball dropping to the paddle was interruptible');
-    G.balls.pop(); G.mode = m0;
-    assert(attuneSafeNow(), 'a calm live beat did not admit the queued level');
-    G.attune.pending = 0;
-    return 'contribution accrues · farm pays nothing · trio → trio → deepen/branch · 4-path cap holds · safe gate honest · pick resumes play';
+    // 4) AFT-024: banked resonance buys WIDTH, not extra screens — and the
+    // surplus past two rolls forward instead of evaporating
+    G.attune.pending = 3; G.clearedStage = 0; G.upgradeChoices = null;
+    dealStageDividend();
+    assert(G.upgradeChoices.length === 5, 'two banked levels did not widen the hand to 5 (' + G.upgradeChoices.length + ')');
+    assert(G.attune.pending === 1, 'the third banked level did not roll forward (' + G.attune.pending + ')');
+    assert(G.dividendBonus === 0, 'the width bonus leaked past its own draft');
+    G.upgradeChoices = null;
+    dealStageDividend();
+    assert(G.upgradeChoices.length === 4, 'the rolled-forward level did not widen the next hand');
+    assert(G.attune.pending === 0, 'the rolled-forward level was not spent');
+    G.upgradeChoices = null;
+    dealStageDividend();
+    assert(G.upgradeChoices.length === 3, 'an unearned hand was still wide');
+    return 'contribution accrues · farm pays nothing · trio → trio → deepen/branch · 4-path cap holds · banked resonance widens the hand (5/4/3) and rolls its surplus';
   });
 
   test('AFT-009R P3: the Aether Forge — finale-only, omitted actions, focused steps, caps', async () => {
     SETTINGS.mode = 'blaster'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
-    // 1) an ORDINARY clear arms no forge and deals no draft
+    // 1) an ORDINARY clear arms no forge — but AFT-024 deals its stage hand
     resetRun(1, true, { seed: 'AFT009R-P3A' });
     G.state = 'play'; G.reinforce = 0; G.objective = null;
     for (const b of G.bricks) b.dead = true;
     for (let f = 0; f < 600 && G.state !== 'results'; f++) { paused = false; G.freeze = 0; update(1/60); }
     assert(G.state === 'results', 'arrival did not reach results');
-    assert(!G.forge && !G.upgradeChoices, 'an ordinary clear armed a forge or dealt a draft');
+    assert(!G.forge, 'an ordinary clear armed a forge');
+    assert(G.upgradeChoices && G.upgradeChoices.length >= 3, 'an ordinary clear dealt no stage dividend');
     G.stateT = 1; advanceResults();
+    assert(G.state === 'upgrade', 'the stage hand did not present after results');
+    pickUpgrade(0);
     assert(G.level === 2 && (G.state === 'serve' || G.state === 'play'), 'ordinary clear did not roll on');
     // 2) a FINALE opens the Forge menu; a fresh run omits Link/Evolve
     resetRun(3, true, { seed: 'AFT009R-P3B' });
@@ -6454,30 +6457,18 @@ window.requestAnimationFrame = function () { return 0; };
     return 'focus 2→0 spends honestly · reforge legal, banked, once per realm · v5 save round-trip · trial sync';
   });
 
-  test('AFT-023: draft pacing discipline + finale knockout checkpoint', async () => {
+  test('AFT-024: no draft interrupts combat + the finale knockout checkpoint', async () => {
     SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
-    // 1) a boss reveal holds drafts out of the next 16 combat seconds
-    window.__SUITE_REVEALS = true;
-    resetRun(3, true, { seed: 'AFT023-REVEAL' });
-    assert((G.attuneHoldT || 0) >= 15, 'the boss reveal did not arm the draft hold (' + G.attuneHoldT + ')');
-    if (G.reveal) revealSkip();
-    window.__SUITE_REVEALS = false;
-    // 2) two banked levels past the curated opening combine into ONE
-    //    choose-two hand (never two chained screens)
-    resetRun(5, true, { seed: 'AFT023-COMBINE', upg: 'arsenal:2,aegis:1' });
+    // AFT-024 retired the mid-combat draft entirely (reveal holds, spacing
+    // cooldowns and combined hands existed only to make interruptions
+    // tolerable) — the invariant that survives is that NOTHING opens a
+    // draft during live combat.
+    resetRun(5, false, { seed: 'AFT024-NOINTERRUPT', upg: 'arsenal:2,aegis:1' });
     G.state = 'play'; G.stateT = 2; G.playT = 2; G.lives = G.livesMax = 99;
-    const A = G.attune;
-    A.presented = Math.max(3, A.presented); A.pending = 2;
-    presentAttunementLevel();
-    assert(G.state === 'upgrade' && G.attuneLive, 'the combined level did not open');
-    assert(G.bonusPicks === 2 && A.pending === 0, 'two banked levels did not combine (bonusPicks=' + G.bonusPicks + ' pending=' + A.pending + ')');
-    const lv0 = totalBuildLevels();
-    pickUpgrade(0);
-    assert(G.state === 'upgrade' && G.upgradeChoices && G.upgradeChoices.length >= 1,
-      'the second pick of a combined hand was not held open');
-    pickUpgrade(0);
-    assert(G.state === 'play' && !G.attuneLive && G.bonusPicks === 0, 'the combined hand did not resume play after two picks');
-    assert(totalBuildLevels() === lv0 + 2, 'two picks did not install two ranks');
+    G.attune.pending = 3; // a full bank must not open anything mid-fight
+    for (let f = 0; f < 600; f++) { paused = false; G.freeze = 0; update(1 / 60); }
+    assert(G.state !== 'upgrade', 'a banked level interrupted live combat (AFT-024 retired that path)');
+    assert(G.attune.pending === 3, 'banked width was spent outside a stage clear');
     // 3) ladder-family knockout resumes at the reached ROUND, not round 0
     resetRun(3, false, { seed: 'AFT023-KO' });
     G.state = 'play'; G.stateT = 2; G.playT = 2;
@@ -6486,15 +6477,33 @@ window.requestAnimationFrame = function () { return 0; };
       'the round advance did not record a knockout checkpoint');
     G.attune.res = 12; G.attune.pending = 1;
     G.lives = 1;
-    loseLife('AFT023 TEST KNOCKOUT');
+    loseLife('AFT024 TEST KNOCKOUT');
+    // the banked level answers as a recovery hand before the retry resumes
+    assert(G.state === 'upgrade' && G.upgradeChoices, 'banked resonance did not answer the knockout');
+    pickUpgrade(0);
     assert(G.state === 'play' || G.state === 'serve', 'the knockout did not retry');
     assert(G.gauntlet && G.gauntlet.phase === 1, 'the retry replayed round 0 (phase=' + (G.gauntlet && G.gauntlet.phase) + ')');
     assert(G.finale && G.finale.beat === 1, 'the finale director did not resume at the reached beat');
     assert(!G.bricks.some(b => b.subBoss && !b.dead), 'the beaten sentinels came back');
     const sov = G.bricks.find(b => b.isBoss && !b.dead);
     assert(sov && sov.hp === sov.maxHp, 'the current round boss did not restart at its round-entry HP');
-    assert(G.attune.res === 6 && G.attune.pending === 0, 'the knockout resume mispriced the bank (want half-res 6, got ' + G.attune.res + ')');
+    assert(G.attune.res === 6, 'the knockout resume mispriced the bank (want half-res 6, got ' + G.attune.res + ')');
     assert(G.invuln >= 2.4 && (G.enemyShotCD || 0) >= 2.1, 'the retry opened without post-knockout grace');
+    // 3a) the recovery hand is capped at TWO per stage — a long grind tops
+    // up a struggling build without out-earning a clean clear
+    G.attune.pending = 1; G.lives = 1;
+    loseLife('AFT024 CAP TEST');
+    assert(G.state === 'upgrade' && G.upgradeChoices, 'the 2nd recovery hand did not open');
+    pickUpgrade(0);
+    G.attune.pending = 1; G.lives = 1;
+    loseLife('AFT024 CAP TEST 2');
+    assert(G.state !== 'upgrade', 'a 3rd recovery hand opened on the same stage (cap 2)');
+    assert(G.attune.pending === 1, 'the capped knockout still spent the bank');
+    // 3b) a checkpoint resume must NOT replay the boss entrance: a draft
+    // freezes update(), so an armed reveal could never finish and the
+    // recovery hand would sit behind a cinematic forever (measured as an
+    // unbounded stall in the campaign bot before this guard)
+    assert(!G.reveal, 'a boss reveal was left armed behind the recovery hand (it can never finish — a draft freezes update)');
     // 4) raid knockout resumes at the reached SEGMENT with the Seraph's damage kept
     resetRun(24, false, { seed: 'AFT023-RAID' });
     assert(G.finale && G.finale.format === 'raid', 'L24 is not the raid finale');
@@ -6507,7 +6516,8 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.finaleCkpt && G.finaleCkpt.raid && G.finaleCkpt.raid.seg === 1,
       'the broken segment did not record a raid checkpoint');
     G.lives = 1;
-    loseLife('AFT023 RAID KNOCKOUT');
+    G.attune.pending = 0; // nothing banked → no recovery hand, a direct retry
+    loseLife('AFT024 RAID KNOCKOUT');
     assert(G.state === 'play' || G.state === 'serve', 'the raid knockout did not retry');
     const RD2 = G.finale.raid;
     assert(RD2.seg === 1 && RD2.segments[0].state !== 'waiting' && RD2.segments[1].state === 'assembling',
@@ -6519,7 +6529,7 @@ window.requestAnimationFrame = function () { return 0; };
     buildLevel(4);
     assert(!G.finaleCkpt, 'the knockout checkpoint outlived its finale');
     SETTINGS.starter = 'none';
-    return 'reveal holds drafts 16s · two banked levels = one choose-two hand · ladder KO resumes at round · raid KO resumes at segment with damage kept · ckpt scoped to its finale';
+    return 'no draft ever interrupts combat · recovery hand capped 2/stage · ladder KO resumes at round (no replayed entrance) · raid KO resumes at segment with damage kept · ckpt scoped to its finale';
   });
 
   test('AFT-023c: manual fire — no tap is ever swallowed, and tapping outpaces the assist', async () => {

@@ -1001,23 +1001,21 @@ function holdBonusPick(remaining) {
   if (upgradeTreeOpen) syncTreeSelectionToDraft();
   return true;
 }
-// AFT-009R P2: a mid-wave attunement pick resumes the FROZEN wave exactly
-// where it stood — no rebuild, no serve. A short grace covers the re-entry
-// so the resumed volley can't be an instant surprise.
-function resumeFromAttunement() {
-  G.attuneLive = false;
-  G.bonusPicks = 0; // a combined hand never leaks picks into the next surface
+// AFT-024: a RECOVERY hand (dealt by a knockout) presents over a retry that
+// is already built and, on a finale, already resumed at its checkpoint
+// round. Installing must hand that exact wave back — a rebuild here would
+// silently replay the finale from round 0.
+function resumeRecoveryDraft() {
+  const back = (G.recoveryDraft && G.recoveryDraft.back) || 'play';
+  G.recoveryDraft = null;
   G.upgradeChoices = null;
   upgradeTreeOpen = false;
-  G.state = 'play'; G.stateT = 0;
+  G.state = back === 'serve' ? 'serve' : 'play';
+  G.stateT = 0;
   G.rerolled = false;
-  G.invuln = Math.max(G.invuln, 0.9);
-  G.enemyShotCD = Math.max(G.enemyShotCD || 0, 0.9);
-  G.bossShotCD = Math.max(G.bossShotCD || 0, 0.9);
-  // AFT-023: presentation spacing — the next draft keeps its distance so
-  // choices never chain seconds apart (tighter inside a finale, whose
-  // per-beat cap already limits volume)
-  G.attuneCD = Math.max(G.attuneCD || 0, stageIdx(G.level) === 2 ? 14 : 24);
+  G.invuln = Math.max(G.invuln, 2.5);
+  G.enemyShotCD = Math.max(G.enemyShotCD || 0, 2.2);
+  G.bossShotCD = Math.max(G.bossShotCD || 0, 2.2);
 }
 function pickUpgrade(i) {
   const c = G.upgradeChoices && G.upgradeChoices[i];
@@ -1076,7 +1074,7 @@ function pickUpgrade(i) {
     upgradeTreeOpen = false;
     SFX.power();
     if (holdBonusPick(remaining)) return;
-    if (G.attuneLive) { resumeFromAttunement(); return; }
+    if (G.recoveryDraft) { resumeRecoveryDraft(); return; }
     G.forge = null; // AFT-009R P3: one Forge decision per realm
     buildLevel(G.level);
     serve();
@@ -1100,7 +1098,7 @@ function pickUpgrade(i) {
     upgradeTreeOpen = false;
     SFX.power();
     if (holdBonusPick(remaining)) return;
-    if (G.attuneLive) { resumeFromAttunement(); return; }
+    if (G.recoveryDraft) { resumeRecoveryDraft(); return; }
     G.forge = null; // AFT-009R P3: one Forge decision per realm
     buildLevel(G.level);
     serve();
@@ -1119,7 +1117,7 @@ function pickUpgrade(i) {
   upgradeTreeOpen = false;
   SFX.power();
   if (holdBonusPick(remaining)) return;
-  if (G.attuneLive) { resumeFromAttunement(); return; }
+  if (G.recoveryDraft) { resumeRecoveryDraft(); return; }
   G.forge = null; // AFT-009R P3: one Forge decision per realm
   const capped = pathLvl(c.pathKey) >= 4;
   buildLevel(G.level);

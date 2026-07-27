@@ -478,9 +478,9 @@ window.__BOT = {
         if (l < bestL) { bestL = l; idx = i; }
       }
     } else {
-      // AFT-009R: 'commit' DEEPENS — with attunement hands arriving
-      // mid-wave in shuffled order, index-0 was a coin flip; a committed
-      // human deepens their main path
+      // AFT-009R/024: 'commit' DEEPENS — hands arrive at stage clears in
+      // shuffled order, so index-0 is a coin flip; a committed human
+      // deepens their main path
       let bestL = -1;
       for (let i = 0; i < cs.length; i++) {
         if (cs[i].pathKey && pathLvl(cs[i].pathKey) > bestL) { bestL = pathLvl(cs[i].pathKey); idx = i; }
@@ -990,13 +990,16 @@ function evaluateBudgets(out) {
   const wmKOs = S.filter(x => x.name.startsWith('E-apex-warmachine'))
     .reduce((a, s) => a + (s.report.totals.knockouts || 0), 0);
   if (wmKOs > 3) fails.push('E-apex-warmachine: ' + wmKOs + ' knockouts across seeds — the offensive apex is a death spiral');
-  // 5c) AFT-023 draft pacing + knockout overhead on the continuous runs:
-  // a completed campaign banks ~18-26 draft events (was 30 before the
-  // discipline), and a knockout costs 30-60s, never a whole-finale replay.
+  // 5c) AFT-024 STAGE DIVIDEND cadence + knockout overhead on the
+  // continuous runs. The campaign is DETERMINISTIC now: one hand per
+  // ordinary stage clear + one Forge per realm = 26-27 decisions, plus up
+  // to two RECOVERY hands per stage on a seed that grinds a finale. The
+  // band therefore reads 24-34, and the hard rail catches a cadence
+  // regression (a per-wave or XP-gated economy would blow well past it).
   for (const s of S.filter(x => x.group === 'C')) {
     const picks = (s.report.upgrades || []).length;
-    if (s.cleared && picks > 30) fails.push(s.name + ': ' + picks + ' drafts — the pacing discipline regressed (>30)');
-    else if (s.cleared && (picks < 15 || picks > 27)) warns.push(s.name + ': ' + picks + ' drafts outside the 15-27 comfort band');
+    if (s.cleared && picks > 40) fails.push(s.name + ': ' + picks + ' drafts — the stage cadence regressed (>40)');
+    else if (s.cleared && (picks < 24 || picks > 34)) warns.push(s.name + ': ' + picks + ' drafts outside the 24-34 stage-dividend band');
     const kos = (s.report.levels || []).filter(L => L.knockout);
     if (kos.length) {
       const worst = Math.max(...kos.map(L => L.t || 0));

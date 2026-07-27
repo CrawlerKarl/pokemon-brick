@@ -262,10 +262,12 @@ const SCENES = [
   { name: 'gameover', js: `G.state='gameover'; G.stateT=1;`,
     expect: `G.state==='gameover'` },
   // AFT-009R: the mid-wave ATTUNEMENT draft (frozen fight behind the cards)
-  { name: 'attune-level', js: `SETTINGS.leftHanded=false; upgradeTreeOpen=false; advOpen=false; window.__SUITE_ATTUNE=true; DEV.launch({level:4,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<40;i++)update(1/60); G.state='play'; G.stateT=2; G.playT=2; G.engageHold=0; gainResonance(60,'scene'); presentAttunementLevel(); for(let i=0;i<70;i++){paused=false;G.freeze=0;update(1/60);} draftSel=0;`,
-    expect: `G.state==='upgrade' && G.attuneLive===true && !!G.upgradeChoices` },
+  // AFT-024: the STAGE DIVIDEND hand — dealt at an ordinary clear, widened
+  // by banked resonance (this scene captures the earned 5-card hand)
+  { name: 'stage-dividend', js: `SETTINGS.leftHanded=false; upgradeTreeOpen=false; advOpen=false; DEV.launch({level:4,mode:'junkie',diff:'normal',seed:'SHOT'}); paused=false; G.freeze=0; for(let i=0;i<40;i++)update(1/60); G.clearedStage=0; G.upgradeChoices=null; G.attune.pending=2; dealStageDividend(); G.state='upgrade'; G.stateT=1.5; draftSel=0;`,
+    expect: `G.state==='upgrade' && !!G.upgradeChoices && G.upgradeChoices.length===5` },
   // AFT-009R: the realm AETHER FORGE action menu
-  { name: 'forge-menu', js: `window.__SUITE_ATTUNE=false; G.attuneLive=false; DEV.launch({level:6,mode:'junkie',diff:'normal',seed:'SHOT',upg:'arsenal:2,impact:2'}); paused=false; G.freeze=0; G.starterLvl=2; for(let i=0;i<10;i++)update(1/60); G.reveal=null; G.state='upgrade'; G.stateT=1; G.clearedStage=2; G.upgradeChoices=null; G.forge={step:'menu'};`,
+  { name: 'forge-menu', js: `DEV.launch({level:6,mode:'junkie',diff:'normal',seed:'SHOT',upg:'arsenal:2,impact:2'}); paused=false; G.freeze=0; G.starterLvl=2; for(let i=0;i<10;i++)update(1/60); G.reveal=null; G.state='upgrade'; G.stateT=1; G.clearedStage=2; G.upgradeChoices=null; G.forge={step:'menu'};`,
     expect: `G.state==='upgrade' && !!G.forge && forgeActions().length >= 1` },
   // AFT-022 F3: LAST in the list — it flips leftHanded, and the per-viewport
   // prep resets it before the next viewport's sweep begins

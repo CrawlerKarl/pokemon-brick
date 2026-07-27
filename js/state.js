@@ -170,13 +170,13 @@ function shipY() { return G.mode === 'junkie' ? G.shipYv : PADDLE_Y(); }
 // the level bands below read as pacing targets, not raw timers.
 // ============================================================
 const RESONANCE_MODE_MUL = { junkie: 1, blaster: 1, classic: 1 }; // calibrated by the P6 probes
-// AFT-023 PACING RE-TUNE: the flat six-band curve dealt ~30 drafts per
-// campaign (six inside the first realm alone — measured, matrix-aft009r).
-// The re-tuned curve keeps the first level ~20-30s in and the curated
-// realm-1 trio, then rises steadily so a full journey banks ~18-22 levels.
+// AFT-024: resonance no longer decides WHEN a hand arrives (the stage does)
+// — it decides HOW WIDE it is. The threshold is therefore priced against
+// the PER-STAGE income cap below: a strong ordinary stage (cap 55) banks
+// one extra card, and a second needs a finale's contribution or carry-over,
+// so a 5-card hand always reads as earned.
 function attuneNeed(level) { // seconds-of-contribution to REACH this level
-  return level <= 1 ? 20 : level === 2 ? 26 : level === 3 ? 34
-    : Math.min(155, 34 + (level - 3) * 8);
+  return level <= 1 ? 38 : Math.min(72, 38 + (level - 1) * 4);
 }
 // Per-stage RESONANCE INCOME CAP (AFT-023): boss deciles + beats + phase
 // turns + objectives + kills can no longer collectively flood the bank —
@@ -226,33 +226,6 @@ function resBossDamage(br, dmg) {
 function resEvent(kind) { // phase turns, finale beats, objective wins…
   gainResonance(kind === 'phase' ? 6 : kind === 'beat' ? 8 : kind === 'objective' ? 10 : 4, kind);
 }
-// the combat-safe gate: a queued level NEVER interrupts a held charge, an
-// open desperation channel, live lane strikes, a chase rush, the engage
-// hold, the resolution beat — or a Breaker ball falling toward the paddle
-// AFT-023 adds PRESENTATION DISCIPLINE on top of combat safety:
-//   · one draft event per ordinary stage, one per finale beat
-//   · a spacing cooldown so choices never chain 10s apart
-//   · a hold window after every boss reveal and phase transition — the
-//     fight's biggest moments are never talked over by a draft
-function attuneSafeNow() {
-  if (G.state !== 'play' || paused || G.reveal || G.resolve) return false;
-  if (G.stateT < 1.2 || (G.engageHold || 0) > 0) return false;
-  if ((G.attuneCD || 0) > 0 || (G.attuneHoldT || 0) > 0) return false;
-  if (stageIdx(G.level) === 2) {
-    if ((G.attuneBeatN || 0) >= 1) return false; // one draft per finale beat
-  } else if ((G.attuneStageN || 0) >= 1) return false; // one per ordinary stage
-  if (typeof chargeHeld !== 'undefined' && chargeHeld) return false;
-  if (G.charge > 0 || G.chargeCD > 0.1) return false;
-  if (G.columnStrikes.length) return false;
-  if (G.bricks.some(b => !b.dead && b.channel)) return false;
-  const CH = typeof chaseState === 'function' && chaseState();
-  if (CH && CH.rush && !CH.rush.hit) return false;
-  if (G.mode === 'classic') {
-    // a ball below mid-screen and falling is the player's whole attention
-    if (G.balls.some(b => !b.dead && !b.stuck && b.vy > 0 && b.y > H * 0.5)) return false;
-  }
-  return true;
-}
 // AFT-009R P5: a GRANTED build (deep-start trial, dev launch, a resumed
 // checkpoint without attune fields) reads as that many completed levels,
 // so the pacing bands continue from the build's real weight instead of
@@ -265,25 +238,20 @@ function syncAttuneToBuild() {
     A.need = attuneNeed(lvl + 1);
   }
 }
-function presentAttunementLevel() {
+// AFT-024 THE STAGE DIVIDEND: every ordinary stage clear deals a draft —
+// deterministic, always at the results beat, never mid-fight. RESONANCE no
+// longer controls WHEN a hand arrives (that was the interruption problem);
+// it controls HOW WIDE it is. Banked levels earned through contribution
+// widen the stage's hand (3 base, +1 each, cap 5) and are then spent, so
+// exceptional play buys CHOICE instead of extra screens.
+function dealStageDividend() {
   const A = G.attune;
-  if (!A || A.pending <= 0) return;
-  // AFT-023: banked levels COMBINE into one larger decision instead of
-  // chaining screens — past the curated opening, two banked levels present
-  // as a single choose-two hand (the Rift-bounty holdBonusPick machinery).
-  const combine = (A.presented || 0) >= 3 && A.pending >= 2 ? 2 : 1;
-  A.pending -= combine;
-  A.presented = (A.presented || 0) + combine;
-  G.attuneLive = true;
-  rollAttunementHand();
-  if (!G.upgradeChoices) { G.attuneLive = false; G.bonusPicks = 0; return; } // nothing left to offer
-  if (combine > 1 && G.upgradeChoices.length >= 2) G.bonusPicks = combine;
-  G.attuneStageN = (G.attuneStageN || 0) + 1;
-  G.attuneBeatN = (G.attuneBeatN || 0) + 1;
-  G.state = 'upgrade'; G.stateT = 0;
-  if (typeof draftSel !== 'undefined') draftSel = null;
-  if (typeof upgradeTreeOpen !== 'undefined') upgradeTreeOpen = false;
-  SFX.power();
+  if (!A) { rollUpgradeChoices(); return; }
+  G.dividendBonus = Math.min(2, A.pending || 0);
+  A.pending = Math.max(0, (A.pending || 0) - G.dividendBonus); // surplus rolls to the next stage
+  A.presented = (A.presented || 0) + 1;
+  rollAttunementHand(); // hands 1-3 stay curated; the roller takes over after
+  G.dividendBonus = 0;
 }
 // AFT-022 F4: the STARFIGHTER edge clamp must cover the ship's full RENDERED
 // footprint — the hull sprite grows with form (54 + 6·form px), the sworn
@@ -603,11 +571,10 @@ const G = {
   attackAnim: 0,       // SPACE JUNKIE: pilot lunge/recoil timer on fire
   rerolled: false,     // one draft reroll per upgrade screen
   bonusPicks: 0,       // Mew VMAX bounty: picks remaining in the CURRENT hand (choose 2)
-  attuneCD: 0,         // AFT-023: spacing cooldown between draft presentations
-  attuneHoldT: 0,      // AFT-023: no-draft hold after a boss reveal / phase turn
-  attuneStageN: 0,     // AFT-023: draft events presented this stage (cap 1 ordinary)
-  attuneBeatN: 0,      // AFT-023: draft events presented this finale beat (cap 1)
   resStageIn: 0,       // AFT-023: resonance income earned this stage (capped)
+  dividendBonus: 0,    // AFT-024: extra cards this stage hand earned from banked resonance
+  recoveryDraft: null, // AFT-024: a knockout hand presenting over an already-built retry
+  recoverN: 0, recoverStageLvl: 0, // AFT-024: recovery hands used on THIS stage (cap 2)
   fireBufT: 0,         // AFT-023c: one buffered manual tap awaiting the barrel
   finaleCkpt: null,    // AFT-023: {lvl, beat, raid?} — knockout resumes here
   finaleResume: false, // AFT-023: true while fast-forwarding after a knockout
@@ -622,7 +589,7 @@ const G = {
   // blaster heat: firing builds it, paddle returns vent it, 100% = overheat
   heat: 0, overheat: 0,
   autoVent: false, // AFT-022 F1: the auto-fire assist is holding its fire to cool
-  attune: null, attuneLive: false, // AFT-009R P2: the frequent progression loop
+  attune: null, // AFT-009R P2 → AFT-024: the resonance arc (hand width)
   forge: null, // AFT-009R P3: the realm-finale AETHER FORGE ({step, action, ...})
   focus: 2, reforgeUsed: false, // AFT-009R P5: reroll charges + the one realm Reforge
   upg: {}, path: {}, catchBonus: 0, upgradeChoices: null, clearedStage: 0,
@@ -1368,10 +1335,10 @@ function buildLevel(lvl) {
   G.reveal = null; G.revealDock = null;
   G.resolve = null; G.arenaPlate = null; // AFT-021: a fresh wave never inherits a resolution beat
   G.shieldGrantN = 0; // AFT-021 P7: the shield income budget is per stage
-  // AFT-023: the resonance income cap and the one-draft-per-stage counter
-  // are per stage too; a knockout retry re-opens BOTH on purpose (the
-  // retried wave pays again — the knockout already confiscated the bank).
-  G.resStageIn = 0; G.attuneStageN = 0; G.attuneBeatN = 0; G.wardOverflowN = 0;
+  // AFT-023/024: the resonance income cap is per stage; a knockout retry
+  // re-opens it on purpose (the retried wave pays again — the knockout
+  // already confiscated the bank).
+  G.resStageIn = 0; G.wardOverflowN = 0;
   G.fireBufT = 0; // AFT-023c: a queued tap never crosses a stage boundary as a ghost shot
   // AFT-022 F6: notice hygiene is per stage — the first pickup of a power
   // (per element) and the first reinforcement wave announce; repeats within
@@ -2462,7 +2429,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.paddle.x = W / 2; G.paddle.speed = 0; G.shipYv = PADDLE_Y();
   // AFT-009R P2: a new journey starts its attunement arc from zero
   G.attune = { level: 0, res: 0, need: attuneNeed(1), pending: 0, presented: 0 };
-  G.attuneLive = false; G.forge = null;
+  G.forge = null;
   G.focus = 2; G.reforgeUsed = false; // AFT-009R P5: two Focus Charges to start
   G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
@@ -2494,7 +2461,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.lastDraftForm = 1; // re-baselined below once starterLvl is known
   G.secret = freshSecretState();
   G.bonusPicks = 0; // no half-spent Mew VMAX bounty leaks into a fresh run
-  G.attuneCD = 0; G.attuneHoldT = 0; G.attuneStageN = 0; G.attuneBeatN = 0; G.resStageIn = 0;
+  G.resStageIn = 0;
   // a fresh run never inherits the previous one's kill slow-mo or hit-stop —
   // lingering dramaticT slowed the first ~0.9s of a new run at ×0.3
   G.dramaticT = 0; G.freeze = 0;
@@ -2529,6 +2496,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.torrentCount = 0; G.starterHits = 0; G.starterKOs = 0; G.starterChillT = 0;
   G.emberN = 0; G.emberFloatT = 0; // AFT-023: fire-vessel shooter kindle counters
   G.fireBufT = 0; // AFT-023c: no tap buffer crosses a run boundary
+  G.dividendBonus = 0; G.recoveryDraft = null; G.recoverN = 0; G.recoverStageLvl = 0; // AFT-024 draft state
   G.justEvolved = false; G.ceremony = null;
   G.encounter = null; G.waveThemeObj = null; G.ending = null; G.guardSwapCD = 8;
   G.blasterTutDone = false; G.rescueCD = 0; G.veilHintCD = 0;
