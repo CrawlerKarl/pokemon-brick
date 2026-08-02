@@ -116,8 +116,8 @@ suite test guards every rect across six sizes.
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 25 mobile scenes
-at two phone viewports (50 screenshots + metadata sidecars → `.gate-shots/`),
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 28 mobile scenes
+at two phone viewports (56 screenshots + metadata sidecars → `.gate-shots/`),
 each PROVING its named state via an `expect` assertion, under FITTED-LABEL
 CONTAINMENT plus the AFT-021 overlap and single-actor-label contracts → the
 WAVE and BOSS artifact-storm benchmarks
@@ -154,7 +154,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 127 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 129 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
@@ -163,7 +163,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   sprites is not a blob, and chasing a literal 0 across random patterns is a
   losing battle). The flyer tests pick patterns randomly — re-run a couple of
   times before trusting a pass.
-- **`npm run baseline` is the balance gate (AFT-008 → AFT-021):** 142
+- **`npm run baseline` is the balance gate (AFT-008 → AFT-024):** 162
   deterministic autopilot scenarios (~70–90s; tools/run-baseline.js) with
   ENFORCED budgets (`evaluateBudgets`: per-mode finale duration bands, mode
   ratios, path spread, vessel cap, shield income, heat, difficulty drift
@@ -604,14 +604,13 @@ phone — flag anything only verifiable there.
   Pokémon that belong together appear together, spanning evolution tiers. Pack
   ids are constrained to their region's roster — `verify-assets` + the test
   suite catch stragglers. Evolved species are bigger + tankier elites.
-- **Progression is TWO connected loops (AFT-009R, 2026-07-24) — never
-  re-add per-stage drafts.** ATTUNEMENT: `G.attune` fills by normalized
-  contribution (`gainResonance`/`resKill`/`resBossDamage`/`resEvent`,
-  state.js) — renewable `br.reinf`/crosser kills pay NOTHING (anti-farm,
-  tested); a completed level queues and presents only at
-  `attuneSafeNow()` beats (never over a charge/channel/strike/rush/
-  engage-hold/resolve/dropping ball), freezing the wave and resuming in
-  place (`G.attuneLive`, `resumeFromAttunement`). Hands 1–3 are CURATED
+- **Progression is TWO connected loops (AFT-009R, 2026-07-24; the draft
+  CADENCE re-cut by AFT-024 — see the STAGE DIVIDEND bullet below).**
+  ATTUNEMENT: `G.attune` fills by normalized contribution
+  (`gainResonance`/`resKill`/`resBossDamage`/`resEvent`, state.js) —
+  renewable `br.reinf`/crosser kills pay NOTHING (anti-farm, tested).
+  **Since AFT-024 a completed level does NOT open a draft**: hands arrive
+  once per STAGE CLEAR and banked levels widen them instead. Hands 1–3 are CURATED
   (weapon trio → support trio → deepen-or-branch); later hands ride the
   roller under the FOUR-PATH CAP (`ownedPathN < 4` in rankedCont —
   grandfathered saves keep every owned path). THE AETHER FORGE
@@ -628,7 +627,7 @@ phone — flag anything only verifiable there.
   from the build); `syncAttuneToBuild()` covers trials/dev grants.
   KNOCKOUT NEVER UNINSTALLS — it costs HALF the loose res + all banked
   levels + 1 Focus and retries (half-res is the AFT-023 spiral-breaker). Every draft surface draws `draftCardModel` (the five-tag card
-  anatomy). Suite + gate scenes (attune-level, forge-menu) lock all of
+  anatomy). Suite + gate scenes (stage-dividend, forge-menu) lock all of
   this.
 - **THE STAGE DIVIDEND owns draft cadence (AFT-024, 2026-07-27) — one
   guaranteed draft per stage clear, and NOTHING interrupts combat.** Every

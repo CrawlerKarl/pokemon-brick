@@ -1,6 +1,6 @@
 # Aetherfall improvement backlog
 
-> ## ⚠ STATUS UPDATE (2026-07-23) — READ THIS FIRST
+> ## ⚠ STATUS UPDATE (2026-08-02) — READ THIS FIRST
 >
 > **Every P0 in this document has since been implemented, tested, and
 > deployed.** The analysis below is preserved as written (it is still the
@@ -9,7 +9,7 @@
 >
 > | This doc says | Reality as of 2026-07-23 |
 > |---|---|
-> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~30–35s**, 103 invariants, both-skin + dist boots, vocabulary scan, 38 mobile scenes with label assertions, wave + boss storm ledgers |
+> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~35s**, **129 invariants**, both-skin + dist boots, vocabulary scan, **28 mobile scenes × 2 viewports** with label assertions, wave + boss storm ledgers |
 > | AFT-001/002/003/004/005A/005B/006/017/018 pending | **all shipped** — see `IMPLEMENTATION_LOG.md` rounds 2026-07-22f … 2026-07-23c |
 > | "boss exports are 192×192; high-res not packaged" | 43 × **512px** boss reveal portraits ship and drive the reveal scene |
 > | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
@@ -23,10 +23,24 @@
 > fix + baseline truth re-zero)** → ~~AFT-009R mobile-first progression
 > redesign~~ **shipped 2026-07-24 (suite 127/127; Attunement + Aether
 > Forge + journal; matrix GREEN `baselines/matrix-aft009r.json`;
-> supersedes AFT-009's scope)** → **AFT-019 (NEXT)** → AFT-010 →
-> AFT-011 → AFT-012. The executed AFT-021 spec is
+> supersedes AFT-009's scope)** → ~~AFT-023 STARFIGHTER improvement pass
+> (six goals: draft pacing, finale knockout checkpoints, apex identities,
+> the duration curve, vessel/affinity/Aegis normalization, guided
+> onboarding)~~ **shipped 2026-07-24** → ~~AFT-023b codex vocabulary +
+> widened gate scan~~ / ~~AFT-023c manual fire~~ **shipped 2026-07-25** →
+> ~~AFT-024 THE STAGE DIVIDEND (one draft per stage clear; the mid-combat
+> draft path deleted)~~ **shipped 2026-07-27 (suite 129/129; baseline
+> GREEN, 162 scenarios, `baselines/matrix-aft024.json`)** →
+> **AFT-019 real-device remainder (NEXT)** → AFT-010 → AFT-011 →
+> AFT-012. The executed AFT-021 spec is
 > `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its matrix
 > evidence is `baselines/AFT021_MATRIX_REPORT.md`.
+>
+> **AFT-019's in-app scope is already DONE** (shipped inside AFT-023: the
+> guided four-archetype vessel view with a recommended pre-selection,
+> browse-all catalog, FLY UNSWORN, mode-correct strings, HIGH-CONTRAST
+> PROJECTILES, bloom/coach occlusion fixes, 320×568 in the fit sweep).
+> What remains is the real-device judgment a simulator cannot give.
 
 
 Last reviewed: 2026-07-24 post-AFT-020 UX playtest audit (workspace head
@@ -73,7 +87,7 @@ items have since shipped.
   codex full-size sprite gallery, neutral-until-sworn selection, and
   per-channel `OATH_CH` evolution curves for tint, rim, aura, fittings,
   radiant blend, and runes.
-- The release gate passes 127/127 invariants (AFT-021 added the combat-state
+- The release gate passes 129/129 invariants (AFT-021 added the combat-state
   safety, visible-clear, overlay-collision, charge/projectile-time, and
   verb-results contracts; AFT-022 added the vent-assist, wrap, left-handed,
   footprint-clamp, offer-tap, notice-hygiene and seeded-launch determinism
@@ -81,7 +95,7 @@ items have since shipped.
   Focus/Reforge/v5-save fixtures) and runs headlessly via `npm test`
   in about 30–35s. It also verifies assets, both editions, the standalone
   distribution, vocabulary/RESIDUE, 50 state-proving mobile scenes, and wave +
-  boss stress ledgers. `npm run baseline` replays 142 deterministic campaign
+  boss stress ledgers. `npm run baseline` replays 162 deterministic campaign
   scenarios with the AFT-021 duration/spread/recovery budgets enforced.
 - The standalone runtime payload is about 37.4 MiB excluding its nested Git
   metadata, with about 36.1 MiB under `dist-aetherfall/art/`.

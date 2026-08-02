@@ -1,7 +1,50 @@
 # HANDOFF — resume here
 
-> **STATUS (2026-07-23 session closeout): ALL P0 ITEMS FROM THE BACKLOG ARE
-> IMPLEMENTED, TESTED, AND LIVE** (rounds g–o in the log): AFT-005A the
+> ## STATUS (2026-08-02 closeout) — everything below is SHIPPED AND LIVE
+>
+> **Suite 129/129 · gate GREEN (~35s, 28 mobile scenes × 2 viewports) ·
+> baseline GREEN (162 scenarios, zero hard failures).** Worktree clean;
+> both sites deployed and smoke-tested in production.
+>
+> - workshop `CrawlerKarl/pokemon-brick` @ `54edec0` →
+>   https://crawlerkarl.github.io/pokemon-brick/
+> - dist `CrawlerKarl/aetherfall` @ `93333f1` →
+>   https://crawlerkarl.github.io/aetherfall/
+>
+> **The last four rounds (newest first — full detail in
+> `IMPLEMENTATION_LOG.md`):**
+>
+> - **AFT-024 THE STAGE DIVIDEND** (owner directive: upgrades per level,
+>   not per XP threshold). One draft per ordinary stage clear + the realm
+>   Forge = **3 decisions per realm, ~26 per journey**, none during live
+>   combat. Resonance repurposed from FREQUENCY to HAND WIDTH (3/4/5
+>   cards). The mid-wave draft path was DELETED, not disabled. A knockout
+>   deals a RECOVERY HAND (banked resonance cashed in, capped 2/stage).
+> - **AFT-023c manual fire**: taps are buffered through the cooldown
+>   (three taps = three shots, always) and active tapping now outpaces the
+>   auto-fire assist by ~25% instead of losing to it.
+> - **AFT-023b codex vocabulary**: the CODEX tally spoke raw Pokémon
+>   words ("CAUGHT"/"SHINY") on AETHERFALL; it now rides
+>   `SKIN.strings.caughtWord`/`shinyTag`, and the gate's vocabulary scan
+>   bans the whole franchise family (POKÉMON/POKÉDEX/POKEBALL) across
+>   every copy table plus `SKIN.strings`.
+> - **AFT-023 the STARFIGHTER improvement pass** (six goals): draft
+>   pacing, finale knockout checkpoints, apex identity re-forge, the
+>   rising duration curve, vessel/affinity/Aegis normalization, and the
+>   guided first-session vessel view.
+>
+> **Two traps worth not rediscovering** (both cost real debugging time):
+> a **draft freezes `update()`**, so any cinematic armed behind one can
+> never finish — that was a genuine soft-lock; and the baseline harness's
+> `wallguard` is a **wall-clock** guard, so a runaway sim reports as a
+> timeout that looks exactly like machine load (it is not).
+>
+> ---
+>
+> <details><summary>Historical: the 2026-07-23 P0 closeout (kept for
+> context)</summary>
+>
+> **ALL P0 ITEMS FROM THE BACKLOG ARE IMPLEMENTED, TESTED, AND LIVE** (rounds g–o in the log): AFT-005A the
 > headless release gate (`npm test`), AFT-001 safe zones + fitted
 > labels, AFT-003 the SURGE lexicon, AFT-004 the kinded announce queue +
 > clean launches, AFT-002 the full-resolution boss reveal + HUD-lane dock,
@@ -10,9 +53,10 @@
 > (baked hot loops + the adaptive effects budget), and AFT-005B mobile
 > scenes with fitted-label assertions + the artifact-storm ledger.
 >
-> **Suite: 127/127 (103 at the 07-23 closeout; AFT-021 +12, AFT-022 +7,
-> AFT-009R +5). `npm test` (~30–35s headless) ran green before every
-> commit.** Production art: 259 base + 259 radiant + 54 previews +
+> **Suite (as of that closeout): 127/127** — 103 at the 07-23 closeout;
+> AFT-021 +12, AFT-022 +7, AFT-009R +5. *(Current count is 129 — see the
+> status banner at the top of this file.)* `npm test` ran green before
+> every commit.** Production art: 259 base + 259 radiant + 54 previews +
 > **43 boss reveals** + 21 weapon sprites. Both sites live:
 > - workshop `CrawlerKarl/pokemon-brick` → https://crawlerkarl.github.io/pokemon-brick/
 > - dist `CrawlerKarl/aetherfall` → the standalone AETHERFALL build
@@ -110,7 +154,12 @@
 > journey; resonance repurposed from FREQUENCY to HAND WIDTH (3/4/5
 > cards); the mid-wave draft path deleted outright; a RECOVERY HAND
 > cashes banked resonance when you're knocked out on a finale. Suite 129.
-> **NEXT: AFT-019 remainder (real-device first-session pass) + AFT-010.**
+>
+> </details>
+
+**NEXT UP:** AFT-019's remainder (a real-device first-session pass — the
+simulator/browser work is done, the phone judgment is not) and AFT-010
+(accessibility). See "Pick up here" below.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -322,10 +371,7 @@ reopens it.
   closeout run was green in 28s: wave 1.01ms average; boss 0.87ms average /
   1.3ms P95; boss FULL 1.4 gradients + 3.9 blur writes/frame.
 
-### Then: AFT-021 stabilization, then the P1 track
-
-The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
-2026-07-24a–h; both sites deployed and curl-verified). The live sequence:
+### The programme sequence
 
 ```
 ✅ AFT-007 ORBITAL RELIC
@@ -333,12 +379,24 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 ✅ AFT-020 NINE REALM FINALES + CAMPAIGN VARIETY (all 10 phases)
 ✅ AFT-008 REDESIGNED-CAMPAIGN CLOSEOUT (Section-9 corrections + matrix)
 ✅ AFT-021 POST-AFT-020 UX STABILIZATION + BALANCE REREAD (Phases 0–9)
-→ AFT-009 constellation redesign
-→ AFT-019 first-session phone pass
+✅ AFT-022 PORTRAIT-MOBILE PLAYTEST ROUND
+✅ AFT-009R PROGRESSION REDESIGN (Attunement / Forge / journal)
+✅ AFT-023  STARFIGHTER IMPROVEMENT PASS (six goals)
+✅ AFT-023b CODEX VOCABULARY + widened gate scan
+✅ AFT-023c MANUAL FIRE (tap buffering + manual cadence edge)
+✅ AFT-024  THE STAGE DIVIDEND (one draft per stage; no combat interrupts)
+→ AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY
 → AFT-010 accessibility
 → AFT-011 loading/WebP
 → AFT-012 visual pass
 ```
+
+**What "AFT-019 remainder" means:** the guided first-session vessel view,
+mode-correct strings, high-contrast projectiles, the bloom/coach occlusion
+fixes and the 320×568 fit sweep all SHIPPED in AFT-023. What is left is
+the part a simulator cannot answer — long-press charging, two-thumb
+movement, haptics, safe areas, browser chrome, thermals — on the owner's
+actual phone.
 
 1. **AFT-021 is DONE** (Phases 0–9, log rounds 2026-07-24i–p) and
    **AFT-022 (the portrait-mobile playtest round) is DONE** (log round
@@ -355,12 +413,30 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
    AETHER FORGE (Refine/Link/Evolve/Reforge — ordinary stage drafts are
    GONE), the constellation as a non-installing journal with a phone
    list view, Focus Charges, checkpoint schema v5 with lossless
-   migration, and knockout that never uninstalls. Suite 127/127; matrix
-   GREEN at `matrix-aft009r.json`. OWNER-JUDGMENT: the attunement pacing
-   feel on a real phone (22 bot-levels/journey vs the ~18 target), the
-   L3-blaster floor re-fit, and the Forge's one-decision-per-realm feel.
-3. **AFT-019 (first-session phone pass)** is the next backlog item.
-3. **Cheap follow-ups spotted during the closeout** (noted, not started):
+   migration, and knockout that never uninstalls.
+   **⚠ SUPERSEDED BY AFT-024 in part:** the Resonance-driven MID-COMBAT
+   draft is gone. Hands now arrive once per STAGE CLEAR and resonance
+   buys hand WIDTH instead of frequency. The Forge, Focus, Reforge,
+   four-path cap, journal and v5 saves are all unchanged.
+3. **AFT-023 / 023b / 023c / 024 are DONE** — see the status banner at
+   the top of this file for the one-paragraph summary of each.
+4. **Open follow-ups from AFT-023/024** (noted, not started):
+   - **the campaign bot grinds the L24 Seraph raid** — it shoots the
+     crown-shielded Sovereign instead of breaking segments, so two of the
+     three campaign seeds burn 15-25 knockouts there. This is a HARNESS
+     limitation, not a game one: the same finale clears in ~46s with zero
+     knockouts under a granted build, and a human reads the crown cue.
+     Targeting the captains directly was tried and measured WORSE (30/29
+     knockouts) — do not retry that specific fix without new evidence.
+   - **the apex identity gap is inside seed noise** — WAR MACHINE should
+     be 10-15% faster than CELESTIAL; it currently trades the lead
+     ±5% run-to-run. The budget rails a gross re-inversion, and the
+     residual is warn-tracked; closing it properly needs more seeds per
+     cell, not more knob turns.
+   - **L21's rite is chain-fast** (~26s vs the 60-100s target) regardless
+     of work coefficients — owner-flagged since TRUE-HEAD; the fix, if
+     wanted, is rite pacing (riteMark arming), not the work vector.
+5. **Cheap follow-ups spotted during the earlier closeout** (still open):
    - the ground vessel clears ~27% faster than the median vessel (matrix
      evidence in docs/baselines/AFT008_CLOSEOUT_REPORT.md) — candidate for
      a gentle trim if the owner confirms it feels dominant;
@@ -372,14 +448,16 @@ The whole AFT-008 → AFT-020 → closeout program is **COMPLETE** (log rounds
 
 Notes so you don't redo finished work:
 
-- **`npm test` is the gate** (~30–35s full, `--fast` ~15s, `--suite` ~12–18s):
-  syntax → assets → 115 invariants headless → both-skin + dist boots →
-  vocabulary scan → RESIDUE → 22 mobile scenes × 2 viewports (44 screenshots
-  → `.gate-shots/` + metadata sidecars) that each PROVE their named state via
-  `expect` assertions, under the overlap + single-actor-label contracts → the
+- **`npm test` is the gate** (~35s full, `--fast` ~15s, `--suite` ~12–18s):
+  syntax → assets → **129 invariants** headless → both-skin + dist boots →
+  the vocabulary scan (no player-facing MEGA, and since AFT-023b no
+  POKÉMON/POKÉDEX/POKEBALL in any copy table or `SKIN.strings`) → RESIDUE →
+  **28 mobile scenes × 2 viewports (56 screenshots** → `.gate-shots/` +
+  metadata sidecars) that each PROVE their named state via `expect`
+  assertions, under the overlap + single-actor-label contracts → the
   wave AND boss storm ledgers (`.gate-report.json`). Run it before every
   commit.
-- **`npm run baseline`** replays 142 deterministic autopilot scenarios
+- **`npm run baseline`** replays **162** deterministic autopilot scenarios
   (~70–90s) and ENFORCES the AFT-021 budgets (finale duration bands ×
   mode, mode ratios, path spread, vessel cap, shield income, heat,
   difficulty drift separation, clear rules) — violations exit red. Always
@@ -497,6 +575,24 @@ Notes so you don't redo finished work:
 - **Git worktrees don't carry gitignored files** — an agent running the gate
   in a worktree will find `serve.js`-adjacent gitignored assets missing;
   restore what the task needs or expect a red step that isn't real.
+- **A DRAFT FREEZES `update()` — never leave a cinematic armed behind
+  one.** A boss entrance armed by a knockout rebuild sat forever behind
+  the AFT-024 recovery hand, because the reveal needed `update()` to
+  advance and the draft had stopped it. Permanent soft-lock. Recovery
+  hands now drop any armed reveal and `beginBossReveal` skips while
+  `G.finaleResume` is set. Any NEW surface that both freezes the sim and
+  can coexist with a reveal needs the same treatment.
+- **The baseline's `wallguard` is a WALL-CLOCK guard, not a sim guard.**
+  A runaway sim (that soft-lock burned 625,920 simulated seconds in one
+  scenario) reports as `endReason: 'wallguard'`, which looks exactly like
+  a slow/loaded machine. Check `simT` in the scenario record before
+  blaming the host: an absurd `simT` means the bot is spinning on a state
+  that early-returns, not that the box is busy. Note the bot's
+  `simCap` check sits AFTER the per-state early returns, so a state that
+  loops forever is never capped.
+- **Don't run two `npm run baseline` invocations at once.** They fight
+  over CPU and leak headless Chrome; kill strays with
+  `pkill -f run-baseline` and `pkill -f remote-debugging-port`.
 - **`migrateCheckpoint` rejects lvl<4 BY DESIGN** — checkpoints only exist
   from region boundaries; a test that hand-saves at level 2 will "fail" the
   bundle validator correctly.
