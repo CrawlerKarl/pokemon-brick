@@ -94,7 +94,7 @@ function serveDir(root) {
       if (!p.startsWith(root)) { res.writeHead(403); res.end(); return; }
       fs.readFile(p, (err, data) => {
         if (err) { res.writeHead(404); res.end('Not found'); return; }
-        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json' };
+        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
         res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
         res.end(data);
       });
@@ -655,13 +655,15 @@ function buildScenarios(quick) {
     // the seeded trial bank collides with each build identically — the old
     // rank-3 grants let the bank push celestial +5 net ranks (prismX/aegisX)
     // while warmachine gained +1, and the "apex inversion" was mostly that.
-    // Three seeds per apex: single-cell late-finale reads are chaotic.
+    // Seven seeds per apex: AFT-011's targeted cleanup requires a stable
+    // verdict before either apex number moves; three seeds still let one
+    // late-raid knockout decide the median.
     const apexes = {
       warmachine: 'arsenal:4,impact:4,surge:4,calibrated,meteor,cataclysm,warmachine',
       celestial: 'prism:4,aegis:4,bond:4,rescue,mirror,guardian,celestial',
     };
     for (const [x, upg] of Object.entries(apexes)) {
-      for (let si = 0; si < 3; si++) {
+      for (let si = 0; si < 7; si++) {
         S.push({
           name: 'E-apex-' + x + (si ? '-S' + (si + 1) : ''), group: 'E',
           launch: { level: 24, mode: 'junkie', diff: 'normal', seed: si ? 'BASE-X' + si : 'BASE-X', starter: 'fire', upg },
@@ -669,6 +671,23 @@ function buildScenarios(quick) {
         });
       }
     }
+    // H — TARGETED OUTLIER EVIDENCE. These are deliberately narrow: the two
+    // late ordinary stages below band and the owner-flagged L21 rite. They
+    // add seed depth without turning this pass into another broad rebalance.
+    for (const lvl of [23, 26]) {
+      for (let si = 0; si < 5; si++) S.push({
+        name: 'H-late-J' + lvl + '-S' + (si + 1), group: 'H', cell: 'late-L' + lvl,
+        launch: { level: lvl, mode: 'junkie', diff: 'normal', seed: 'TARGET-LATE-' + lvl + '-' + si,
+          starter: 'fire', upg: grantFor(lvl) || undefined },
+        simCap: 240,
+      });
+    }
+    for (let si = 0; si < 7; si++) S.push({
+      name: 'H-rite-L21-S' + (si + 1), group: 'H', cell: 'rite-L21',
+      launch: { level: 21, mode: 'junkie', diff: 'normal', seed: 'TARGET-RITE-' + si,
+        starter: 'fire', upg: grantFor(21) || undefined },
+      simCap: 300,
+    });
     // F — DIFFICULTY PROBES. AFT-021 P7: each difficulty runs TWICE — the
     // target-parking policy (near-optimal) and a DRIFT policy (a predictable
     // human-ish sweep that does not chase safety), so difficulty separates in
@@ -983,7 +1002,8 @@ function evaluateBudgets(out) {
     // noise tolerance: three-seed medians on late finales swing ±3s per
     // run (measured) — hard-fail only a GROSS inversion, warn inside it
     if (wmDur > ceDur * 1.15) fails.push('E-apex: WAR MACHINE median ' + f1(wmDur) + 's is grossly slower than CELESTIAL ' + f1(ceDur) + 's');
-    else if (wmDur > ceDur * 0.95) warns.push('E-apex: WAR MACHINE ' + Math.round((1 - wmDur / ceDur) * 100) + '% faster (target 10-15%)');
+    else if (wmDur < ceDur * 0.82) warns.push('E-apex: WAR MACHINE ' + Math.round((1 - wmDur / ceDur) * 100) + '% faster (overshoots the 10-15% target)');
+    else if (wmDur > ceDur * 0.90) warns.push('E-apex: WAR MACHINE ' + Math.round((1 - wmDur / ceDur) * 100) + '% faster (target 10-15%)');
     if (ceDps > wmDps * 1.2 && ceTaken === 0) fails.push('E-apex: CELESTIAL dominates both survival (0 taken) and damage rate (' + f2(ceDps) + ' vs ' + f2(wmDps) + ')');
     else if (ceDps > wmDps * 1.05 && ceTaken === 0) warns.push('E-apex: CELESTIAL leads dps (' + f2(ceDps) + ' vs ' + f2(wmDps) + ') at zero damage taken');
   }
@@ -1069,7 +1089,7 @@ function buildMarkdown(out) {
   md.push('Full per-scenario `DEV.report()` payloads: `docs/baselines/' + JSON_BASENAME + '`.');
   md.push('');
   md.push('Determinism check (same seed, same bot, DEX-isolated): **'
-    + (out.determinism.pass ? 'PASS' : 'FAIL') + '** — '
+    + (out.determinism.skipped ? 'SKIPPED (FILTERED RUN)' : out.determinism.pass ? 'PASS' : 'FAIL') + '** — '
     + JSON.stringify(out.determinism.a) + ' vs ' + JSON.stringify(out.determinism.b));
   md.push('');
 
@@ -1115,6 +1135,20 @@ function buildMarkdown(out) {
       const t = s.report.totals;
       md.push(row(['L' + s.opts.level, s.opts.mode, s.cleared ? 'yes' : '**no** (' + s.endReason + ')',
         f1(t.playTime) + 's', f2(t.bossEquivalents), f1(dmgOut(t)), String(t.knockouts), String(s.lives)]));
+    }
+    md.push('');
+  }
+
+  const H = by('H');
+  if (H.length) {
+    md.push('## Targeted outlier evidence');
+    md.push('');
+    md.push(row(['cell', 'seed', 'cleared', 'duration', 'KOs', 'damage rate']));
+    md.push(row(['---', '---', '---', '---', '---', '---']));
+    for (const s of H) {
+      const t = s.report.totals;
+      md.push(row([s.cell || s.name, s.opts.seed, s.cleared ? 'yes' : '**no** (' + s.endReason + ')',
+        f1(t.playTime) + 's', String(t.knockouts), f1(dmgOut(t) / Math.max(1, t.playTime))]));
     }
     md.push('');
   }
@@ -1286,7 +1320,7 @@ function buildMarkdown(out) {
   md.push('## ANOMALIES');
   md.push('');
   const anomalies = [];
-  if (!out.determinism.pass) anomalies.push('DETERMINISM CHECK FAILED — ' + out.determinism.note);
+  if (!out.determinism.pass && !out.determinism.skipped) anomalies.push('DETERMINISM CHECK FAILED — ' + out.determinism.note);
   const Cx = by('C')[0];
   if (Cx && !Cx.cleared) {
     anomalies.push(Cx.name + ': the real run ended in GAME OVER at level ' + Cx.finalLevel
@@ -1395,16 +1429,19 @@ async function main() {
   const d2 = results.find(r => r.name === 'I-determinism-2');
   const detA = d1 && d1.report ? { kills: d1.report.totals.kills, playTime: d1.report.totals.playTime, dmgNormal: d1.report.totals.dmgNormal } : null;
   const detB = d2 && d2.report ? { kills: d2.report.totals.kills, playTime: d2.report.totals.playTime, dmgNormal: d2.report.totals.dmgNormal } : null;
-  const detPass = !!(detA && detB
+  const detSkipped = !!process.env.BASE_ONLY && (!detA || !detB);
+  const detPass = detSkipped || !!(detA && detB
     && detA.kills === detB.kills
     && detA.playTime === detB.playTime
     && detA.dmgNormal === detB.dmgNormal);
   const determinism = {
-    pass: detPass, a: detA, b: detB,
-    note: detPass ? 'kills/playTime/dmgNormal identical across the pair'
+    pass: detPass, skipped: detSkipped, a: detA, b: detB,
+    note: detSkipped ? 'filtered run did not include the determinism pair'
+      : detPass ? 'kills/playTime/dmgNormal identical across the pair'
       : 'totals diverged — investigate bot state derivation or a game-side leak',
   };
-  console.log('  determinism: ' + (detPass ? 'PASS' : 'FAIL') + ' — ' + JSON.stringify(detA) + ' vs ' + JSON.stringify(detB));
+  console.log('  determinism: ' + (detSkipped ? 'SKIPPED (filtered run)' : detPass ? 'PASS' : 'FAIL')
+    + ' — ' + JSON.stringify(detA) + ' vs ' + JSON.stringify(detB));
 
   // ── write fixtures ──
   fs.mkdirSync(OUT_DIR, { recursive: true });

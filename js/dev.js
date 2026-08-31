@@ -310,6 +310,11 @@ window.DEV = {
   },
   download: devDownloadReport,
   panel: devTogglePanel,
+  art() { // AFT-011: cold-start/decode progress + bounded-cache memory proxy
+    return { stream: AETHER_ART_STREAM.metrics(), memory: aetherArtMemoryStats(),
+      realm: typeof regionIdx === 'function' ? regionIdx(G.level) + 1 : null,
+      viewport: { w: W, h: H, touch: IS_TOUCH } };
+  },
   perf() { // AFT-018: the profiler at a glance
     const cadenceMs = PERF.cadenceAvg();
     return { avgMs: +PERF.avg().toFixed(2), p95Ms: +PERF.p95().toFixed(2),
@@ -327,6 +332,7 @@ window.DEV = {
       "DEV.finale(region, beat|'core'|'coda', opts) — exact finale-beat launch",
       'DEV.grant("arsenal:3,aegis:2,vshred") — grant paths / web nodes / stacks',
       'DEV.report() — balance report object · DEV.download() — save as JSON',
+      'DEV.art() — AFT-011 load timing + decoded-art memory estimate',
       'DEV.panel() / F9 — live balance dashboard overlay',
       'DEV.levels() — per-level stat records',
       'URL: ?dev&level=3&round=1&mode=junkie&diff=normal&seed=S&upg=arsenal:3',

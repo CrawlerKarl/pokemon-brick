@@ -763,6 +763,17 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   // ARE the rite (no wound), unqualified ones trickle ×0.25 attrition
   if (br.totem && riteState() && G.finale.beat === 0 && dmg < 90) {
     const R = G.finale.rite;
+    // AFT-011 targeted finale pacing: the three authored rites now wake in
+    // sequence. A sleeping Totem is ceremonial scenery — it cannot be
+    // chain-cleared by the same auto-fire burst that answers another rite.
+    if (!br.riteArmed) {
+      br.flash = 0.45;
+      if ((R.failCD || 0) <= 0) {
+        R.failCD = 1.1;
+        addFloater(br.bx + G.fx, br.by + G.fy - br.h / 2 - 12, 'THE NEXT RITE WAITS', '#90a4ae', 10);
+      }
+      return;
+    }
     let qualified = false;
     if (br.riteKind === 'opening') {
       const gapA = (G.time * 0.9) % (Math.PI * 2);
@@ -1113,10 +1124,11 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     if (G.objective && G.objective.type === 'undercard' && !G.objective.done && !br.crosser && !br.friendly) {
       const O2 = G.objective;
       // AFT-021 P5: the crowd wants a SHOW, not a speedrun — smaller per-kill
-      // pops under a 0.09/s rate ceiling put the undercard at ~15-20s of
-      // sustained rhythm instead of one 8-second AoE dump
+      // AFT-011 targeted late-stage cleanup: the War Cradle undercard owns a
+      // 33s authored crowd clock. The former 0.05/s ceiling made every one
+      // of five seeds finish in 23-29s, below the 34-65s late-act band.
       if (O2.t0 == null) O2.t0 = G.time;
-      const crowdCeil = 0.05 * Math.max(0.5, G.time - O2.t0);
+      const crowdCeil = 0.03 * Math.max(0.5, G.time - O2.t0);
       O2.crowd = Math.min(1, Math.min((O2.crowd || 0) + 0.03 + (G.combo >= 5 ? 0.012 : 0), crowdCeil));
       O2.progress = O2.crowd;
       if (O2.crowd >= 1) completeNonAttrition(O2, O2.name || 'THE CROWD ROARS');
@@ -4589,9 +4601,21 @@ function updateRite(dt) {
   if (R.failCD > 0) R.failCD -= dt;
   if (R.tagCD > 0) R.tagCD -= dt;
   if (F.beat === 0) {
+    if ((R.activeRite || 0) < 3 && F.beatT >= R.armAt) {
+      const active = G.bricks.find(b => !b.dead && b.totem && b.riteOrder === R.activeRite);
+      if (active && !active.riteArmed) {
+        active.riteArmed = true;
+        R.activeRite++;
+        R.armAt += R.interlude;
+        setCombatNotice('RITE ' + ((active.riteOrder || 0) + 1) + '/3 AWAKENS · '
+          + String(active.riteKind || '').toUpperCase(), '#5affc3', 2.1);
+        ringFx(active.bx + G.fx, active.by + G.fy, '#5affc3', 8, 110, 4, 0.5);
+        SFX.power();
+      }
+    }
     // the growing roots: closing resets that rite's progress, loudly
     for (const b of G.bricks) {
-      if (b.dead || !b.totem || b.riteKind !== 'root') continue;
+      if (b.dead || !b.totem || !b.riteArmed || b.riteKind !== 'root') continue;
       b.riteRoot += dt / 9;
       if (b.riteRoot >= 1) {
         b.riteRoot = 0;
@@ -6951,6 +6975,11 @@ function update(dt) {
         // (+15% at full pressure) — the apex is a weapon-form dance, both
         // halves of which now deal damage
         if (!L.charged && upgN('warmachine')) dmg *= 1 + 0.22 * (G.railPressure || 0);
+        // AFT-011 targeted apex cleanup: seven matched raid seeds left WAR
+        // MACHINE only 2% faster than CELESTIAL. A flat +15% on its two
+        // weapon forms is stable and legible; unlike a weapon-clock change it
+        // cannot compound charge thresholds, cooldowns, cooling and travel.
+        if (upgN('warmachine')) dmg *= 1.15;
         if (L.heavy) dmg *= 1.15;
         if (L.nova) dmg *= 2;
         if (L.calib) dmg *= 1.6; // CALIBRATED BARRAGE: primed volley

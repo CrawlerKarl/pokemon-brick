@@ -210,6 +210,27 @@ window.requestAnimationFrame = function () { return 0; };
       (FORCED_VIEWPORT ? ' (viewport reported 0×0 — forced virtual 900×700)' : '');
   });
 
+  test('mobile haptics stay brief and rate-limited across the game', async () => {
+    const motorOnMs = pattern => (Array.isArray(pattern) ? pattern : [pattern])
+      .reduce((total, duration, i) => total + (i % 2 === 0 ? duration : 0), 0);
+    const kinds = Object.keys(HAPTIC_PATTERNS);
+    assert(kinds.length === 11, 'a haptic event is missing from the shared feedback table');
+    assert(HAPTIC_GLOBAL_COOLDOWN >= 120,
+      'different feedback events can stack too quickly (' + HAPTIC_GLOBAL_COOLDOWN + 'ms)');
+    assert(HAPTIC_PATTERNS.tap <= 4 && HAPTIC_PATTERNS.hit <= 3 && HAPTIC_PATTERNS.break <= 6,
+      'routine touch/combat feedback is stronger than the restrained mobile budget');
+    for (const kind of kinds) {
+      assert(motorOnMs(HAPTIC_PATTERNS[kind]) <= 32,
+        kind + ' keeps the motor active for ' + motorOnMs(HAPTIC_PATTERNS[kind]) + 'ms');
+      assert(HAPTIC_COOLDOWNS[kind] >= 160,
+        kind + ' can repeat after only ' + HAPTIC_COOLDOWNS[kind] + 'ms');
+    }
+    assert(HAPTIC_COOLDOWNS.damage >= 380 && HAPTIC_COOLDOWNS.boss >= 440
+      && HAPTIC_COOLDOWNS.mega >= 520,
+    'major combat feedback does not have enough recovery time');
+    return 'routine ticks 3–6ms · major patterns ≤32ms motor-on · 120ms global floor';
+  });
+
   // 1b) every pilot attack shape renders at every evolution tier — a tier-III
   // fire pilot once CRASHED here (negative ember radius throws in ctx.arc)
   test('typed bolts render at all tiers', async () => {
@@ -2381,8 +2402,14 @@ window.requestAnimationFrame = function () { return 0; };
     const totems = () => G.bricks.filter(b => b.totem && !b.dead);
     assert(totems().length === 3
       && new Set(totems().map(t => t.riteKind)).size === 3, 'three totems, three distinct rites');
+    assert(totems().every(t => !t.riteArmed) && R.armAt === 6 && R.interlude === 17,
+      'the authored rite begins with a six-second ceremony and 17-second interludes');
+    F.beatT = 6; updateRite(0);
+    assert(totems().filter(t => t.riteArmed).length === 1,
+      'only one rite awakens — auto-fire cannot chain all three together');
     // PULSE: hits only count on the beat
     const pulseT = totems().find(t => t.riteKind === 'pulse');
+    pulseT.riteArmed = true; // isolate this rite's hit-window contract
     F.beatT = ((pulseT.subIdx || 0) === 0 ? 0.1 : 1.4 - (pulseT.subIdx || 0) + 0.1); // inside its window
     const canQualify = ((F.beatT + (pulseT.subIdx || 0)) % 1.4) < 0.38;
     if (!canQualify) F.beatT += 1.4 - ((F.beatT + (pulseT.subIdx || 0)) % 1.4) + 0.05;
@@ -2393,6 +2420,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(R.marks === 1 && pulseT.crosser && !pulseT.subBoss, 'the pulse rite completes — the totem departs marked');
     // ROOT: three strikes before it closes; closing resets progress
     const rootT = totems().find(t => t.riteKind === 'root');
+    rootT.riteArmed = true; // isolate the root close/reset contract
     rootT.riteHits = 2; rootT.riteRoot = 0.99;
     await runFrames(12); // the root closes
     assert(rootT.riteHits === 0, 'a closed root resets the rite (it resists)');
@@ -2400,6 +2428,7 @@ window.requestAnimationFrame = function () { return 0; };
     assert(R.marks === 2, 'three timely strikes break the root');
     // OPENING: only through the rotating gap; killing markless still works
     const openT = totems().find(t => t.riteKind === 'opening');
+    openT.riteArmed = true; // isolate the rotating-opening contract
     const ohp = openT.hp;
     // stand OPPOSITE the gap: pick a paddle x so the angle misses the gap
     const gapA = (G.time * 0.9) % (Math.PI * 2);
@@ -2582,27 +2611,42 @@ window.requestAnimationFrame = function () { return 0; };
     return 'Stormbinder tempo · One Life un-stacked · stacks diminish with floors/caps · AEGIS restores, regen rides threat time ≤3/stage';
   });
 
-  // Owner report 2026-07-24: reveal portraits traded color a beat into the
-  // scene, and draft surfaces flashed vector weapons before the PNGs landed.
-  // The fixes: region-level reveal warming (stages of lead time), weapon-art
-  // warming on the title frame, and a per-reveal LATCH that locks each
-  // portrait's art source after the 0.35s fade — no mid-scene swaps, ever.
-  test('reveal + weapon art never swap mid-scene (warm early, latch after the fade)', async () => {
+  // AFT-011: production art streams current-first; procedural/vector art is
+  // always live, next-realm art waits for the quiet prefetch beat, and the
+  // reveal latch still prevents a late source swap inside a scene.
+  test('AFT-011: current-first art stream, bounded caches, procedural fallback + reveal latch', async () => {
     await resetBetween();
-    SETTINGS.mode = 'junkie';
-    resetRun(1, true, { seed: 'WARM1' }); // an ARRIVAL build...
-    const gen = SKIN.gens[0];
+    const realSkin = SKIN;
+    try {
+      SKIN = SKINS.aetherfall;
+      SETTINGS.mode = 'junkie';
+      const nextBoss = SKIN.gens[1].boss.id;
+      delete revealImgCache[nextBoss];
+      resetRun(1, true, { seed: 'WARM1' }); // an ARRIVAL build...
+      const gen = SKIN.gens[0];
     assert(!!revealImgCache[gen.boss.id] && !!revealImgCache[gen.gauntlet.myth[0]]
       && gen.gauntlet.subs.every(([sid]) => !!revealImgCache[sid]),
-      '...warms every portrait its region can reveal, stages ahead');
+      '...warms every portrait the current realm can reveal');
+    assert(!revealImgCache[nextBoss] && realmArtPrefetchRealm === 1,
+      'the next realm waits instead of competing with the current load');
+    flushAetherfallRealmPrefetch();
+    assert(!!revealImgCache[nextBoss], 'the queued next realm can prefetch on the quiet beat');
+
+    for (const k of Object.keys(aetherWeaponImages)) delete aetherWeaponImages[k];
     warmSetupArt();
     if (SKIN.weaponArt && SKIN.weaponArt.shapes) {
       const anyShape = Object.keys(SKIN.weaponArt.shapes)[0];
-      // pokemon has no weaponArt; on aetherfall the title warm must have
-      // kicked every Relicforge load (checked via the dist boot too)
-      assert(!anyShape || aetherRelicImage(anyShape) != null || SKIN.id !== 'aetherfall',
-        'weapon PNGs kick their loads at the title frame');
+      assert(Object.keys(aetherWeaponImages).length === 0,
+        'the title does not decode the whole weapon library');
+      assert(!anyShape || aetherRelicImage(anyShape) != null,
+        'a requested weapon streams behind its vector fallback');
     }
+    const farId = SKIN.gens[5].boss.id;
+    getSprite(farId); trimAetherfallArtCaches(0);
+    const keepMax = new Set([...realmArtIds(0), ...realmArtIds(1),
+      ...((SKIN.starterMon[SETTINGS.starter] || {}).ids || [])]).size * 2;
+    assert(SKINS.aetherfall.spriteCacheStats().count <= keepMax,
+      'decoded sprite canvases stay inside current + next + vessel retention');
     // the latch: whatever the portrait showed at the end of the fade is
     // FINAL — a late-arriving PNG may not replace it mid-scene
     const r = { t: 0.1 };
@@ -2614,7 +2658,8 @@ window.requestAnimationFrame = function () { return 0; };
     r.artLatch[999] = false; // an id that fell back during the fade…
     revealLatch(r);
     assert(r.artLatch[999] === false, '…stays on the live sprite for the whole scene');
-    return 'region reveals warm at build + trial pick · weapons warm at title · portrait art locks after the fade';
+      return 'current realm now · next realm later · bounded decoded cache · procedural/vector fallback · portrait source latch';
+    } finally { SKIN = realSkin; }
   });
 
   // AFT-004: the announce queue is a single-owner PRIORITY queue with kinds,

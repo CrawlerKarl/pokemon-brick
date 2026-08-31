@@ -156,7 +156,7 @@ items have since shipped.
 | AFT-009 | P1 | ✅ Superseded → shipped as AFT-009R (2026-07-24) | Mobile-first progression redesign: Attunement levels, the Aether Forge, the constellation journal | Frequent readable choices on phones; the full web becomes a build journal | XL | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
-| AFT-011 | P1 | ⬜ Open | Mobile loading, asset streaming, and WebP packaging | Faster startup and lower decoded-memory use on ordinary phones | L | AFT-005A |
+| AFT-011 | P1 | ✅ Shipped 2026-08-30; physical-device check open | Mobile loading, asset streaming, and WebP packaging | 690 WebP / 0 PNG / 10.3 MB; current-first stream; 13.63 MB decoded-art campaign peak proxy | L | AFT-005A |
 | AFT-012 | P1 | ⬜ Open | Whole-game visual integration pass | Carries the locked sprite style into scale, shadows, VFX, HUD, and scenery | L | AFT-001–003, AFT-017 |
 | AFT-013 | P2 | ⬜ Open | Codex boss combat dossiers (the sprite gallery already shipped) | Lets players revisit full boss art and learn counterplay | M | AFT-002 |
 | AFT-014 | P2 | ⬜ Open | Run history, boss rush, endless route, and custom modifiers | Converts campaign mastery into replayability | XL | AFT-008 |
@@ -621,6 +621,15 @@ systems.
   quality has priority.
 
 ### AFT-011 — Mobile loading and packaging
+
+**Implemented 2026-08-30.** The standalone package now contains 690 WebPs,
+zero runtime PNGs, and 10.3 MB of art. Runtime loading is current-realm-first
+with delayed next-realm prefetch, bounded decoded caches, visible progress,
+and procedural fallback. The permanent gate profiles three portrait phone
+sizes under 3×–6× CPU slowdown and walks all nine realm boundaries; measured
+first frames were 164–811 ms and the decoded-art peak proxy was 13.63 MB with
+zero failures. Full evidence and the remaining physical iOS/Android caveat:
+`AFT011_MOBILE_LOADING_AND_TARGETED_BALANCE.md`.
 
 - Convert runtime art to WebP where alpha quality remains acceptable; retain
   PNG only when it wins visually or by size. Generate WebP from the masters in

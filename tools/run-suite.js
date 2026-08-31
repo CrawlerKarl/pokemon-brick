@@ -63,7 +63,7 @@ function serveDir(root) {
       if (!p.startsWith(root)) { res.writeHead(403); res.end(); return; }
       fs.readFile(p, (err, data) => {
         if (err) { res.writeHead(404); res.end('Not found'); return; }
-        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json' };
+        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
         res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
         res.end(data);
       });
@@ -516,23 +516,80 @@ async function main() {
       if (!b.ok || !residue) return finish(1);
     }
 
+    // AFT-011 package contract: the standalone ships the complete production
+    // library as WebP and no runtime PNG masters. Keep both count and bytes in
+    // the gate so a future art pass cannot silently restore the 37 MB risk.
+    {
+      const artRoot = path.join(ROOT, 'dist-aetherfall', 'art', 'aetherfall-production');
+      const files = fs.readdirSync(artRoot, { recursive: true }).map(f => path.join(artRoot, f))
+        .filter(f => fs.statSync(f).isFile());
+      const webps = files.filter(f => f.endsWith('.webp'));
+      const pngs = files.filter(f => f.endsWith('.png'));
+      const bytes = webps.reduce((n, f) => n + fs.statSync(f).size, 0);
+      const clean = webps.length === 690 && pngs.length === 0 && bytes < 24 * 1024 * 1024;
+      step('AFT-011 standalone art package', clean,
+        webps.length + ' WebP · ' + pngs.length + ' PNG · ' + (bytes / 1048576).toFixed(1) + ' MB');
+      if (!clean) return finish(1);
+    }
+
     // ── step 7: dist boot smoke + vocabulary scan ──
     {
       const t = Date.now();
       const distRoot = path.join(ROOT, 'dist-aetherfall');
       const { srv: dsrv, port: dport } = await serveDir(distRoot);
       const page = await openPage(cdp, `http://127.0.0.1:${dport}/index.html`);
-      const ok = await waitFor(page.evaluate,
-        `typeof SKIN !== 'undefined' && SKIN.id === 'aetherfall' && typeof G !== 'undefined' && document.title === 'AETHERFALL'`,
-        BOOT_TIMEOUT_MS, 'dist boot').catch(e => { step('dist boot', false, e.message); return null; });
-      if (ok) {
+      // Three portrait phone proxies: compact/entry, current mid-range, and
+      // large flagship. CPU throttling makes the cold-start number useful on
+      // this desktop; DEV.art() keeps physical-device follow-up comparable.
+      const phoneProfiles = [
+        { name: 'compact', width: 320, height: 568, cpu: 6 },
+        { name: 'mid', width: 390, height: 844, cpu: 4 },
+        { name: 'large', width: 430, height: 932, cpu: 3 },
+      ];
+      const artProfiles = [];
+      let ok = true;
+      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 }, page.sessionId);
+      for (const phone of phoneProfiles) {
+        await cdp.send('Emulation.setDeviceMetricsOverride',
+          { width: phone.width, height: phone.height, deviceScaleFactor: 2, mobile: true }, page.sessionId);
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: phone.cpu }, page.sessionId);
+        await cdp.send('Page.reload', { ignoreCache: true }, page.sessionId);
+        const boot = await waitFor(page.evaluate,
+          `typeof SKIN !== 'undefined' && SKIN.id === 'aetherfall' && typeof G !== 'undefined' && document.title === 'AETHERFALL'`,
+          BOOT_TIMEOUT_MS, 'dist boot ' + phone.name).catch(e => { step('dist boot', false, e.message); return null; });
+        if (!boot) { ok = false; break; }
         await new Promise(r => setTimeout(r, 1000));
+        artProfiles.push({ profile: phone, art: JSON.parse(await page.evaluate('JSON.stringify(DEV.art())')) });
+      }
+      if (ok) {
+        // Walk every realm boundary in one session and force its queued-next
+        // bundle to settle. Because trimAetherfallArtCaches runs at each
+        // launch, the maximum is a campaign peak for the bounded policy, not
+        // an opening-screen snapshot.
+        await cdp.send('Emulation.setDeviceMetricsOverride',
+          { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, page.sessionId);
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }, page.sessionId);
+        const realmMemory = [];
+        for (let ri = 0; ri < 9; ri++) {
+          await page.evaluate(`DEV.launch({level:${ri * 3 + 1},mode:'junkie',diff:'normal',starter:'fire',seed:'AFT011-MEM-${ri}'}); flushAetherfallRealmPrefetch(); 'launched'`);
+          await new Promise(r => setTimeout(r, 500));
+          realmMemory.push(JSON.parse(await page.evaluate('JSON.stringify(DEV.art().memory)')));
+        }
+        const campaignPeakMB = Math.max(...realmMemory.map(m => m.decodedMB));
         const scan = JSON.parse(await page.evaluate(VOCAB_SCAN));
-        const clean = page.errors.length === 0 && scan.leftover.length === 0 && scan.lexSample === 'SURGE READY!';
+        const artClean = artProfiles.length === phoneProfiles.length && artProfiles.every(p =>
+          p.art.stream.firstFrameMs < 3000 && p.art.memory.decodedMB < 28 && p.art.stream.failed === 0)
+          && campaignPeakMB < 28;
+        const clean = page.errors.length === 0 && scan.leftover.length === 0 && scan.lexSample === 'SURGE READY!' && artClean;
         step('dist boot + vocabulary scan', clean,
-          clean ? 'standalone boots clean, 0 MEGA' : (page.errors[0] || scan.leftover.slice(0, 5).join(', ')), Date.now() - t);
+          clean ? artProfiles.map(p => p.profile.name + ' ' + p.profile.width + '×' + p.profile.height + '@'
+            + p.profile.cpu + '×: ' + Math.round(p.art.stream.firstFrameMs) + 'ms/' + p.art.memory.decodedMB + 'MB').join(' · ')
+            + ' · campaign peak ' + campaignPeakMB + 'MB · 0 art failures · 0 MEGA'
+            : (page.errors[0] || scan.leftover.slice(0, 5).join(', ') || JSON.stringify(artProfiles)), Date.now() - t);
+        report.aft011 = { phoneProfiles: artProfiles, realmMemory, campaignPeakMB };
         if (!clean) { dsrv.close(); return finish(1); }
       } else { dsrv.close(); return finish(1); }
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }, page.sessionId);
       await page.close();
       dsrv.close();
     }

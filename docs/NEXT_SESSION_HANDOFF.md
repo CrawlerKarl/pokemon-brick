@@ -385,9 +385,9 @@ reopens it.
 ✅ AFT-023b CODEX VOCABULARY + widened gate scan
 ✅ AFT-023c MANUAL FIRE (tap buffering + manual cadence edge)
 ✅ AFT-024  THE STAGE DIVIDEND (one draft per stage; no combat interrupts)
+✅ AFT-011  MOBILE LOADING + WEBP (690 WebP; current-first stream; bounded caches)
 → AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY
 → AFT-010 accessibility
-→ AFT-011 loading/WebP
 → AFT-012 visual pass
 ```
 

@@ -8,7 +8,7 @@
 //      seeds only engine-neutral skin defaults; skin.js loses the pokemon
 //      registry entry ([POKEMON-SKIN-START/END] markers)
 //    - zero pokemon assets (assets/fonts ships, assets/sprites does not)
-//    - art/aetherfall-production/sprites/final (base + radiant PNGs)
+//    - art/aetherfall-production/sprites/final (base + radiant WebP exports)
 //    - art/aetherfall-production/sprites/preview (high-res setup portraits)
 //    - art/aetherfall-production/weapons/final (relics + ship fittings)
 //    - pokemon-termed COMMENT lines dropped; pokemon-flavored DATA strings
@@ -24,6 +24,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'dist-aetherfall');
@@ -152,6 +153,24 @@ function rmrf(p) { fs.rmSync(p, { recursive: true, force: true }); }
 function mkdirp(p) { fs.mkdirSync(p, { recursive: true }); }
 function copy(src, dst) { mkdirp(path.dirname(dst)); fs.copyFileSync(src, dst); }
 
+// AFT-011: encode directly from the production pipeline's validated masters
+// during packaging. We never recompress files from dist/, and we keep the
+// editable/source checkout PNG-based so art review and regeneration remain
+// lossless. q90 + alpha_q100 measured materially smaller across combat,
+// preview, reveal and weapon samples without weakening transparent edges.
+const CWEBP = [process.env.CWEBP, '/opt/homebrew/bin/cwebp', '/usr/local/bin/cwebp', 'cwebp']
+  .find(p => p && (p === 'cwebp' || fs.existsSync(p)));
+function encodeWebp(src, dst) {
+  mkdirp(path.dirname(dst));
+  try {
+    // Method 4 keeps the release gate practical while retaining nearly all
+    // of method 6's compression win on these small transparent assets.
+    execFileSync(CWEBP, ['-quiet', '-q', '90', '-alpha_q', '100', '-m', '4', '-mt', src, '-o', dst]);
+  } catch (e) {
+    throw new Error('WebP packaging requires cwebp (set CWEBP=/path/to/cwebp): ' + e.message);
+  }
+}
+
 // drop full-line comments (// or block-comment continuation lines) that carry
 // pokemon terms; leave code lines and inline trailing comments untouched so
 // nothing structural can break. node --check validates every result below.
@@ -216,6 +235,10 @@ for (const f of fs.readdirSync(jsDir).filter(f => f.endsWith('.js'))) {
     if (f === 'render.js') src = applySwaps(src, RENDER_SWAPS, 'render.js');
     src = scrubTrailing(scrubComments(src));
   }
+  // Runtime URL tables still point at the reviewable PNG masters in the
+  // workshop. The standalone package serves their build-time WebP exports.
+  src = src.replace(/(art\/aetherfall-production\/(?:sprites|weapons)\/(?:final|preview|reveal)\/[^'"\s]+)\.png/g, '$1.webp');
+  if (f === 'aetherfall.js') src = src.replace(/(afw-[a-z-]+)\.png/g, '$1.webp');
   mkdirp(path.join(out, 'js'));
   fs.writeFileSync(path.join(out, 'js', f), src);
 }
@@ -231,11 +254,11 @@ for (const f of fs.readdirSync(jsDir).filter(f => f.endsWith('.js'))) {
 copy(path.join(root, 'assets', 'fonts', 'orbitron.woff2'),
   path.join(out, 'assets', 'fonts', 'orbitron.woff2'));
 
-// 4) the production art (base + radiant vessels, relics, and fittings)
+// 4) the production art, encoded from the validated pipeline masters
 const finalDir = path.join(root, 'art', 'aetherfall-production', 'sprites', 'final');
 let artN = 0;
 for (const f of fs.readdirSync(finalDir).filter(f => f.endsWith('.png'))) {
-  copy(path.join(finalDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'final', f));
+  encodeWebp(path.join(finalDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'final', f.replace(/\.png$/, '.webp')));
   artN++;
 }
 // high-res vessel previews (optional — the finals cover any gap)
@@ -243,7 +266,7 @@ const previewDir = path.join(root, 'art', 'aetherfall-production', 'sprites', 'p
 let previewN = 0;
 try {
   for (const f of fs.readdirSync(previewDir).filter(f => f.endsWith('.png'))) {
-    copy(path.join(previewDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'preview', f));
+    encodeWebp(path.join(previewDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'preview', f.replace(/\.png$/, '.webp')));
     previewN++;
   }
 } catch (e) { /* no preview pass in this checkout */ }
@@ -252,14 +275,14 @@ const revealDir = path.join(root, 'art', 'aetherfall-production', 'sprites', 're
 let revealN = 0;
 try {
   for (const f of fs.readdirSync(revealDir).filter(f => f.endsWith('.png'))) {
-    copy(path.join(revealDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'reveal', f));
+    encodeWebp(path.join(revealDir, f), path.join(out, 'art', 'aetherfall-production', 'sprites', 'reveal', f.replace(/\.png$/, '.webp')));
     revealN++;
   }
 } catch (e) { /* no reveal pass in this checkout */ }
 const weaponDir = path.join(root, 'art', 'aetherfall-production', 'weapons', 'final');
 let weaponN = 0;
 for (const f of fs.readdirSync(weaponDir).filter(f => f.endsWith('.png'))) {
-  copy(path.join(weaponDir, f), path.join(out, 'art', 'aetherfall-production', 'weapons', 'final', f));
+  encodeWebp(path.join(weaponDir, f), path.join(out, 'art', 'aetherfall-production', 'weapons', 'final', f.replace(/\.png$/, '.webp')));
   weaponN++;
 }
 
@@ -286,7 +309,7 @@ engine:
 - **BLASTER** — ball-less wall clearing with a piercing charge shot.
 
 Every creature, vessel, sentinel, sovereign, weapon relic, missile, and ship
-fitting ships hand-finished art in the same Relicforge style, with true
+fitting ships hand-finished WebP art in the same Relicforge style, with true
 prismatic RADIANT vessel forms. 100% vanilla JS + Canvas — no build step, no
 dependencies, no network calls.
 
@@ -300,7 +323,6 @@ Any static file server works. The game saves locally in your browser.
 `);
 
 // ---- verify ----
-const { execFileSync } = require('child_process');
 let checked = 0;
 for (const f of fs.readdirSync(path.join(out, 'js')).filter(f => f.endsWith('.js'))) {
   execFileSync(process.execPath, ['--check', path.join(out, 'js', f)]);
@@ -314,9 +336,12 @@ for (const f of fs.readdirSync(path.join(out, 'js')).filter(f => f.endsWith('.js
   const OK = /SKIN\.id === 'pokemon'|SKINS\.pokemon|isBossOnlyPokemon|c\.skin : 'pokemon'|"kantolegend"/;
   lines.forEach((l, i) => { if (STRONG.test(l) && !OK.test(l)) residue.push(f + ':' + (i + 1) + ': ' + l.trim().slice(0, 90)); });
 }
+const shippedPng = fs.readdirSync(path.join(out, 'art', 'aetherfall-production', 'sprites', 'final'))
+  .filter(f => f.endsWith('.png')).length;
+if (shippedPng) throw new Error('AFT-011: standalone art contains ' + shippedPng + ' unexpected PNG files');
 console.log('build-aetherfall-dist: ' + checked + ' js modules (all node --check clean), '
-  + artN + ' vessel PNGs, ' + previewN + ' preview PNGs, ' + revealN + ' reveal PNGs, ' + weaponN
-  + ' weapon/fitting PNGs, fonts, index.html, serve.js → dist-aetherfall/');
+  + artN + ' vessel WebPs, ' + previewN + ' preview WebPs, ' + revealN + ' reveal WebPs, ' + weaponN
+  + ' weapon/fitting WebPs, fonts, index.html, serve.js → dist-aetherfall/');
 console.log(residue.length
   ? 'RESIDUE (' + residue.length + ' lines carry pokemon terms — review):\n  ' + residue.join('\n  ')
   : 'RESIDUE: none — no pokemon terms in any shipped js.');

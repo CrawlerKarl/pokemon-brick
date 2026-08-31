@@ -1300,6 +1300,104 @@ function preloadGen(g) {
   Object.values(g.tiers).flat().forEach(([id]) => getSprite(id));
   getSprite(g.boss.id);
 }
+
+// AFT-011: one small, shared image loader makes the art stream observable.
+// Production art is optional at runtime: every caller already has a live
+// procedural/vector fallback, so a slow or missing file must be reported but
+// may never block play. Bundles let the loading panel tell the truth about the
+// assets requested for THIS screen/realm instead of showing a lifetime total.
+const AETHER_ART_STREAM = (() => {
+  const bundles = [];
+  const entries = new Map();
+  const bootT = performance.now();
+  let active = null, firstPaintMs = null, firstFrameMs = null, peakPending = 0, totalFailed = 0;
+  function begin(label, foreground = true) {
+    const b = { label, foreground, requested: 0, settled: 0, failed: 0,
+      started: performance.now(), finished: 0 };
+    bundles.push(b);
+    if (bundles.length > 12) bundles.shift();
+    active = b;
+    return b;
+  }
+  function withBundle(label, foreground, fn) {
+    const prev = active, b = begin(label, foreground);
+    try { fn(); } finally {
+      active = prev;
+      if (!b.requested) b.finished = performance.now();
+    }
+    return b;
+  }
+  function load(src, kind, ready) {
+    const img = new Image();
+    if (!src) return img;
+    const b = active || begin('ON-DEMAND ART', false);
+    b.requested++;
+    entries.set(src, { status: 'loading', kind: kind || 'art', started: performance.now() });
+    const pending = [...entries.values()].filter(e => e.status === 'loading').length;
+    peakPending = Math.max(peakPending, pending);
+    const settle = ok => {
+      const e = entries.get(src);
+      if (!e || e.status !== 'loading') return;
+      e.status = ok ? 'ready' : 'failed'; e.settled = performance.now();
+      b.settled++;
+      if (!ok) { b.failed++; totalFailed++; }
+      if (b.settled >= b.requested) b.finished = performance.now();
+    };
+    img.onload = () => { settle(true); if (ready) ready(img); };
+    img.onerror = () => { settle(false); };
+    img.src = src;
+    return img;
+  }
+  function summary() {
+    const pendingBundles = bundles.filter(b => b.requested > b.settled);
+    const b = pendingBundles.filter(x => x.foreground).slice(-1)[0]
+      || pendingBundles.slice(-1)[0]
+      || bundles.filter(x => x.failed && performance.now() - x.finished < 6000).slice(-1)[0]
+      || null;
+    return b ? { label: b.label, requested: b.requested, settled: b.settled,
+      failed: b.failed, pending: Math.max(0, b.requested - b.settled),
+      elapsedMs: performance.now() - b.started, foreground: b.foreground } : null;
+  }
+  function metrics() {
+    const vals = [...entries.values()];
+    return {
+      firstPaintMs, firstFrameMs, requests: vals.length,
+      ready: vals.filter(e => e.status === 'ready').length,
+      pending: vals.filter(e => e.status === 'loading').length,
+      failed: totalFailed, peakPending,
+      artSettledMs: vals.length && vals.every(e => e.status !== 'loading')
+        ? Math.max(...vals.map(e => e.settled || bootT)) - bootT : null,
+    };
+  }
+  return {
+    withBundle, load, summary, metrics,
+    markFirstPaint() {
+      if (firstPaintMs == null) {
+        firstFrameMs = performance.now(); // navigation-relative cold-start proxy
+        firstPaintMs = firstFrameMs - bootT; // module-ready → first canvas frame
+      }
+    },
+  };
+})();
+function loadAetherImage(src, kind, ready) { return AETHER_ART_STREAM.load(src, kind, ready); }
+function withAetherArtBundle(label, foreground, fn) {
+  return AETHER_ART_STREAM.withBundle(label, foreground, fn);
+}
+
+// Includes every combat/reveal actor a realm can request. Used both for
+// current-first preloading and for the decoded-canvas retention boundary.
+function realmArtIds(rIdx2) {
+  const g = SKIN.gens && SKIN.gens[rIdx2];
+  const ids = new Set();
+  if (!g) return ids;
+  regionRoster(g).forEach(id => ids.add(id));
+  if (g.gauntlet) {
+    for (const [id] of g.gauntlet.subs || []) ids.add(id);
+    if (g.gauntlet.myth) ids.add(g.gauntlet.myth[0]);
+  }
+  if (rIdx2 === 0 && SKIN.secret) ids.add(SKIN.secret.id);
+  return ids;
+}
 // (the preload CALL lives at the pokeworld.js tail — it warms the ACTIVE skin)
 
 // ---- Pokédex (persistent collection, shinies tracked separately) ----

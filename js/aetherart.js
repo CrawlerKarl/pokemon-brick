@@ -3912,7 +3912,7 @@
   // The art pipeline (art/aetherfall-production/, see its STYLE_BIBLE)
   // generates finished sprites per stable id; tools/build-art-overrides.js
   // publishes them as AETHERFALL_ART_OVERRIDES. When an override exists,
-  // the PNG is blitted ONTO the already-cached canvas the moment it loads —
+  // the production image is blitted ONTO the already-cached canvas the moment it loads —
   // same object identity, so every live reference upgrades in place and the
   // procedural bake covers the load gap (and every id with no override).
   // Local same-origin files only — the no-remote-fetch rule stands.
@@ -3928,8 +3928,7 @@
     const key = (shiny ? 's' : '') + id;
     if (OVERRIDE_LOADED[key]) return;
     OVERRIDE_LOADED[key] = true;
-    const img = new Image();
-    img.onload = () => {
+    loadAetherImage(src, 'sprite', img => {
       const c = cv.getContext('2d');
       const size = cv.width;
       c.save();
@@ -3964,8 +3963,7 @@
         }
       }
       c.restore();
-    };
-    img.src = src;
+    });
   }
 
   AF.spriteMaker = function (id, shiny) {
@@ -3975,6 +3973,24 @@
       applyOverride(CACHE[key], id, shiny);
     }
     return CACHE[key];
+  };
+  // AFT-011: the live realm and its prefetched successor own the decoded
+  // sprite canvases. A stage rebuild has already released every old actor,
+  // so canvases outside that boundary can be collected safely. Revisited
+  // realms rebake instantly and stream their production art back in.
+  AF.retainSpriteIds = function (ids) {
+    const keep = ids instanceof Set ? ids : new Set(ids || []);
+    for (const key of Object.keys(CACHE)) {
+      const id = +(key[0] === 's' ? key.slice(1) : key);
+      if (keep.has(id)) continue;
+      delete CACHE[key];
+      delete OVERRIDE_LOADED[key];
+    }
+  };
+  AF.spriteCacheStats = function () {
+    const canvases = Object.values(CACHE);
+    return { count: canvases.length,
+      decodedBytes: canvases.reduce((n, c) => n + (c.width || 0) * (c.height || 0) * 4, 0) };
   };
   AF.spriteClassify = classify;
   // the gallery sheet reports pipeline coverage

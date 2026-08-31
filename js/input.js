@@ -1819,7 +1819,7 @@ function fireCharge(c, resonant = false) {
     SFX.shield();
   }
   // AFT-023 WAR MACHINE re-forge: banked rail pressure is OFFENSE now — the
-  // spent bar rides the rail shot as up to +45% damage (on top of the heat
+  // spent bar rides the rail shot as bounded bonus damage (on top of the heat
   // discount below), so the apex reads as the faster, riskier weapon-form
   // dance it was always meant to be, not a heat accessory a cool barrel
   // never needs (measured inert: 0 overheats across the L24 probe).

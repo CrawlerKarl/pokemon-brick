@@ -119,17 +119,51 @@ if (document.fonts && document.fonts.load) {
 }
 const IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
   || new URLSearchParams(location.search).has('touch'); // ?touch forces mobile controls (testing)
-let lastHapticAt = 0;
+// Keep touch feedback legible without letting rapid-fire combat turn into a
+// continuous buzz. Routine actions are a light tick; important states retain
+// a short, distinct rhythm. The global floor prevents different event types
+// from stacking, while per-kind cooldowns tame repeated hits and pickups.
+const HAPTIC_GLOBAL_COOLDOWN = 120;
+const HAPTIC_PATTERNS = Object.freeze({
+  tap: 4,
+  hit: 3,
+  break: 6,
+  warn: [5, 45, 8],
+  item: [5, 36, 7],
+  damage: [12, 48, 14],
+  boss: [8, 42, 11],
+  mega: [8, 38, 9, 56, 15],
+  // AFT-021 P8: promotion, full charge, and release remain distinct,
+  // but no longer dominate the player's grip.
+  promote: [4, 30, 6],
+  full: [7, 36, 10],
+  resonant: [6, 32, 7, 48, 12],
+});
+const HAPTIC_COOLDOWNS = Object.freeze({
+  tap: 220,
+  hit: 160,
+  break: 220,
+  warn: 320,
+  item: 260,
+  damage: 380,
+  boss: 440,
+  mega: 520,
+  promote: 320,
+  full: 380,
+  resonant: 480,
+});
+let lastHapticAt = -Infinity;
+const lastHapticByKind = Object.create(null);
 function haptic(kind = 'tap') {
   if (!IS_TOUCH || typeof SETTINGS === 'undefined' || !SETTINGS.haptics || !navigator.vibrate) return;
   const now = performance.now();
-  if (now - lastHapticAt < (kind === 'hit' ? 45 : 80)) return;
+  const resolvedKind = HAPTIC_PATTERNS[kind] ? kind : 'tap';
+  const lastKindAt = lastHapticByKind[resolvedKind] ?? -Infinity;
+  if (now - lastHapticAt < HAPTIC_GLOBAL_COOLDOWN
+    || now - lastKindAt < HAPTIC_COOLDOWNS[resolvedKind]) return;
   lastHapticAt = now;
-  const patterns = { tap: 8, hit: 5, break: 12, warn: [9, 34, 14], item: [10, 25, 16], damage: [28, 35, 28], boss: [18, 28, 18, 28, 35], mega: [16, 30, 16, 30, 44],
-    // AFT-021 P8: the charge arc speaks through the thumb — promotion,
-    // full, and the resonant release each feel distinct
-    promote: [6, 18, 10], full: [14, 22, 20], resonant: [10, 16, 10, 16, 26] };
-  navigator.vibrate(patterns[kind] || patterns.tap);
+  lastHapticByKind[resolvedKind] = now;
+  navigator.vibrate(HAPTIC_PATTERNS[resolvedKind]);
 }
 
 function resize() {

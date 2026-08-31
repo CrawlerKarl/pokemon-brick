@@ -566,9 +566,7 @@ const AETHER_RELIC_SIZE = Object.freeze({
 function aetherWeaponImage(path) {
   if (SKIN.id !== 'aetherfall' || !path) return null;
   if (!aetherWeaponImages[path]) {
-    const img = new Image();
-    img.src = path;
-    aetherWeaponImages[path] = img;
+    aetherWeaponImages[path] = loadAetherImage(path, 'weapon');
   }
   return aetherWeaponImages[path];
 }
@@ -657,7 +655,7 @@ function aetherPreviewImage(id, light) {
     : (typeof AETHERFALL_ART_PREVIEW !== 'undefined' && AETHERFALL_ART_PREVIEW);
   const src = table && table[id];
   if (!src) return null;
-  if (!aetherPreviewImages[src]) { const im = new Image(); im.src = src; aetherPreviewImages[src] = im; }
+  if (!aetherPreviewImages[src]) aetherPreviewImages[src] = loadAetherImage(src, 'preview');
   const img = aetherPreviewImages[src];
   return (img.complete && img.naturalWidth) ? img : null;
 }
@@ -666,26 +664,31 @@ function aetherPreviewImage(id, light) {
 // vessel. Both load lazily on first draw, so the first click on any tile
 // showed the scaled-up tile art for a beat and then swapped to the preview
 // (and the tiles themselves popped from procedural bakes to their PNGs).
-// Warming the whole roster while the TITLE screen is up means every image a
-// click can reach is already decoded before the player gets there.
+// AFT-011 keeps boot honest: warm only the vessels visible on the current
+// setup surface plus the selected hero. Opening BROWSE ALL intentionally
+// expands that bundle; the rest of the campaign remains procedural until its
+// realm is current. Weapons load on demand behind their vector fallback.
 let warmedSetupArt = '';
 function warmSetupArt() {
-  if (warmedSetupArt === SKIN.id) return;
-  warmedSetupArt = SKIN.id;
-  for (const k in SKIN.starterMon) {
-    const sm = SKIN.starterMon[k];
-    if (!sm || !sm.ids) continue;
-    for (const id of sm.ids) getSprite(id); // tiles + evolution forms (kicks the final-PNG overrides)
-    aetherPreviewImage(sm.ids[0], false);   // the hero portrait
-    aetherPreviewImage(sm.ids[0], true);    // its radiant casting (LIGHT oath summary card)
-  }
-  // the 21 Relicforge weapon sprites too (owner report, 2026-07-24: draft
-  // surfaces flashed the vector fallback for a beat before the PNG landed —
-  // production art must be there from the first frame)
-  if (SKIN.weaponArt) {
-    for (const k2 in (SKIN.weaponArt.shapes || {})) aetherRelicImage(k2);
-    for (const k2 in (SKIN.weaponArt.aux || {})) aetherAuxImage(k2);
-  }
+  if (SKIN.id !== 'aetherfall') return;
+  const keys = (!pilotBrowseAll && pilotFreshSession())
+    ? PILOT_ARCHETYPES.map(a => a.key) : Object.keys(SKIN.starterMon || {});
+  if (SETTINGS.starter && SETTINGS.starter !== 'none' && !keys.includes(SETTINGS.starter)) keys.push(SETTINGS.starter);
+  const warmKey = SKIN.id + '|' + keys.join(',') + '|' + SETTINGS.starter + '|' + (SETTINGS.affinity || '');
+  if (warmedSetupArt === warmKey) return;
+  warmedSetupArt = warmKey;
+  withAetherArtBundle('VESSEL FORGE', true, () => {
+    for (const k of keys) {
+      const sm = SKIN.starterMon[k];
+      if (sm && sm.ids) getSprite(sm.ids[0]);
+    }
+    const chosen = SKIN.starterMon[SETTINGS.starter];
+    if (chosen && chosen.ids) {
+      getSprite(chosen.ids[0]);
+      aetherPreviewImage(chosen.ids[0], false);
+      if (SETTINGS.affinity === 'light') aetherPreviewImage(chosen.ids[0], true);
+    }
+  });
 }
 function affinityVesselImage(id, big, forceBase) {
   if (id > 0) {
@@ -2974,6 +2977,17 @@ function drawRiteFx() {
       if (b.dead || !b.totem) continue;
       const bx2 = b.bx + G.fx, by2 = b.by + G.fy;
       const r = Math.max(b.w, b.h) * 0.66;
+      ctx.save();
+      if (!b.riteArmed) {
+        ctx.globalAlpha = 0.32;
+        ctx.setLineDash([4, 6]); ctx.lineWidth = 1.5; ctx.strokeStyle = '#90a4ae';
+        ctx.beginPath(); ctx.arc(bx2, by2, r + 6, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        fitLabel('WAITING', bx2, by2 + r + 13,
+          { size: 8, min: 7, weight: 800, color: '#b0bec5', maxW: 58 });
+        ctx.restore();
+        continue;
+      }
       if (b.riteKind === 'opening') {
         const gapA = (G.time * 0.9) % (Math.PI * 2);
         ctx.lineWidth = 3;
@@ -2993,6 +3007,7 @@ function drawRiteFx() {
         ctx.strokeStyle = 'rgba(124,179,66,0.7)';
         ctx.strokeRect(bx2 - r, by2 + r + 6, r * 2, 5);
       }
+      ctx.restore();
     }
   } else {
     // the moon: FILLED crescent = bright rules; HOLLOW = dark rules
@@ -6178,11 +6193,64 @@ function bossRevealImage(id) {
   if (revealImgCache[id]) return revealImgCache[id];
   let img = null;
   if (SKIN.id === 'aetherfall' && typeof AETHERFALL_ART_REVEAL !== 'undefined' && AETHERFALL_ART_REVEAL[id]) {
-    img = new Image();
-    img.src = AETHERFALL_ART_REVEAL[id];
+    img = loadAetherImage(AETHERFALL_ART_REVEAL[id], 'reveal');
   } else img = getSprite(id);
   revealImgCache[id] = img;
   return img;
+}
+
+// AFT-011: bound the decoded campaign library to current + next realm, plus
+// the player's three-form vessel line. The production images/canvases are
+// ordinary JS references, so deleting old cache entries makes them eligible
+// for collection without touching anything still on the live stage.
+function trimAetherfallArtCaches(currentRealm) {
+  if (SKIN.id !== 'aetherfall') return;
+  const nextRealm = (currentRealm + 1) % SKIN.gens.length;
+  const keepIds = new Set([...realmArtIds(currentRealm), ...realmArtIds(nextRealm)]);
+  const chosen = SKIN.starterMon && SKIN.starterMon[SETTINGS.starter];
+  if (chosen && chosen.ids) chosen.ids.forEach(id => keepIds.add(id));
+  if (SKINS.aetherfall.retainSpriteIds) SKINS.aetherfall.retainSpriteIds(keepIds);
+
+  const keepReveal = new Set([...realmArtIds(currentRealm), ...realmArtIds(nextRealm)]);
+  for (const id of Object.keys(revealImgCache)) if (!keepReveal.has(+id)) delete revealImgCache[id];
+
+  const keepPreview = new Set();
+  if (chosen && chosen.ids) {
+    const tables = [typeof AETHERFALL_ART_PREVIEW !== 'undefined' && AETHERFALL_ART_PREVIEW,
+      typeof AETHERFALL_ART_PREVIEW_RADIANT !== 'undefined' && AETHERFALL_ART_PREVIEW_RADIANT];
+    for (const table of tables) if (table) for (const id of chosen.ids) if (table[id]) keepPreview.add(table[id]);
+  }
+  for (const src of Object.keys(aetherPreviewImages)) if (!keepPreview.has(src)) delete aetherPreviewImages[src];
+  for (const key of Object.keys(fxCache)) {
+    if (!key.startsWith('vessel_')) continue;
+    const id = +(key.split('_')[1] || 0);
+    if (!keepIds.has(id)) delete fxCache[key];
+  }
+}
+
+function aetherArtMemoryStats() {
+  const bytesFor = values => values.reduce((n, img) => {
+    const w = (img && (img.naturalWidth || img.width)) || 0;
+    const h = (img && (img.naturalHeight || img.height)) || 0;
+    return n + w * h * 4;
+  }, 0);
+  const sprite = SKINS.aetherfall.spriteCacheStats ? SKINS.aetherfall.spriteCacheStats()
+    : { count: 0, decodedBytes: 0 };
+  const buckets = {
+    sprites: sprite.decodedBytes,
+    previews: bytesFor(Object.values(aetherPreviewImages)),
+    reveals: bytesFor(Object.values(revealImgCache)),
+    weapons: bytesFor(Object.values(aetherWeaponImages)),
+  };
+  const decodedBytes = Object.values(buckets).reduce((a, b) => a + b, 0);
+  return {
+    decodedMB: +(decodedBytes / 1048576).toFixed(2), spriteCanvases: sprite.count,
+    previews: Object.keys(aetherPreviewImages).length, reveals: Object.keys(revealImgCache).length,
+    weapons: Object.keys(aetherWeaponImages).length,
+    bucketsMB: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, +(v / 1048576).toFixed(2)])),
+    jsHeapMB: performance.memory && performance.memory.usedJSHeapSize
+      ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(2) : null,
+  };
 }
 function drawRevealPortrait(id, cx, cy, side, alpha, latch) {
   let img = bossRevealImage(id);
@@ -9861,6 +9929,39 @@ function drawForgeMenu(accent) {
   }
   ctx.restore();
 }
+// AFT-011: an honest, non-blocking loading plate. Production art improves in
+// place; the procedural/vector game underneath is complete and playable, so
+// the copy says that plainly instead of trapping a phone behind a fake 100%.
+function drawAetherArtLoading() {
+  if (SKIN.id !== 'aetherfall') return;
+  const s = AETHER_ART_STREAM.summary();
+  if (!s || (!s.pending && !s.failed)) return;
+  const compact = G.state !== 'menu';
+  const w = Math.min(W - 24 - SAFE_L - SAFE_R, compact ? 292 : 356);
+  const h = compact ? 44 : 62;
+  const x = SAFE_L + (W - SAFE_L - SAFE_R - w) / 2;
+  const y = H - SAFE_B - h - (IS_TOUCH ? 12 : 18);
+  ctx.save();
+  roundRect(x, y, w, h, 10);
+  ctx.fillStyle = 'rgba(5,8,22,0.94)'; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = s.failed ? '#ff8a80' : '#80d8ff'; ctx.stroke();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#f4f8ff';
+  const label = s.pending ? s.label + ' · ' + s.settled + '/' + s.requested
+    : 'PRODUCTION ART FALLBACK · ' + s.failed + ' UNAVAILABLE';
+  ctx.fillText(label, x + 12, y + 15, w - 24);
+  if (s.pending) {
+    const p = s.requested ? s.settled / s.requested : 1;
+    roundRect(x + 12, y + 27, w - 24, 5, 2.5); ctx.fillStyle = '#17243b'; ctx.fill();
+    roundRect(x + 12, y + 27, (w - 24) * p, 5, 2.5); ctx.fillStyle = '#5affc3'; ctx.fill();
+  }
+  if (!compact) {
+    ctx.font = bodyFont(9, 700); ctx.fillStyle = '#b9c8d8';
+    ctx.fillText('PLAYABLE NOW · PROCEDURAL ART IS ACTIVE DURING THE STREAM', x + 12, y + 47, w - 24);
+  }
+  ctx.restore();
+}
+
 function drawOverlays() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (G.state === 'menu') { drawMenu(); }
@@ -10516,6 +10617,7 @@ function render() {
   if (G.state !== 'menu' && G.state !== 'dex' && G.state !== 'upgrade' && G.state !== 'results') drawHUD();
   drawOverlays();
   if (G.state === 'menu' || G.state === 'dex') drawAnnounce(); // konami toast etc.
+  drawAetherArtLoading();
   drawBossReveal(); // AFT-002: modal, above HUD and overlays
   drawCursor();
 }

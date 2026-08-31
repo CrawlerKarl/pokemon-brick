@@ -22,6 +22,7 @@ function frame(now) {
     G.freeze -= rdt;
     const tR = performance.now();
     render();
+    AETHER_ART_STREAM.markFirstPaint();
     // Phase transitions are some of the densest boss frames. Profiling only
     // normal simulation frames hid their GPU pressure from AUTO effects.
     PERF.push(0, performance.now() - tR, cadenceMs);
@@ -32,6 +33,7 @@ function frame(now) {
   update(rdt);
   const tR = performance.now();
   render();
+  AETHER_ART_STREAM.markFirstPaint();
   PERF.push(tR - tU, performance.now() - tR, cadenceMs); // work + real FPS
   requestAnimationFrame(frame);
 }
