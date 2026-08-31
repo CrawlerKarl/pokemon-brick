@@ -774,11 +774,28 @@ phone — flag anything only verifiable there.
   de-escalates on the slow 120-frame average: rung 1 drops full-frame bloom +
   the big decorative blurs (`fxGlow`), rung 2 adds thinner emission and 75%
   render resolution (`applyRenderScale` — backing store only; CSS size,
-  coordinates and hitboxes never change). **Never cull** hostile projectiles,
+  coordinates and hitboxes never change), and **rung 3 (AFT-025, sustained
+  sub-29 FPS or `SETTINGS.fx === 'minimal'`) flattens the frame**: the whole
+  sky stack composites into ONE cached plate (`backgroundPlate`, render.js —
+  twinkle/parallax freeze, ambient motes rest), emission thins again, the
+  column-strike lane wash yields to its flat white core, and resolution goes
+  to 0.62 ONLY where DPR ≥ 2 (a DPR-1 phone is already sub-native at 0.75 —
+  keep the rung-3 floor DPR-aware or HUD text goes soft on exactly the
+  devices the ladder protects). **Never cull** hostile projectiles,
   telegraphs, hit feedback, objective state, the vessel, boss HP, or touch
   controls, and **simulation must stay bit-identical at every level** — which
   means nothing gated by `effectsLevel()` may sit in front of a `gameRand()`
   call, and cosmetic spawns stay on `Math.random()`.
+- **OVERDRAW is a budgeted resource (AFT-025): the storm ledger counts
+  PAINTED SCREENS per frame** (drawImage dest px / W·H — machine-portable,
+  like the gradient/blur counts) and the gate enforces full ≤ 6.5 / lean ≤
+  5.6 / rung-3 ≤ 3.4. A phone dies by full-screen layers a desktop never
+  feels — before adding any new whole-viewport wash/overlay, check whether
+  it can bake into an existing layer (`over` is associative: the atmosphere
+  wash lives INSIDE `bgWash` now, one composite instead of two, pixel-
+  identical). `tools/profile-boss.js` is the diagnostic companion: a
+  CPU-throttled phone-viewport replay of the region-1 finale with per-draw-
+  function ms and the same pixel ledger.
 - **A free-running timer that consumes `gameRand()` MUST be reset in
   `resetRun`.** `G.splashCD` wasn't, so a seeded run's RNG stream depended on
   how many runs preceded it in the page and the sim-identity test went
@@ -786,13 +803,20 @@ phone — flag anything only verifiable there.
 - **Never allocate gradients or set `shadowBlur` per-entity per-frame in hot
   loops.** Both are the mobile stutter killers (GC churn + GPU stalls). Repeated
   art is baked ONCE into offscreen sprite caches: `shotSprite`, `auraSprite`,
-  `glowSprite`, `glintSprite`, `getSilhouette` (render.js). Enemy shots / flyer
-  auras / boss aura / card gloss / sparkles all use these. Bake any new
-  many-per-frame effect too.
+  `glowSprite`, `glintSprite`, `getSilhouette`, `aetherRelicBake` (render.js).
+  Enemy shots / flyer auras / boss aura / card gloss / sparkles all use these.
+  Bake any new many-per-frame effect too. **The 2026-08-31 lesson:**
+  `drawAetherRelic` set per-shot `shadowBlur` under AETHERFALL only (pokemon
+  rode the baked path) — "aetherfall lags at the boss" was literally this one
+  line, and the gate missed it because on-demand weapon art (AFT-011) can
+  never load inside a synchronous measure loop; the storm now takes a real
+  async beat first and holds a 40-shot dense probe at blur ≤ 8. A skin-
+  specific draw path needs a skin-specific storm.
 - **Light & depth** are cheap: `drawBloom` (half-res additive re-composite of
   the whole frame — the "modern glow"; play/serve only, respects `reduceFlash`)
-  and `drawAtmosphere` (cached per-region wash). Neither allocates per frame.
-  Kill/catch/shiny sparkles are `sparkle()` (state.js).
+  and the `bgWash` scene wash (contrast + atmosphere baked together, cached
+  per scene). Neither allocates per frame. Kill/catch/shiny sparkles are
+  `sparkle()` (state.js).
 - Boss phase-tint silhouettes pre-warm at wave build so enrage can't hitch.
 - `br.flash` decays in `update()` (dt-scaled), NOT render — it gates the pierce
   i-frame, so a per-render-frame decay coupled DPS to refresh rate. Render only

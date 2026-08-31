@@ -29,7 +29,7 @@ const SETTINGS = Object.assign(
   { drops: 1, speed: 1, preset: 'easy', sfx: 1, music: 0.8, starter: 'none',
     reduceShake: PREFERS_REDUCED_MOTION, reduceFlash: PREFERS_REDUCED_MOTION,
     hcBall: false, autoFire: false, mode: 'junkie', skin: 'pokemon', affinity: null,
-    fx: 'auto', // AFT-018 effects quality: auto (phone default) | full | reduced
+    fx: 'auto', // AFT-018/025 effects quality: auto (phone default) | full | reduced | minimal
     buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
     leftHanded: false, haptics: true },
   STORED_SETTINGS);
@@ -139,11 +139,13 @@ const SLIDERS = [
     fmt: v => v <= 0.01 ? 'OFF' : Math.round(v * 100) + '%' },
 ];
 const TOGGLES = [
-  // AFT-018: a 3-way cycle, not a boolean — AUTO degrades decorative work
+  // AFT-018: a cycle, not a boolean — AUTO degrades decorative work
   // when the moving frame average exceeds budget; FULL never degrades;
-  // REDUCED always runs lean. Reduce-flashes below stays an ACCESSIBILITY
-  // choice, never a disguised performance toggle.
-  { key: 'fx', label: 'EFFECTS QUALITY', cycle: ['auto', 'full', 'reduced'] },
+  // REDUCED always runs lean; MINIMAL (AFT-025) pins the deepest rung —
+  // flattened background, deepest resolution drop — for phones that still
+  // struggle. Reduce-flashes below stays an ACCESSIBILITY choice, never a
+  // disguised performance toggle.
+  { key: 'fx', label: 'EFFECTS QUALITY', cycle: ['auto', 'full', 'reduced', 'minimal'] },
   { key: 'reduceShake', label: 'REDUCE SCREEN SHAKE' },
   { key: 'reduceFlash', label: 'REDUCE FLASHES' },
   // AFT-023: mode-neutral label; the toggle now also boosts hostile-shot

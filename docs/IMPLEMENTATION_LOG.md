@@ -5,6 +5,75 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-08-31 — AFT-025: THE FLAT FRAME — boss fights stop lagging on the phone (overdraw + per-shot blur)
+
+Owner report: AETHERFALL lags "when there's too much going on — example,
+final boss on the first world." This reopened the boss frame-rate thread
+the 2026-07-23 rounds had closed, and it supplied the real-device evidence
+AFT-018's deeper rungs were explicitly waiting on. Diagnosed with a new
+throttled profiler (`tools/profile-boss.js` — CPU-throttled phone-viewport
+replay of the region-1 finale with per-draw-function timing and a painted-
+pixels ledger), which found the desktop-invisible costs:
+
+- **THE SMOKING GUN — `drawAetherRelic` set `ctx.shadowBlur` per
+  projectile per frame, AETHERFALL only.** Every enemy shot, typed player
+  bolt, and missile drew through a fresh GPU blur pass — the exact
+  per-entity stall the `fxCache` family exists to prevent. The pokemon
+  skin never hit it (no `weaponArt` → the baked `enemyShotSprite` path),
+  which is why "aetherfall lags" was literally skin-specific. Worse, the
+  gate's storm never caught it: weapon art loads ON DEMAND (AFT-011) and
+  the storm's measure loop was fully synchronous, so the images could
+  never arrive — the gate was silently benchmarking the vector fallback.
+  Fixed by baking halo + tier echoes + additive tint into one canvas per
+  (image, colour, tier, size-bucket): one plain `drawImage` per shot.
+- **OVERDRAW — ~6.5 full-screen layers painted per frame,** and rung 2
+  barely helped (still ~5): sky, twinkling stars, parallax scenery, the
+  contrast wash, the atmosphere wash, vignette, bloom. On a phone that is
+  the compositor-falls-behind-while-JS-stays-cheap signature from the
+  original report. Two cuts: (1) the atmosphere wash now BAKES INTO
+  `bgWash` (`over` is associative — pixel-identical, one less full-screen
+  composite at every rung, always); (2) a new **RUNG 3** composites
+  sky+stars+scenery+wash into ONE cached plate (`backgroundPlate`,
+  render.js) — twinkle and parallax freeze, ambient motes rest, and the
+  measured frame drops from ~5.5 to **2.36 painted screens**.
+- **RUNG 3 of the effects ladder** (AFT-018's "deeper rungs require that
+  evidence" — evidence delivered): engages at sustained sub-29-FPS
+  (workHot > 30 / cadenceHot > 34 / fxLoad > 2.2), keeps the sticky
+  de-escalation. It adds the background plate, emission 0.3× / life
+  0.55× / ring cap 6, drops the column-strike lane wash (the flat white
+  core and the dashed warn — the information — stay), and takes
+  resolution to 0.62 **only where DPR ≥ 2** (a DPR-1 phone is already
+  sub-native at 0.75; going lower would soften the HUD text the ladder
+  exists to protect). `SETTINGS.fx` gains a user-facing **MINIMAL** that
+  pins it.
+- **The GC-churn tail:** the column-strike gradient (allocated per strike
+  per frame — a desperation channel fires 5-10 at once, a hitch at the
+  worst possible moment), the relic plate / binding sigil double
+  `shadowBlur` per drop, the boss/sentinel HP-bar gradients, Galar's
+  per-mote mist gradients, and the shooting-star gradient are all baked
+  or cached in local space now.
+
+**The gate got stronger so this cannot regress silently:** the storm is
+async (one real beat lets the on-demand weapon art ARRIVE before
+measuring), records **painted screens/frame** as a machine-portable
+budget (full ≤ 6.5, lean ≤ 5.6, min ≤ 3.4), runs a rung-3 pass, and adds
+a **40-shot DENSE PROBE** through the real renderer with `blur ≤ 8`
+(per-shot blur reads as 40+; the probe also fails if its shots die, so it
+can never go hollow). Closeout numbers: boss full 4.47 screens/frame ·
+grad 0.4 · probe blur 3.6; rung 3 = 2.36 screens at 0.62 resolution.
+
+Verification: suite 130/130 (the AFT-018 fixture now covers all four
+rungs: MINIMAL pins rung 3, the 240-frame seeded sim is bit-identical
+full vs reduced vs minimal, hostile fire spawns under every rung, rung-3
+resolution is DPR-aware); full gate green; relic shots / drop plates /
+rung-3 plate eyeballed in the live renderer at 420×900. Balance untouched
+(no baseline run needed — render-only work, sim identity suite-locked).
+One pre-existing flake noted in passing: the randomized upgrade-web offer
+test ("a satellite crowded out an authored node", iter 8) went red once
+and green on rerun — same class as the flyer-pattern tests.
+
+---
+
 ## 2026-07-27 — AFT-024: THE STAGE DIVIDEND — upgrades arrive per stage, and nothing interrupts a fight
 
 Owner directive: upgrades should arrive **after each level** rather than on

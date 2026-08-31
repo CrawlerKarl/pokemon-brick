@@ -116,7 +116,7 @@ sometimes doesn't fire — trigger manually with
 | `state.js` | The `G` state object, `buildLevel()` (**the level generator — modes, formations, ecology, flight/squad assignment, hp**), `makeBall`, `resetRun`, `serve`, `spawnReinforcement`, checkpoints (`saveCheckpoint`/`resumeRun`), `sparkle`/`ringFx`, tree caps |
 | `input.js` | Mouse/keyboard/touch, `onPress` dispatch, `fireAction`/`fireCharge`, `pickUpgrade`/`rerollDraft`, `touchButtons` geometry, `serveAngle` |
 | `update.js` | The simulation: **flight patterns (`flightPos`), junkie separation + maneuvers, divers, reinforcements**, ball/laser/enemy-shot physics, `damageBrick` (+ tiered boss phases), `bossAbility`, `loseLife` (knockout), rally/barrier, level-clear |
-| `render.js` | All drawing: bricks + free-flyers (gait animation), bosses (`drawBossMon`), paddle / junkie pilot rig, HUD, menus, Pokédex, draft screen; **FX sprite caches + `drawBloom`/`drawAtmosphere`** (see Graphics & performance) |
+| `render.js` | All drawing: bricks + free-flyers (gait animation), bosses (`drawBossMon`), paddle / junkie pilot rig, HUD, menus, Pokédex, draft screen; **FX sprite caches + `drawBloom`/`backgroundPlate`** (see Graphics & performance) |
 | `dev.js` | **Dev tooling (local-only, inert in normal play):** deterministic URL/console launches (`?dev&level=&seed=&upg=…`, `window.DEV`), build grants, the balance report + F9 dashboard overlay (see Verifying) |
 | `main.js` | `requestAnimationFrame` loop (`update` then `render`; `G.freeze` = hit-stop; a bootstrap guard retries until the viewport + vignette exist) |
 
@@ -634,10 +634,12 @@ column strikes, fans, phase-out…). Boss HP scales with region + journey loop.
 **Never allocate a gradient or set `shadowBlur` per-entity per-frame** — both
 are the mobile stutter killers (GC churn + GPU stalls). Repeated art is baked
 ONCE into offscreen sprite caches (`fxCache`): `shotSprite`, `auraSprite`,
-`glowSprite`, `glintSprite`, plus `getSilhouette`. The "lit" look is cheap:
-`drawBloom` (a half-res blurred copy of the frame composited back additively —
-play/serve only, respects `reduceFlash`, ~0.2ms) and `drawAtmosphere` (cached
-per-region horizon-glow + top-darken wash). Kills/catches/shinies throw
+`glowSprite`, `glintSprite`, `aetherRelicBake` (the AETHERFALL projectile
+halo — per-shot `shadowBlur` here was the 2026-08-31 boss-lag root cause),
+plus `getSilhouette`. The "lit" look is cheap: `drawBloom` (a half-res
+blurred copy of the frame composited back additively — play/serve only,
+respects `reduceFlash`, ~0.2ms) and the `bgWash` scene wash (contrast +
+horizon-glow + top-darken, baked together per scene). Kills/catches/shinies throw
 `sparkle()` glints and `ringFx()` shockwaves (both capped). `br.flash` (hit
 flash) decays in `update()` dt-scaled, NOT render — it gates the pierce
 i-frame, so a per-render-frame decay would couple DPS to the display's refresh
@@ -649,10 +651,15 @@ compositor stall can drop visible FPS while `update()` and `render()` still
 return in about 1ms. Sustained cadence above 20ms drops full-frame bloom and
 large decorative blurs; above 26ms it also thins cosmetic emission and renders
 the canvas backing store at 75% scale (CSS size, coordinates, input, hitboxes,
-and simulation remain unchanged). Boss hit-stop frames are profiled too.
+and simulation remain unchanged); above 34ms (AFT-025) rung 3 composites the
+whole sky stack into one cached plate, thins emission again, and drops the
+backing store to 62% where DPR ≥ 2 — `SETTINGS.fx = 'minimal'` pins this rung
+from the settings panel. Boss hit-stop frames are profiled too.
 `DEV.perf()` reports work time, `cadenceMs`, estimated FPS, effects rung, and
 live effect counts. Hostile shots, telegraphs, hit feedback, the vessel, boss
-health, and controls are never culled.
+health, and controls are never culled. `tools/profile-boss.js` replays the
+region-1 finale under CPU throttle with per-draw-function timing and a
+painted-pixels ledger when a frame-rate report needs diagnosing.
 
 ### Skill tree (`PATHS` in data.js ~423) — now the hub of THE UPGRADE WEB
 Six paths × four tiers, **permanent**, drafted between every wave. The 24

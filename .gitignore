@@ -4,3 +4,4 @@ serve.js
 dist-aetherfall/
 .gate-report.json
 .gate-shots/
+.profile-boss.json

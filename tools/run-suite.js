@@ -362,13 +362,16 @@ async function runStorm(cdp, port, reuse) {
     if (!booted) { await page.close(); return { err: 'storm page failed to boot', ms: Date.now() - t0 }; }
   }
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, sid);
-  const res = await page.evaluate(`(() => {
+  const res = await page.evaluate(`(async () => {
     try {
       resize(); ZONE_DEBUG = false; upgradeTreeOpen = false; advOpen = false;
       // instrument the context: gradient allocations + shadowBlur passes per
-      // frame are MACHINE-PORTABLE budgets (absolute ms are not)
+      // frame are MACHINE-PORTABLE budgets (absolute ms are not) — and since
+      // AFT-025 so is PAINTED AREA: drawImage dest px per frame over W*H is
+      // the overdraw ledger (a phone's compositor dies by full-screen layers,
+      // which a fast desktop never feels)
       if (!window.__GC) {
-        window.__GC = { grad: 0, blur: 0 };
+        window.__GC = { grad: 0, blur: 0, diDest: 0 };
         const pL = ctx.createLinearGradient.bind(ctx), pR = ctx.createRadialGradient.bind(ctx);
         ctx.createLinearGradient = (...a) => { __GC.grad++; return pL(...a); };
         ctx.createRadialGradient = (...a) => { __GC.grad++; return pR(...a); };
@@ -377,21 +380,34 @@ async function runStorm(cdp, port, reuse) {
           set(v) { if (v > 0) __GC.blur++; d.set.call(this, v); },
           get() { return d.get.call(this); },
         });
+        const pDI = ctx.drawImage.bind(ctx);
+        ctx.drawImage = function (img, ...a) {
+          let dw = (img && (img.naturalWidth || img.width)) || 0;
+          let dh = (img && (img.naturalHeight || img.height)) || 0;
+          if (a.length === 4) { dw = a[2]; dh = a[3]; }
+          else if (a.length === 8) { dw = a[6]; dh = a[7]; }
+          __GC.diDest += Math.abs(dw * dh);
+          return pDI(img, ...a);
+        };
       }
       const timed = (frames, perFrame) => {
         const times = [];
-        __GC.grad = 0; __GC.blur = 0;
+        let shotSum = 0;
+        __GC.grad = 0; __GC.blur = 0; __GC.diDest = 0;
         for (let i = 0; i < frames; i++) {
           const a = performance.now();
           paused = false; G.freeze = 0;
           if (perFrame) perFrame(i);
           update(1/60); render();
           times.push(performance.now() - a);
+          shotSum += G.enemyShots.length;
         }
         times.sort((x, y) => x - y);
         return { avg: +(times.reduce((s2, v) => s2 + v, 0) / times.length).toFixed(2),
           p95: +times[Math.floor(times.length * 0.95)].toFixed(2),
-          grad: +(__GC.grad / frames).toFixed(1), blur: +(__GC.blur / frames).toFixed(1) };
+          grad: +(__GC.grad / frames).toFixed(1), blur: +(__GC.blur / frames).toFixed(1),
+          layers: +(__GC.diDest / frames / (W * H)).toFixed(2),
+          shotsAvg: +(shotSum / frames).toFixed(1) };
       };
       // ── pass A: the WAVE storm (Surge + forced burst/ring load) ──
       DEV.launch({ level: 24, mode: 'junkie', diff: 'hard', seed: 'STORM', upg: 'arsenal:4,surge:4,impact:4,prism:3' });
@@ -410,11 +426,36 @@ async function runStorm(cdp, port, reuse) {
       while (G.reveal) update(0.5);
       const pin = () => { const b = G.bricks.find(x => !x.dead && x.isBoss); if (b) b.hp = Math.max(b.hp, Math.round(b.maxHp * 0.2)); return b; };
       for (let i = 0; i < 180; i++) { G.freeze = 0; pin(); update(1/60); }
+      // the AETHERFALL weapon art loads ON DEMAND (AFT-011) — a synchronous
+      // loop can never receive it, silently benchmarking the vector fallback
+      // instead of what a real phone draws. One render REQUESTS it, one real
+      // beat lets it ARRIVE, then the measured passes hit the production path.
+      render();
+      await new Promise(r => setTimeout(r, 600));
       const bossFull = timed(120, i => { const b = pin(); mouseX = b ? b.bx + G.fx + Math.sin(i * 0.08) * 80 : W / 2; });
       SETTINGS.fx = 'reduced';
       const bossLean = timed(90, i => { const b = pin(); mouseX = b ? b.bx + G.fx : W / 2; });
+      // ── pass C: the deepest rung — the AFT-025 background plate + trims ──
+      SETTINGS.fx = 'minimal';
+      for (let i = 0; i < 30; i++) { G.freeze = 0; pin(); update(1/60); render(); }
+      const bossMin = timed(90, i => { const b = pin(); mouseX = b ? b.bx + G.fx : W / 2; });
+      // ── pass D: the DENSE-SHOT probe — 40 held typed projectiles through
+      // the real renderer. This is the load a finale actually produces, and
+      // the fixture that catches any per-shot blur/gradient regression (the
+      // drawAetherRelic per-shot shadowBlur hid from the sparse passes).
+      SETTINGS.fx = 'full';
+      SETTINGS.autoFire = false; // the player's lasers must not thin the probe field
+      const probeTypes = ['fire', 'water', 'electric', 'grass', 'psychic', 'dark', 'steel', 'ice'];
+      for (let i = 0; i < 40; i++) {
+        spawnEnemyShot({ x: 30 + (i % 8) * (W - 60) / 7, y: 120 + Math.floor(i / 8) * 60,
+          vx: 0, vy: 8, type: probeTypes[i % probeTypes.length],
+          classKey: i % 7 === 6 ? 'heavy' : i % 3 === 0 ? 'micro' : 'standard' });
+      }
+      render();
+      await new Promise(r => setTimeout(r, 400)); // the probe's own shot art arrives
+      const probe = timed(60, i => { const b = pin(); mouseX = b ? b.bx + G.fx : W / 2; });
       SETTINGS.fx = 'auto'; SETTINGS.autoFire = false;
-      return JSON.stringify({ ok: true, wave, bossFull, bossLean,
+      return JSON.stringify({ ok: true, wave, bossFull, bossLean, bossMin, probe,
         avg: wave.avg, p95: wave.p95,
         counts: { particles: G.particles.length, shots: G.enemyShots.length, lasers: G.lasers.length, rings: G.rings.length } });
     } catch (e) { return JSON.stringify({ ok: false, err: String(e && e.message || e).slice(0, 140) }); }
@@ -609,12 +650,18 @@ async function main() {
     {
       const st = await runStorm(cdp, port, scenePage);
       const catastrophic = st.ok && (st.wave.avg > 50 || st.bossFull.avg > 50);
-      // machine-PORTABLE budgets: GPU state changes per frame, not ms — the
-      // boss fight may never regress back into per-frame gradient/blur churn
-      const overBudget = st.ok && (st.bossFull.grad > 8 || st.bossFull.blur > 14 || st.bossLean.blur > 6);
+      // machine-PORTABLE budgets: GPU state changes + painted screens per
+      // frame, not ms — the boss fight may never regress back into per-frame
+      // gradient/blur churn (probe: 40 live typed shots through the real
+      // renderer — per-SHOT blur reads as 40+, the bake reads as single
+      // digits) nor back into the full-screen layer stack AFT-025 collapsed.
+      const overBudget = st.ok && (st.bossFull.grad > 8 || st.bossFull.blur > 14 || st.bossLean.blur > 6
+        || st.bossMin.blur > 6 || st.probe.blur > 8 || st.probe.grad > 8
+        || st.probe.shotsAvg < 25 // the probe went hollow — its shots died; the blur number proves nothing
+        || st.bossFull.layers > 6.5 || st.bossLean.layers > 5.6 || st.bossMin.layers > 3.4);
       step('artifact storms (wave + boss)', !!st.ok && !catastrophic && !overBudget,
         st.ok
-          ? 'wave ' + st.wave.avg + 'ms · boss ' + st.bossFull.avg + 'ms (grad ' + st.bossFull.grad + ' · blur ' + st.bossFull.blur + '/frame; lean blur ' + st.bossLean.blur + ')'
+          ? 'wave ' + st.wave.avg + 'ms · boss ' + st.bossFull.avg + 'ms (grad ' + st.bossFull.grad + ' · blur ' + st.bossFull.blur + ' · ' + st.bossFull.layers + ' screens/frame; lean blur ' + st.bossLean.blur + '; min ' + st.bossMin.layers + ' screens; probe ' + st.probe.shotsAvg + ' shots → blur ' + st.probe.blur + ')'
           : (st.err || 'failed'), st.ms);
       report.storm = st;
       if (scenePage) scenePage.page.close();

@@ -2964,6 +2964,7 @@ window.requestAnimationFrame = function () { return 0; };
       // overrides pin the ladder
       SETTINGS.fx = 'full'; assert(effectsLevel() === 0, 'FULL must never degrade');
       SETTINGS.fx = 'reduced'; assert(effectsLevel() === 2, 'REDUCED must run lean');
+      SETTINGS.fx = 'minimal'; assert(effectsLevel() === 3, 'MINIMAL must pin the deepest rung (AFT-025)');
       // SIM IDENTITY: the same seeded wave, run at FULL and at REDUCED,
       // must land on bit-identical gameplay state (cosmetics excluded)
       const simHash = () => {
@@ -2983,23 +2984,32 @@ window.requestAnimationFrame = function () { return 0; };
       const hFull = runSeeded('full');
       const hLean = runSeeded('reduced');
       assert(hFull === hLean, 'REDUCED changed the simulation: ' + hFull + ' vs ' + hLean);
-      // hostile fire spawns identically under REDUCED (never culled)
-      SETTINGS.fx = 'reduced';
-      resetRun(8, true, { seed: 'FXTEST' });
-      const before = G.enemyShots.length;
-      const shot = spawnEnemyShot({ x: W / 2, y: 120, vy: 240, type: 'fire' });
-      assert(shot && G.enemyShots.length === before + 1, 'hostile fire culled under REDUCED');
+      const hMin = runSeeded('minimal');
+      assert(hFull === hMin, 'MINIMAL changed the simulation: ' + hFull + ' vs ' + hMin);
+      // hostile fire spawns identically under REDUCED and MINIMAL (never culled)
+      for (const fx of ['reduced', 'minimal']) {
+        SETTINGS.fx = fx;
+        resetRun(8, true, { seed: 'FXTEST' });
+        const before = G.enemyShots.length;
+        const shot = spawnEnemyShot({ x: W / 2, y: 120, vy: 240, type: 'fire' });
+        assert(shot && G.enemyShots.length === before + 1, 'hostile fire culled under ' + fx.toUpperCase());
+      }
       // AFT-018b: the fast window escalates in ~0.5s; the glow gate and the
-      // resolution controller respond to the ladder (scale never under suite)
+      // resolution controller respond to the ladder (scale never under suite).
+      // The ladder is STICKY between sub-cases by design, so each case resets
+      // it directly the way a fresh session would start.
+      const resetLadder = () => { FX_LADDER.level = 0; FX_LADDER.changedAt = 0; FX_LADDER.belowSince = 0; };
       SETTINGS.fx = 'auto';
+      resetLadder();
       for (let i = 0; i < 120; i++) PERF.push(1, 1);      // calm history
-      for (let i = 0; i < 30; i++) PERF.push(20, 15);     // a 0.5s spike
+      for (let i = 0; i < 30; i++) PERF.push(20, 15);     // a hard 0.5s spike (35ms frames)
       assert(PERF.recent(30) > 30 && PERF.avg() < 15,
         'fast/slow windows broken: recent=' + PERF.recent(30).toFixed(1) + ' avg=' + PERF.avg().toFixed(1));
-      assert(effectsLevel() === 2, 'a 0.5s spike must escalate immediately (got ' + effectsLevel() + ')');
+      assert(effectsLevel() === 3, 'a sustained sub-30-FPS work spike must reach rung 3 (got ' + effectsLevel() + ')');
       // GPU/compositor pressure often appears only as late animation frames:
       // work stays cheap while cadence falls to ~30 FPS. That real-device
       // boss case must drive the same fallback.
+      resetLadder();
       for (let i = 0; i < 120; i++) PERF.push(1, 1, 16.67);
       for (let i = 0; i < 30; i++) PERF.push(1, 1, 33.33);
       assert(PERF.recent(30) < 3 && PERF.cadenceRecent(30) > 30,
@@ -3007,6 +3017,16 @@ window.requestAnimationFrame = function () { return 0; };
       assert(effectsLevel() === 2,
         '30 FPS cadence with cheap JS must escalate (got ' + effectsLevel() + ')');
       assert(fxWantedScale() === 0.75, 'rung 2 must request 75% resolution');
+      // AFT-025: cadence collapsing under ~29 FPS reaches the deepest rung,
+      // and its resolution drop is DPR-AWARE (0.62 only where density headroom
+      // exists; a DPR-1 phone stays at 0.75 so HUD text survives)
+      resetLadder();
+      for (let i = 0; i < 30; i++) PERF.push(1, 1, 40);
+      assert(effectsLevel() === 3,
+        '25 FPS cadence with cheap JS must reach rung 3 (got ' + effectsLevel() + ')');
+      assert(fxWantedScale() === (DPR >= 2 ? 0.62 : 0.75),
+        'rung 3 resolution must be DPR-aware (got ' + fxWantedScale() + ' at DPR ' + DPR + ')');
+      resetLadder();
       SETTINGS.fx = 'full';
       assert(fxGlow(12) === 12, 'FULL must keep decorative glows');
       SETTINGS.fx = 'reduced';
@@ -3014,16 +3034,22 @@ window.requestAnimationFrame = function () { return 0; };
       update(1 / 60); // the controller runs — but never rescales under the suite
       assert(RENDER_SCALE === 1, 'adaptive resolution must stay off under the suite');
       for (let i = 0; i < 120; i++) PERF.push(1, 1, 16.67); // settle both rings for later tests
-      // decorative emission DOES scale down (the whole point)
+      // decorative emission DOES scale down (the whole point) — and rung 3
+      // thins deeper than rung 2
       G.particles.length = 0;
       burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
       const lean = G.particles.length;
+      SETTINGS.fx = 'minimal';
+      G.particles.length = 0;
+      burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
+      const minimal = G.particles.length;
       SETTINGS.fx = 'full';
       G.particles.length = 0;
       burst(W / 2, H / 2, '#fff', 20, 200, 0.6);
       assert(lean < G.particles.length, 'REDUCED did not thin decorative emission (' + lean + ' vs ' + G.particles.length + ')');
+      assert(minimal < lean, 'MINIMAL must thin deeper than REDUCED (' + minimal + ' vs ' + lean + ')');
     } finally { SETTINGS.fx = realFx; SETTINGS.mode = realMode; }
-    return 'work + real-FPS profiler live · overrides pin rungs · 240-frame seeded sim BIT-IDENTICAL full vs reduced · hostiles spawn · cosmetics thin';
+    return 'work + real-FPS profiler live · overrides pin all 4 rungs · 240-frame seeded sim BIT-IDENTICAL full vs reduced vs minimal · hostiles spawn · cosmetics thin · rung-3 DPR-aware resolution';
   });
 
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no

@@ -3711,14 +3711,18 @@ const FX_LADDER = { level: 0, changedAt: 0, belowSince: 0 };
 function effectsLevel() {
   if (SETTINGS.fx === 'full') return 0;
   if (SETTINGS.fx === 'reduced') return 2;
+  if (SETTINGS.fx === 'minimal') return 3; // AFT-025: pin the deepest rung
   // AUTO: ESCALATE on the fast 30-frame window (~0.5s — a boss entrance
   // spike degrades before the drop is felt), DE-ESCALATE only when the slow
   // 120-frame average also recovers — hysteresis in the right direction.
   // Work time alone misses GPU/compositor stalls on phones, so actual rAF
-  // cadence is an equal input: >20ms is below 50 FPS; >26ms is below 39 FPS.
+  // cadence is an equal input: >20ms is below 50 FPS; >26ms is below 39 FPS;
+  // >34ms (below ~29 FPS, sustained) is the rung-3 line — the phone is
+  // losing the fight and the frame gets flattened to its cheapest honest form.
   const workHot = Math.max(PERF.recent(30), PERF.avg());
   const cadenceHot = Math.max(PERF.cadenceRecent(30), PERF.cadenceAvg());
-  const raw = (workHot > 22 || cadenceHot > 26 || fxLoad() > 1.6) ? 2 // emission + resolution
+  const raw = (workHot > 30 || cadenceHot > 34 || fxLoad() > 2.2) ? 3   // background plate + deep trims
+    : (workHot > 22 || cadenceHot > 26 || fxLoad() > 1.6) ? 2 // emission + resolution
     : (workHot > 15 || cadenceHot > 20 || fxLoad() > 1.15) ? 1 : 0;   // bloom + big glows first
   const L = FX_LADDER, t = performance.now();
   if (raw > L.level) { L.level = raw; L.changedAt = t; L.belowSince = 0; }
@@ -3730,7 +3734,14 @@ function effectsLevel() {
   } else L.belowSince = 0;
   return L.level;
 }
-function fxWantedScale() { return effectsLevel() >= 2 ? 0.75 : 1; }
+// Rung 3 drops the backing store further ONLY where density headroom exists:
+// at DPR 2 (retina phones) 0.62 still renders above 1.2 device-px per CSS px,
+// while a DPR-1 device is already sub-native at 0.75 — going lower there
+// would visibly soften the HUD text the ladder exists to protect.
+function fxWantedScale() {
+  const lvl = effectsLevel();
+  return lvl >= 3 ? (DPR >= 2 ? 0.62 : 0.75) : lvl >= 2 ? 0.75 : 1;
+}
 
 // ---- AFT-002: THE BOSS REVEAL — a separate scene, not a combat layer ----
 // Freeze combat, show the full-resolution portrait with a dedicated info

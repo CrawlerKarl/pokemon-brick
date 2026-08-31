@@ -2636,8 +2636,8 @@ function serve() {
 // ============================================================
 // AFT-018: decorative spawns scale with the effects level — never hostile
 // fire, never telegraphs, never hit feedback (floaters are information).
-function fxEmitScale() { return effectsLevel() >= 2 ? 0.45 : 1; }
-function fxLifeScale() { return effectsLevel() >= 2 ? 0.7 : 1; }
+function fxEmitScale() { const l = effectsLevel(); return l >= 3 ? 0.3 : l >= 2 ? 0.45 : 1; }
+function fxLifeScale() { const l = effectsLevel(); return l >= 3 ? 0.55 : l >= 2 ? 0.7 : 1; }
 function burst(x, y, color, n = 18, speed = 260, life = 0.7) {
   n = Math.max(1, Math.round(n * fxEmitScale())); life *= fxLifeScale();
   for (let i = 0; i < n; i++) {
@@ -2677,7 +2677,8 @@ function addFloater(x, y, text, color, size = 16) {
 }
 // expanding shockwave ring — the modern "kill pop". Additive, cheap, capped.
 function ringFx(x, y, color, r0 = 6, r1 = 40, lw = 3, life = 0.38) {
-  if (effectsLevel() >= 2 && G.rings.length > 10) return; // lean mode: fewer blurred rings
+  const lvl = effectsLevel();
+  if (lvl >= 2 && G.rings.length > (lvl >= 3 ? 6 : 10)) return; // lean mode: fewer blurred rings
   if (G.rings.length > 24) return;
   G.rings.push({ x, y, color, r0, r1, lw, life, maxLife: life });
 }

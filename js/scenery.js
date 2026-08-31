@@ -109,17 +109,30 @@ function buildBackground(genIdx, stage = 2) {
   // strongest in the TOP band where the flocks fly, easing toward the ship's
   // lane. Baked once per scene (a cached canvas, zero per-frame cost); the
   // menu never draws it, so the title keeps its postcard look.
-  bgWash = null;
+  // The ATMOSPHERE wash (warm horizon glow + top darken, formerly its own
+  // per-frame full-screen layer in render.js) bakes into the SAME canvas —
+  // "over" is associative, so one pre-composited layer is pixel-identical to
+  // drawing the two in sequence, and a phone paints one less full screen
+  // every frame. The menu never draws this canvas, as before.
+  bgWash = document.createElement('canvas'); bgWash.width = W; bgWash.height = H;
+  const wc = bgWash.getContext('2d');
   if (scene.dark < 0.85) {
     const base = 0.44 * Math.pow(1 - scene.dark, 1.15);
-    bgWash = document.createElement('canvas'); bgWash.width = W; bgWash.height = H;
-    const wc = bgWash.getContext('2d');
     const wg = wc.createLinearGradient(0, 0, 0, H);
     wg.addColorStop(0, 'rgba(6,11,30,' + Math.min(0.6, base * 1.2).toFixed(3) + ')');
     wg.addColorStop(0.55, 'rgba(6,11,30,' + base.toFixed(3) + ')');
     wg.addColorStop(1, 'rgba(6,11,30,' + (base * 0.6).toFixed(3) + ')');
     wc.fillStyle = wg; wc.fillRect(0, 0, W, H);
   }
+  const accent = g.accent || '#7ee08a';
+  // horizon glow: a soft band of the region accent low on the screen
+  const hg = wc.createRadialGradient(W / 2, H * 0.9, 10, W / 2, H * 0.9, H * 0.7);
+  hg.addColorStop(0, accent + '30'); hg.addColorStop(0.5, accent + '10'); hg.addColorStop(1, accent + '00');
+  wc.fillStyle = hg; wc.fillRect(0, 0, W, H);
+  // top darken for depth
+  const tg = wc.createLinearGradient(0, 0, 0, H * 0.5);
+  tg.addColorStop(0, 'rgba(2,4,14,0.5)'); tg.addColorStop(1, 'rgba(2,4,14,0)');
+  wc.fillStyle = tg; wc.fillRect(0, 0, W, H * 0.5);
 }
 function silhouetteBase(c, color, baseY) {
   c.fillStyle = color;
@@ -653,14 +666,11 @@ function drawAmbient(genIdx) {
         ctx.fillRect(a.x - 3.5 * tw, a.y - 0.5, 7 * tw, 1);
         break;
       }
-      case 'mist': {
-        const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r);
-        g.addColorStop(0, 'rgba(190,210,225,0.06)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      case 'mist':
+        // baked blob — a radial gradient per mote per frame was real GC churn
         ctx.globalAlpha = 1;
-        ctx.fillStyle = g;
-        ctx.fillRect(a.x - a.r, a.y - a.r, a.r * 2, a.r * 2);
+        ctx.drawImage(mistBlobSprite(), a.x - a.r, a.y - a.r, a.r * 2, a.r * 2);
         break;
-      }
       case 'dust':
         ctx.globalAlpha = 0.35 + 0.2 * Math.sin(a.ph * 2);
         ctx.fillStyle = '#e8c98a';
@@ -670,11 +680,25 @@ function drawAmbient(genIdx) {
   }
   ctx.globalAlpha = 1;
   for (const s of shootStars) {
-    ctx.globalAlpha = Math.min(1, s.life / 0.3) * 0.55;
-    const g = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 0.12, s.y - s.vy * 0.12);
-    g.addColorStop(0, '#ffffff'); g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.strokeStyle = g; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 0.12, s.y - s.vy * 0.12); ctx.stroke();
+    // two solid segments fade the tail — no per-frame gradient allocation
+    const a = Math.min(1, s.life / 0.3) * 0.55;
+    const mx = s.x - s.vx * 0.06, my = s.y - s.vy * 0.06;
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6;
+    ctx.globalAlpha = a;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(mx, my); ctx.stroke();
+    ctx.globalAlpha = a * 0.35;
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(s.x - s.vx * 0.12, s.y - s.vy * 0.12); ctx.stroke();
   }
   ctx.globalAlpha = 1;
+}
+let mistBlob = null;
+function mistBlobSprite() {
+  if (mistBlob) return mistBlob;
+  const S = 96;
+  mistBlob = document.createElement('canvas'); mistBlob.width = mistBlob.height = S;
+  const c = mistBlob.getContext('2d');
+  const g = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0, 'rgba(190,210,225,0.06)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.fillRect(0, 0, S, S);
+  return mistBlob;
 }

@@ -359,6 +359,16 @@ identity tests; and deterministic wave + boss storm ledgers with hard
 gradient/blur budgets. AFT-018 is code-complete. The remaining action is
 owner confirmation on the real phone; deeper rungs require that evidence.
 
+**2026-08-31 update (AFT-025):** the evidence arrived — the owner reported
+the region-1 finale lagging on AETHERFALL. Rung 3 is now implemented (the
+background plate, DPR-aware 0.62 resolution, deeper emission trims, the
+user-facing MINIMAL), the aetherfall-only per-shot `shadowBlur` in
+`drawAetherRelic` is baked away, and the gate's storm gained painted-
+screens budgets plus a 40-shot dense probe that measures the PRODUCTION
+shot path (the old synchronous storm could never load the on-demand
+weapon art). Remaining real-device action: owner confirms the finale is
+smooth; if not, MINIMAL is the one-tap diagnostic.
+
 - Add a lightweight frame profiler that records update time, actor drawing,
   projectile drawing, decorative effects, bloom/compositing, HUD drawing,
   total frame time, active effect counts, and garbage-collection-like spikes.

@@ -1,17 +1,25 @@
 # HANDOFF — resume here
 
-> ## STATUS (2026-08-02 closeout) — everything below is SHIPPED AND LIVE
+> ## STATUS (2026-08-31 closeout) — everything below is SHIPPED
 >
-> **Suite 129/129 · gate GREEN (~35s, 28 mobile scenes × 2 viewports) ·
-> baseline GREEN (162 scenarios, zero hard failures).** Worktree clean;
-> both sites deployed and smoke-tested in production.
+> **Suite 130/130 · gate GREEN (~57s full).** The two newest rounds:
+> **AFT-011** (mobile loading: 690 WebP / 10.3 MB dist, realm-first art
+> streaming, bounded decoded caches — found complete-but-uncommitted from
+> the 08-30 session and committed as its own round) and **AFT-025 THE
+> FLAT FRAME** (the owner's "aetherfall lags at the region-1 boss"
+> report: the per-shot `shadowBlur` in `drawAetherRelic` — AETHERFALL
+> only, invisible to the old synchronous storm — plus the overdraw
+> collapse: atmosphere baked into `bgWash`, a rung-3 background PLATE,
+> DPR-aware 0.62 resolution, the MINIMAL setting, and painted-screens +
+> dense-probe budgets in the gate. `tools/profile-boss.js` is the new
+> throttled diagnostic).
 >
-> - workshop `CrawlerKarl/pokemon-brick` @ `54edec0` →
+> - workshop `CrawlerKarl/pokemon-brick` →
 >   https://crawlerkarl.github.io/pokemon-brick/
-> - dist `CrawlerKarl/aetherfall` @ `93333f1` →
+> - dist `CrawlerKarl/aetherfall` →
 >   https://crawlerkarl.github.io/aetherfall/
 >
-> **The last four rounds (newest first — full detail in
+> **The prior rounds (newest first — full detail in
 > `IMPLEMENTATION_LOG.md`):**
 >
 > - **AFT-024 THE STAGE DIVIDEND** (owner directive: upgrades per level,
@@ -360,11 +368,14 @@ reopens it.
 - **How to check on device**: play a finale, then read `DEV.perf()` — it
   reports `cadenceMs`, `fps`, the active `level`, weighted `load`, and live
   effect counts. `level` should climb above 0 while it's struggling.
-- **If boss lag persists**, in order: (a) a rung-3 that simplifies
-  atmosphere/scenery and culls offscreen trails, (b) drop the resolution
-  floor below 0.75, (c) profile the boss's own draw path (guard wings, HP
-  glows, entrance fx) — the gate's boss storm gives per-frame gradient/blur
-  counts to compare against, (d) a WebGL compositor (AFT-011 territory).
+- **Round 3 HAPPENED (AFT-025, 2026-08-31)** — the owner reported the
+  region-1 finale lagging again on AETHERFALL. Root causes and fixes are in
+  the AFT-025 log entry: `drawAetherRelic`'s per-shot `shadowBlur`
+  (aetherfall-only, invisible to the synchronous storm), the ~6.5
+  painted-screens overdraw, and the rung-3/MINIMAL ladder extension.
+  `tools/profile-boss.js` replays the exact scenario throttled. If lag
+  EVER returns after that: (a) offscreen fragment/trail culls + animation
+  sampling (the still-unbuilt rung 4), (b) a WebGL compositor.
 - **The gate now guards this**: a BOSS storm runs every `npm test` with
   machine-portable budgets (grad ≤8, blur ≤14/frame at FULL; ≤6 lean).
   Absolute ms stay advisory; state-change counts gate hard. The final
@@ -386,7 +397,8 @@ reopens it.
 ✅ AFT-023c MANUAL FIRE (tap buffering + manual cadence edge)
 ✅ AFT-024  THE STAGE DIVIDEND (one draft per stage; no combat interrupts)
 ✅ AFT-011  MOBILE LOADING + WEBP (690 WebP; current-first stream; bounded caches)
-→ AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY
+✅ AFT-025  THE FLAT FRAME (per-shot blur baked; overdraw budgets; rung 3 + MINIMAL)
+→ AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY (now incl. confirming AFT-025 killed the boss lag)
 → AFT-010 accessibility
 → AFT-012 visual pass
 ```
@@ -483,9 +495,12 @@ Notes so you don't redo finished work:
   Follow it for any new format work; don't invent a second pattern.
 - **AFT-003's optional tail** (renaming internal `G.mega`/`megaT`) remains
   ruled out by the backlog itself — engine identifiers ship unchanged.
-- **AFT-018's deeper rungs are available but unimplemented by design**:
-  rung 3+ (offscreen fragment/trail culls, animation sampling) waits for
-  real-device evidence; the storm ledger accumulates the baseline every run.
+- **AFT-018's rung 3 SHIPPED as AFT-025 (2026-08-31)** — the owner's
+  region-1 boss-lag report was the real-device evidence it waited on. The
+  background plate, DPR-aware 0.62 resolution, MINIMAL, and the
+  painted-screens/dense-probe storm budgets are all live; further rungs
+  (offscreen fragment/trail culls, animation sampling) remain unbuilt and
+  wait on new evidence.
 
 ---
 
