@@ -5,6 +5,33 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-08-31 — AFT-025b: the audit's tail — every deferred offender from the perf sweep
+
+The AFT-025 round fixed what the region-1 AETHERFALL finale actually hit;
+this follow-up clears the rest of the audit list so no skin or mode keeps a
+known offender:
+
+- **The pokemon-skin missile fallback** drew each homing missile with a live
+  `shadowBlur = 14` every frame (the relic-image branch never runs without
+  `weaponArt`) — now a baked dart sprite, nose halo preserved.
+- **BREAKER's boss brick** allocated its shell bevel + red→gold HP-bar
+  gradients per frame; both now ride cached local-space gradients re-mapped
+  through the CTM (verified visually — the bevel orientation survives).
+- **The secret boss (`drawMewVmax`)** bar gradient cached the same way.
+- **Nameplate/label halos on critical draws** (boss mon, boss brick, secret
+  boss, rift shard) now ride `fxGlow` — the text/shape information stays at
+  every rung, the decorative blur yields under load, matching the AFT-018
+  precedent.
+- **Dead code deleted** (both found by the audit, both verified): the
+  unreachable `if (br.isBoss)` nameplate/bar block inside `drawBricks`
+  (bosses `continue` out earlier) and `drawLifeRing` (nothing has called it
+  since the segmented HP component landed).
+
+Storm after: boss full blur **1.2/frame** (was 2.4 at AFT-025, 3+ before),
+grad 0.4, probe unchanged at 3.5. Suite 130/130, gate green.
+
+---
+
 ## 2026-08-31 — AFT-025: THE FLAT FRAME — boss fights stop lagging on the phone (overdraw + per-shot blur)
 
 Owner report: AETHERFALL lags "when there's too much going on — example,

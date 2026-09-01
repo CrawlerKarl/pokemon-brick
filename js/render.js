@@ -1085,7 +1085,7 @@ function drawBossMon(br, x, y) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = lastStand ? '#ff8a80' : ph === 2 ? '#ffab91' : '#fff';
-  ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
+  ctx.shadowColor = '#000'; ctx.shadowBlur = fxGlow(5); // the text stays; the halo yields under load
   // AFT-002: a docked boss reads from the HUD lane; AFT-021 P3: in a
   // multi-actor fight only the ACTIVE target keeps its floating plate
   if (G.revealDock !== br.poke.id && (br === frameActiveActor || frameActiveActor == null)) {
@@ -1167,15 +1167,24 @@ function drawMewVmax(br, x, y) {
   const barY = Math.min(H * 0.55, y + br.h / 2 + 14);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 13px Orbitron, sans-serif';
-  ctx.fillStyle = '#fff'; ctx.shadowColor = phCol; ctx.shadowBlur = 12;
+  ctx.fillStyle = '#fff'; ctx.shadowColor = phCol; ctx.shadowBlur = fxGlow(12);
   ctx.fillText('SECRET BOSS · ' + SKIN.secret.name, x, barY - 14, barW + 30);
   ctx.shadowBlur = 0;
   roundRect(x - barW / 2, barY, barW, 10, 5);
   ctx.fillStyle = 'rgba(2,4,16,0.82)'; ctx.fill();
   if (frac > 0) {
-    const hg = ctx.createLinearGradient(x - barW / 2, 0, x + barW / 2, 0);
-    hg.addColorStop(0, '#58e7ff'); hg.addColorStop(0.55, '#d780ff'); hg.addColorStop(1, '#ff4f9a');
-    roundRect(x - barW / 2, barY, barW * frac, 10, 5); ctx.fillStyle = hg; ctx.fill();
+    // cached in local space, re-mapped through the CTM (AFT-018 rule)
+    let hg = fxCache.vmaxBarGrad;
+    if (!hg) {
+      hg = ctx.createLinearGradient(0, 0, 1, 0);
+      hg.addColorStop(0, '#58e7ff'); hg.addColorStop(0.55, '#d780ff'); hg.addColorStop(1, '#ff4f9a');
+      fxCache.vmaxBarGrad = hg;
+    }
+    roundRect(x - barW / 2, barY, barW * frac, 10, 5);
+    ctx.save();
+    ctx.translate(x - barW / 2, 0); ctx.scale(barW, 1);
+    ctx.fillStyle = hg; ctx.fill();
+    ctx.restore();
   }
   ctx.fillStyle = 'rgba(2,4,16,0.9)';
   for (const f of [1 / 3, 2 / 3]) ctx.fillRect(x - barW / 2 + barW * f - 1, barY, 2, 10);
@@ -1215,11 +1224,21 @@ function drawBossBrick(br, x, y) {
   roundRect(x - hw + 5, y - hh + depth + 7, br.w, br.h, 18); ctx.fill();
   roundRect(x - hw, y - hh + depth, br.w, br.h, 18);
   ctx.fillStyle = ph === 3 ? '#5b101f' : '#10162a'; ctx.fill();
-  const shell = ctx.createLinearGradient(x, y - hh, x, y + hh);
-  shell.addColorStop(0, ph === 3 ? '#ff6b75' : mixHex(col, '#ffffff', 0.3));
-  shell.addColorStop(0.18, col);
-  shell.addColorStop(1, mixHex(col, '#070b19', 0.72));
-  roundRect(x - hw, y - hh, br.w, br.h, 18); ctx.fillStyle = shell; ctx.fill();
+  // shell bevel cached per (colour, last-stand) in local space — the boss
+  // brick redraws every frame of a BREAKER finale (AFT-018 rule)
+  let shell = fxCache['bossShell_' + col + '_' + (ph === 3 ? 1 : 0)];
+  if (!shell) {
+    shell = ctx.createLinearGradient(0, 0, 0, 1);
+    shell.addColorStop(0, ph === 3 ? '#ff6b75' : mixHex(col, '#ffffff', 0.3));
+    shell.addColorStop(0.18, col);
+    shell.addColorStop(1, mixHex(col, '#070b19', 0.72));
+    fxCache['bossShell_' + col + '_' + (ph === 3 ? 1 : 0)] = shell;
+  }
+  roundRect(x - hw, y - hh, br.w, br.h, 18);
+  ctx.save();
+  ctx.translate(0, y - hh); ctx.scale(1, br.h);
+  ctx.fillStyle = shell; ctx.fill();
+  ctx.restore();
   ctx.lineWidth = ph === 3 ? 4 : 3;
   ctx.strokeStyle = br.flash > 0 ? '#ffffff' : phCol;
   roundRect(x - hw, y - hh, br.w, br.h, 18); ctx.stroke();
@@ -1267,7 +1286,7 @@ function drawBossBrick(br, x, y) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '900 13px Orbitron, sans-serif';
   ctx.fillStyle = ph === 3 ? '#ff8a80' : '#ffffff';
-  ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+  ctx.shadowColor = '#000'; ctx.shadowBlur = fxGlow(6); // text stays; halo yields under load
   if (G.revealDock !== br.poke.id) // AFT-002: a docked boss reads from the HUD lane
     fitLabel('BOSS BRICK · ' + br.poke.n.toUpperCase(), x, y - hh - 29,
       { size: 13, min: 10, weight: 900, maxW: Math.min(W * 0.62, Math.max(170, br.w * 1.3)), zone: 'field' });
@@ -1276,9 +1295,18 @@ function drawBossBrick(br, x, y) {
   roundRect(x - barW / 2, barY, barW, 9, 4.5);
   ctx.fillStyle = 'rgba(0,0,0,0.68)'; ctx.fill();
   if (frac > 0) {
-    const hg = ctx.createLinearGradient(x - barW / 2, 0, x + barW / 2, 0);
-    hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
-    roundRect(x - barW / 2, barY, barW * frac, 9, 4.5); ctx.fillStyle = hg; ctx.fill();
+    // shares the cached red→gold bar gradient (AFT-018 rule)
+    let hg = fxCache.hpGradRedGold;
+    if (!hg) {
+      hg = ctx.createLinearGradient(0, 0, 1, 0);
+      hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
+      fxCache.hpGradRedGold = hg;
+    }
+    roundRect(x - barW / 2, barY, barW * frac, 9, 4.5);
+    ctx.save();
+    ctx.translate(x - barW / 2, 0); ctx.scale(barW, 1);
+    ctx.fillStyle = hg; ctx.fill();
+    ctx.restore();
   }
   ctx.fillStyle = 'rgba(6,9,24,0.92)';
   for (const f of [1 / 3, 2 / 3]) ctx.fillRect(x - barW / 2 + barW * f - 1, barY, 2, 9);
@@ -1619,23 +1647,9 @@ function drawBricks() {
       ctx.fillStyle = `rgba(255,255,255,${(br.flash - 0.4) * 0.8})`;
       ctx.fill();
     }
-    if (br.isBoss) {
-      ctx.font = '900 13px Orbitron, sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = br.phase === 2 ? '#ff8a80' : '#fff';
-      ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-      ctx.fillText((br.phase === 2 ? '😡 ' : '★ ') + br.poke.n.toUpperCase() + (br.phase === 2 ? '' : ' ★'), x, y - hh - 26);
-      ctx.shadowBlur = 0;
-      const bw2 = br.w * 0.85, frac = Math.max(0, br.hp / br.maxHp);
-      roundRect(x - bw2 / 2, y - hh - 16, bw2, 8, 4);
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
-      if (frac > 0) {
-        roundRect(x - bw2 / 2, y - hh - 16, bw2 * frac, 8, 4);
-        const hg = ctx.createLinearGradient(x - bw2 / 2, 0, x + bw2 / 2, 0);
-        hg.addColorStop(0, '#ff5252'); hg.addColorStop(1, '#ffd54f');
-        ctx.fillStyle = hg; ctx.fill();
-      }
-    } else if (br.armored) {
+    // (bosses `continue` above — the old `if (br.isBoss)` nameplate/bar that
+    // lived here was unreachable and is gone, AFT-025b)
+    if (br.armored) {
       // ---- armored plating: colour-shifting tint, corner rivets, cracks ----
       // (HP itself lives in the corner dial below, off the artwork)
       roundRect(x - hw, y - hh, br.w, br.h, rad);
@@ -4158,13 +4172,23 @@ function drawProjectiles() {
     const missile = aetherAuxImage('homingMissile');
     const missileCol = TYPE_COLORS[m.element] || '#7986cb';
     if (!drawAetherRelic(missile, 0, 0, m.comet ? 46 : 40, missileCol, m.tier || 1)) {
-      ctx.shadowColor = '#7986cb'; ctx.shadowBlur = 14;
-      ctx.fillStyle = '#c5cae9';
-      ctx.beginPath();
-      ctx.moveTo(0, -15); ctx.lineTo(-7, 11); ctx.lineTo(7, 11);
-      ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#ff8a65';
-      ctx.beginPath(); ctx.arc(0, 14, 5, 0, Math.PI * 2); ctx.fill();
+      // baked dart — this fallback is the EVERY-FRAME path on the pokemon
+      // skin (no weaponArt), so its halo must not be a live shadowBlur
+      let dart = fxCache.missileDart;
+      if (!dart) {
+        dart = document.createElement('canvas'); dart.width = dart.height = 72;
+        const c = dart.getContext('2d');
+        c.translate(36, 36);
+        c.shadowColor = '#7986cb'; c.shadowBlur = 14;
+        c.fillStyle = '#c5cae9';
+        c.beginPath();
+        c.moveTo(0, -15); c.lineTo(-7, 11); c.lineTo(7, 11);
+        c.closePath(); c.fill();
+        c.fillStyle = '#ff8a65'; // the nose keeps the same soft halo it always had
+        c.beginPath(); c.arc(0, 14, 5, 0, Math.PI * 2); c.fill();
+        fxCache.missileDart = dart;
+      }
+      ctx.drawImage(dart, -36, -36);
     }
     ctx.restore();
   }
@@ -4392,7 +4416,7 @@ function drawPowerups() {
     }
     if (pu.p.key === 'riftShard') {
       const pulse = 0.5 + 0.5 * Math.sin(G.time * 5 + pu.shardIndex * 1.8);
-      ctx.shadowColor = '#d780ff'; ctx.shadowBlur = 20 + pulse * 12;
+      ctx.shadowColor = '#d780ff'; ctx.shadowBlur = fxGlow(20 + pulse * 12); // shard + ring stay; halo yields under load
       ctx.beginPath();
       ctx.moveTo(0, -24); ctx.lineTo(16, -4); ctx.lineTo(7, 22); ctx.lineTo(-13, 12); ctx.lineTo(-17, -8); ctx.closePath();
       // gradient cached in local space — the CTM re-maps it per pickup at paint,
@@ -5312,53 +5336,11 @@ function drawGauntletEntranceFx() {
   ctx.restore();
 }
 
-// player health ring — our own character's vitals, styled like the enemy HP
-// dials: a glowing arc over a faint track, tick-segmented per life, with the
-// count in the middle. Greens → amber → red as it drains; the last life pulses.
-function drawLifeRing() {
-  const denom = Math.max(1, G.livesMax || G.lives);
-  const R = 21, cx = W - 32, cy = 29;
-  const frac = Math.max(0, Math.min(1, G.lives / denom));
-  const danger = G.lives <= 1;
-  const col = danger ? '#ff5252' : G.lives === 2 ? '#ffca6a' : '#5fe0a6';
-  const pulse = danger ? 0.55 + 0.45 * Math.abs(Math.sin(G.time * 4)) : 1;
-  ctx.save();
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // disc + rim
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(6,10,26,0.82)'; ctx.fill();
-  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.stroke();
-  // faint full track
-  ctx.beginPath(); ctx.arc(cx, cy, R - 4, 0, Math.PI * 2);
-  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.stroke();
-  // health arc (glowing), from 12 o'clock clockwise
-  ctx.save();
-  ctx.shadowColor = col; ctx.shadowBlur = 9 * pulse;
-  ctx.globalAlpha = pulse;
-  ctx.beginPath(); ctx.arc(cx, cy, R - 4, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
-  ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = col; ctx.stroke();
-  ctx.restore();
-  // notches between lives so the discrete count reads at a glance
-  if (denom > 1 && denom <= 8) {
-    for (let i = 0; i < denom; i++) {
-      const a = -Math.PI / 2 + (i / denom) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * (R - 6.5), cy + Math.sin(a) * (R - 6.5));
-      ctx.lineTo(cx + Math.cos(a) * (R - 1.5), cy + Math.sin(a) * (R - 1.5));
-      ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(6,10,26,0.92)'; ctx.stroke();
-    }
-  }
-  // centre: tiny heart + the count
-  drawGlyph(ctx, 'heart', cx, cy - 6, 4.5, col);
-  ctx.globalAlpha = pulse;
-  ctx.font = '900 15px Orbitron, sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.fillText(String(G.lives), cx, cy + 6);
-  ctx.restore();
-}
-// Persistent segmented HP rail. The ring remains the compact count, while
-// this second readout makes both maximum health and missing segments obvious
-// without waiting for the temporary on-hit bar near the player.
+// (drawLifeRing, the old glowing life dial, was dead code — nothing called it
+// since the segmented HP component took over; removed in AFT-025b.)
+// Persistent segmented HP rail: makes both maximum health and missing
+// segments obvious without waiting for the temporary on-hit bar near the
+// player.
 function drawPlayerHealthBar() {
   const denom = Math.max(1, G.livesMax || G.lives);
   const lives = Math.max(0, G.lives);
