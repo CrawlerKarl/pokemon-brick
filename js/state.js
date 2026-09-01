@@ -105,8 +105,11 @@ const AUTOFIRE_RESUME_HEAT = 0.3;
 function autofireVentCool() { return G.mode === 'junkie' ? 1.15 : 1.6; }
 // The perfect-release sweet spot: seconds after a charge tops out during
 // which releasing fires the RESONANT shot (Milestone 2). Wide enough to hit
-// on purpose on touch, narrow enough to stay a timing skill.
+// on purpose on touch, narrow enough to stay a timing skill. AFT-010's
+// EASIER CHARGE TIMING widens the window through resonanceWindow() — live
+// checks read the function; the constant stays the tuned default.
 const RESONANCE_WINDOW = 0.38;
+function resonanceWindow() { return SETTINGS.easyCharge ? 0.6 : RESONANCE_WINDOW; }
 // ---- STARFIGHTER pilots: in junkie mode your starter IS the ship. Flying
 // without a partner uses a neutral training drone. The attack's SHAPE follows the pilot's
 // species; its COLOR + type follow the CURRENT element, so a Charmeleon

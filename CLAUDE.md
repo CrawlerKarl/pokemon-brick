@@ -116,8 +116,8 @@ suite test guards every rect across six sizes.
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 28 mobile scenes
-at two phone viewports (56 screenshots + metadata sidecars → `.gate-shots/`),
+`build-dist` requiring RESIDUE: none → a dist boot smoke → 29 mobile scenes
+at two phone viewports (58 screenshots + metadata sidecars → `.gate-shots/`),
 each PROVING its named state via an `expect` assertion, under FITTED-LABEL
 CONTAINMENT plus the AFT-021 overlap and single-actor-label contracts → the
 WAVE and BOSS artifact-storm benchmarks
@@ -154,7 +154,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 129 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 131 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
@@ -764,6 +764,23 @@ phone — flag anything only verifiable there.
   squishes inside the circle at any buttonScale. All
   four safe-area insets (`SAFE_T/L/R/B`, setup.js) shift the HUD bar and
   corner controls; keep new top/edge-anchored UI behind them.
+
+- **Accessibility rides the ACCESS settings tab (AFT-010 stage 1) and every
+  option is INERT at its default** — a fresh install must play bit-identically
+  with the whole page untouched (suite-asserted). TEXT SIZE scales through
+  ONE interception on the main ctx's `font` setter (setup.js; browser-only
+  guarded — the dist builder harvests modules in a canvas-less Node vm), and
+  fitLabel's containment is what keeps enlarged text on-screen — never add a
+  second scaling path. `cbSafeColor` is keyed by SEMANTIC NAME ('hpGood',
+  'shieldGood'…), NEVER by hex: grass and bug OWN '#66bb6a'/'#9ccc65' as
+  identity colours, and identity is carried by shape, not hue. TAP-TOGGLE
+  CHARGE lives entirely on `chargeHeld` so the three pause/visibility disarm
+  sites cover it for free — any new charge-mode state must be added to all
+  three. EASIER CHARGE TIMING multiplies inside `chargeFillTime()`/
+  `resonanceWindow()`, never `weaponScale()` (the one-weapon-clock rule).
+  The settings panel PAGINATES (GAME/TOUCH/SAVE/ACCESS), it does not
+  scroll — a new row goes on the page with headroom or on a new tab, and
+  the viewport-fit sweep asserts every page's rects at six viewports.
 
 ## Performance (mobile is the target — keep it smooth)
 - **The effects ladder reads WORK TIME *and* rAF CADENCE (AFT-018/018b).**

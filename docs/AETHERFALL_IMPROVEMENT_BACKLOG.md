@@ -155,7 +155,7 @@ items have since shipped.
 | AFT-021 | P1, P0 defects first | ✅ Shipped 07-24 | Post-AFT-020 UX stabilization and balance reread | Stage wins resolve visibly (the `resolve` beat + combatIsLive), one layout authority + combat-safe viewport, one weapon clock, and the measured mode/path/progression rebalance (BASELINE GREEN, 142 scenarios) | XL | AFT-020, AFT-008 closeout |
 | AFT-009 | P1 | ✅ Superseded → shipped as AFT-009R (2026-07-24) | Mobile-first progression redesign: Attunement levels, the Aether Forge, the constellation journal | Frequent readable choices on phones; the full web becomes a build journal | XL | AFT-007 |
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
-| AFT-010 | P1 | ⬜ Open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
+| AFT-010 | P1 | ✅ Stage 1 shipped 08-31; stage 2 (DOM layer) open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
 | AFT-011 | P1 | ✅ Shipped 2026-08-30; physical-device check open | Mobile loading, asset streaming, and WebP packaging | 690 WebP / 0 PNG / 10.3 MB; current-first stream; 13.63 MB decoded-art campaign peak proxy | L | AFT-005A |
 | AFT-012 | P1 | ⬜ Open | Whole-game visual integration pass | Carries the locked sprite style into scale, shadows, VFX, HUD, and scenery | L | AFT-001–003, AFT-017 |
 | AFT-013 | P2 | ⬜ Open | Codex boss combat dossiers (the sprite gallery already shipped) | Lets players revisit full boss art and learn counterplay | M | AFT-002 |
@@ -614,7 +614,17 @@ systems.
 
 ### AFT-010 — Mobile accessibility (staged)
 
-**Stage 1 — settings-level wins (S–M each, ship piecemeal):**
+**Stage 1 — settings-level wins: ✅ SHIPPED 2026-08-31** (the ACCESS tab —
+text size via the ctx.font interception + fitLabel containment, background
+dimming, outline strength, colorblind-safe threat colors on semantic
+tokens, tap-toggle charge riding `chargeHeld`, easier charge timing via
+`chargeFillTime`/`resonanceWindow`, and visual sound cues covering the
+audited residue: the heat-threshold beeps + the desktop vent word. Every
+option inert at its default; suite 131 asserts it. Full detail in the
+implementation log.) All the pre-existing options (button size, opacity,
+follow speed, handedness, haptics, auto-fire, reduced shake/flash) kept.
+
+**Stage 1 original scope (for reference):**
 
 - Add text size, background dimming, projectile-outline strength,
   colorblind-safe threat palettes, toggle-charge, reduced hold time, and

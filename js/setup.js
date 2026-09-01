@@ -4,6 +4,36 @@
 // ============================================================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+// AFT-010: TEXT SIZE — one interception point scales every UI font set on
+// the MAIN context. fitLabel (AFT-001) measures through the same scaled
+// font, so its containment logic keeps enlarged text inside its zones
+// automatically (tight boxes shrink back toward fit; roomy ones actually
+// grow). Offscreen bake contexts are untouched — sprite art never rescales.
+// At the default scale the setter passes straight through. Every scaled
+// string is remembered so it can never be scaled twice, and nothing in the
+// codebase reads ctx.font back (verified), so no compounding path exists.
+const FONT_SCALE = { scale: 1, map: new Map(), out: new Set() };
+// (guarded: the dist builder harvests these modules in a Node vm whose fake
+// DOM has no CanvasRenderingContext2D — the interception is browser-only)
+if (typeof CanvasRenderingContext2D !== 'undefined'
+  && Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font')) {
+  const fd = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font');
+  Object.defineProperty(ctx, 'font', {
+    set(v) {
+      const s = (typeof SETTINGS !== 'undefined' && SETTINGS.textScale) || 1;
+      if (s === 1 || FONT_SCALE.out.has(v)) { fd.set.call(this, v); return; }
+      if (FONT_SCALE.scale !== s) { FONT_SCALE.scale = s; FONT_SCALE.map.clear(); FONT_SCALE.out.clear(); }
+      let sv = FONT_SCALE.map.get(v);
+      if (sv === undefined) {
+        sv = String(v).replace(/(\d+(?:\.\d+)?)px/, (m, n) => (Math.round(n * s * 10) / 10) + 'px');
+        if (FONT_SCALE.map.size > 600) { FONT_SCALE.map.clear(); FONT_SCALE.out.clear(); }
+        FONT_SCALE.map.set(v, sv); FONT_SCALE.out.add(sv);
+      }
+      fd.set.call(this, sv);
+    },
+    get() { return fd.get.call(this); },
+  });
+}
 let W = 0, H = 0, DPR = 1, SAFE_B = 0, SAFE_T = 0, SAFE_L = 0, SAFE_R = 0;
 let vignette = null;
 // ---- safe persistent storage: one corrupt key must never brick the game.

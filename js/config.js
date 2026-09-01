@@ -31,7 +31,17 @@ const SETTINGS = Object.assign(
     hcBall: false, autoFire: false, mode: 'junkie', skin: 'pokemon', affinity: null,
     fx: 'auto', // AFT-018/025 effects quality: auto (phone default) | full | reduced | minimal
     buttonScale: 1, buttonOpacity: 0.85, touchFollow: 1,
-    leftHanded: false, haptics: true },
+    leftHanded: false, haptics: true,
+    // AFT-010 stage 1 — accessibility (keys are storage-stable, never rename):
+    // textScale scales every UI font through the setup.js interception;
+    // bgDim darkens gameplay skies for sprite contrast; hcStrength scales
+    // the high-contrast outline weight; cbSafe swaps the semantic
+    // green→blue "safe/healthy" colours (type identity colours untouched —
+    // shape carries identity); toggleCharge taps to start/release a charge
+    // instead of holding; easyCharge shortens the charge arc and widens the
+    // resonant window; visualCues mirrors key audio cues as HUD pips.
+    textScale: 1, bgDim: 0, hcStrength: 1, cbSafe: false,
+    toggleCharge: false, easyCharge: false, visualCues: false },
   STORED_SETTINGS);
 if (!PRESETS[SETTINGS.preset]) SETTINGS.preset = 'easy';
 // Gameplay randomness can be locked for the daily challenge without making
@@ -165,14 +175,31 @@ const TOUCH_TOGGLES = [
   { key: 'leftHanded', label: 'LEFT-HANDED BUTTONS' },
   { key: 'haptics', label: 'HAPTIC FEEDBACK' },
 ];
+// AFT-010 stage 1 — the ACCESS page. Its own tab (the TOUCH precedent):
+// the GAME page has no landscape headroom left, and the panel paginates
+// rather than scrolls.
+const ACCESS_SLIDERS = [
+  { key: 'textScale', label: 'TEXT SIZE', min: 1, max: 1.35,
+    fmt: v => Math.round(v * 100) + '%' },
+  { key: 'bgDim', label: 'BACKGROUND DIMMING', min: 0, max: 0.5,
+    fmt: v => v <= 0.01 ? 'OFF' : Math.round(v * 100) + '%' },
+  { key: 'hcStrength', label: 'OUTLINE STRENGTH', min: 0.6, max: 1.8,
+    fmt: v => Math.round(v * 100) + '%' },
+];
+const ACCESS_TOGGLES = [
+  { key: 'cbSafe', label: 'COLORBLIND-SAFE COLORS' },
+  { key: 'toggleCharge', label: 'TAP-TOGGLE CHARGE' },
+  { key: 'easyCharge', label: 'EASIER CHARGE TIMING' },
+  { key: 'visualCues', label: 'VISUAL SOUND CUES' },
+];
 // The old STARTERS literal lived here only because config parses before
 // data.js. It is GONE: the setup grid derives at runtime from the active
 // skin via skinStarters() (js/skin.js), which also owns the
 // SETTINGS.starter validation — keys are engine-stable type keys.
 let advOpen = false; // advanced settings panel
-let settingsPage = 0; // 0 = game/accessibility, 1 = touch controls
-function activeSliders() { return settingsPage === 1 ? TOUCH_SLIDERS : SLIDERS; }
-function activeToggles() { return settingsPage === 1 ? TOUCH_TOGGLES : TOGGLES; }
+let settingsPage = 0; // 0 = game, 1 = touch controls, 2 = save, 3 = accessibility
+function activeSliders() { return settingsPage === 1 ? TOUCH_SLIDERS : settingsPage === 3 ? ACCESS_SLIDERS : SLIDERS; }
+function activeToggles() { return settingsPage === 1 ? TOUCH_TOGGLES : settingsPage === 3 ? ACCESS_TOGGLES : TOGGLES; }
 // The menu has a featured title hub followed by a two-step setup wizard:
 // all partners on one screen, then challenge + launch. Anything that returns
 // to the menu resets to the featured title hub.
@@ -426,7 +453,7 @@ function advLayout() {
   const px = W / 2 - pw / 2, py = Math.max(compact ? 8 : 20, H / 2 - ph / 2);
   return {
     px, py, pw, ph, compact, sliders, toggles,
-    tab: i => ({ x: px + 24 + i * (pw - 48) / 3, y: py + (compact ? 48 : 58), w: (pw - 48) / 3 - 6, h: compact ? 30 : 36 }),
+    tab: i => ({ x: px + 24 + i * (pw - 48) / 4, y: py + (compact ? 48 : 58), w: (pw - 48) / 4 - 6, h: compact ? 30 : 36 }),
     // AFT-006: the SAVE page — three stacked action buttons + status lines
     saveBtn: i => ({ x: px + 36, y: py + (compact ? 108 : 128) + i * (compact ? 44 : 52), w: pw - 72, h: compact ? 36 : 42 }),
     saveStatusY: py + (compact ? 108 : 128) + 3 * (compact ? 44 : 52) + 10,

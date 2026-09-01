@@ -212,6 +212,9 @@ const SCENES = [
     expect: `G.state==='menu' && !advOpen` },
   { name: 'settings-save', js: `G.state='menu'; advOpen=true; settingsPage=2;`,
     expect: `G.state==='menu' && advOpen && settingsPage===2` },
+  // AFT-010: the ACCESS page — its rows must render and fit like every other
+  { name: 'settings-access', js: `G.state='menu'; advOpen=true; settingsPage=3;`,
+    expect: `G.state==='menu' && advOpen && settingsPage===3 && activeToggles()===ACCESS_TOGGLES` },
   // AFT-023: the setup surfaces were never screenshotted (flagged gap) —
   // the guided first-session view, the full grid, and the oath row with
   // the UNSWORN chip all ride the fitted-label containment contract now.

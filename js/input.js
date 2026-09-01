@@ -101,7 +101,10 @@ function claimUiTouch(id, x = null, y = null, label = '') {
 window.addEventListener('mousedown', e => {
   if (performance.now() - lastTouchT < 900) return;
   if (e.button === 2) { // right button = CHARGE (blaster mode)
-    chargeHeld = true; audio();
+    // AFT-010 toggle-charge: press toggles instead of holding
+    if (SETTINGS.toggleCharge) chargeHeld = !(chargeHeld || G.charge > 0);
+    else chargeHeld = true;
+    audio();
     return;
   }
   if (G.state === 'upgrade' && upgradeTreeOpen) {
@@ -116,7 +119,7 @@ window.addEventListener('mousedown', e => {
   if (treeDrag && treeDrag.id == null) treeDrag.id = 'mouse';
 });
 window.addEventListener('mouseup', e => {
-  if (e.button === 2) { chargeHeld = false; return; }
+  if (e.button === 2) { if (!SETTINGS.toggleCharge) chargeHeld = false; return; }
   fireHeld = false;
   if (treeDrag && treeDrag.id === 'mouse') {
     const tap = !treeDrag.moved, tx = treeDrag.x, ty = treeDrag.y;
@@ -129,7 +132,7 @@ window.addEventListener('contextmenu', e => {
   if (G.state === 'play' || G.state === 'serve') e.preventDefault();
 });
 window.addEventListener('keyup', e => {
-  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') chargeHeld = false;
+  if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !SETTINGS.toggleCharge) chargeHeld = false;
 });
 window.addEventListener('wheel', e => {
   if (G.state === 'upgrade' && upgradeTreeOpen) {
@@ -182,9 +185,20 @@ window.addEventListener('touchstart', e => {
       if (B.fire && inCircle(x, y, B.fire, 22)) {
         claimUiTouch(t.identifier, B.fire.x, B.fire.y, 'FIRE');
         if (G.mode !== 'classic' && G.state === 'play') {
-          // Delay only shooter-mode touch fire long enough to distinguish a
-          // tap from a hold. A second finger cannot steal an active FIRE touch.
-          if (touchFirePendingId === null && chargeTouchId === null) {
+          // AFT-010 TOGGLE-CHARGE: no sustained hold required — one tap
+          // starts the charge, the next releases it. The release rides the
+          // normal update.js release branch (chargeHeld drops with charge
+          // banked), so power/pierce/resonance/heat behave identically to a
+          // held charge, and the three pause/visibility disarm sites cover
+          // this mode for free because it lives entirely on chargeHeld.
+          // chargeTouchId stays null on purpose: the charge belongs to no
+          // finger, so touchend/touchcancel never auto-release it.
+          if (SETTINGS.toggleCharge) {
+            if (chargeHeld || G.charge > 0) chargeHeld = false;
+            else chargeHeld = true;
+          } else if (touchFirePendingId === null && chargeTouchId === null) {
+            // Delay only shooter-mode touch fire long enough to distinguish a
+            // tap from a hold. A second finger cannot steal an active FIRE touch.
             touchFirePendingId = t.identifier;
             touchFirePendingT = inputNow();
           }
@@ -359,7 +373,11 @@ const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'Ar
 let konamiIdx = 0;
 window.addEventListener('keydown', e => {
   if (e.code === 'Space') { primaryAction(); e.preventDefault(); }
-  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') chargeHeld = true; // charge shot
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { // charge shot
+    // AFT-010 toggle-charge: press toggles (key-repeat ignored) instead of holding
+    if (SETTINGS.toggleCharge) { if (!e.repeat) chargeHeld = !(chargeHeld || G.charge > 0); }
+    else chargeHeld = true;
+  }
   if (e.code === 'KeyE') tryMega();
   if (e.code === 'KeyM') toggleMusic();
   if (e.code === 'KeyP') togglePause();
@@ -499,7 +517,7 @@ function handleAdvancedPress(x, y) {
   if (inRect(x, y, A.close) || !inRect(x, y, { x: A.px, y: A.py, w: A.pw, h: A.ph })) {
     advOpen = false; saveSettings(); return;
   }
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) { // AFT-010: + the ACCESS page
     if (inRect(x, y, A.tab(i))) { settingsPage = i; dragSlider = -1; SFX.wall(); return; }
   }
   if (settingsPage === 2) { handleSavePress(x, y, A); return; }
@@ -1609,10 +1627,14 @@ function addWeaponHeat(amount) {
   if (before < 0.7 && G.heat >= 0.7) {
     tone(420, 0.09, 'sawtooth', 0.045, 120);
     haptic('warn');
+    // AFT-010 VISUAL SOUND CUES: the threshold beeps were the one cue with
+    // no discrete visual (the gauge only creeps) — mirror them as floaters
+    if (SETTINGS.visualCues) addFloater(G.paddle.x, shipY() - 62, 'HEAT 70%', '#ffd54f', 13);
   }
   if (before < 0.9 && G.heat >= 0.9) {
     tone(250, 0.14, 'sawtooth', 0.06, -80);
     haptic('warn');
+    if (SETTINGS.visualCues) addFloater(G.paddle.x, shipY() - 62, 'HEAT 90%!', '#ff9d3d', 14);
   }
   if (G.heat >= 1 && G.overheat <= 0) {
     G.overheat = OVERHEAT_DUR;

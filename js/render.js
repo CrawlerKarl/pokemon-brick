@@ -54,9 +54,19 @@ function drawRiftBackground() {
   ctx.restore();
 }
 
+// AFT-010: BACKGROUND DIMMING — an accessibility wash over the finished
+// background stack (never the sprites, which draw after). One fillRect;
+// menus keep their postcard look.
+function bgDimWash() {
+  const d = SETTINGS.bgDim || 0;
+  if (d <= 0) return;
+  ctx.fillStyle = 'rgba(2,4,12,' + d + ')';
+  ctx.fillRect(0, 0, W, H);
+}
 function drawBackground() {
   if (G.secret && (G.secret.vmax || G.secret.rewardDraft)) {
     drawRiftBackground();
+    bgDimWash();
     return;
   }
   const onMenu = G.state === 'menu' || G.state === 'dex';
@@ -72,6 +82,7 @@ function drawBackground() {
   // scene or viewport change.
   if (!onMenu && effectsLevel() >= 3) {
     ctx.drawImage(backgroundPlate(), 0, 0, W, H);
+    bgDimWash();
     return;
   }
   ctx.drawImage(bgSky, 0, 0, W, H);
@@ -89,6 +100,7 @@ function drawBackground() {
   // bright skies never swallow the sprites; the menu keeps its postcard look
   if (!onMenu && bgWash) ctx.drawImage(bgWash, 0, 0, W, H);
   drawAmbient(genIdx);
+  if (!onMenu) bgDimWash();
 }
 let bgPlate = null, bgPlateKey = '';
 function backgroundPlate() {
@@ -112,15 +124,38 @@ function backgroundPlate() {
   return bgPlate;
 }
 
+// AFT-010: COLORBLIND-SAFE THREAT COLORS. Type identity is carried by SHAPE
+// (a design invariant), so the 18 aspect colours stay put — this mode swaps
+// only the SEMANTIC green "safe/healthy" poles for blues, the one confusion
+// axis (red↔green) that actually erased information. Audited 2026-08-31:
+// these four green sites plus the armor ramp were the only places where hue
+// alone did the differentiating work.
+// Keyed by SEMANTIC NAME, never by hex — grass ('#66bb6a') and bug
+// ('#9ccc65') share these exact hexes as IDENTITY colours, so a hex-keyed
+// map would be one careless call away from repainting a species.
+const CB_SAFE_COLORS = {
+  hpGood: ['#5fe0a6', '#4dd0e1'],    // healthy HP pole
+  arcGood: ['#9ccc65', '#64b5f6'],   // brick/flyer HP arc "high" pole
+  shieldGood: ['#66bb6a', '#4fc3f7'], // shield gain / shield icon
+  shieldSoft: ['#a5d6a7', '#81d4fa'], // shield burst tint
+};
+function cbSafeColor(name) {
+  const p = CB_SAFE_COLORS[name];
+  return p ? p[SETTINGS.cbSafe ? 1 : 0] : name; // unknown values pass through
+}
 // armored "guardian wall" bricks shift colour as you whittle their plating down,
-// fresh (cyan) → cracked (red), so their remaining hits read at a glance
+// fresh (cyan) → cracked (red), so their remaining hits read at a glance.
+// The colorblind-safe ramp runs cold→neutral→hot (cyan→blue→white→yellow→
+// orange→red) — a diverging ramp whose steps survive red-green blindness.
 const ARMOR_STEPS = ['#37e0ff', '#5cffb0', '#c6ff5a', '#ffe14d', '#ff9d3d', '#ff5a5a'];
+const ARMOR_STEPS_CB = ['#37e0ff', '#5a8dff', '#e8eef6', '#ffe14d', '#ff9d3d', '#ff5a5a'];
 function armorColor(br) {
+  const steps = SETTINGS.cbSafe ? ARMOR_STEPS_CB : ARMOR_STEPS;
   const dmg = br.maxHp - br.hp;
-  const idx = br.maxHp <= ARMOR_STEPS.length
-    ? Math.min(ARMOR_STEPS.length - 1, Math.floor(dmg))
-    : Math.min(ARMOR_STEPS.length - 1, Math.round(dmg / br.maxHp * (ARMOR_STEPS.length - 1)));
-  return ARMOR_STEPS[idx];
+  const idx = br.maxHp <= steps.length
+    ? Math.min(steps.length - 1, Math.floor(dmg))
+    : Math.min(steps.length - 1, Math.round(dmg / br.maxHp * (steps.length - 1)));
+  return steps[idx];
 }
 
 // ---- pre-rendered FX sprites: shadowBlur and per-frame gradient allocation
@@ -489,9 +524,12 @@ function leafBladeSprite(color) {
 // per-frame shadowBlur. Cached per (scheme, colour, radius). Schemes mirror the
 // original branch set exactly: high-contrast, fire, element-tinted, default.
 function ballBodySprite(scheme, col, r) {
-  const key = 'ball_' + scheme + '_' + col + '_' + r;
+  // AFT-010: OUTLINE STRENGTH scales the hc keyline — it joins the cache key
+  // (bucketed to 0.1) so moving the slider rebakes instead of going stale
+  const hcw = scheme === 'hc' ? Math.round((SETTINGS.hcStrength || 1) * 10) / 10 : 1;
+  const key = 'ball_' + scheme + '_' + col + '_' + r + (scheme === 'hc' ? '_' + hcw : '');
   if (fxCache[key]) return fxCache[key];
-  const pad = scheme === 'hc' ? 4 : 20;
+  const pad = scheme === 'hc' ? 8 : 20;
   const size = Math.ceil(r + pad) * 2;
   const c = document.createElement('canvas'); c.width = c.height = size;
   const cc = c.getContext('2d');
@@ -499,7 +537,7 @@ function ballBodySprite(scheme, col, r) {
   if (scheme === 'hc') {
     cc.fillStyle = '#ffffff';
     cc.beginPath(); cc.arc(cx, cy, r, 0, Math.PI * 2); cc.fill();
-    cc.lineWidth = 2.5; cc.strokeStyle = '#000';
+    cc.lineWidth = 2.5 * hcw; cc.strokeStyle = '#000';
     cc.beginPath(); cc.arc(cx, cy, r + 1, 0, Math.PI * 2); cc.stroke();
   } else {
     cc.shadowColor = scheme === 'fire' ? '#ff5722' : (col || '#90caf9');
@@ -1484,7 +1522,7 @@ function drawBricks() {
         ctx.lineWidth = 3; ctx.lineCap = 'round';
         ctx.strokeStyle = 'rgba(8,12,28,0.55)';
         ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, Math.PI * 1.5); ctx.stroke();
-        ctx.strokeStyle = frac > 0.5 ? '#9ccc65' : frac > 0.25 ? '#ffd54f' : '#ff7043';
+        ctx.strokeStyle = frac > 0.5 ? cbSafeColor('arcGood') : frac > 0.25 ? '#ffd54f' : '#ff7043';
         ctx.beginPath(); ctx.arc(x, yb, s2 * 0.56, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); ctx.stroke();
       }
       if (br.subBoss && !(br.openT > 0)) {
@@ -2396,6 +2434,13 @@ function drawPilotRig(x, py, preview = false) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ff8a80';
       ctx.fillText('OVERHEAT', x, hy + 12);
+    } else if (SETTINGS.visualCues && !IS_TOUCH && SETTINGS.autoFire && G.autoVent) {
+      // AFT-010: the vent state was named only on the touch FIRE pad —
+      // with VISUAL SOUND CUES on, the desktop gauge says it too
+      ctx.font = '700 9px Orbitron, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffb74d';
+      ctx.fillText('VENTING', x, hy + 12);
     }
     ctx.globalAlpha = 1;
   }
@@ -2683,6 +2728,12 @@ function drawPaddle() {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ff8a80';
       ctx.fillText('OVERHEAT', x, hy + 12);
+    } else if (SETTINGS.visualCues && !IS_TOUCH && SETTINGS.autoFire && G.autoVent) {
+      // AFT-010: mirror the touch pad's vent word on the desktop gauge too
+      ctx.font = '700 9px Orbitron, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffb74d';
+      ctx.fillText('VENTING', x, hy + 12);
     }
     ctx.globalAlpha = 1;
   }
@@ -4245,10 +4296,11 @@ function drawProjectiles() {
     // hostile shot gains a white keyline over a black backing ring
     // (strokes only, render-only; collision untouched)
     if (SETTINGS.hcBall) {
+      const ow = SETTINGS.hcStrength || 1; // AFT-010: OUTLINE STRENGTH
       ctx.globalAlpha = 0.9;
-      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 3.4;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 3.4 * ow;
       ctx.beginPath(); ctx.arc(s.x, s.y, r * 0.72 + 2.2, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6 * ow;
       ctx.beginPath(); ctx.arc(s.x, s.y, r * 0.72 + 2.2, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -4409,9 +4461,10 @@ function drawPowerups() {
     // AFT-023: HIGH-CONTRAST PROJECTILES rings pickups too — a catchable
     // thing must read at a glance against any sky (strokes only)
     if (SETTINGS.hcBall) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;
+      const ow = SETTINGS.hcStrength || 1; // AFT-010: OUTLINE STRENGTH
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3 * ow;
       ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4 * ow;
       ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.stroke();
     }
     if (pu.p.key === 'riftShard') {
@@ -5345,7 +5398,7 @@ function drawPlayerHealthBar() {
   const denom = Math.max(1, G.livesMax || G.lives);
   const lives = Math.max(0, G.lives);
   const danger = lives <= 1;
-  const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : '#5fe0a6';
+  const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : cbSafeColor('hpGood');
   const pulse = danger ? 0.62 + 0.38 * Math.abs(Math.sin(G.time * 5)) : 1;
   const barW = W < 560 ? 112 : 154;
   const x = W - 18 - barW, y = 16, h = 25;
@@ -5573,7 +5626,7 @@ function drawHUD() {
   ]) {
     if (G[slot]) active.push({ icon, color, tier: G[slot].tier, t: G[slot].t });
   }
-  if (G.shieldCharges > 0) active.push({ icon: 'shield', color: '#66bb6a', tier: G.shieldCharges, t: null });
+  if (G.shieldCharges > 0) active.push({ icon: 'shield', color: cbSafeColor('shieldGood'), tier: G.shieldCharges, t: null });
   const riftReward = SECRET_UPGRADES.find(s => G.secretUpg[s.key]);
   if (riftReward) active.push({ icon: riftReward.icon, color: riftReward.color, tier: 1, t: null, label: 'RIFT' });
   const maxSlots = (narrow || IS_TOUCH) ? 3 : 7;
@@ -5798,7 +5851,7 @@ function drawHurtHealth() {
   if (G.hurtHud <= 0 || (G.state !== 'play' && G.state !== 'serve')) return;
   const denom = Math.max(1, G.livesMax || G.lives), lives = Math.max(0, G.lives);
   const danger = lives <= 1;
-  const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : '#5fe0a6';
+  const col = danger ? '#ff5252' : lives === 2 ? '#ffca6a' : cbSafeColor('hpGood');
   const alpha = Math.min(1, G.hurtHud / 0.5); // hold, then fade out over the last 0.5s
   const segW = 15, segH = 7, gap = 3, heartW = 15, pad = 9;
   const barW = denom * segW + (denom - 1) * gap;
@@ -5904,7 +5957,7 @@ function drawTouchControls() {
     // the full-charge label walks the resonance arc: the sweet-spot window
     // shouts RESONANT!, then plain RELEASE!, then OVERCHARGE once the barrel
     // starts cooking — the state language stays explicit at every moment
-    const resonantNow = full && G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW;
+    const resonantNow = full && G.chargeFullT > 0 && G.chargeFullT <= resonanceWindow();
     const overNow = full && G.chargeFullT > 1.4;
     // AFT-001: SHORT state words on the pad face — the explanatory clause
     // lives on the sub-line, so nothing squishes inside the circle at any
@@ -5923,9 +5976,12 @@ function drawTouchControls() {
     // second line: what HOLDING does right now (shooter modes only).
     // AFT-021 P4: Heavy Bolt's faster fill is a bought identity — the pad
     // names it persistently so the quicker arc reads as a feature.
+    // AFT-010 toggle-charge: the pad speaks the tap grammar instead — a
+    // charge in flight is released by tapping, not by lifting.
     const sub = !shooter ? '' : hot ? Math.ceil(G.overheat) + 's · LOCKED'
-      : charging ? (full ? '' : 'KEEP HOLDING')
+      : charging ? (SETTINGS.toggleCharge ? 'TAP = FIRE' : full ? '' : 'KEEP HOLDING')
       : venting ? 'AUTO COOLING'
+      : SETTINGS.toggleCharge ? 'TAP = CHARGE'
       : (upgN('heavy') ? 'HOLD = FAST CHARGE' : 'HOLD = CHARGE');
     if (sub) {
       ctx.font = '800 7px Orbitron, sans-serif';
@@ -8158,13 +8214,13 @@ function drawAdvanced() {
   ctx.moveTo(cb.x + 10, cb.y + 10); ctx.lineTo(cb.x + cb.w - 10, cb.y + cb.h - 10);
   ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
   ctx.stroke();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) { // AFT-010: + the ACCESS page
     const r = A.tab(i), active = settingsPage === i;
     roundRect(r.x, r.y, r.w, r.h, 10);
     ctx.fillStyle = active ? 'rgba(66,165,245,0.26)' : 'rgba(255,255,255,0.05)'; ctx.fill();
     ctx.strokeStyle = active ? '#80d8ff' : 'rgba(255,255,255,0.15)'; ctx.lineWidth = active ? 2 : 1; ctx.stroke();
-    ctx.font = `800 ${A.compact ? 9 : 10}px Orbitron, sans-serif`; ctx.fillStyle = active ? '#e3f2fd' : '#78909c';
-    ctx.fillText(i === 0 ? 'GAME' : i === 1 ? 'TOUCH' : 'SAVE', r.x + r.w / 2, r.y + r.h / 2);
+    ctx.font = `800 ${A.compact ? 8 : 9}px Orbitron, sans-serif`; ctx.fillStyle = active ? '#e3f2fd' : '#78909c';
+    ctx.fillText(i === 0 ? 'GAME' : i === 1 ? 'TOUCH' : i === 2 ? 'SAVE' : 'ACCESS', r.x + r.w / 2, r.y + r.h / 2, r.w - 6);
   }
   // AFT-006: the SAVE page — export/import/restore + surfaced storage health
   if (settingsPage === 2) { drawSaveSettings(A); ctx.restore(); return; }

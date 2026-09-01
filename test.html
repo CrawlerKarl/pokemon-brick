@@ -3052,6 +3052,100 @@ window.requestAnimationFrame = function () { return 0; };
     return 'work + real-FPS profiler live · overrides pin all 4 rungs · 240-frame seeded sim BIT-IDENTICAL full vs reduced vs minimal · hostiles spawn · cosmetics thin · rung-3 DPR-aware resolution';
   });
 
+  // AFT-010 stage 1: the accessibility settings do what they claim, and every
+  // one of them is inert at its default — a fresh install plays bit-identically
+  // to the pre-AFT-010 game.
+  test('AFT-010: accessibility — text scale, charge assists, outline strength, dim', async () => {
+    const real = { textScale: SETTINGS.textScale, toggleCharge: SETTINGS.toggleCharge,
+      easyCharge: SETTINGS.easyCharge, hcStrength: SETTINGS.hcStrength,
+      bgDim: SETTINGS.bgDim, hcBall: SETTINGS.hcBall, mode: SETTINGS.mode,
+      cbSafe: SETTINGS.cbSafe, visualCues: SETTINGS.visualCues };
+    try {
+      SETTINGS.mode = 'junkie';
+      // TEXT SIZE: the ctx.font interception scales the px value; the default
+      // is a pure passthrough; measureText sees the scale (which is what
+      // fitLabel's containment relies on)
+      SETTINGS.textScale = 1;
+      ctx.font = '900 13px Orbitron, sans-serif';
+      const wBase = ctx.measureText('SOVEREIGN OF THE DAWN').width;
+      assert(/13px/.test(ctx.font), 'default text scale must be identity (got ' + ctx.font + ')');
+      SETTINGS.textScale = 1.3;
+      ctx.font = '900 13px Orbitron, sans-serif';
+      assert(/16\.9px/.test(ctx.font), 'text scale 1.3 must scale 13px → 16.9px (got ' + ctx.font + ')');
+      const wScaled = ctx.measureText('SOVEREIGN OF THE DAWN').width;
+      assert(wScaled > wBase * 1.15, 'scaled font must measure wider (' + wScaled.toFixed(1) + ' vs ' + wBase.toFixed(1) + ')');
+      SETTINGS.textScale = 1;
+      // TAP-TOGGLE CHARGE: a charge accumulates with NO held pointer and the
+      // release toggle fires it — the exact state the input branch sets
+      SETTINGS.toggleCharge = true;
+      resetRun(8, true, { seed: 'A10' });
+      G.state = 'play'; paused = false;
+      G.charge = 0; G.chargeFullT = 0; G.overheat = 0; G.heat = 0; G.chargeCD = 0;
+      chargeHeld = true; // tap 1 (the FIRE-pad toggle branch sets exactly this)
+      for (let i = 0; i < 40; i++) { G.freeze = 0; update(1 / 60); }
+      assert(G.charge > 0.3, 'toggle charge must accumulate without a held pointer (got ' + G.charge.toFixed(2) + ')');
+      const lasersBefore = G.lasers.length;
+      chargeHeld = false; // tap 2 releases
+      G.freeze = 0; update(1 / 60);
+      assert(G.lasers.length > lasersBefore, 'the release tap must fire the charge');
+      assert(G.charge === 0, 'the charge must be spent after the release tap');
+      SETTINGS.toggleCharge = false;
+      // EASIER CHARGE TIMING: shortens the fill and widens the resonant
+      // window ONLY when on — the tuned defaults stay untouched
+      SETTINGS.easyCharge = false;
+      assert(Math.abs(chargeFillTime() - 1.1) < 1e-9, 'default fill time must stay 1.1s');
+      assert(resonanceWindow() === RESONANCE_WINDOW, 'default resonant window must stay ' + RESONANCE_WINDOW);
+      SETTINGS.easyCharge = true;
+      assert(chargeFillTime() > 0.7 && chargeFillTime() < 0.95, 'easy charge must shorten the fill (got ' + chargeFillTime() + ')');
+      assert(resonanceWindow() > RESONANCE_WINDOW, 'easy charge must widen the resonant window');
+      SETTINGS.easyCharge = false;
+      // OUTLINE STRENGTH: the hc ball keyline rebakes when the slider moves
+      SETTINGS.hcStrength = 1;
+      const b1 = ballBodySprite('hc', '#ffffff', 9);
+      SETTINGS.hcStrength = 1.8;
+      const b2 = ballBodySprite('hc', '#ffffff', 9);
+      assert(b1 !== b2, 'outline strength must join the hc bake key (stale sprite)');
+      SETTINGS.hcStrength = 1;
+      // BACKGROUND DIMMING renders cleanly in play and never on the menu
+      SETTINGS.bgDim = 0.4;
+      G.state = 'play';
+      render(); // must not throw with the dim wash active
+      G.state = 'menu';
+      render();
+      SETTINGS.bgDim = 0;
+      // COLORBLIND-SAFE COLORS: the semantic green poles remap to blues when
+      // on, stay tuned defaults when off; type identity colours never map
+      SETTINGS.cbSafe = false;
+      assert(cbSafeColor('hpGood') === '#5fe0a6', 'cb mode off must be identity');
+      const armorFresh = armorColor({ maxHp: 6, hp: 5 });
+      SETTINGS.cbSafe = true;
+      assert(cbSafeColor('hpGood') === '#4dd0e1', 'healthy pole must remap to blue');
+      assert(cbSafeColor(TYPE_COLORS.grass) === TYPE_COLORS.grass, 'a raw hex (type identity) must pass through untouched');
+      assert(armorColor({ maxHp: 6, hp: 5 }) !== armorFresh, 'the armor ramp must swap to the safe ramp');
+      SETTINGS.cbSafe = false;
+      // VISUAL SOUND CUES: the 70% heat beep gains a floater only when on
+      SETTINGS.visualCues = false;
+      G.state = 'play'; G.heat = 0.68; G.overheat = 0;
+      G.floaters.length = 0;
+      addWeaponHeat(0.05);
+      assert(G.floaters.length === 0, 'cue floaters must stay off by default');
+      SETTINGS.visualCues = true;
+      G.heat = 0.68;
+      addWeaponHeat(0.05);
+      assert(G.floaters.some(f => /HEAT 70/.test(f.text)), 'the 70% beep must mirror as a floater when cues are on');
+      SETTINGS.visualCues = false;
+      G.heat = 0; G.floaters.length = 0;
+      // the ACCESS page rows all address real SETTINGS keys
+      for (const t of ACCESS_TOGGLES) assert(t.key in SETTINGS, 'ACCESS toggle key missing: ' + t.key);
+      for (const s of ACCESS_SLIDERS) assert(s.key in SETTINGS, 'ACCESS slider key missing: ' + s.key);
+    } finally {
+      Object.assign(SETTINGS, real);
+      chargeHeld = false; G.charge = 0; G.chargeFullT = 0;
+      G.trial = true;
+    }
+    return 'font interception scales + identity at default · toggle-charge taps start/release · easy-charge assists gated · hc bake rekeys · dim wash clean · cb greens→blues, types untouched · heat-beep floater gated · ACCESS rows wired';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so
@@ -3630,6 +3724,21 @@ window.requestAnimationFrame = function () { return 0; };
         if (D.affNone) rects.affNone = D.affNone;
         for (let i = 0; i < Object.keys(PRESETS).length; i++) rects['chip(' + i + ')'] = D.chip(i);
         for (let i = 0; i < TOGGLES.length; i++) rects['toggle(' + i + ')'] = A.toggle(i);
+        // AFT-010: the ACCESS page carries its own row set — assert it too,
+        // or a new accessibility row could silently overflow a viewport
+        {
+          const p0 = settingsPage;
+          settingsPage = 3;
+          const A3 = advLayout();
+          rects.accessPanel = { x: A3.px, y: A3.py, w: A3.pw, h: A3.ph };
+          for (let i = 0; i < ACCESS_SLIDERS.length; i++) {
+            const s = A3.slider(i);
+            rects['accessSlider(' + i + ')'] = { x: s.x, y: s.y - 8, w: s.w, h: 16 };
+          }
+          for (let i = 0; i < ACCESS_TOGGLES.length; i++) rects['accessToggle(' + i + ')'] = A3.toggle(i);
+          for (let i = 0; i < 4; i++) rects['settingsTab(' + i + ')'] = A3.tab(i);
+          settingsPage = p0;
+        }
         for (let i = 0; i < 3; i++) rects['upgrade(' + i + ')'] = U.card(i);
         // constellation nodes may OVERFLOW small viewports by design (the
         // compact chart enforces a big minimum scale and pans instead) — the

@@ -5,6 +5,64 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-08-31 — AFT-010 stage 1: the ACCESS page — settings-level accessibility
+
+Seven settings-level wins on a new fourth settings tab (ACCESS — its own
+page like TOUCH before it, because the GAME page had no landscape headroom
+left and the panel paginates rather than scrolls). Every option is INERT at
+its default: a fresh install plays bit-identically to the pre-AFT-010 game
+(suite-asserted).
+
+- **TEXT SIZE (100–135%)** — one interception point on the main context's
+  `font` setter (setup.js) scales every UI font; `fitLabel` measures
+  through the same scaled font, so AFT-001's containment automatically
+  keeps enlarged text on-screen (roomy labels grow, tight ones shrink back
+  toward fit, identity labels ellipsize as designed). Offscreen bake
+  contexts are untouched — sprite art never rescales. Nothing in the
+  codebase reads `ctx.font` back (verified), so no compounding path
+  exists; the interception is browser-only guarded because the dist
+  builder harvests these modules in a Node vm with no canvas.
+- **BACKGROUND DIMMING (0–50%)** — one wash over the finished background
+  stack on all three paths (normal, rung-3 plate, secret arena); sprites
+  draw after it, so only the sky dims. Menus keep their postcard look.
+- **OUTLINE STRENGTH (60–180%)** — scales the HIGH-CONTRAST PROJECTILES
+  keylines (ball bake — the strength joins the cache key so the slider
+  can't go stale — plus the live shot/pickup rings).
+- **COLORBLIND-SAFE COLORS** — audited first: type identity is carried by
+  shape, and the effectiveness feedback was already non-red/green, so the
+  real hazards were the semantic GREEN "safe/healthy" poles. Those remap
+  to blues (player HP, brick/flyer HP arc, shield family) plus a diverging
+  cyan→blue→white→yellow→orange→red armor ramp. `cbSafeColor` is keyed by
+  SEMANTIC NAME, never by hex — grass ('#66bb6a') and bug ('#9ccc65')
+  share those exact hexes as identity colours, and the suite caught a
+  hex-keyed first draft one assertion in.
+- **TAP-TOGGLE CHARGE** — one tap starts the charge, the next releases it;
+  no sustained hold. It lives entirely on `chargeHeld` (the release rides
+  the normal update-loop release branch), so power/pierce/resonance/heat
+  are identical to a held charge and all three pause/visibility disarm
+  sites cover it for free. Desktop right-click/Shift toggle too
+  (key-repeat guarded). The FIRE pad speaks the tap grammar: TAP = CHARGE
+  / TAP = FIRE.
+- **EASIER CHARGE TIMING** — full charge at ~0.86s (×0.78, multiplicative
+  with Heavy Bolt) and the resonant window widened 0.38s → 0.6s, both
+  through their own knobs (`chargeFillTime`/`resonanceWindow`) — never
+  through `weaponScale`, the one-weapon-clock invariant.
+- **VISUAL SOUND CUES** — the audit found the game already dual-modality
+  almost everywhere (floaters/banners/gauges beside nearly every SFX), so
+  this toggle honestly covers the residue: the 70%/90% heat-warning beeps
+  gain HEAT 70%/90% floaters, and the vent state (previously named only on
+  the touch FIRE pad) now reads on the desktop heat gauge.
+
+Coverage: suite 131 (the AFT-010 fixture + the viewport-fit sweep now
+asserts the ACCESS page's panel/rows/tabs across all six viewports); the
+gate gains a `settings-access` scene (58 screenshots). One pre-existing
+capture quirk noted while reviewing shots: a stale TRIAL MODE announce
+card can bleed over settings-panel scenes at 667×375 (also on the older
+settings-save scene) — flagged as a separate gate-hygiene task, not a
+game defect. Stage 2 (the DOM/screen-reader layer) remains open.
+
+---
+
 ## 2026-08-31 — AFT-025b: the audit's tail — every deferred offender from the perf sweep
 
 The AFT-025 round fixed what the region-1 AETHERFALL finale actually hit;

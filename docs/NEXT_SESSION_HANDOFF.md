@@ -2,17 +2,22 @@
 
 > ## STATUS (2026-08-31 closeout) — everything below is SHIPPED
 >
-> **Suite 130/130 · gate GREEN (~57s full).** The two newest rounds:
+> **Suite 131/131 · gate GREEN (~55s full, 29 scenes × 2 viewports).**
+> The three newest rounds:
 > **AFT-011** (mobile loading: 690 WebP / 10.3 MB dist, realm-first art
 > streaming, bounded decoded caches — found complete-but-uncommitted from
-> the 08-30 session and committed as its own round) and **AFT-025 THE
+> the 08-30 session and committed as its own round); **AFT-025 THE
 > FLAT FRAME** (the owner's "aetherfall lags at the region-1 boss"
 > report: the per-shot `shadowBlur` in `drawAetherRelic` — AETHERFALL
 > only, invisible to the old synchronous storm — plus the overdraw
 > collapse: atmosphere baked into `bgWash`, a rung-3 background PLATE,
 > DPR-aware 0.62 resolution, the MINIMAL setting, and painted-screens +
 > dense-probe budgets in the gate. `tools/profile-boss.js` is the new
-> throttled diagnostic).
+> throttled diagnostic); and **AFT-010 STAGE 1** (the ACCESS settings
+> tab: text size, background dimming, outline strength, colorblind-safe
+> threat colors, tap-toggle charge, easier charge timing, visual sound
+> cues — every option inert at its default, suite-asserted; stage 2, the
+> DOM/screen-reader layer, remains open).
 >
 > - workshop `CrawlerKarl/pokemon-brick` →
 >   https://crawlerkarl.github.io/pokemon-brick/
@@ -398,8 +403,9 @@ reopens it.
 ✅ AFT-024  THE STAGE DIVIDEND (one draft per stage; no combat interrupts)
 ✅ AFT-011  MOBILE LOADING + WEBP (690 WebP; current-first stream; bounded caches)
 ✅ AFT-025  THE FLAT FRAME (per-shot blur baked; overdraw budgets; rung 3 + MINIMAL)
+✅ AFT-010 STAGE 1 (the ACCESS settings tab — 7 settings-level accessibility wins)
 → AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY (now incl. confirming AFT-025 killed the boss lag)
-→ AFT-010 accessibility
+→ AFT-010 STAGE 2 (the DOM/screen-reader layer for menus/results/codex/web)
 → AFT-012 visual pass
 ```
 
@@ -461,10 +467,10 @@ actual phone.
 Notes so you don't redo finished work:
 
 - **`npm test` is the gate** (~35s full, `--fast` ~15s, `--suite` ~12–18s):
-  syntax → assets → **129 invariants** headless → both-skin + dist boots →
+  syntax → assets → **131 invariants** headless → both-skin + dist boots →
   the vocabulary scan (no player-facing MEGA, and since AFT-023b no
   POKÉMON/POKÉDEX/POKEBALL in any copy table or `SKIN.strings`) → RESIDUE →
-  **28 mobile scenes × 2 viewports (56 screenshots** → `.gate-shots/` +
+  **29 mobile scenes × 2 viewports (58 screenshots** → `.gate-shots/` +
   metadata sidecars) that each PROVE their named state via `expect`
   assertions, under the overlap + single-actor-label contracts → the
   wave AND boss storm ledgers (`.gate-report.json`). Run it before every

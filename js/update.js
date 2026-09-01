@@ -39,7 +39,11 @@ function hostileScale() { return (G.fx_slow ? 0.5 : 1) * (G.starterChillT > 0 ? 
 function cinematicScale() { return G.dramaticT > 0 ? 0.3 : 1; }
 function timeScale() { return hostileScale() * settingsScale() * cinematicScale(); }
 function weaponScale() { return settingsScale(); }
-function chargeFillTime() { return upgN('heavy') ? 0.8 : 1.1; } // Heavy Bolt's fast fill is an IDENTITY, cued on the pad
+// Heavy Bolt's fast fill is an IDENTITY, cued on the pad. AFT-010's EASIER
+// CHARGE TIMING assist multiplies here — its own knob, never folded into
+// weaponScale (the one-weapon-clock invariant: charge fill and bolt travel
+// must keep their ratio at every Game Speed).
+function chargeFillTime() { return (SETTINGS.easyCharge ? 0.78 : 1) * (upgN('heavy') ? 0.8 : 1.1); }
 // Dialga's Roar of Time slows only the balls, not the player
 function ballTimeScale() { return G.timeWarpT > 0 ? 0.55 : 1; }
 // Dialga's TIME DILATION (Milestone 4): ONE shared metronome period drives both
@@ -618,8 +622,8 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     br.flash = 0.65; generator.flash = 0.8;
     if (!br.shieldHintT || G.time > br.shieldHintT) {
       br.shieldHintT = G.time + 1.2;
-      addFloater(sx, sy - 18, 'SHIELDED', '#66bb6a', 11);
-      ringFx(sx, sy, '#66bb6a', 4, 32, 2, 0.25);
+      addFloater(sx, sy - 18, 'SHIELDED', cbSafeColor('shieldGood'), 11);
+      ringFx(sx, sy, cbSafeColor('shieldGood'), 4, 32, 2, 0.25);
     }
     haptic('hit');
     return;
@@ -2609,9 +2613,9 @@ function absorbHit(x, y, shotType = null, volleyId = null) {
     addFloater(G.paddle.x, y - 74, 'FACET STORED ' + G.facets.length + '/3', '#80cbc4', 11);
   }
   celestialSector('s'); // CELESTIAL GUARDIAN: shield events fill a sector
-  addFloater(G.paddle.x, y - 46, 'SHIELD!', '#66bb6a', 15);
-  burst(x, y, '#66bb6a', 18, 240, 0.5);
-  ringFx(G.paddle.x, y, '#a5d6a7', 6, 64, 3, 0.4);
+  addFloater(G.paddle.x, y - 46, 'SHIELD!', cbSafeColor('shieldGood'), 15);
+  burst(x, y, cbSafeColor('shieldGood'), 18, 240, 0.5);
+  ringFx(G.paddle.x, y, cbSafeColor('shieldSoft'), 6, 64, 3, 0.4);
   SFX.shield();
   // REACTIVE OVERDRIVE: the break feeds the Mega ring — gold surge on the rig
   if (upgN('reactive') && G.megaT <= 0) {
@@ -5657,7 +5661,7 @@ function update(dt) {
         if (G.chargeFullT > 1.4) addWeaponHeat(dt * weaponScale() * 0.4);
       }
     } else if (G.charge > 0) {
-      fireCharge(G.charge, G.chargeFullT > 0 && G.chargeFullT <= RESONANCE_WINDOW);
+      fireCharge(G.charge, G.chargeFullT > 0 && G.chargeFullT <= resonanceWindow());
       chargedThisFrame = true;
       G.charge = 0; G.chargeCD = 0.25; G.chargeFullT = 0;
     }
@@ -5695,8 +5699,8 @@ function update(dt) {
           // capstone proc reads on the SHIP, not just as text: the bubble
           // flares green and a ring blooms outward as the charge regrows
           G.shieldFlash = Math.max(G.shieldFlash || 0, 0.8);
-          ringFx(G.paddle.x, shipY(), '#66bb6a', 6, 52, 3, 0.4);
-          addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', '#66bb6a', 12);
+          ringFx(G.paddle.x, shipY(), cbSafeColor('shieldGood'), 6, 52, 3, 0.4);
+          addFloater(G.paddle.x, shipY() - 30, 'SUPER SHIELD +1', cbSafeColor('shieldGood'), 12);
         }
       }
     } else G.shieldRegenT = 10;
