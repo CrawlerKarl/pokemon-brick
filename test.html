@@ -1773,10 +1773,21 @@ window.requestAnimationFrame = function () { return 0; };
     await runFrames(30);
     const boss = G.bricks.find(b => !b.dead && b.isBoss && !b.mythic);
     assert(boss && !boss.dormant, 'the Sovereign is live');
+    // AFT-026: a junkie gauntlet legendary's ONE phase transition fires at
+    // exactly 50% (the LAST STAND spectacle) — the owner read it as the
+    // kill. The engine must hold the fight there, always.
+    boss.hp = Math.ceil(boss.maxHp * 0.5);
+    await runFrames(60);
+    assert(G.state === 'play' && !boss.dead && F.beatKey !== 'coda',
+      'half health must never clear the finale (state=' + G.state + ' beat=' + F.beatKey + ')');
     // fell the Sovereign (+wings) → the coda: blooms, a presence, NO mythic bar
     for (const b of G.bricks) if (!b.dead && (b.isBoss || b.guard)) b.dead = true;
     await runFrames(40);
     assert(F.beatKey === 'coda' && F.codaHold === true, 'coda opens and holds the clear');
+    // AFT-026: the fall itself must announce BEFORE the coda takes the
+    // screen — the reveal used to open on the kill's own breath
+    assert((G.announce && /FALLS/.test(G.announce.name || '')) || G.announceQueue.some(a => /FALLS/.test(a.name || '')),
+      "the Sovereign's fall never announced");
     assert(!G.bricks.some(b => !b.dead && b.isBoss && b.mythic), 'no hostile mythic spawned');
     assert(G.bricks.some(b => !b.dead && b.crosser && b.poke && b.poke.id === genFor(6).gauntlet.myth[0]),
       'the coda presence drifts through as a crosser');
@@ -6509,6 +6520,15 @@ window.requestAnimationFrame = function () { return 0; };
     assert(G.forge && G.forge.step === 'menu', 'the finale did not arm the Forge');
     G.stateT = 1; advanceResults();
     assert(G.state === 'upgrade' && G.forge, 'results did not open the Forge');
+    // AFT-026: the menu is a live, UN-TIMED decision surface. The old
+    // "no draftable upgrades → breather" auto-skip (update.js) ate it 2.2s
+    // after it opened — the owner saw the realm decision for about a second,
+    // every realm. Idle five sim-seconds with the real frame loop running;
+    // the Forge must still be waiting. (Every prior check either screenshotted
+    // a hand-built state or answered instantly — nothing ever idled here.)
+    for (let f = 0; f < 300; f++) { paused = false; G.freeze = 0; update(1/60); }
+    assert(G.state === 'upgrade' && G.forge && G.forge.step === 'menu',
+      'the Forge menu must survive an undecided player (state=' + G.state + ' after 5s)');
     let acts = forgeActions();
     const keys = acts.map(a => a.key);
     assert(keys.includes('refine') && !keys.includes('link') && !keys.includes('evolve'),

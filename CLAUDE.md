@@ -593,12 +593,18 @@ phone — flag anything only verifiable there.
   captains…) — build blocks live in `buildLevel`'s gauntlet section.
 - **Boss presentation is mode-specific.** BREAKER finales use oversized,
   moving **boss bricks** (`drawBossBrick`) and brick guards; BLASTER and
-  STARFIGHTER use bare legendaries (`drawBossMon`). All share **three phases**
-  at ⅔/⅓ HP (`br.phase`, set in `damageBrick`): each transition
-  fires a shockwave with one readable escape spoke, applies a 0.78s damage gate,
-  and phase 3 (last stand) summons a minion ring + faster, wider fire. Boss
-  abilities keyed by id in `BOSS_ABILITIES`; regular volleys are also authored
-  per species by `spawnBossFire`.
+  STARFIGHTER use bare legendaries (`drawBossMon`). Phases ride `br.phase`
+  (set in `damageBrick`): **three phases at ⅔/⅓ HP everywhere EXCEPT
+  STARFIGHTER gauntlet legendaries, which run TWO phases with their one
+  transition at 50%** (`phaseCount`, state.js — mythicals keep ⅔/⅓ in every
+  mode). Each transition fires a shockwave with one readable escape spoke,
+  applies a 0.78s damage gate, and the final phase (last stand) summons a
+  minion ring + faster, wider fire — which means a junkie legendary's
+  biggest mid-fight spectacle lands at exactly half health; a player can
+  read it as the kill (2026-09-01 owner report), so a finale Sovereign's
+  actual FALL must always get its own readable beat before the next scene
+  takes the screen. Boss abilities keyed by id in `BOSS_ABILITIES`; regular
+  volleys are also authored per species by `spawnBossFire`.
 - **Wave ecology.** Each wave draws ONE habitat (`pickWaveTheme` → a curated
   `HABITAT_PACKS` pack or a `TYPE_CLUSTERS` fallback) via `themedPool`, so
   Pokémon that belong together appear together, spanning evolution tiers. Pack

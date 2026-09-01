@@ -5,6 +5,57 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-09-01 — AFT-026: two owner playtest reports — the eaten Forge, and the fall that never landed
+
+**Report 1: "The refine and reforge option at the end of each world only
+stays on for a second, doesn't let him choose."** Root cause
+(update.js): the state-'upgrade' breather — "no draftable upgrades left →
+brief breather, then straight on" (`!G.upgradeChoices && G.stateT > 2.2`)
+— predates the Forge, whose action MENU legitimately has no dealt hand.
+So every realm's one Forge decision was auto-skipped 2.2s after opening
+(visible/tappable for only ~1.7s of that), `buildLevel + serve` rolled the
+next realm, and the decision was silently lost with `G.forge` leaked into
+play. **Since AFT-009R shipped, no player who didn't tap within 2.2
+seconds ever used the Forge** — and nothing could see it: the gate scene
+screenshots a hand-built state, the suite test calls `forgeChoose`
+synchronously, and the baseline bot answers on the first tick. Nothing
+ever IDLED at the menu with the frame loop running. Fix: the breather
+excepts `G.forge` — a decision surface waits for the player, always. The
+suite now idles five sim-seconds at the real clear→results→Forge flow and
+asserts the menu survives.
+
+**Report 2: "World 2, 2nd of the three final bosses — only got him down
+to half health and then it told me the stage was cleared."** Verdict:
+the clear guard is sound (four independent gates make clear-with-a-live-
+boss impossible), but the REPORT is still a real defect — in
+presentation. Two facts compounded: (a) a STARFIGHTER gauntlet legendary
+has TWO phases, so Zephyrion's one big transition (LAST STAND flash,
+shake, adds ring) fires at exactly 50% HP — the most kill-like spectacle
+of the fight, at half health; (b) when Zephyrion actually died,
+`relayBeginCoda` opened the Hourseed's full-screen reveal ON THE SAME
+BREATH — the reproduced frame 0.5s after the kill showed a stale
+"SPRIGLING CAUGHT!" toast and nothing else. The fall never landed;
+memory anchored to the 50% flash. Fix (relay-scoped, no shared gauntlet
+timing touched): the Sovereign's fall now gets its own beat — slow-mo
+(`G.dramaticT`), white shockwave + typed burst + sparkles at the corpse,
+and a preempting boss-kinded "<NAME> FALLS · THE STORM BREAKS" card
+(`clearAnnouncements([])` first — a catch toast must never outrank the
+finale's central kill); the Hourseed reveal and the coda card follow at
+the 1.5s mark (`F.coda.revealActor`/`opened`, dormant-under-suite as
+ever). CLAUDE.md's boss-phases bullet corrected (it claimed ⅔/⅓ for all —
+junkie gauntlet legendaries split once at 50%), with the lesson recorded:
+a finale Sovereign's fall must always get its own readable beat.
+
+Coverage: the relay suite test now asserts (1) 50% HP never clears the
+finale and (2) the fall announces before the coda takes the screen.
+Suite 131/131, full gate green, labeled L6 baseline probe green
+(matrix-aft026-l6-probe; the L6-junkie near-band warn pre-exists).
+Verified visually: kill → fall beat (card + rings + slow-mo, no cut) →
+Hourseed reveal at 1.5s → coda → resolve; and the Forge held open through
+a 15-sim-second idle then dealt a REFINE hand via the real input router.
+
+---
+
 ## 2026-08-31 — AFT-010 stage 1: the ACCESS page — settings-level accessibility
 
 Seven settings-level wins on a new fourth settings tab (ACCESS — its own

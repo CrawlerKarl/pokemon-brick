@@ -17,7 +17,14 @@
 > tab: text size, background dimming, outline strength, colorblind-safe
 > threat colors, tap-toggle charge, easier charge timing, visual sound
 > cues — every option inert at its default, suite-asserted; stage 2, the
-> DOM/screen-reader layer, remains open).
+> DOM/screen-reader layer, remains open). Then **AFT-026 (2026-09-01)**,
+> two owner playtest fixes: the state-'upgrade' breather was EATING the
+> AETHER FORGE 2.2s after it opened (no player who hesitated ever used
+> it — the breather now excepts `G.forge`, and the suite idles at the
+> menu), and the relay Sovereign's death cut straight to the Hourseed
+> reveal so the kill never read (players anchor on the 50% LAST STAND
+> flash — junkie gauntlet legendaries are TWO-phase; the fall now gets
+> slow-mo + a preempting FALLS card, reveal deferred 1.5s).
 >
 > - workshop `CrawlerKarl/pokemon-brick` →
 >   https://crawlerkarl.github.io/pokemon-brick/

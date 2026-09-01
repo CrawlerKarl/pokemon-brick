@@ -4075,6 +4075,28 @@ function relayBeginCoda(gen2) {
   const mid = gen2.gauntlet && gen2.gauntlet.myth;
   F.coda = { t: 0, dur: 14, spawned: 0, blooms: 6 };
   F.codaHold = true;
+  // AFT-026: the Sovereign's fall gets its OWN beat before anything new
+  // takes the screen. The Hourseed's reveal used to open on the same breath
+  // as the kill, so the finale's one real victory never landed — the owner
+  // read the whole sequence as "cleared while the boss still had half
+  // health" (the 50% LAST STAND flash was the last thing that registered).
+  // Slow-mo + fireworks + a named fall card now; the reveal and the coda
+  // card follow once the fall has been seen.
+  const fallen = G.bricks.find(b => b.isBoss && b.dead);
+  if (fallen && fallen.poke) {
+    G.dramaticT = Math.max(G.dramaticT || 0, 0.9);
+    const fx2 = fallen.bx + G.fx, fy2 = fallen.by + G.fy;
+    burst(fx2, fy2, '#ffffff', 34, 380, 0.9);
+    burst(fx2, fy2, TYPE_COLORS[fallen.poke.t] || '#80d8ff', 26, 300, 0.8);
+    ringFx(fx2, fy2, '#ffffff', 10, Math.min(W, H) * 0.4, 5, 0.7);
+    sparkle(fx2, fy2, 10, true);
+    // the fall PREEMPTS whatever toast is up — a catch notice must never
+    // outrank the finale's central kill (announce hygiene via the kinded
+    // clear, per the AFT-004 contract)
+    clearAnnouncements([]);
+    setAnnounce('star', '#ffd54f', (fallen.poke.n || '').toUpperCase() + ' FALLS',
+      'THE STORM BREAKS', 2.4, null, null, false, false, 'boss');
+  }
   // AFT-021 P5: the coda is a REWARD LAP — any ordinary leftovers stand
   // down with the storm (a classic wall fragment once marched off-screen
   // and held the finale hostage for ten minutes)
@@ -4097,17 +4119,25 @@ function relayBeginCoda(gen2) {
     };
     G.bricks.push(verd);
     getSprite(mid[0]);
-    beginBossReveal('mythic', [verd]); // her portrait deserves the scene — nothing hostile resumes after
+    // her portrait deserves the scene — but only AFTER the fall has read
+    // (AFT-026); updateRelayCoda opens it at the 1.5s mark
+    F.coda.revealActor = verd;
   }
-  const label = (fp && fp.beats[2] && fp.beats[2].label) || 'THE REWIND';
-  const tip = (fp && fp.beats[2] && fp.beats[2].tip) || 'GATHER THE BLOOMS';
-  setAnnounce('leaf', '#b9f6ca', label, tip, 3.4, null, null, false, true, 'boss');
   F.meter = { value: 0, max: F.coda.blooms, label: (fp && fp.relay && fp.relay.bloomName) || 'BLOOM' };
 }
 function updateRelayCoda(dt) {
   const F = G.finale, C = F.coda;
   if (!C) return;
   C.t += dt;
+  // AFT-026: the Hourseed's reveal + the coda card wait out the fall beat
+  if (!C.opened && C.t >= 1.5) {
+    C.opened = true;
+    if (C.revealActor) { beginBossReveal('mythic', [C.revealActor]); C.revealActor = null; }
+    const fp = F.profile;
+    const label = (fp && fp.beats[2] && fp.beats[2].label) || 'THE REWIND';
+    const tip = (fp && fp.beats[2] && fp.beats[2].tip) || 'GATHER THE BLOOMS';
+    setAnnounce('leaf', '#b9f6ca', label, tip, 3.4, null, null, false, true, 'boss');
+  }
   const due = Math.min(C.blooms, Math.floor(C.t / (C.dur / C.blooms)) + 1);
   while (C.spawned < due) {
     C.spawned++;
@@ -5546,8 +5576,13 @@ function update(dt) {
   if (G.state === 'resolve') { updateResolve(dt); return; } // AFT-021 P1: the harmless post-win beat
   if (G.state === 'results') return; // static interstitial: no simulation
   if (G.state === 'upgrade') {
-    // no draftable upgrades left → brief breather, then straight on
-    if (!G.upgradeChoices && G.stateT > 2.2) { buildLevel(G.level); serve(); }
+    // no draftable upgrades left → brief breather, then straight on.
+    // NEVER while the AETHER FORGE is open: its action MENU is a decision
+    // surface with no dealt hand, so `!G.upgradeChoices` is true there and
+    // this breather was silently eating the realm's one Forge decision 2.2s
+    // after it appeared (owner report, 2026-09-01 — "only stays on for a
+    // second"). A decision surface waits for the player, always.
+    if (!G.upgradeChoices && !G.forge && G.stateT > 2.2) { buildLevel(G.level); serve(); }
     return;
   }
   if (G.state === 'ceremony') {
