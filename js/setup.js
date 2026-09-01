@@ -184,16 +184,42 @@ const HAPTIC_COOLDOWNS = Object.freeze({
 });
 let lastHapticAt = -Infinity;
 const lastHapticByKind = Object.create(null);
-function haptic(kind = 'tap') {
-  if (!IS_TOUCH || typeof SETTINGS === 'undefined' || !SETTINGS.haptics || !navigator.vibrate) return;
-  const now = performance.now();
+// AFT-026b (owner report: "multiple vibrations per charge hold — it gets
+// confusing, especially with more weapons"). Every damaging hit, kill, and
+// pickup fires a haptic, and autonomous weapons (relic, missiles, chains)
+// keep scoring THROUGH a charge hold — so the thumb reading the charge arc
+// was being buzzed by unrelated combat noise. Two rules on top of the
+// per-kind cooldowns:
+//   1) THE HOLD OWNS THE THUMB — while a charge is armed, the ambient
+//      combat ticks (tap/hit/break/item) are muted outright; the arc
+//      (promote → full → resonant) and true warnings (heat, massive,
+//      damage, boss, mega) still speak.
+//   2) ONE NOISE BUDGET — tap/hit/break/item share a single 450ms bucket,
+//      so a six-weapon build buzzes no more often than a starter one.
+const HAPTIC_NOISE_KINDS = new Set(['tap', 'hit', 'break', 'item']);
+const HAPTIC_NOISE_COOLDOWN = 450;
+let lastNoiseHapticAt = -Infinity;
+// the pure decision core — the suite drives this directly (no touch device,
+// no navigator.vibrate needed); returns the pattern to play, or null
+function hapticGate(kind, now) {
   const resolvedKind = HAPTIC_PATTERNS[kind] ? kind : 'tap';
+  const noise = HAPTIC_NOISE_KINDS.has(resolvedKind);
+  if (noise
+    && ((typeof chargeHeld !== 'undefined' && chargeHeld)
+      || (typeof G !== 'undefined' && G && G.charge > 0))) return null;
   const lastKindAt = lastHapticByKind[resolvedKind] ?? -Infinity;
   if (now - lastHapticAt < HAPTIC_GLOBAL_COOLDOWN
-    || now - lastKindAt < HAPTIC_COOLDOWNS[resolvedKind]) return;
+    || now - lastKindAt < HAPTIC_COOLDOWNS[resolvedKind]
+    || (noise && now - lastNoiseHapticAt < HAPTIC_NOISE_COOLDOWN)) return null;
   lastHapticAt = now;
   lastHapticByKind[resolvedKind] = now;
-  navigator.vibrate(HAPTIC_PATTERNS[resolvedKind]);
+  if (noise) lastNoiseHapticAt = now;
+  return HAPTIC_PATTERNS[resolvedKind];
+}
+function haptic(kind = 'tap') {
+  if (!IS_TOUCH || typeof SETTINGS === 'undefined' || !SETTINGS.haptics || !navigator.vibrate) return;
+  const p = hapticGate(kind, performance.now());
+  if (p) navigator.vibrate(p);
 }
 
 function resize() {

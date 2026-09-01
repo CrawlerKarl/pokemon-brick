@@ -3157,6 +3157,51 @@ window.requestAnimationFrame = function () { return 0; };
     return 'font interception scales + identity at default · toggle-charge taps start/release · easy-charge assists gated · hc bake rekeys · dim wash clean · cb greens→blues, types untouched · heat-beep floater gated · ACCESS rows wired';
   });
 
+  // AFT-026b: every hit/kill/pickup fires a haptic and autonomous weapons
+  // keep scoring through a charge hold — the owner felt "multiple vibrations
+  // per charge hold." The gate mutes ambient combat noise while a charge is
+  // armed and puts all noise kinds on ONE shared budget.
+  test('AFT-026b: haptics — the hold owns the thumb, combat noise shares one budget', async () => {
+    const heldReal = typeof chargeHeld !== 'undefined' ? chargeHeld : false;
+    const chargeReal = G.charge;
+    const reset = () => {
+      lastHapticAt = -Infinity; lastNoiseHapticAt = -Infinity;
+      for (const k of Object.keys(lastHapticByKind)) delete lastHapticByKind[k];
+    };
+    try {
+      chargeHeld = false; G.charge = 0;
+      reset();
+      // ONE NOISE BUDGET: a second noise kind inside 450ms stays silent —
+      // more weapons must never mean more buzz
+      assert(hapticGate('break', 1000), 'a kill buzzes when idle');
+      assert(!hapticGate('hit', 1200), 'a different noise kind inside the shared bucket must stay silent');
+      assert(!hapticGate('item', 1400), 'pickups ride the same noise budget');
+      assert(hapticGate('hit', 1460), 'the bucket reopens after 450ms');
+      // the charge arc is never throttled by combat noise
+      reset();
+      assert(hapticGate('break', 1000), 'noise at t=1000');
+      assert(hapticGate('full', 1200), 'the charge arc punches through the noise bucket');
+      // THE HOLD OWNS THE THUMB
+      reset();
+      chargeHeld = true;
+      assert(!hapticGate('break', 5000) && !hapticGate('hit', 6000)
+        && !hapticGate('item', 7000) && !hapticGate('tap', 8000),
+        'combat noise must stay silent during a hold');
+      assert(hapticGate('promote', 9000) && hapticGate('full', 9500)
+        && hapticGate('warn', 10000) && hapticGate('damage', 10500),
+        'the arc and true warnings still speak during a hold');
+      chargeHeld = false; G.charge = 0.5; // finger lifted, charge banked (toggle mode)
+      assert(!hapticGate('break', 12000), 'a banked charge still owns the thumb');
+      G.charge = 0;
+      reset();
+      assert(hapticGate('break', 20000), 'noise returns once the charge resolves');
+    } finally {
+      chargeHeld = heldReal; G.charge = chargeReal;
+      reset();
+    }
+    return 'noise kinds share a 450ms bucket · the arc punches through · hold mutes noise (held OR banked) · warnings always speak';
+  });
+
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
   // enemy ever fires (the director schedules no wave fire, boss volleys,
   // abilities, or beams) and the paddle has no gun (blasterArmed() is false, so

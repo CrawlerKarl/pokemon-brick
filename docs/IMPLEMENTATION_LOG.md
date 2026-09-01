@@ -46,9 +46,24 @@ ever). CLAUDE.md's boss-phases bullet corrected (it claimed ⅔/⅓ for all —
 junkie gauntlet legendaries split once at 50%), with the lesson recorded:
 a finale Sovereign's fall must always get its own readable beat.
 
+**Report 3 (same session, AFT-026b): "too much haptic feedback,
+especially as I get more weapons and hold the charge — multiple
+vibrations per hold, confusing."** Every damaging hit, kill, and pickup
+fires a haptic, and autonomous weapons (relic, missiles, chains) keep
+scoring THROUGH a charge hold — so the thumb reading the AFT-021 P8
+charge arc was buzzed by unrelated combat noise, and the buzz rate
+scaled with build size. The gate (setup.js, now a pure `hapticGate` the
+suite drives headless) gained two rules atop the per-kind cooldowns:
+THE HOLD OWNS THE THUMB (while a charge is armed — held or banked —
+tap/hit/break/item are muted outright; promote/full/resonant and true
+warnings still speak) and ONE NOISE BUDGET (those four kinds share a
+single 450ms bucket, so a six-weapon build buzzes no more often than a
+starter one).
+
 Coverage: the relay suite test now asserts (1) 50% HP never clears the
-finale and (2) the fall announces before the coda takes the screen.
-Suite 131/131, full gate green, labeled L6 baseline probe green
+finale and (2) the fall announces before the coda takes the screen; a
+new haptic-gate fixture locks the hold-mute and the shared budget.
+Suite 132/132, full gate green, labeled L6 baseline probe green
 (matrix-aft026-l6-probe; the L6-junkie near-band warn pre-exists).
 Verified visually: kill → fall beat (card + rings + slow-mo, no cut) →
 Hourseed reveal at 1.5s → coda → resolve; and the Forge held open through
