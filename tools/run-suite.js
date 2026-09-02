@@ -312,6 +312,11 @@ async function runScenes(cdp, port) {
     for (const sc of SCENES) {
       const res = await page.evaluate(`(() => {
         try {
+          // capture hygiene (harness-only, never game code): scenes share one
+          // frozen page, so a card announced by an earlier scene's launch
+          // (e.g. TRIAL MODE) would otherwise bleed into this capture — each
+          // scene starts announce-clean; its OWN setup may still announce.
+          G.announce = null; G.announceQueue.length = 0; G.combatNotice = null;
           ${sc.js}
           G.freeze = 999; render();
           const expectOk = ${sc.expect ? `!!(${sc.expect})` : 'true'};
