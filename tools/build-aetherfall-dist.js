@@ -313,6 +313,17 @@ fitting ships hand-finished WebP art in the same Relicforge style, with true
 prismatic RADIANT vessel forms. 100% vanilla JS + Canvas — no build step, no
 dependencies, no network calls.
 
+## Playing comfortably
+
+Built for phones first. **Settings → ACCESS** carries text size, background
+dimming, projectile outline strength, colorblind-safe threat colours,
+tap-toggle charge (no sustained hold), easier charge timing, and visual
+equivalents for key audio cues. **Settings → TOUCH** covers button size and
+opacity, follow speed, left-handed mirroring, and haptics. Every
+accessibility option is off by default and changes nothing until you reach
+for it. If the frame rate ever struggles on an older phone, set **EFFECTS
+QUALITY** to AUTO (the default, which adapts on its own) or pin MINIMAL.
+
 ## Running locally
 
 \`\`\`
