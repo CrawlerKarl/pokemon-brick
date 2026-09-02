@@ -61,15 +61,23 @@ the in-game HUD uses one health readout, identifies permanent partner elements
 versus timed items, shows Mega charge as a percentage, and keeps region rules
 and type-matchup feedback in dedicated rails away from the bricks. Mobile
 players can tune follow speed, button size and opacity, mirror controls for
-left-handed play, and enable haptics directly from the pause screen.
+left-handed play, and enable haptics directly from the pause screen. The
+settings panel paginates into four pages — GAME / TOUCH / SAVE / ACCESS —
+and the ACCESS page (AFT-010 stage 1) adds text size, background dimming,
+outline strength, colorblind-safe threat colours, tap-toggle charge, easier
+charge timing, and visual sound cues. Every one of them is inert at its
+default, so an untouched install plays exactly as it always did.
 During live combat no banner sits in the flight lane: non-boss announcements
 render as a compact strip under the HUD (`drawAnnounceStrip`; boss-round
 reveals pass `hero` to `setAnnounce` and keep the centre card). STARFIGHTER
 first installs get a five-step coach (`G.jCoach`: fly → tap-fire → charge →
 orb → mega, once per install via `pkbrk-jcoach`), the FIRE pad always names
 its state (`TAP FIRE / AUTO ON / % / RELEASE! / HEAT HIGH / COOLING Ns` +
-a `HOLD = CHARGE` subline), Mega readiness fires a distinct haptic + button
-pulse every fill, and all four safe-area insets (`SAFE_T/L/R/B`) keep the
+a `HOLD = CHARGE` subline, or `TAP = CHARGE`/`TAP = FIRE` under
+tap-toggle), Mega readiness fires a distinct haptic + button
+pulse every fill, haptics speak a deliberate language rather than one buzz
+per hit (`hapticGate`: ambient ticks mute while a charge is armed and share
+one budget, so the charge arc stays legible at any build size), and all four safe-area insets (`SAFE_T/L/R/B`) keep the
 HUD and corner controls clear of notches and rounded corners. New
 players who request reduced motion at the device level automatically start
 with screen shake and flashes reduced; saved in-game choices still take
@@ -1077,9 +1085,9 @@ knockouts). All LOCAL-ONLY — nothing is transmitted. Surfaces:
 1. Confirm boss-level smoothness on the owner's real phone. Two performance
    rounds are shipped; the cadence-driven fallback is the latest and still
    needs hardware confirmation.
-2. If smooth, begin the P1 track in backlog order: AFT-007 ORBITAL RELIC →
-   AFT-008 balance matrix → AFT-009 constellation redesign → AFT-019
-   first-session phone pass → AFT-010 accessibility → AFT-011 loading/WebP →
+2. The P1 track through AFT-011, AFT-025, AFT-010 stage 1 and AFT-026/026b
+   is shipped (see `docs/IMPLEMENTATION_LOG.md`). What remains: AFT-019's
+   real-device pass, then AFT-010 stage 2 (the DOM accessibility layer) and
    AFT-012 visual integration.
 3. If boss lag persists, use `DEV.perf()` and the boss storm ledger before
    adding deeper quality rungs. The handoff records the ordered fallback

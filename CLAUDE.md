@@ -154,7 +154,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 131 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 132 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
@@ -635,6 +635,21 @@ phone — flag anything only verifiable there.
   levels + 1 Focus and retries (half-res is the AFT-023 spiral-breaker). Every draft surface draws `draftCardModel` (the five-tag card
   anatomy). Suite + gate scenes (stage-dividend, forge-menu) lock all of
   this.
+- **A DECISION SURFACE WAITS FOR THE PLAYER — it never auto-advances
+  (AFT-026).** The state-'upgrade' breather ("no draftable upgrades left →
+  brief breather, then straight on", update.js) must except every live
+  decision, and it now excepts `G.forge` explicitly: the Forge's action
+  MENU legitimately has NO dealt hand (`G.upgradeChoices` is null until
+  `forgeChoose`), so the old `!G.upgradeChoices` test silently ate the
+  realm's one decision 2.2s after it opened — for every player, every
+  realm, from AFT-009R until the owner reported it. Any NEW surface that
+  presents choices without pre-dealing `G.upgradeChoices` must be added to
+  that guard. **Test the IDLE, not just the pick:** the defect was
+  invisible because the gate scene screenshots a hand-built state, the
+  suite called `forgeChoose` synchronously, and the baseline bot answers
+  on the first tick — nothing ever let `update()` run while the menu sat
+  undecided. The suite now idles 5 sim-seconds at the real
+  clear→results→Forge flow.
 - **THE STAGE DIVIDEND owns draft cadence (AFT-024, 2026-07-27) — one
   guaranteed draft per stage clear, and NOTHING interrupts combat.** Every
   ordinary stage clear deals a hand at the results beat
@@ -770,6 +785,19 @@ phone — flag anything only verifiable there.
   squishes inside the circle at any buttonScale. All
   four safe-area insets (`SAFE_T/L/R/B`, setup.js) shift the HUD bar and
   corner controls; keep new top/edge-anchored UI behind them.
+- **HAPTICS ARE A LANGUAGE, NOT A HIT COUNTER (AFT-026b).** All feedback
+  routes through `hapticGate(kind, now)` (setup.js — a PURE function so the
+  suite drives it headless; `haptic()` is the thin device wrapper). Two
+  rules on top of the per-kind cooldowns: (1) **the hold owns the thumb** —
+  while a charge is armed (`chargeHeld` OR a banked `G.charge`, so
+  tap-toggle counts), the ambient kinds (tap/hit/break/item) are muted
+  entirely, because autonomous weapons keep scoring through a hold and the
+  charge ARC (promote → full → resonant) must stay legible; (2) **one noise
+  budget** — those four ambient kinds share a single 450ms bucket, so build
+  size can never raise the buzz rate. True warnings (warn/damage/boss/mega)
+  ALWAYS speak, hold or not. A new haptic is either an arc/warning kind or
+  it joins `HAPTIC_NOISE_KINDS` — never a fourth category that bypasses
+  both rules.
 
 - **Accessibility rides the ACCESS settings tab (AFT-010 stage 1) and every
   option is INERT at its default** — a fresh install must play bit-identically

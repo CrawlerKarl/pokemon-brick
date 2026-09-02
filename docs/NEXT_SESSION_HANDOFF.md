@@ -1,8 +1,8 @@
 # HANDOFF — resume here
 
-> ## STATUS (2026-08-31 closeout) — everything below is SHIPPED
+> ## STATUS (2026-09-01 closeout) — everything below is SHIPPED
 >
-> **Suite 131/131 · gate GREEN (~55s full, 29 scenes × 2 viewports).**
+> **Suite 132/132 · gate GREEN (~52s full, 29 scenes × 2 viewports).**
 > The three newest rounds:
 > **AFT-011** (mobile loading: 690 WebP / 10.3 MB dist, realm-first art
 > streaming, bounded decoded caches — found complete-but-uncommitted from
@@ -24,7 +24,11 @@
 > menu), and the relay Sovereign's death cut straight to the Hourseed
 > reveal so the kill never read (players anchor on the 50% LAST STAND
 > flash — junkie gauntlet legendaries are TWO-phase; the fall now gets
-> slow-mo + a preempting FALLS card, reveal deferred 1.5s).
+> slow-mo + a preempting FALLS card, reveal deferred 1.5s). And
+> **AFT-026b**: haptics were buzzing once per hit/kill/pickup, so a
+> big build drowned the charge arc — ambient ticks now mute while a
+> charge is armed and share one 450ms budget (`hapticGate`, a pure
+> function the suite drives headless).
 >
 > - workshop `CrawlerKarl/pokemon-brick` →
 >   https://crawlerkarl.github.io/pokemon-brick/
@@ -177,9 +181,22 @@
 >
 > </details>
 
-**NEXT UP:** AFT-019's remainder (a real-device first-session pass — the
-simulator/browser work is done, the phone judgment is not) and AFT-010
-(accessibility). See "Pick up here" below.
+**NEXT UP:** AFT-019's remainder — the real-device pass. Four things now
+wait on the owner's phone rather than on code: (1) the region-1 boss
+frame rate after AFT-025, (2) the Aether Forge is actually usable after
+AFT-026, (3) the relay Sovereign's fall reads as a kill, (4) the haptics
+feel calm after AFT-026b. After that, AFT-010 STAGE 2 (the DOM /
+screen-reader accessibility layer) is the next build round. See "Pick up
+here" below.
+
+**A caution learned on 2026-09-01 (AFT-026):** three of the last four
+defects were INVISIBLE to a green gate — the Forge auto-skip (nothing
+ever idled at a decision surface), the relay fall (nothing asserted what
+the player SEES between a kill and the next scene), and the haptic
+pile-up (nothing counted feedback events per unit of player attention).
+When a report says "it felt wrong," check what the harness never
+simulates — a hesitating player, an un-tapped screen, a full build — not
+just what it asserts.
 
 Work in `/Users/andariel/Downloads/Pokemon Brick Breaker and Alien Invader`.
 
@@ -411,7 +428,10 @@ reopens it.
 ✅ AFT-011  MOBILE LOADING + WEBP (690 WebP; current-first stream; bounded caches)
 ✅ AFT-025  THE FLAT FRAME (per-shot blur baked; overdraw budgets; rung 3 + MINIMAL)
 ✅ AFT-010 STAGE 1 (the ACCESS settings tab — 7 settings-level accessibility wins)
-→ AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY (now incl. confirming AFT-025 killed the boss lag)
+✅ AFT-026  OWNER PLAYTEST (the Forge auto-skip; the relay Sovereign's fall beat)
+✅ AFT-026b HAPTIC CALM (the hold owns the thumb; one shared noise budget)
+→ AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY (now incl. confirming AFT-025 killed the boss lag,
+   the Forge is usable, the relay fall reads, and the haptics feel calm)
 → AFT-010 STAGE 2 (the DOM/screen-reader layer for menus/results/codex/web)
 → AFT-012 visual pass
 ```
@@ -474,7 +494,7 @@ actual phone.
 Notes so you don't redo finished work:
 
 - **`npm test` is the gate** (~35s full, `--fast` ~15s, `--suite` ~12–18s):
-  syntax → assets → **131 invariants** headless → both-skin + dist boots →
+  syntax → assets → **132 invariants** headless → both-skin + dist boots →
   the vocabulary scan (no player-facing MEGA, and since AFT-023b no
   POKÉMON/POKÉDEX/POKEBALL in any copy table or `SKIN.strings`) → RESIDUE →
   **29 mobile scenes × 2 viewports (58 screenshots** → `.gate-shots/` +

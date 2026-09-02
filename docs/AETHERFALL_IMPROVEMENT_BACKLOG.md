@@ -9,7 +9,7 @@
 >
 > | This doc says | Reality as of 2026-07-23 |
 > |---|---|
-> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~35s**, **129 invariants**, both-skin + dist boots, vocabulary scan, **28 mobile scenes × 2 viewports** with label assertions, wave + boss storm ledgers |
+> | "`npm test` is a placeholder echo … ~20 minutes, manual" | `npm test` is the real headless gate: **~52s**, **132 invariants**, both-skin + dist boots, vocabulary scan, **29 mobile scenes × 2 viewports** with label assertions, wave + boss storm ledgers (+ the AFT-025 overdraw/dense-shot budgets) |
 > | AFT-001/002/003/004/005A/005B/006/017/018 pending | **all shipped** — see `IMPLEMENTATION_LOG.md` rounds 2026-07-22f … 2026-07-23c |
 > | "boss exports are 192×192; high-res not packaged" | 43 × **512px** boss reveal portraits ship and drive the reveal scene |
 > | oath on a `[0.42, 0.72, 1]` curve | replaced by per-channel `OATH_CH` curves (tint/rim/aura/fitting/blend/runes) |
@@ -31,8 +31,14 @@
 > ~~AFT-024 THE STAGE DIVIDEND (one draft per stage clear; the mid-combat
 > draft path deleted)~~ **shipped 2026-07-27 (suite 129/129; baseline
 > GREEN, 162 scenarios, `baselines/matrix-aft024.json`)** →
-> **AFT-019 real-device remainder (NEXT)** → AFT-010 → AFT-011 →
-> AFT-012. The executed AFT-021 spec is
+> ~~AFT-011 mobile loading + WebP~~ **shipped 2026-08-30** →
+> ~~AFT-025 THE FLAT FRAME (the boss-lag fix: baked projectile halos,
+> the overdraw collapse, rung 3 + MINIMAL)~~ / ~~AFT-010 stage 1 (the
+> ACCESS settings tab)~~ / ~~AFT-026 + 026b (owner playtest: the Forge
+> auto-skip, the relay fall beat, calmer haptics)~~ **shipped
+> 2026-08-31 → 09-01 (suite 132/132)** →
+> **AFT-019 real-device remainder (NEXT)** → AFT-010 stage 2 (the DOM
+> accessibility layer) → AFT-012. The executed AFT-021 spec is
 > `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its matrix
 > evidence is `baselines/AFT021_MATRIX_REPORT.md`.
 >
@@ -87,15 +93,16 @@ items have since shipped.
   codex full-size sprite gallery, neutral-until-sworn selection, and
   per-channel `OATH_CH` evolution curves for tint, rim, aura, fittings,
   radiant blend, and runes.
-- The release gate passes 129/129 invariants (AFT-021 added the combat-state
+- The release gate passes 132/132 invariants (AFT-021 added the combat-state
   safety, visible-clear, overlay-collision, charge/projectile-time, and
   verb-results contracts; AFT-022 added the vent-assist, wrap, left-handed,
   footprint-clamp, offer-tap, notice-hygiene and seeded-launch determinism
   fixtures; AFT-009R added the card-anatomy, resonance, Forge, journal and
   Focus/Reforge/v5-save fixtures) and runs headlessly via `npm test`
-  in about 30–35s. It also verifies assets, both editions, the standalone
-  distribution, vocabulary/RESIDUE, 50 state-proving mobile scenes, and wave +
-  boss stress ledgers. `npm run baseline` replays 162 deterministic campaign
+  in about 52s. It also verifies assets, both editions, the standalone
+  distribution, vocabulary/RESIDUE, 29 state-proving mobile scenes at two
+  viewports, and wave + boss stress ledgers (with the AFT-025 painted-screens
+  and dense-shot budgets). `npm run baseline` replays 162 deterministic campaign
   scenarios with the AFT-021 duration/spread/recovery budgets enforced.
 - The standalone runtime payload is about 37.4 MiB excluding its nested Git
   metadata, with about 36.1 MiB under `dist-aetherfall/art/`.
