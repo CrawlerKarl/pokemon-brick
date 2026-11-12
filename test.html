@@ -210,25 +210,26 @@ window.requestAnimationFrame = function () { return 0; };
       (FORCED_VIEWPORT ? ' (viewport reported 0×0 — forced virtual 900×700)' : '');
   });
 
-  test('mobile haptics stay brief and rate-limited across the game', async () => {
+  test('mobile haptics are essential-only, brief, and globally rate-limited', async () => {
     const motorOnMs = pattern => (Array.isArray(pattern) ? pattern : [pattern])
       .reduce((total, duration, i) => total + (i % 2 === 0 ? duration : 0), 0);
     const kinds = Object.keys(HAPTIC_PATTERNS);
-    assert(kinds.length === 11, 'a haptic event is missing from the shared feedback table');
-    assert(HAPTIC_GLOBAL_COOLDOWN >= 120,
+    assert(kinds.join() === 'ui,charge,ready,warning,damage,success,ability',
+      'the essential-only haptic vocabulary drifted: ' + kinds.join());
+    assert(HAPTIC_GLOBAL_COOLDOWN >= 320 && HAPTIC_CRITICAL_COOLDOWN >= 180,
       'different feedback events can stack too quickly (' + HAPTIC_GLOBAL_COOLDOWN + 'ms)');
-    assert(HAPTIC_PATTERNS.tap <= 4 && HAPTIC_PATTERNS.hit <= 3 && HAPTIC_PATTERNS.break <= 6,
-      'routine touch/combat feedback is stronger than the restrained mobile budget');
+    assert(HAPTIC_PATTERNS.ui <= 3 && HAPTIC_PATTERNS.charge <= 3,
+      'routine/timing feedback is stronger than the restrained mobile budget');
     for (const kind of kinds) {
-      assert(motorOnMs(HAPTIC_PATTERNS[kind]) <= 32,
+      assert(motorOnMs(HAPTIC_PATTERNS[kind]) <= 22,
         kind + ' keeps the motor active for ' + motorOnMs(HAPTIC_PATTERNS[kind]) + 'ms');
-      assert(HAPTIC_COOLDOWNS[kind] >= 160,
+      assert(HAPTIC_COOLDOWNS[kind] >= 320,
         kind + ' can repeat after only ' + HAPTIC_COOLDOWNS[kind] + 'ms');
     }
-    assert(HAPTIC_COOLDOWNS.damage >= 380 && HAPTIC_COOLDOWNS.boss >= 440
-      && HAPTIC_COOLDOWNS.mega >= 520,
+    assert(HAPTIC_COOLDOWNS.damage >= 1100 && HAPTIC_COOLDOWNS.warning >= 1600
+      && HAPTIC_COOLDOWNS.ability >= 2000,
     'major combat feedback does not have enough recovery time');
-    return 'routine ticks 3–6ms · major patterns ≤32ms motor-on · 120ms global floor';
+    return '7 meaningful events · no hit/kill/pickup vocabulary · ≤22ms motor-on · 320ms global floor';
   });
 
   // 1b) every pilot attack shape renders at every evolution tier — a tier-III
@@ -656,9 +657,14 @@ window.requestAnimationFrame = function () { return 0; };
       // AFT-009R P2: the four-path cap — a fresh path is only an eligible
       // continuation while a slot remains open
       const ownedPathN2 = PATH_KEYS.filter(k => pathLvl(k) > 0).length;
+      // AFT-027: a hand deals at most ONE fusion/apex (asserted just below), so
+      // the "big" pool can fill a single slot however many are eligible. The
+      // old sum counted three eligible fusions as three fillable slots and
+      // failed ~1% of runs on a legal hand (1 path + 1 fusion + 1 satellite;
+      // reproduced under a 6000-build fuzz — a test-accounting bug, not a game one).
       const authoredEligible = PATH_KEYS.filter(k => pathLvl(k) < 4 && (pathLvl(k) > 0 || ownedPathN2 < 4)).length +
-        WEB_BRIDGES.filter(bridgeEligible).length + WEB_FUSIONS.filter(fusionEligible).length +
-        WEB_APEXES.filter(apexEligible).length;
+        WEB_BRIDGES.filter(bridgeEligible).length +
+        Math.min(1, WEB_FUSIONS.filter(fusionEligible).length + WEB_APEXES.filter(apexEligible).length);
       for (const c of cs) {
         if (c.pathKey) {
           assert(pathLvl(c.pathKey) < 4 && c.tierIdx === pathLvl(c.pathKey),
@@ -3157,49 +3163,36 @@ window.requestAnimationFrame = function () { return 0; };
     return 'font interception scales + identity at default · toggle-charge taps start/release · easy-charge assists gated · hc bake rekeys · dim wash clean · cb greens→blues, types untouched · heat-beep floater gated · ACCESS rows wired';
   });
 
-  // AFT-026b: every hit/kill/pickup fires a haptic and autonomous weapons
-  // keep scoring through a charge hold — the owner felt "multiple vibrations
-  // per charge hold." The gate mutes ambient combat noise while a charge is
-  // armed and puts all noise kinds on ONE shared budget.
-  test('AFT-026b: haptics — the hold owns the thumb, combat noise shares one budget', async () => {
-    const heldReal = typeof chargeHeld !== 'undefined' ? chargeHeld : false;
-    const chargeReal = G.charge;
+  // AFT-026c: rate-limiting noisy combat telemetry was not enough on a real
+  // phone. The vocabulary itself is now essential-only: no hit, ordinary
+  // kill, pickup, paddle-return, promotion or resonant-release events exist.
+  test('AFT-026c: haptics — essential events only, urgent feedback may interrupt', async () => {
     const reset = () => {
-      lastHapticAt = -Infinity; lastNoiseHapticAt = -Infinity;
+      lastHapticAt = -Infinity; lastHapticPriority = -Infinity;
       for (const k of Object.keys(lastHapticByKind)) delete lastHapticByKind[k];
     };
     try {
-      chargeHeld = false; G.charge = 0;
       reset();
-      // ONE NOISE BUDGET: a second noise kind inside 450ms stays silent —
-      // more weapons must never mean more buzz
-      assert(hapticGate('break', 1000), 'a kill buzzes when idle');
-      assert(!hapticGate('hit', 1200), 'a different noise kind inside the shared bucket must stay silent');
-      assert(!hapticGate('item', 1400), 'pickups ride the same noise budget');
-      assert(hapticGate('hit', 1460), 'the bucket reopens after 450ms');
-      // the charge arc is never throttled by combat noise
+      assert(!hapticGate('hit', 1000) && !hapticGate('break', 2000)
+        && !hapticGate('item', 3000) && !hapticGate('tap', 4000)
+        && !hapticGate('promote', 5000) && !hapticGate('resonant', 6000),
+      'retired combat-noise events must fail silent');
+
       reset();
-      assert(hapticGate('break', 1000), 'noise at t=1000');
-      assert(hapticGate('full', 1200), 'the charge arc punches through the noise bucket');
-      // THE HOLD OWNS THE THUMB
-      reset();
-      chargeHeld = true;
-      assert(!hapticGate('break', 5000) && !hapticGate('hit', 6000)
-        && !hapticGate('item', 7000) && !hapticGate('tap', 8000),
-        'combat noise must stay silent during a hold');
-      assert(hapticGate('promote', 9000) && hapticGate('full', 9500)
-        && hapticGate('warn', 10000) && hapticGate('damage', 10500),
-        'the arc and true warnings still speak during a hold');
-      chargeHeld = false; G.charge = 0.5; // finger lifted, charge banked (toggle mode)
-      assert(!hapticGate('break', 12000), 'a banked charge still owns the thumb');
-      G.charge = 0;
-      reset();
-      assert(hapticGate('break', 20000), 'noise returns once the charge resolves');
+      assert(hapticGate('ui', 1000), 'a UI decision should speak');
+      assert(!hapticGate('charge', 1200), 'routine events must respect the 320ms global floor');
+      assert(hapticGate('charge', 1320), 'the global floor should reopen at 320ms');
+      // A real hit is more important than the charge tick and may interrupt
+      // it after the smaller critical floor.
+      assert(hapticGate('damage', 1500), 'urgent damage should interrupt lower-priority feedback after 180ms');
+      assert(!hapticGate('warning', 1700), 'lower-priority warning must not stack onto damage');
+      assert(hapticGate('warning', 1820), 'warning should speak after the normal global floor');
+      assert(!hapticGate('warning', 3000), 'warning kind cooldown must suppress repetition');
+      assert(hapticGate('warning', 3420), 'warning cooldown should eventually reopen');
     } finally {
-      chargeHeld = heldReal; G.charge = chargeReal;
       reset();
     }
-    return 'noise kinds share a 450ms bucket · the arc punches through · hold mutes noise (held OR banked) · warnings always speak';
+    return 'retired noise fails silent · 320ms global floor · urgent damage can preempt after 180ms · long danger cooldowns';
   });
 
   // 2b-ii) CLASSIC IS CALM (2026 redesign): BREAKER is a pure ball game — no
@@ -3245,6 +3238,94 @@ window.requestAnimationFrame = function () { return 0; };
       'spawnEnemyShot leaked a shot in classic');
     SETTINGS.starter = 'none'; G.starter = null; // no partner mods leak forward
     return 'no arming source works · zero lasers/charge · director fires nothing over 240f · ball-only loss';
+  });
+
+  // AFT-027: BREAKER's wall GROWS with the journey. The shared thinning
+  // budget trades boxed bricks for flyers — classic has none, so its walls
+  // were just shrinking (6–12 bricks from realm 6 on). Rows now climb, the
+  // viewport still caps them, and BLASTER's wall keeps the old thinning.
+  test('AFT-027: Breaker walls grow with the journey; Blaster walls keep thinning', async () => {
+    SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    const wall = (mode, lvl, seed) => {
+      SETTINGS.mode = mode;
+      resetRun(lvl, true, { seed });
+      const b = G.bricks.filter(x => !x.dead && !x.flight);
+      return { n: b.length, rows: b.length ? Math.max(...b.map(x => x.row)) + 1 : 0,
+        flyers: G.bricks.filter(x => !x.dead && x.flight).length,
+        low: b.length ? Math.max(...b.map(x => x.hy + x.h / 2)) : 0 };
+    };
+    const mean = (mode, lvl, key) => { let s = 0; for (let i = 0; i < 6; i++) s += wall(mode, lvl, 'AFT027-W' + i)[key]; return s / 6; };
+    const early = mean('classic', 1, 'rows'), mid = mean('classic', 13, 'rows'), late = mean('classic', 25, 'rows');
+    assert(mid >= early && late >= mid, 'classic rows must never shrink across the journey: ' + early + ' → ' + mid + ' → ' + late);
+    const cap = Math.max(2, Math.floor((H * 0.58 - Math.max(110, Math.min(190, Math.round(H * 0.15)))) / (G.brickH + Math.max(9, Math.min(13, G.brickH * 0.3)))));
+    if (cap >= 5) assert(late >= early + 2, 'a realm-9 wall is not meaningfully deeper than realm 1 (' + early + ' → ' + late + ')');
+    assert(mean('classic', 25, 'n') > mean('classic', 1, 'n'), 'late Breaker walls field no more bricks than the opening');
+    for (const lvl of [1, 8, 14, 20, 26]) {
+      const w = wall('classic', lvl, 'AFT027-C' + lvl);
+      assert(w.flyers === 0, 'L' + lvl + ': classic built ' + w.flyers + ' flyers');
+      assert(w.low <= H * 0.58 + G.brickH, 'L' + lvl + ': the wall reaches ' + Math.round(w.low) + ' — the lower field must stay open');
+      assert(w.rows <= 7, 'L' + lvl + ': ' + w.rows + ' rows');
+    }
+    // durability: its own curve, bounded (depth is more wall, never sponges)
+    assert(classicWallMul(0) === 1 && classicWallMul(1) === 1, 'the opening realms must keep the shared brick numbers');
+    for (let r = 3; r < 9; r++) assert(classicWallMul(r) >= classicWallMul(r - 1), 'classicWallMul must rise from realm 3 on');
+    assert(classicWallMul(8) <= 2, 'classicWallMul past ×2 is a sponge, not depth');
+    // BLASTER shares the generator but NOT the growth — its wall still thins toward flyers
+    assert(mean('blaster', 25, 'rows') <= mean('blaster', 1, 'rows'), 'the classic row growth leaked into BLASTER walls');
+    SETTINGS.mode = 'classic'; SETTINGS.starter = 'none'; G.starter = null;
+    return 'rows ' + early.toFixed(1) + ' → ' + mid.toFixed(1) + ' → ' + late.toFixed(1) + ' · lower field open · no flyers · blaster untouched';
+  });
+
+  // AFT-027 (the feel pass): presentation-only rules. Combat text never
+  // prints on itself, kills in one spot SUM into one number, the combo calls
+  // out its tiers instead of every fifth kill, and the screen flash carries
+  // meaning by colour (red is reserved for being hurt).
+  test('AFT-027: combat text de-clutters, combo tiers call out, flash colour means something', async () => {
+    SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'none';
+    resetRun(5, true, { seed: 'AFT027-FEEL' });
+    G.state = 'play'; G.stateT = 9; G.engageHold = 0;
+    // 1) a repeated call-out refreshes; it never stacks a copy
+    G.floaters.length = 0;
+    addFloater(200, 300, 'PRISMSTORM!', '#64ffda', 14);
+    for (let i = 0; i < 12; i++) update(1 / 60);
+    addFloater(206, 296, 'PRISMSTORM!', '#64ffda', 14);
+    assert(G.floaters.filter(f => f.text === 'PRISMSTORM!').length === 1, 'a repeated call-out printed twice');
+    assert(G.floaters[0].life > 1 && G.floaters[0].pop === 1, 'the refreshed call-out did not re-pop');
+    // 2) different lines in one spot settle into separate lanes (real box gap)
+    G.floaters.length = 0;
+    const a = addFloater(200, 300, 'SALVAGE VOLLEY!', '#fff', 26), b = addFloater(204, 302, 'PRISMSTORM PRIMED', '#fff', 15);
+    assert(Math.abs(a.y - b.y) >= (26 + 15) * 0.58 - 0.01, 'two call-outs overlap: ' + a.y + ' vs ' + b.y);
+    // 3) a local burst of kills is ONE growing number
+    G.floaters.length = 0;
+    addScoreFloater(200, 300, 2400); addScoreFloater(230, 320, 2400); addScoreFloater(180, 280, 3200);
+    const sc = G.floaters.filter(f => f.score);
+    assert(sc.length === 1 && sc[0].text === '+8000' && sc[0].n === 3, 'score pops did not sum: ' + sc.map(f => f.text).join(','));
+    addScoreFloater(200, 300, 1000, true); // a boss score stands alone
+    assert(G.floaters.filter(f => f.score).length === 2, 'a boss score merged into a crowd pop');
+    for (let i = 0; i < 40; i++) addFloater(40 + i * 7, 120 + i * 9, 'T' + i, '#fff', 12);
+    assert(G.floaters.length <= 14, 'the floater cap leaked: ' + G.floaters.length);
+    // 4) combo tiers: thresholds only, never the old every-fifth-kill echo
+    assert(comboTierIdx(9) === 0 && comboTierIdx(10) === 1 && comboTierIdx(25) === 2 && comboTierIdx(50) === 3 && comboTierIdx(100) === 4, 'combo tier thresholds moved');
+    assert(!comboMilestone(5) && !comboMilestone(15) && comboMilestone(10) && comboMilestone(25) && comboMilestone(150), 'combo milestones wrong');
+    const victim = () => G.bricks.find(x => !x.dead && !x.isBoss && !x.dormant && !x.crosser && !x.friendly);
+    G.floaters.length = 0; G.combo = 4;
+    let v = victim(); damageBrick(v, 9999, v.bx, v.by, null, { source: 'bolt' });
+    assert(G.combo === 5 && !G.floaters.some(f => /^COMBO/.test(f.text)), 'combo x5 still prints a floater');
+    G.combo = 9; v = victim(); damageBrick(v, 9999, v.bx, v.by, null, { source: 'bolt' });
+    assert(G.combo === 10 && G.floaters.some(f => f.text === 'COMBO x10'), 'the x10 tier was not called out');
+    assert(G.comboTierT === 1, 'the HUD tier flare did not arm');
+    // 5) flash colour: Surge is gold, a hit is red — and a weaker flash never recolours a stronger one
+    G.flashT = 0; G.flashCol = null;
+    flashFx(0.3, '1,2,3'); flashFx(0.1, '9,9,9');
+    assert(G.flashCol === '1,2,3' && G.flashT === 0.3, 'a weaker flash stole the colour');
+    G.flashT = 0; G.mega = 1; G.megaT = 0; tryMega();
+    assert(G.megaT > 0 && G.flashCol === '255,213,79' && G.flashT > 0, 'Surge ignition did not flash gold');
+    G.megaT = 0; G.invuln = 0; G.shieldCharges = 0; G.lives = G.livesMax = 4; G.combo = 12; G.floaters.length = 0;
+    loseLife('TEST HIT');
+    assert(G.flashCol === FLASH_HURT && G.flashT >= 0.35, 'a real hit must flash hurt-red');
+    assert(G.floaters.some(f => /COMBO x12 BROKEN/.test(f.text)), 'a broken streak was not named');
+    SETTINGS.mode = 'classic'; SETTINGS.starter = 'none'; G.starter = null;
+    return 'refresh-not-stack · lane settle · summed score pops · tier call-outs at 10/25/50/100 · gold Surge / red hurt';
   });
 
   // 2b-iii) CLASSIC OFFENSE RESKIN: with no gun, the VOLLEY/IMPACT capstones
@@ -3615,6 +3696,91 @@ window.requestAnimationFrame = function () { return 0; };
   test('flyer↔flyer non-overlap: junkie L4', flyerFlyerTest('junkie', 4));
   test('flyer↔flyer non-overlap: blaster L8', flyerFlyerTest('blaster', 8));
 
+  // AFT-028 THE MOTION PASS — "the enemies feel drunk" had three real causes
+  // and each one gets a guard here: (1) reinforcements dealt onto slots too
+  // tight to hold them, so the solver jostled the pack every frame; (2) a
+  // squad's solver offset being dropped in ONE frame when its maneuver ended
+  // (a ~10px snap); (3) dives built from two curves meeting in a hard V.
+  // Smoothness is measured as the per-frame SECOND DIFFERENCE of position —
+  // a velocity snap of N px/frame shows up as N.
+  test('AFT-028: enemy motion — rigid reinforcement rank, no maneuver snap, smooth dives, hits never move the sim', async () => {
+    const mode0 = SETTINGS.mode;
+    try {
+      SETTINGS.mode = 'junkie';
+      // ---- 1) the RANK: every reinforcement owns a slot the solver accepts
+      for (const lvl of [5, 14, 23]) {
+        resetRun(lvl, true);
+        G.state = 'play';
+        for (const b of G.bricks) b.dead = true;
+        spawnReinforcement();
+        const rk = G.bricks.filter(b => !b.dead && b.flight && b.flight.sq === 99);
+        assert(rk.length >= 8, 'L' + lvl + ': no reinforcement flight spawned');
+        assert(rk.every(b => b.flight.kind === 'rank' && b.flight.phase === 0), 'L' + lvl + ': reinforcements are not one rigid rank');
+        let worst = Infinity;
+        for (let i = 0; i < rk.length; i++) for (let j = i + 1; j < rk.length; j++) {
+          const a = rk[i], b = rk[j];
+          const d = Math.hypot(a.flight.gx - b.flight.gx, a.flight.gy - b.flight.gy);
+          const minD = (Math.min(a.w, a.h) + Math.min(b.w, b.h)) * 0.7;
+          worst = Math.min(worst, d - minD);
+        }
+        assert(worst >= -0.5, 'L' + lvl + ': rank slots are tighter than the separation solver allows (' + worst.toFixed(1) + 'px) — the pack will jostle');
+        for (const b of rk) {
+          const x0 = b.flight.cx + b.flight.gx;
+          assert(x0 - b.flight.rx - b.w / 2 >= 0 && x0 + b.flight.rx + b.w / 2 <= W, 'L' + lvl + ': a rank file patrols off-screen');
+        }
+      }
+      // ---- 2) a maneuver ending never snaps the squad back onto its slots
+      resetRun(5, true);
+      G.state = 'play'; G.lives = 9; G.divers = false; G.maneuverCD = 99;
+      await runFrames(60 * 6, () => { G.lives = 9; G.invuln = 1; G.maneuverCD = 99; G.enemyShots.length = 0; });
+      const riders = G.bricks.filter(b => !b.dead && b.flight && b.flight.state >= 2 && !b.crosser);
+      assert(riders.length >= 4, 'no settled formation to maneuver');
+      G.maneuver = { sq: riders[0].flight.sq, kind: 'scatter', t: 0, dur: 2.6 }; // the real scatter length
+      const prev = new Map(); let snap = 0, sawOffset = 0;
+      await runFrames(200, () => {
+        G.lives = 9; G.invuln = 1; G.maneuverCD = 99; G.enemyShots.length = 0;
+        for (const b of riders) {
+          if (b.dead) continue;
+          sawOffset = Math.max(sawOffset, Math.abs(b.sepX || 0) + Math.abs(b.sepY || 0));
+          const p = prev.get(b) || [];
+          if (p.length === 2) snap = Math.max(snap, Math.hypot(b.bx - 2 * p[1][0] + p[0][0], b.by - 2 * p[1][1] + p[0][1]));
+          p.push([b.bx, b.by]); if (p.length > 2) p.shift(); prev.set(b, p);
+        }
+      });
+      assert(!G.maneuver, 'the scatter never ended');
+      assert(snap < 1.6, 'a rider snapped ' + snap.toFixed(1) + 'px/frame² across a maneuver (start or end)');
+      // ---- 3) the dive: one smooth move, never below its floor
+      const dvb = G.bricks.find(b => !b.dead && b.flight && b.flight.state >= 2 && !b.crosser);
+      assert(dvb, 'no rider to dive');
+      dvb.dive = { t: 0, dur: 2.9, dir: 1, tx: W / 2 };
+      let dsnap = 0, low = -Infinity; const dp = [];
+      await runFrames(190, () => {
+        G.lives = 9; G.invuln = 1; G.maneuverCD = 99; G.enemyShots.length = 0; G.diveCD = 99;
+        if (dvb.dead) return false;
+        low = Math.max(low, dvb.by + G.fy);
+        if (dp.length === 2) dsnap = Math.max(dsnap, Math.hypot(dvb.bx - 2 * dp[1][0] + dp[0][0], dvb.by - 2 * dp[1][1] + dp[0][1]));
+        dp.push([dvb.bx, dvb.by]); if (dp.length > 2) dp.shift();
+      });
+      assert(!dvb.dive, 'the dive never completed');
+      assert(dsnap < 2.2, 'the dive has a velocity snap (' + dsnap.toFixed(1) + 'px/frame²)');
+      assert(low <= PADDLE_Y() - 130 + 0.5, 'the diver dipped below its floor into the ship band');
+      // ---- 4) a hit is felt in the DRAW, never in the sim; riders stay upright
+      const tgt = G.bricks.find(b => !b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.crosser && b !== dvb) || dvb;
+      tgt.hp = tgt.maxHp = 50;
+      const bx0 = tgt.bx, by0 = tgt.by;
+      damageBrick(tgt, 1, tgt.bx + G.fx, tgt.by + G.fy + 200);
+      assert(tgt.bx === bx0 && tgt.by === by0, 'a hit moved the enemy in the simulation');
+      assert(Number.isFinite(tgt.kx) && Number.isFinite(tgt.ky) && tgt.ky < 0, 'a shot from below did not kick the sprite upward (' + tgt.kx + ',' + tgt.ky + ')');
+      let lean = 0;
+      await runFrames(120, () => {
+        G.lives = 9; G.invuln = 1; G.maneuverCD = 99; G.enemyShots.length = 0; G.diveCD = 99;
+        for (const b of G.bricks) if (!b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.entry && !b.flight.entering && !b.crosser) lean = Math.max(lean, Math.abs(b.bank || 0));
+      });
+      assert(lean <= 0.0701, 'a rider holding formation leaned ' + lean.toFixed(3) + ' rad — formations patrol upright');
+      return 'rank slots clear the solver at L5/14/23 · maneuver snap ' + snap.toFixed(2) + ' · dive snap ' + dsnap.toFixed(2) + ' px/frame² · hit kick is draw-only · formation lean ≤ ' + lean.toFixed(3);
+    } finally { SETTINGS.mode = mode0; }
+  });
+
   // 4) density budget at build time, levels 1..27
   test('density budget (levels 1–27)', async () => {
     SETTINGS.mode = 'classic';
@@ -3760,11 +3926,22 @@ window.requestAnimationFrame = function () { return 0; };
           const TR = trialLayout();
           rects.trialPanel = { x: TR.px, y: TR.py, w: TR.pw, h: TR.ph };
           rects.trialStart = TR.start;
+          rects.trialRush = TR.rush; // BOSS RUSH launcher shares the start row
           for (let i = 0; i < SKIN.gens.length; i++) rects['trialRegion(' + i + ')'] = TR.region(i);
           for (let i = 0; i < 3; i++) rects['trialStage(' + i + ')'] = TR.stage(i);
           for (let i = 0; i < TR.roundCount; i++) rects['trialRound(' + i + ')'] = TR.round(i);
           for (let i = 0; i < TR.phaseCount; i++) rects['trialPhase(' + i + ')'] = TR.phase(i);
           SETTINGS.mode = m0; Object.assign(trialSel, r0);
+        }
+        { const RS = rushSummaryLayout(); rects.rushRetry = RS.retry; rects.rushTitle = RS.title; } // BOSS RUSH summary
+        { // AFT-013: codex tabs, the realm-1 cast tiles (widest row), the dossier page
+          const sc0 = dexScroll; dexScroll = 0;
+          const HL = dexHeadLayout(), DL = dossierListLayout(), DP = dossierPageLayout();
+          rects['dexTab(0)'] = HL.tabs[0]; rects['dexTab(1)'] = HL.tabs[1];
+          DL.tiles(bossCast(0), 0).forEach((t, i) => { rects['dossierTile(0,' + i + ')'] = t; });
+          rects.dossierCard = DP.card; rects.dossierArt = DP.art; rects.dossierInfo = DP.info;
+          rects.dossierPrev = DP.prev; rects.dossierNext = DP.next;
+          dexScroll = sc0;
         }
         for (let i = 0; i < MODES.length; i++) rects['card(' + i + ')'] = L.card(i);
         for (let i = 0; i < skinStarters().length; i++) rects['starter(' + i + ')'] = P.starter(i);
@@ -6604,6 +6781,515 @@ window.requestAnimationFrame = function () { return 0; };
     // 6) the transformation caps stay the engine's: max 2 fusions, 1 apex
     assert(typeof fusionsOwnedCount === 'function', 'fusion cap accounting missing');
     return 'ordinary clears roll on · finale Forge · Refine-only fresh · pure hands · LINK/BACK · one decision per realm';
+  });
+
+  // ---- BOSS RUSH: the nine realm finales back to back, timed, on the
+  // campaign's own build economy (Forge + two skipped-stage dividend hands
+  // per realm). All drives are seeded and FORCED — no Math.random luck.
+  function rushIdle(secs) {
+    for (let f = 0; f < Math.round(secs * 60); f++) { paused = false; G.freeze = 0; update(1 / 60); }
+  }
+  function rushForceClear(maxF) {
+    for (let f = 0; f < (maxF || 3000) && (G.state === 'play' || G.state === 'serve' || G.state === 'resolve'); f++) {
+      paused = false; G.freeze = 0; G.lives = Math.max(G.lives, 99);
+      if (G.reveal) { G.reveal = null; G.revealDock = null; }
+      if (G.state === 'serve') fireAction();
+      if (G.state === 'play' || G.state === 'serve') {
+        for (const b of G.bricks) if (!b.dead && !b.dormant && !b.barrier && !b.friendly)
+          damageBrick(b, 9999, b.bx + G.fx, b.by + G.fy, null, { ignorePhaseGate: true });
+      }
+      update(1 / 60);
+    }
+  }
+  // drive a whole rush to its summary: clear, results, ceremony, Forge
+  // (Refine), both armory hands — exactly the surfaces a player taps through
+  function rushDriveToEnd() {
+    for (let guard = 0; guard < 200 && G.state !== 'gameover'; guard++) {
+      if (G.state === 'play' || G.state === 'serve' || G.state === 'resolve') rushForceClear();
+      else if (G.state === 'results') { G.stateT = 1; advanceResults(); }
+      else if (G.state === 'ceremony') { if (G.ceremony) G.ceremony.t = 99; advanceCeremony(); }
+      else if (G.state === 'upgrade') {
+        if (G.forge && G.forge.step === 'menu') forgeChoose('refine');
+        if (G.upgradeChoices) pickUpgrade(0); else rushIdle(0.1);
+      } else break;
+    }
+  }
+  test('BOSS RUSH: launch → Forge → two armory hands → next finale; every surface waits; combat-only clock', async () => {
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset, s0 = SETTINGS.starter;
+    const e0 = ERR.length;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      // 1) a boss reveal freezes the clock (reveals opt in for this check)
+      window.__SUITE_REVEALS = true;
+      try { startBossRush('RUSH-T1R'); } finally { window.__SUITE_REVEALS = false; }
+      assert(G.reveal, 'the rush launch did not arm the finale reveal');
+      for (let f = 0; f < 45 && G.reveal; f++) { paused = false; G.freeze = 0; update(1 / 60); }
+      assert(G.rush.t === 0, 'the clock ran during the boss reveal (' + G.rush.t + ')');
+      // 2) launch = a level-3 TRIAL with fresh rush state and the banked build
+      startBossRush('RUSH-T1');
+      assert(G.level === 3 && G.trial === true && G.rush && G.rush.idx === 0 && G.rush.t === 0
+        && G.rush.splits.length === 0 && G.rush.mode === 'junkie' && G.rush.preset === 'normal',
+        'the launch did not open a level-3 trial with fresh rush state');
+      assert(G.runStartLevel === 3 && totalBuildLevels() > 0, 'the rush did not bank the deep-start build');
+      assert(!trialOpen, 'the picker stayed open over the rush');
+      // 3) the clock runs in live combat, never while paused
+      G.reveal = null;
+      rushIdle(1);
+      assert(G.rush.t > 0.95 && G.rush.t < 1.05, 'the clock did not run in live combat (' + G.rush.t.toFixed(3) + ')');
+      paused = true; const tp = G.rush.t;
+      for (let f = 0; f < 60; f++) update(1 / 60);
+      paused = false;
+      assert(G.rush.t === tp, 'the clock ran while paused');
+      render(); // the rush HUD title draws
+      // 4) the finale clear closes split 1; results wait and freeze the clock
+      rushForceClear();
+      assert(G.state === 'results' && G.rush.splits.length === 1 && G.rush.idx === 1 && G.rush.splits[0].lvl === 3,
+        'the first finale clear did not record split 1 (state ' + G.state + ')');
+      assert(G.results.rushSplit === G.rush.splits[0].t && G.results.rushIdx === 1, 'the results do not carry the split');
+      const tr = G.rush.t;
+      rushIdle(3);
+      assert(G.state === 'results' && G.rush.t === tr, 'results auto-advanced or ran the clock');
+      render();
+      // 5) the AETHER FORGE opens exactly as in the campaign — and WAITS
+      G.stateT = 1; advanceResults();
+      assert(G.state === 'upgrade' && G.forge && G.forge.step === 'menu', 'the results did not open the Forge');
+      rushIdle(5);
+      assert(G.state === 'upgrade' && G.forge && G.forge.step === 'menu' && G.rush.t === tr,
+        'the Forge menu did not wait for the player (state ' + G.state + ')');
+      forgeChoose('refine');
+      rushIdle(3);
+      assert(G.state === 'upgrade' && G.upgradeChoices && G.forge, 'the Forge hand did not wait');
+      pickUpgrade(0);
+      // 6) RUSH ARMORY 1/2 — the skipped stage-4 dividend, real machinery
+      assert(G.state === 'upgrade' && !G.forge && G.upgradeChoices && G.upgradeChoices.length >= 3
+        && G.rush.armoryN === 1 && G.level === 5 && rushArmoryHand(),
+        'armory hand 1 did not follow the Forge (L' + G.level + ' ' + G.state + ' n' + G.rush.armoryN + ')');
+      rushIdle(5);
+      assert(G.state === 'upgrade' && G.upgradeChoices && G.rush.armoryN === 1 && G.rush.t === tr,
+        'armory hand 1 auto-advanced or ran the clock');
+      render();
+      pickUpgrade(0);
+      assert(G.state === 'upgrade' && G.upgradeChoices && G.rush.armoryN === 2 && G.level === 6 && rushArmoryHand(),
+        'armory hand 2 did not follow (L' + G.level + ' n' + G.rush.armoryN + ')');
+      rushIdle(5);
+      assert(G.state === 'upgrade' && G.upgradeChoices && G.rush.armoryN === 2, 'armory hand 2 auto-advanced');
+      pickUpgrade(0);
+      // 7) …then the next Sovereign: level 6, idx 1, armory spent
+      assert(G.level === 6 && stageIdx(G.level) === 2 && (G.state === 'play' || G.state === 'serve')
+        && G.rush.idx === 1 && G.rush.armoryN === 0 && G.rush.armory === 0,
+        'the rush did not build the realm-2 finale (L' + G.level + ' ' + G.state + ')');
+      assert(G.finale && G.finale.format === finaleProfile(1).format, 'the realm-2 finale format did not build');
+      rushIdle(0.5);
+      assert(G.rush.t > tr, 'the clock did not resume in the next finale');
+      assert(ERR.length === e0, 'errors: ' + ERR.slice(e0).join(' | '));
+      return 'reveal freezes the clock · L3 trial + banked build · clock live-only · split 1 on results · Forge/hand/armory 1/2/2/2 each idle 3–5s untouched · L6 finale, idx 1';
+    } finally { window.__SUITE_REVEALS = false; SETTINGS.mode = m0; SETTINGS.preset = p0; SETTINGS.starter = s0; }
+  });
+
+  test('BOSS RUSH: a knockout costs +20s and resumes at the finale checkpoint', async () => {
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset, s0 = SETTINGS.starter;
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      startBossRush('RUSH-T2');
+      G.reveal = null;
+      rushIdle(0.5);
+      jumpToGauntletRound(1); // the ladder reached its legendary round
+      G.finaleCkpt = { lvl: G.level, beat: 1, kos: 0 };
+      const t0 = G.rush.t;
+      G.lives = 1; G.invuln = 0; G.shieldCharges = 0;
+      loseLife('TEST HIT');
+      assert(G.rush.kos === 1 && G.rush.penalty === RUSH_KO_PENALTY, 'the knockout did not add the rush penalty (' + G.rush.kos + '/' + G.rush.penalty + ')');
+      assert(G.level === 3 && G.finaleCkpt && G.finaleCkpt.kos === 1, 'the knockout left the finale or lost its checkpoint');
+      assert(G.finale && G.finale.beat === 1, 'the retry did not resume at the reached round (beat ' + (G.finale && G.finale.beat) + ')');
+      assert(Math.abs(rushTotal() - (G.rush.t + RUSH_KO_PENALTY)) < 1e-9 && G.rush.t === t0, 'the penalty is not tracked separately from combat time');
+      if (G.state === 'upgrade' && G.recoveryDraft) pickUpgrade(0); // a recovery hand resumes, never rebuilds
+      rushForceClear();
+      assert(G.state === 'results' && G.rush.splits[0].kos === 1, 'the split did not carry its knockout');
+      return 'KO → kos 1 · +' + RUSH_KO_PENALTY + 's penalty (separate) · resumed at beat 1 · split carries the KO';
+    } finally { SETTINGS.mode = m0; SETTINGS.preset = p0; SETTINGS.starter = s0; }
+  });
+
+  test('BOSS RUSH: nine finales → summary + record; cheats never record; no journey writes; retry', async () => {
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset, s0 = SETTINGS.starter;
+    const watched = ['rush', 'best', 'medals', 'crests', 'dex', 'dexs', 'run', 'victory'].map(k => storeKey(k));
+    const before = {};
+    for (const k of watched) before[k] = localStorage.getItem(k);
+    const e0 = ERR.length;
+    try {
+      localStorage.removeItem(storeKey('rush'));
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      startBossRush('RUSH-T3');
+      rushDriveToEnd();
+      const R = G.rush;
+      assert(G.state === 'gameover' && R && R.done && R.summary && R.summary.complete,
+        'the ninth finale did not end on the rush summary (state ' + G.state + ', splits ' + (R && R.splits.length) + ')');
+      assert(R.splits.length === 9 && R.splits.every((s, i) => s.lvl === 3 * (i + 1) && s.realm === i),
+        'the splits are not the nine finales in order');
+      assert(G.level === 28 && !G.ending, 'the rush rolled into the campaign ending or past 28');
+      assert(R.summary.newBest && Math.abs(R.summary.total - rushTotal()) < 0.01, 'the first full rush was not a new best');
+      const rec = loadStore(storeKey('rush'), 'null');
+      const r1 = rec && rec['junkie:normal'];
+      assert(r1 && Math.abs(r1.best - R.summary.total) < 0.01 && r1.runs === 1 && r1.splits.length === 9
+        && r1.starter === 'fire' && r1.kos === R.kos && typeof r1.date === 'string',
+        'the record shape is wrong: ' + JSON.stringify(r1));
+      // trial semantics held: nothing else persisted
+      for (const k of watched) if (k !== storeKey('rush'))
+        assert(localStorage.getItem(k) === before[k], 'a rush wrote journey storage: ' + k);
+      render();
+      // the summary waits for the player and its buttons work
+      rushIdle(3);
+      assert(G.state === 'gameover', 'the summary auto-advanced');
+      const RL = rushSummaryLayout();
+      G.stateT = 1;
+      onPress(RL.retry.x + RL.retry.w / 2, RL.retry.y + RL.retry.h / 2);
+      assert(G.level === 3 && G.rush && G.rush.t === 0 && G.rush.splits.length === 0 && G.rush.seed === 'RUSH-T3',
+        'RETRY RUSH did not relaunch the rush');
+      // a CHEATED rush completes but never records
+      G.cheated = true;
+      rushDriveToEnd();
+      assert(G.state === 'gameover' && G.rush.summary && G.rush.summary.complete && !G.rush.summary.newBest,
+        'the cheated rush did not reach its summary');
+      const rec2 = loadStore(storeKey('rush'), 'null');
+      assert(JSON.stringify(rec2) === JSON.stringify(rec), 'a cheated rush touched the record');
+      render();
+      G.stateT = 1;
+      onPress(RL.title.x + RL.title.w / 2, RL.title.y + RL.title.h / 2);
+      assert(G.state === 'menu' && G.rush === null, 'TITLE did not leave the rush');
+      // a true game over mid-rush reads as a failed rush and records nothing
+      startBossRush('RUSH-T3B');
+      G.reveal = null; rushIdle(0.2);
+      G.path = {}; G.upg = {}; G.stacks = freshStacks(); G.attune.level = 0; // no build left to absorb it
+      G.lives = 1; G.invuln = 0; G.shieldCharges = 0;
+      loseLife('TEST HIT');
+      assert(G.state === 'gameover' && G.rush && !G.rush.summary, 'a mid-rush game over did not reach the summary');
+      render();
+      assert(JSON.stringify(loadStore(storeKey('rush'), 'null')) === JSON.stringify(rec), 'a failed rush recorded');
+      assert(ERR.length === e0, 'errors: ' + ERR.slice(e0).join(' | '));
+      return '9 splits in order · summary at L28 (no ending) · record ' + JSON.stringify(Object.keys(r1)) + ' · no journey writes · RETRY/TITLE · cheats + game over never record';
+    } finally {
+      for (const k of watched) { if (before[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, before[k]); }
+      SETTINGS.mode = m0; SETTINGS.preset = p0; SETTINGS.starter = s0;
+    }
+  });
+
+  test('BOSS RUSH: records ride the save bundle; picker + summary geometry; ordinary runs unaffected', async () => {
+    const k = storeKey('rush'), pk = storeKey('preimport');
+    const prior = localStorage.getItem(k), priorPre = localStorage.getItem(pk);
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset;
+    try {
+      // 1) export → validate → import round-trips the per-skin rush key
+      saveStore(k, { 'blaster:hard': { best: 612.4, date: '2026-11-12', kos: 2, splits: [1, 2, 3, 4, 5, 6, 7, 8, 9], starter: 'none', runs: 3 } });
+      const b = exportBundle();
+      assert(b.keys[k] && b.keys[k]['blaster:hard'].best === 612.4, 'the bundle did not export the rush records');
+      const v = validateBundle(b);
+      assert(v.ok, 'the bundle with rush records failed validation: ' + v.reason);
+      saveStore(k, null);
+      applyBundle(b);
+      const back = loadStore(k, 'null');
+      assert(back && back['blaster:hard'] && back['blaster:hard'].runs === 3, 'the import did not restore the rush records');
+      SETTINGS.mode = 'blaster'; SETTINGS.preset = 'hard';
+      assert(rushBest('blaster', 'hard').best === 612.4 && rushBest('blaster', 'normal') === null, 'rushBest keys by mode:preset');
+      // 2) the picker draws the launcher with the best time; tapping it launches
+      G.state = 'menu'; trialOpen = true; render();
+      const T = trialLayout();
+      onPress(T.rush.x + T.rush.w / 2, T.rush.y + T.rush.h / 2);
+      assert(G.rush && G.level === 3 && G.trial && G.mode === 'blaster' && G.rush.preset === 'hard' && !trialOpen,
+        'the picker button did not launch a rush with the current mode/difficulty');
+      // 3) a NON-rush trial keeps its flow: finale → Forge → next stage (+1)
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal';
+      resetRun(3, true, { seed: 'RUSH-T4' });
+      assert(G.rush === null, 'a plain trial carried rush state');
+      rushForceClear();
+      assert(G.state === 'results' && !G.results.rushSplit, 'a plain trial results carried a split');
+      G.stateT = 1; advanceResults();
+      forgeChoose('refine'); pickUpgrade(0);
+      assert(G.level === 4 && (G.state === 'play' || G.state === 'serve'), 'a plain trial did not advance to level 4 (L' + G.level + ')');
+      // 4) a real journey: no rush, the armory hook is inert
+      resetRun(1, false, { seed: 'RUSH-T4J' });
+      const lv = G.level;
+      assert(G.rush === null && rushArmoryNext() === false && G.level === lv, 'the armory hook touched a journey');
+      return 'bundle export/validate/import keeps ' + k + ' · picker launches the current mode:preset · plain trial L3→4 · journey inert';
+    } finally {
+      if (prior == null) localStorage.removeItem(k); else localStorage.setItem(k, prior);
+      if (priorPre == null) localStorage.removeItem(pk); else localStorage.setItem(pk, priorPre);
+      trialOpen = false; SETTINGS.mode = m0; SETTINGS.preset = p0;
+    }
+  });
+
+  // ---- AFT-013: THE BOSS LOG + CODEX DOSSIERS ------------------------------
+  // every test snapshots ALL game storage and the in-memory log, and restores
+  // both — a real-journey finale writes crests/medals/checkpoints too
+  function withStorageSnapshot() {
+    const snap = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('pkbrk-')) snap[key] = localStorage.getItem(key);
+    }
+    return () => {
+      const now = [];
+      for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i); if (key && key.startsWith('pkbrk-')) now.push(key); }
+      for (const key of now) if (!(key in snap)) localStorage.removeItem(key);
+      for (const [key, v] of Object.entries(snap)) localStorage.setItem(key, v);
+      bossLogReload();
+    };
+  }
+  // drive a live finale to its results with PARTIAL damage, so every phase
+  // window opens and closes on the real clock (no phase-gate bypass)
+  function bossLogDriveFinale(maxF) {
+    for (let f = 0; f < (maxF || 9000) && (G.state === 'play' || G.state === 'serve' || G.state === 'resolve'); f++) {
+      paused = false; G.freeze = 0; G.lives = Math.max(G.lives, 99);
+      if (G.reveal) { G.reveal = null; G.revealDock = null; }
+      if (G.state === 'serve') fireAction();
+      if (G.state === 'play' && f % 2 === 0) {
+        for (const b of G.bricks) {
+          if (b.dead || b.dormant || b.barrier || b.friendly) continue;
+          const bossy = b.isBoss || b.subBoss;
+          damageBrick(b, bossy ? Math.max(0.5, b.maxHp * 0.05) : 9999, b.bx + G.fx, b.by + G.fy);
+        }
+      }
+      update(1 / 60);
+    }
+  }
+  test('AFT-013: boss log — shape check, corrupt storage, save bundle, codex flow', async () => {
+    const restore = withStorageSnapshot();
+    const k = storeKey('bosslog');
+    const e0 = ERR.length;
+    try {
+      assert(EXPORT_SKIN_KEYS.includes('bosslog'), 'bosslog is not in EXPORT_SKIN_KEYS');
+      // 1) corrupt / hostile shapes never throw and sanitize to {}
+      for (const raw of ['{bad json', '[1,2,3]', '"str"', '42', 'null']) {
+        localStorage.setItem(k, raw);
+        const L = bossLogReload();
+        assert(L && typeof L === 'object' && !Array.isArray(L) && Object.keys(L).length === 0,
+          'corrupt bosslog "' + raw + '" did not sanitize to {}: ' + JSON.stringify(L));
+      }
+      localStorage.setItem(k, JSON.stringify({ '150': { seen: 1, wins: 'x', kos: -3, best: { junkie: -1, classic: 42.5, foo: 9 },
+        phase: { junkie: { 1: 3, 9: 4 }, nope: { 1: 2 } } }, bad: 5, arr: [1] }));
+      const L = bossLogReload();
+      assert(JSON.stringify(L) === JSON.stringify({ '150': { seen: 1, wins: 0, kos: 0, best: { classic: 42.5 }, phase: { junkie: { 1: 3 } } } }),
+        'the shape check let hostile fields through: ' + JSON.stringify(L));
+      // 2) the save bundle carries it, and an import refreshes the live log
+      const b = exportBundle();
+      assert(b.keys[k] && b.keys[k]['150'], 'the bundle did not export the boss log');
+      assert(validateBundle(b).ok, 'a bundle with the boss log failed validation');
+      saveStore(k, {}); bossLogReload();
+      applyBundle(b);
+      assert(bossLogEntry('150') && bossLogEntry('150').best.classic === 42.5, 'the import did not restore the live boss log');
+      // 3) the codex flow: tabs → boss list → unmet tile denies → met tile opens → ‹ › → outside closes
+      saveStore(k, {}); bossLogReload();
+      const cast0 = bossCast(0), cast1 = bossCast(1);
+      bossLogTouch(cast0.find(c => c.role === 'legendary').key).seen = 1;
+      bossLogTouch(cast1.find(c => c.role === 'legendary').key).seen = 1;
+      G.state = 'dex'; dexTab = 'grid'; dexDetail = null; dossierDetail = null; dexScroll = 0;
+      render();
+      const HL = dexHeadLayout();
+      onPress(HL.tabs[1].x + HL.tabs[1].w / 2, HL.tabs[1].y + HL.tabs[1].h / 2);
+      assert(dexTab === 'boss', 'the boss tab did not open');
+      render();
+      const unmet = dossierTileRects.find(t => !t.seen), met = dossierTileRects.find(t => t.seen);
+      assert(unmet && met, 'the boss list drew no met/unmet tiles (' + dossierTileRects.length + ')');
+      onPress(unmet.x + unmet.w / 2, unmet.y + unmet.h / 2);
+      assert(!dossierDetail && G.state === 'dex', 'an unmet silhouette opened a dossier');
+      onPress(met.x + met.w / 2, met.y + met.h / 2);
+      assert(dossierDetail && dossierDetail.key === met.key, 'a met tile did not open its dossier');
+      render();
+      assert(dossierPageRects && dossierPageRects.card, 'the dossier page wrote no rects');
+      const first = dossierDetail.key;
+      onPress(dossierPageRects.next.x + 5, dossierPageRects.next.y + 5);
+      assert(dossierDetail && dossierDetail.key !== first, '› did not step to the next met boss');
+      render();
+      onPress(2, 2);
+      assert(!dossierDetail && G.state === 'dex', 'an outside tap did not close the dossier');
+      onPress(HL.tabs[0].x + 5, HL.tabs[0].y + 5);
+      assert(dexTab === 'grid', 'the collection tab did not return');
+      render();
+      // 4) the page geometry: the portrait is never under the info, at any size
+      const w0 = W, h0 = H, bad = [];
+      try {
+        for (const [w, h] of [[310, 670], [320, 568], [390, 844], [667, 375], [844, 390], [1280, 720], [1280, 800]]) {
+          W = w; H = h;
+          const P = dossierPageLayout();
+          const ov = (a, c) => a.x < c.x + c.w && c.x < a.x + a.w && a.y < c.y + c.h && c.y < a.y + a.h;
+          if (ov(P.art, P.info)) bad.push(w + '×' + h + ' art/info overlap');
+          if (ov(P.info, P.prev) || ov(P.info, P.next) || ov(P.art, P.prev) || ov(P.art, P.next)) bad.push(w + '×' + h + ' arrows overlap content');
+          if (P.info.h < 150 || P.art.w < 110) bad.push(w + '×' + h + ' page too cramped (info ' + (P.info.h | 0) + ', art ' + (P.art.w | 0) + ')');
+        }
+      } finally { W = w0; H = h0; resize(); }
+      assert(bad.length === 0, bad.join(' ; '));
+      assert(ERR.length === e0, 'errors: ' + ERR.slice(e0).join(' | '));
+      return '5 corrupt shapes → {} · hostile fields stripped · bundle export/validate/import refreshes the log · tabs/deny/open/›/close · page geometry at 7 sizes';
+    } finally { G.state = 'menu'; dexTab = 'grid'; dossierDetail = null; restore(); }
+  });
+
+  test('AFT-013: the real region-1 ladder records met / fell / KO — STARFIGHTER + BREAKER', async () => {
+    const restore = withStorageSnapshot();
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset, s0 = SETTINGS.starter;
+    const e0 = ERR.length;
+    const out = [];
+    try {
+      for (const mode of ['junkie', 'classic']) {
+        saveStore(storeKey('bosslog'), {}); bossLogReload();
+        SETTINGS.mode = mode; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+        resetRun(3, true, { seed: 'AFT013-' + mode });
+        G.trial = false; // a REAL journey (the deep start only banks the build)
+        G.reveal = null;
+        for (let f = 0; f < 30; f++) { paused = false; G.freeze = 0; if (G.state === 'serve') fireAction(); update(1 / 60); }
+        // a knockout while the sentinels are live → one KO to the fight's owner
+        const live = G.bricks.filter(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss));
+        assert(live.length, mode + ': no live boss-class actor to fall to');
+        G.lives = 1; G.invuln = 0; G.shieldCharges = 0;
+        loseLife('TEST HIT');
+        const cast = bossCast(0).filter(c => c.role !== 'secret');
+        const kos = cast.reduce((n, c) => n + ((bossLogEntry(c.key) || {}).kos || 0), 0);
+        assert(kos === 1, mode + ': the knockout logged ' + kos + ' KOs');
+        if (G.state === 'upgrade' && G.recoveryDraft) pickUpgrade(0);
+        assert(G.level === 3, mode + ': the knockout left the finale');
+        bossLogDriveFinale();
+        assert(G.state === 'results', mode + ': the ladder did not reach results (' + G.state + ')');
+        for (const c of cast) {
+          const e = bossLogEntry(c.key);
+          assert(e && e.seen === 1 && e.wins === 1, mode + ': ' + c.role + ' ' + c.key + ' not logged met+fallen once: ' + JSON.stringify(e));
+          assert(e.best[mode] > 0, mode + ': ' + c.role + ' has no fastest fall');
+        }
+        const leg = bossLogEntry(cast.find(c => c.role === 'legendary').key);
+        const legPhases = Object.keys(leg.phase[mode] || {}).length;
+        assert(legPhases === (mode === 'junkie' ? 2 : 3), mode + ': legendary phase splits ' + JSON.stringify(leg.phase));
+        assert(!bossLogEntry('secret'), mode + ': the secret was logged without being fought');
+        const stored = loadStore(storeKey('bosslog'), '{}');
+        assert(JSON.stringify(stored) === JSON.stringify(bossLog()), mode + ': the store and the live log diverged');
+        out.push(mode + ' ' + cast.length + ' met+fell · leg ' + leg.best[mode] + 's/' + legPhases + 'P · 1 KO');
+      }
+      assert(ERR.length === e0, 'errors: ' + ERR.slice(e0).join(' | '));
+      return out.join(' · ');
+    } finally { SETTINGS.mode = m0; SETTINGS.preset = p0; SETTINGS.starter = s0; restore(); }
+  });
+
+  test('AFT-013: a non-ladder finale credits its whole cast; sandboxes never write; rush does', async () => {
+    const restore = withStorageSnapshot();
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset, s0 = SETTINGS.starter;
+    const e0 = ERR.length;
+    const k = storeKey('bosslog');
+    try {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      // 1) the realm-2 RELAY (its coda mythic is a reward event, never a bar)
+      saveStore(k, {}); bossLogReload();
+      resetRun(6, true, { seed: 'AFT013-RELAY' });
+      G.trial = false;
+      assert(G.finale && G.finale.format === 'relay', 'level 6 did not build the relay');
+      rushForceClear();
+      assert(G.state === 'results', 'the relay did not complete (' + G.state + ')');
+      const cast = bossCast(1);
+      for (const c of cast) {
+        const e = bossLogEntry(c.key);
+        assert(e && e.seen && e.wins === 1, 'relay ' + c.role + ' not credited once: ' + JSON.stringify(e));
+        for (const t of Object.values(e.best)) assert(t > 0, 'a zero fastest-fall was recorded');
+      }
+      // 2) sandboxes: a practice trial, a daily, a cheated journey — nothing
+      saveStore(k, {}); bossLogReload();
+      resetRun(3, true, { seed: 'AFT013-TRIAL' }); rushForceClear();
+      assert(G.state === 'results' && Object.keys(bossLog()).length === 0, 'a practice trial wrote the boss log');
+      resetRun(3, false, { daily: true, seed: 'AFT013-DAILY' }); G.trial = false; rushForceClear();
+      assert(G.daily && Object.keys(bossLog()).length === 0, 'a daily wrote the boss log');
+      resetRun(3, true, { seed: 'AFT013-CHEAT' }); G.trial = false; G.cheated = true; rushForceClear();
+      assert(Object.keys(bossLog()).length === 0, 'a cheated run wrote the boss log');
+      assert(JSON.stringify(loadStore(k, '{}')) === '{}', 'a sandbox reached storage');
+      // 3) BOSS RUSH is a trial that DOES record
+      startBossRush('AFT013-RUSH'); G.reveal = null; rushForceClear();
+      assert(G.state === 'results' && G.rush, 'the rush finale did not complete');
+      assert(bossCast(0).filter(c => c.role !== 'secret').every(c => bossLogEntry(c.key) && bossLogEntry(c.key).wins === 1),
+        'a rush finale did not record its cast');
+      // 4) the dossier reads the rush split back
+      const R = G.rush; R.splits = [{ lvl: 3, realm: 0, t: 64.2, kos: 0 }];
+      saveStore(storeKey('rush'), { 'junkie:normal': { best: 600, splits: [64.2, 70, 70, 70, 70, 70, 70, 70, 70], runs: 1 } });
+      const D = bossDossier(bossCast(0).find(c => c.role === 'legendary').key);
+      assert(D.record.rush && D.record.rush.t === 64.2 && /1:04\.2/.test(D.record.rushText), 'the dossier missed the rush split: ' + D.record.rushText);
+      assert(ERR.length === e0, 'errors: ' + ERR.slice(e0).join(' | '));
+      return 'relay: ' + cast.length + ' credited once (coda mythic by completion) · trial/daily/cheat write nothing · rush records · rush split on the page';
+    } finally { SETTINGS.mode = m0; SETTINGS.preset = p0; SETTINGS.starter = s0; G.cheated = false; restore(); }
+  });
+
+  test('AFT-013: the dossier model is complete for 9 realms × full cast in BOTH skins', async () => {
+    const realSkin = SKIN;
+    const bad = [];
+    let n = 0;
+    try {
+      for (const sk of ['pokemon', 'aetherfall']) {
+        SKIN = SKINS[sk];
+        const roster = bossDossierRoster();
+        if (roster.length !== 9) bad.push(sk + ': roster has ' + roster.length + ' realms');
+        const walk = (v, p) => {
+          if (v === undefined || v === null) { if (!/\.record\.(rush|rushText)$|\.record\.best\[\d+\]\.phases$/.test(p)) bad.push(sk + p + ' is ' + v); return; }
+          if (typeof v === 'string') { if (!v.trim() || /undefined|NaN|\[object/.test(v)) bad.push(sk + p + ' = "' + v + '"'); return; }
+          if (typeof v === 'number') { if (!Number.isFinite(v)) bad.push(sk + p + ' = ' + v); return; }
+          if (Array.isArray(v)) { v.forEach((x, i) => walk(x, p + '[' + i + ']')); return; }
+          if (typeof v === 'object') for (const kk of Object.keys(v)) walk(v[kk], p + '.' + kk);
+        };
+        for (let r = 0; r < 9; r++) {
+          for (const c of bossCast(r)) {
+            const D = bossDossier(c.key);
+            n++;
+            if (!D) { bad.push(sk + ' r' + r + ' ' + c.key + ' has no dossier'); continue; }
+            walk(D, ' r' + r + ' ' + c.key);
+            if (!D.attacks.length) bad.push(sk + ' r' + r + ' ' + c.key + ' lists no attacks');
+            if (!D.typeText.includes(typeWord())) bad.push(sk + ' ' + c.key + ' type line skips the skin type word');
+            if (sk === 'aetherfall' && /\bMEGA\b|POKÉ|POKE/i.test(JSON.stringify(D))) bad.push('aetherfall ' + c.key + ' leaks another skin\'s words');
+            if (D.record.winText !== 'NOT YET DEFEATED' && !(D.record.wins > 0)) bad.push(sk + ' ' + c.key + ' empty record reads wrong');
+          }
+        }
+        if (!SKIN.strings.dossierName) bad.push(sk + ' has no dossierName');
+      }
+    } finally { SKIN = realSkin; }
+    assert(bad.length === 0, bad.slice(0, 12).join(' ; '));
+    return n + ' dossiers (both skins) — every field present, no undefined/NaN, skin words throughout';
+  });
+
+  test('AFT-013: the boss log is a passive observer — same seeded finale, logged vs stubbed', async () => {
+    const restore = withStorageSnapshot();
+    const m0 = SETTINGS.mode, p0 = SETTINGS.preset, s0 = SETTINGS.starter;
+    const names = ['bossLogEngage', 'bossLogFall', 'bossLogPhase', 'bossLogKnockout', 'bossLogFinaleComplete'];
+    const orig = {};
+    for (const nm of names) orig[nm] = window[nm];
+    const run = () => {
+      SETTINGS.mode = 'junkie'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
+      resetRun(3, true, { seed: 'AFT013-SIM' });
+      G.trial = false; G.reveal = null;
+      mouseX = W / 2; lastMouseY = H * 0.8; fireHeld = true;
+      let h = 0;
+      const mix = v => { h = (h * 31 + Math.round((+v || 0) * 10)) >>> 0; };
+      for (let f = 0; f < 1500 && G.state === 'play'; f++) {
+        paused = false; G.freeze = 0; G.lives = Math.max(G.lives, 99);
+        mouseX = W / 2 + Math.sin(f / 40) * W * 0.3;
+        if (f % 6 === 0) {
+          const t = G.bricks.find(b => !b.dead && !b.dormant && (b.isBoss || b.subBoss));
+          if (t) damageBrick(t, Math.max(1, t.maxHp * 0.08), t.bx + G.fx, t.by + G.fy);
+        }
+        update(1 / 60);
+        if (f % 10 === 0) { mix(G.score); mix(G.mega); mix(G.paddle.x); for (const b of G.bricks) { mix(b.hp); mix(b.bx); mix(b.by); } mix(G.enemyShots.length); }
+      }
+      fireHeld = false;
+      mix(gameRand());
+      return { h, state: G.state, level: G.level };
+    };
+    try {
+      // a discarded WARM-UP run first: the first seeded finale in a page
+      // diverges from every later one regardless of the log (a pre-existing
+      // first-run leak, measured with the log stubbed in BOTH runs) — the
+      // comparison must be between two warm runs
+      for (const nm of names) window[nm] = () => null;
+      run();
+      for (const nm of names) window[nm] = orig[nm];
+      saveStore(storeKey('bosslog'), {}); bossLogReload();
+      const A = run();
+      const logged = Object.keys(bossLog()).length;
+      for (const nm of names) window[nm] = () => null;
+      const B = run();
+      assert(logged > 0, 'the logged run recorded nothing — the observer was not live');
+      assert(A.h === B.h && A.state === B.state, 'the boss log moved the sim (hash ' + A.h + ' vs ' + B.h + ')');
+      return '1500-frame seeded finale: hash ' + A.h + ' identical logged vs stubbed · ' + logged + ' entries logged';
+    } finally {
+      for (const nm of names) window[nm] = orig[nm];
+      fireHeld = false; SETTINGS.mode = m0; SETTINGS.preset = p0; SETTINGS.starter = s0; restore();
+    }
   });
 
   test('AFT-009R P4: the constellation is a JOURNAL — non-installing, listed, discovered', async () => {

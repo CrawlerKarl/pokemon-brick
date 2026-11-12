@@ -39,3 +39,21 @@ function frame(now) {
 }
 resize(); // every module is parsed by now — the real init
 requestAnimationFrame(frame);
+
+// AFT-015: installable + offline. The worker NEVER registers under the gate,
+// dev launches, the test/gallery pages, automation, or localhost — unless the
+// URL carries `sw` (the manual-testing escape hatch). Relative path: the game
+// is served from a GitHub Pages sub-path.
+(function registerServiceWorker() {
+  try {
+    if (typeof navigator === 'undefined' || typeof location === 'undefined' || !('serviceWorker' in navigator)) return;
+    const q = new URLSearchParams(location.search);
+    const forced = q.has('sw');
+    const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    if (q.has('dev') || /(^|\/)(test|gallery)\.html$/.test(location.pathname)) return;
+    if (!forced && (window.__SUITE || navigator.webdriver)) return;
+    if (local && !forced) return;
+    const go = () => navigator.serviceWorker.register('sw.js').catch(() => {});
+    if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true });
+  } catch (e) { /* the worker is an enhancement, never a dependency */ }
+})();

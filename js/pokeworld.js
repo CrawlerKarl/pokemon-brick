@@ -768,6 +768,7 @@ FINALE_PROFILES[7] = {
     meterLabel: 'BREAK METER', seraphShieldWord: 'THE CROWN SHIELDS IT',
     segmentWord: 'CROWN SEGMENT', boundName: 'ZARUDE IS BOUND',
     freeWord: 'ZARUDE UNBOUND — IT TEARS THE CROWN!',
+    freeTip: 'OPTIONAL: BREAK EVERY VINE TO FREE ZARUDE — IT TEARS A CROWN SEGMENT OPEN', // AFT-013 dossier cue
     jobs: ['ENERGIZE', 'REINFORCE', 'FREEZE'],
   },
 };
@@ -845,6 +846,9 @@ assembleSkins({
     riftDesc: 'ONE OF THREE PIECES THAT REWRITES KANTO\'S FINAL ROUND',
     partnerWord: 'PARTNER',
     regionWord: 'REGION',
+    rushName: 'BOSS RUSH', // the nine-finale timed mode (trial picker)
+    rushFoes: 'FINALES',
+    dossierName: 'LEGENDS', // AFT-013: the Pokédex's boss-dossier tab
   },
   // the rift-secret encounter species + copy (engine flow reads SKIN.secret)
   secret: { id: 151, t: 'psychic', name: 'MEW VMAX',

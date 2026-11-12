@@ -248,7 +248,6 @@ function spawnEnemyShot(opts = {}) {
   s.heavy = opts.heavy == null ? !!C.heavy : !!opts.heavy;
   G.enemyShots.push(s);
   if (classKey === 'massive') {
-    haptic('warn');
     tone(105, 0.18, 'sawtooth', 0.045, 45);
   }
   return s;
@@ -616,6 +615,7 @@ function starterStrikeTargets(source, count, dmg, element, color, label) {
 function damageBrick(br, dmg, sx, sy, element, meta = {}) {
   if (!br || br.dead) return;
   if (br.friendly) return; // PROTECT-objective allies take no player damage (any path)
+  if (br.isBoss || br.subBoss) bossLogEngage(br); // AFT-013: first engagement = MET (passive observer)
   if (br.isBoss && br.phaseT > 0 && !meta.ignorePhaseGate) return;
   const generator = !meta.ignoreShield && shieldGeneratorFor(br);
   if (generator) {
@@ -625,7 +625,6 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       addFloater(sx, sy - 18, 'SHIELDED', cbSafeColor('shieldGood'), 11);
       ringFx(sx, sy, cbSafeColor('shieldGood'), 4, 32, 2, 0.25);
     }
-    haptic('hit');
     return;
   }
   // ditto was disguised all along — first hit reveals it instead of damaging
@@ -987,7 +986,13 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     }
   }
   br.flash = 1;
-  haptic('hit');
+  { // HIT KICK (presentation only — render reads kx/ky, the sim never does):
+    // the direction the blow came from, so the sprite recoils AWAY from it
+    const kdx = br.bx + G.fx - sx, kdy = br.by + G.fy - sy, kd = Math.hypot(kdx, kdy);
+    const km = Math.min(7, 3.5 + dmg * 0.6);
+    if (kd > 1 && kd < 400) { br.kx = kdx / kd * km; br.ky = kdy / kd * km; }
+    else { br.kx = 0; br.ky = -km; }
+  }
   if (starterDirect) {
     const chainEvery = starterMod('chainEvery', 0);
     if (chainEvery && G.starterHits % chainEvery === 0) {
@@ -1031,7 +1036,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       br.enrageAnimT = 0.9; // render garnish: scale-pulse + speed-lines (decays in update)
       const lastStand = newPhase === phaseCount;
       SFX.enrage();
-      G.shake = 14; G.flashT = 0.18;
+      G.shake = 14; flashFx(0.18, hexToRgbTriple(TYPE_COLORS[br.poke.t])); // AFT-027: the boss's own colour, never hurt-red
       G.freeze = Math.max(G.freeze, 0.18);
       const bx3 = br.bx + G.fx, by3 = br.by + G.fy;
       burst(bx3, by3, lastStand ? '#ff5252' : '#ff8a65', 40, 420, 0.9);
@@ -1085,7 +1090,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
         br.poke.n.toUpperCase() + (lastStand ? ' — LAST STAND!' : ' IS ENRAGED!'),
         lastStand ? 'RELENTLESS FIRE · GUARDS INBOUND — FINISH IT' : 'FASTER, SPREADING ATTACKS', 2.4,
         null, null, false, false, 'boss');
-      haptic('boss');
+      haptic('warning');
     }
   }
   if (br.hp <= 0) {
@@ -1145,11 +1150,12 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       else completeNonAttrition(O, O.name || 'LANES RUN');
     }
     if (br.isBoss) statsBossPhaseMark(br, br.phase); // close the final phase clock
+    if (br.isBoss || br.subBoss) bossLogFall(br); // AFT-013: the boss log's WIN (passive)
     if (G.runStats) {
       G.runStats.bricksBroken++;
       if (br.isBoss) G.runStats.bossesDefeated++;
     }
-    haptic(br.isBoss ? 'boss' : 'break');
+    if (br.isBoss) haptic('success');
     G.combo++;
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     // RIFT COURIER down: the earned shard drops — the falling pickup keeps the
@@ -1242,8 +1248,21 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
     const pts = Math.round(base * scoreMult());
     G.score += pts;
     // only surface the noteworthy numbers — constant +NN spam reads as noise
-    if (br.isBoss || pts >= 150) addFloater(br.bx + G.fx, br.by + G.fy, '+' + pts, '#fff', br.isBoss ? 26 : 15);
-    if (!br.isBoss && G.combo > 2 && G.combo % 5 === 0) addFloater(br.bx + G.fx, br.by + G.fy - 26, 'COMBO x' + G.combo, '#ffd54f', 18);
+    // AFT-027: a local burst of kills SUMS into one growing number
+    if (br.isBoss || pts >= 150) addScoreFloater(br.bx + G.fx, br.by + G.fy, pts, br.isBoss);
+    // AFT-027: the combo is called out at its TIER thresholds (10/25/50/100…)
+    // — a moment with its own chime and ring — not as a floater every fifth
+    // kill repeating what the HUD label already says
+    if (!br.isBoss && comboMilestone(G.combo)) {
+      const cc = comboColor(G.combo);
+      addFloater(br.bx + G.fx, br.by + G.fy - 30, 'COMBO x' + G.combo, cc, 20 + comboTierIdx(G.combo));
+      ringFx(br.bx + G.fx, br.by + G.fy, cc, 10, 78, 3, 0.42);
+      SFX.comboUp(comboTierIdx(G.combo));
+      G.comboTierT = 1; // HUD label flare (decays in update)
+    }
+    // AFT-027: an ELITE going down is its own beat — evolved/rank-2 foes and
+    // tanky bricks get a second ring, a deeper report, and a longer hit-stop
+    const eliteKill = !br.isBoss && (br.elite >= 2 || br.maxHp >= 3);
     burst(sx, sy, col, br.isBoss ? 70 : 22, br.isBoss ? 420 : 300, br.isBoss ? 1.1 : 0.7);
     // a twinkle of glints tops off every kill — more (and gold) for elites/bosses
     sparkle(sx, sy, br.isBoss ? 16 : br.maxHp >= 3 ? 6 : 3, br.isBoss || br.maxHp >= 3);
@@ -1256,9 +1275,10 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       br.isBoss ? Math.min(W * 0.3, 240) : br.maxHp >= 3 ? 64 : 36,
       br.isBoss ? 5 : 3, br.isBoss ? 0.7 : 0.38);
     if (br.isBoss) ringFx(br.bx + G.fx, br.by + G.fy, '#ffffff', 6, 130, 3, 0.5);
+    else if (eliteKill) ringFx(br.bx + G.fx, br.by + G.fy, '#fff3b0', 14, 96, 2, 0.5);
     G.comboPop = 1;
-    G.shake = Math.min(G.shake + (br.isBoss ? 14 : 4), 16);
-    G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : 0.025); // hit-stop
+    G.shake = Math.min(G.shake + (br.isBoss ? 14 : eliteKill ? 7 : 4), 16);
+    G.freeze = Math.max(G.freeze, br.isBoss ? 0.14 : eliteKill ? 0.05 : 0.025); // hit-stop
     if (br.isBoss) {
       SFX.bossDown(); addFloater(W / 2, H * 0.3, br.poke.n.toUpperCase() + ' DEFEATED!', col, 30);
       // brief slow-mo even mid-gauntlet (the next round's entrance pause absorbs
@@ -1272,6 +1292,7 @@ function damageBrick(br, dmg, sx, sy, element, meta = {}) {
       ringFx(dbx, dby, dc, 34, Math.min(W * 0.34, 270), 4, 0.68);
       ringFx(dbx, dby, dc, 64, Math.min(W * 0.46, 360), 3, 0.82);
     }
+    else if (eliteKill) SFX.eliteDown();
     else SFX.brick();
     triggerBrickBehavior(br);
     // every region's arrival wave seeds a Sky Warp on the first kill —
@@ -1419,6 +1440,12 @@ function flightPos(F, tAbs) {
       // plunging through a deep valley mid-crossing
       const u = ((F.phase + t) % 1 + 1) % 1;
       return { x: F.cx - F.rx + u * F.rx * 2, y: F.cy + Math.sin(u * Math.PI * 2) * F.ry };
+    }
+    case 'rank': { // a RIGID lattice (reinforcements): every rider holds its
+      // own slot (gx, gy) while the whole block glides side to side —
+      // settling at each end, brisk through the middle — on a shallow smile
+      const g = s * (1.5 - 0.5 * s * s);
+      return { x: F.cx + F.gx + g * F.rx, y: F.cy + F.gy - Math.cos(th * 2) * F.ry };
     }
     case 'lane': // each rider bobs in its own vertical lane; the phase
       // offsets make a wave travel across the rank of lanes
@@ -1628,7 +1655,6 @@ function spawnRiftShard(index, x = W / 2, y = Math.max(105, H * 0.22)) {
 }
 function collectPickup(pu) {
   if (G.runStats) G.runStats.itemsCaught++;
-  haptic('item');
   // AFT-007: the bond web keys off the RELIC loop now (webRelicProcs) —
   // pickups only feed the aegis-side guardian source (potions)
   if (pu.p && pu.p.key === 'heal') webGuardianCharge();
@@ -2114,7 +2140,7 @@ function bossAbility(boss) {
       G.timeWarpClock = 0; // open on the fast downbeat
       setCombatNotice('TIME DILATION', '#8ecae6', 2);
       tone(70, 0.8, 'sawtooth', 0.1, -20);
-      if (!SETTINGS.reduceFlash) G.flashT = Math.max(G.flashT, 0.12);
+      if (!SETTINGS.reduceFlash) flashFx(0.12, '142,202,230');
       break;
     }
     case 644: { // Zekrom: THE STORM ENGINE (Milestone 4 Round B).
@@ -2616,7 +2642,11 @@ function absorbHit(x, y, shotType = null, volleyId = null) {
   addFloater(G.paddle.x, y - 46, 'SHIELD!', cbSafeColor('shieldGood'), 15);
   burst(x, y, cbSafeColor('shieldGood'), 18, 240, 0.5);
   ringFx(G.paddle.x, y, cbSafeColor('shieldSoft'), 6, 64, 3, 0.4);
-  SFX.shield();
+  // AFT-027: a ward eating a hit is a SAVE — glassy crack, a small kick and
+  // a cool flash, so it can never be mistaken for the red hurt beat
+  SFX.wardBreak();
+  G.shake = Math.min(G.shake + 6, 14);
+  flashFx(0.1, '128,216,255');
   // REACTIVE OVERDRIVE: the break feeds the Mega ring — gold surge on the rig
   if (upgN('reactive') && G.megaT <= 0) {
     gainMega(0.15, 'reactive');
@@ -3048,19 +3078,23 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
   haptic('damage');
   ringFx(G.paddle.x, shipY(), '#ff5252', 8, 90, 4, 0.5);
   G.lives--;
+  // AFT-027: losing a real streak is named, once, at the ship
+  if (G.combo >= 10) addFloater(G.paddle.x, shipY() - 46, 'COMBO x' + G.combo + ' BROKEN', '#b0bec5', 13);
   G.combo = 0;
   G.deathsThisWave++;
   G.adapt = Math.max(0.78, G.adapt * 0.94); // quiet rubber-band: ease off
   G.ballElement = null;
   G.megaT = 0;
   SFX.lifeLost();
-  G.shake = 16; G.flashT = 0.35;
+  G.shake = 16; G.flashT = 0.35; G.flashCol = FLASH_HURT;
   G.fx_fire = G.fx_laser = G.fx_draco = null;
   if (G.lives <= 0) {
+    bossLogKnockout(); // AFT-013: a KO to the boss that owned the fight (passive)
     // KNOCKOUT: the build absorbs the defeat — refill lives and retry. The
     // run only truly ends once there is no build at all to carry it.
     if (totalBuildLevels() > 0 || (G.attune && G.attune.level > 0)) {
       statsKnockout(); // mark the failed attempt before the retry record opens
+      if (G.rush) { G.rush.kos++; G.rush.penalty += RUSH_KO_PENALTY; } // BOSS RUSH: fixed time penalty
       // AFT-009R P5: DELIBERATE CHOICES STAY OWNED — a defeat never
       // uninstalls an upgrade. The cost is the UNSPENT progress: current
       // resonance, banked (unpresented) attunement levels, and one Focus
@@ -3123,7 +3157,7 @@ function loseLife(cause = 'MISSED BALL', shot = null) {
       G.bossShotCD = Math.max(G.bossShotCD || 0, 2.2);
       setAnnounce('alert', '#ff8a65', 'KNOCKED OUT!',
         'BUILD SAFE — HALF YOUR LOOSE RESONANCE LOST'
-        + (lostFocus ? ' · 1 FOCUS' : ''), 3.6,
+        + (lostFocus ? ' · 1 FOCUS' : '') + (G.rush ? ' · +' + RUSH_KO_PENALTY + 'S' : ''), 3.6,
         recover ? 'YOUR BANKED RESONANCE ANSWERS — CHOOSE AN UPGRADE'
           : (resumeLine || 'RETRYING THE WAVE WITH FULL LIVES'));
       // the recovery hand rides the ordinary dividend path (banked width
@@ -3499,7 +3533,7 @@ function completeProtect(O, name) {
   statsObjective(O.type, true);
   setAnnounce('star', '#ffd54f', name, 'THE FLOCK SCATTERS — THE SKY IS YOURS', 2.8,
     null, null, false, true, 'objective');
-  SFX.levelUp(); haptic('boss');
+  SFX.levelUp(); haptic('success');
 }
 // the traveler / relay fell: the objective FAILS (the first fail state). No
 // extra punishment — the wave reverts to a normal attrition clear (the clear
@@ -3512,14 +3546,14 @@ function friendlyFaints(fr) {
   if (fr.sibyl) {
     setAnnounce('star', '#ff80ab', 'A CLOCK FALLS SILENT', 'THE RING WINDOWS THIN', 2.2,
       null, null, false, false, 'objective');
-    SFX.hit(0); haptic('hit');
+    SFX.hit(0); haptic('warning');
     return;
   }
   const O = G.objective;
   if (O) { O.failed = true; statsObjective(O.type, false); }
   setAnnounce('star', '#ff80ab', 'THE TRAVELER FELL — CLEAR THE WAVE!', '', 2.4,
     null, null, false, false, 'objective');
-  SFX.hit(0); haptic('hit');
+  SFX.hit(0); haptic('warning');
 }
 // AFT-020: complete a non-attrition objective — the remaining ordinary
 // population stands down. Shooter modes disperse the flock into fleeing
@@ -3655,7 +3689,7 @@ function updateObjective(dt) {
       G.reinforce = 0; // outlasting the swarm ENDS the stage — no grind wave after
       setAnnounce('star', '#ffd54f', 'MIGRATION SURVIVED!', 'THE FLOCK PASSES — THE SKY IS YOURS', 2.8,
         null, null, false, true, 'objective');
-      SFX.levelUp(); haptic('boss');
+      SFX.levelUp(); haptic('success');
     }
   }
 }
@@ -3769,11 +3803,7 @@ function beginBossReveal(kind, brs) {
   const reduced = !!SETTINGS.reduceFlash; // reduced-effects: dissolve, no sweep
   const gen = genFor(G.level);
   const primary = brs[0];
-  const cue = kind === 'sentinels' ? 'STRIKE THE ONE THAT JUST ATTACKED — IT IS OPEN'
-    : kind === 'secret' ? 'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE'
-    : kind === 'mythic' ? 'THREE PHASES · DENY ITS SUMMONS — TWO HITS EACH'
-    : blasterArmed() ? 'A CHARGED SHOT BREAKS ITS CHANNEL'
-    : 'THE BALL IS YOUR ONLY WEAPON — KEEP THE HIGH GROUND';
+  const cue = bossRevealCue(kind, blasterArmed()); // AFT-013: one source with the codex dossier
   const roleLine = kind === 'sentinels' ? 'ROUND 1 — THE SENTINELS'
     : kind === 'legendary' ? 'ROUND 2 — THE LEGENDARY'
     : kind === 'secret' ? 'MAX RIFT — THE SECRET BOSS' : 'FINAL ROUND — THE MYTHICAL';
@@ -3959,6 +3989,7 @@ function completeFinale() {
     L.finaleMastery = result;
   }
   awardCrest(F.realm, result); // durable recognition, never power (real journeys only)
+  bossLogFinaleComplete(F.realm); // AFT-013: the whole cast is met; coda presences take the win
 }
 // ---- THE GALE RELAY (AFT-020 Phase 2 — the first non-ladder format) ----
 // Beat 0: the three Vows pass ONE storm core. Only the carrier takes real
@@ -5337,7 +5368,7 @@ function gauntletSummonMythic(forceSecret = false) {
     const vmax = G.bricks[G.bricks.length - 1];
     if (G.mode === 'junkie') beginGauntletEntry('secret', 3, 'maxrift', vmax, '#d780ff', 3.1);
     else { G.enemyShots = []; G.telegraphs = []; G.columnStrikes = []; G.bossIntro = 1.8; }
-    G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); G.flashT = Math.max(G.flashT, 0.2);
+    G.shake = 16; G.freeze = Math.max(G.freeze, 0.18); flashFx(0.2, '215,128,255');
     SFX.roar();
     clearAnnouncements(['trial']);
     beginBossReveal('secret', [vmax]); // AFT-002
@@ -5391,17 +5422,31 @@ function updateSpriteKinematics(dt) {
     br.vspd = Math.hypot(br.vvx, br.vvy);
     // gait phase integrates distance travelled plus a slow idle breath —
     // stride quickens with real speed, and a parked mon still breathes
-    br.animPh = (br.animPh ?? br.wobble) + br.vspd * dt * 0.045 + dt * 1.6;
+    // A rider HOLDING FORMATION animates on its squad's clock (a wave
+    // travelling down the rank); only a mon actually going somewhere — a
+    // diver, a crosser, a rider still flying in — strides with its own speed.
+    // Per-rider integration let every sprite drift to its own phase, and a
+    // rank of out-of-step bobbing read as a stagger, not a formation.
+    const F0 = br.flight;
+    if (F0 && F0.state >= 2 && !br.dive && !br.entry && !F0.entering && !br.crosser) {
+      br.animPh = G.time * 2.6 + (F0.sq || 0) * 1.3 - (br.col || 0) * 0.45;
+    } else br.animPh = (br.animPh ?? br.wobble) + br.vspd * dt * 0.045 + dt * 1.6;
     // facing flips only after the direction HOLDS ~150ms — no apex flicker
     const want = br.vvx > 22 ? -1 : br.vvx < -22 ? 1 : (br.face || 1);
     if (want !== (br.face || 1)) {
       br.faceT = (br.faceT || 0) + dt;
       if (br.faceT >= 0.15) { br.face = want; br.faceT = 0; }
     } else br.faceT = 0;
-    // bank follows the path tangent; vertical velocity adds a touch of pitch
-    const bankTgt = Math.max(-0.3, Math.min(0.3, br.vvx * 0.0011))
-      + Math.max(-0.13, Math.min(0.13, br.vvy * 0.0005));
-    br.bank = (br.bank ?? 0) + (bankTgt - (br.bank ?? 0)) * Math.min(1, dt * 7);
+    // BANK is a statement of intent, not a symptom of drift: a formation's
+    // slow patrol sits inside the deadzone (riders stay upright and crisp),
+    // and only a committed move — a dive, a fly-by, an entrance — leans in.
+    // (Was ±17° off raw velocity plus a pitch term: every rider tilted one
+    // way and then the other as its squad swayed.)
+    const committed = br.dive || br.crosser || br.entry || (F0 && F0.entering);
+    const cap = committed ? 0.2 : 0.07;
+    const over = Math.max(0, Math.abs(br.vvx) - (committed ? 30 : 70));
+    const bankTgt = Math.sign(br.vvx) * Math.min(cap, over * 0.0011);
+    br.bank = (br.bank ?? 0) + (bankTgt - (br.bank ?? 0)) * Math.min(1, dt * 9);
   }
 }
 
@@ -5520,7 +5565,7 @@ function update(dt) {
     p.vx *= (1 - dt * 2); p.vy = p.vy * (1 - dt * 2) + 320 * dt;
   }
   compactInPlace(G.particles, p => p.life > 0);
-  for (const f of G.floaters) { f.life -= dt; f.y -= 40 * dt; }
+  for (const f of G.floaters) { f.life -= dt; f.y -= 40 * dt; f.age = (f.age || 0) + dt; if (f.pop > 0) f.pop = Math.max(0, f.pop - dt * 7); }
   compactInPlace(G.floaters, f => f.life > 0);
   for (const f of G.fragments) {
     f.life -= dt; f.x += f.vx * dt; f.y += f.vy * dt;
@@ -5557,6 +5602,7 @@ function update(dt) {
   G.scoreShown += (G.score - G.scoreShown) * Math.min(1, dt * 9);
   if (Math.abs(G.score - G.scoreShown) < 1) G.scoreShown = G.score;
   G.comboPop = Math.max(0, G.comboPop - dt * 3.2);
+  if (G.comboTierT > 0) G.comboTierT = Math.max(0, G.comboTierT - dt * 1.4); // AFT-027 tier flare
 
   if (G.state === 'ending') {
     // the ending owns its own clock: no combat sim, no timers, just beats.
@@ -5582,7 +5628,7 @@ function update(dt) {
     // this breather was silently eating the realm's one Forge decision 2.2s
     // after it appeared (owner report, 2026-09-01 — "only stays on for a
     // second"). A decision surface waits for the player, always.
-    if (!G.upgradeChoices && !G.forge && G.stateT > 2.2) { buildLevel(G.level); serve(); }
+    if (!G.upgradeChoices && !G.forge && G.stateT > 2.2) { if (rushArmoryNext()) return; buildLevel(G.level); serve(); }
     return;
   }
   if (G.state === 'ceremony') {
@@ -5595,7 +5641,7 @@ function update(dt) {
     if (c.evo) {
       if (!c.burst1 && c.t >= 1.9) { // radiant flash: the change begins
         c.burst1 = true;
-        G.flashT = 0.25;
+        flashFx(0.25, '255,255,255'); // AFT-027: an evolution is radiant, not a wound
         ringFx(cx, cy, '#ffffff', 8, Math.min(W, H) * 0.34, 4, 0.6);
         SFX.mega();
       }
@@ -5618,6 +5664,9 @@ function update(dt) {
 
   tickEffects(dt);
   if (G.state === 'play') { G.playT += dt; statsPlayTick(dt); }
+  // BOSS RUSH clock: sim dt in LIVE combat only — reveals returned above,
+  // pause/results/drafts/ceremonies never reach this line
+  if (G.rush && !G.rush.done && (G.state === 'play' || G.state === 'serve')) G.rush.t += dt;
   // AFT-021 P2: the trial/daily BRIEFING HOLD — while it runs, every hostile
   // clock is floored (no fire, no dives, no maneuvers; formations still fly)
   // and when it ends the trial notice retires so copy never sits over live
@@ -5673,7 +5722,6 @@ function update(dt) {
       // so touch and desktop reach full charge in the same time.
       G.charge = Math.max(G.charge, Math.min(1, (heldMs / 1000) * weaponScale() / chargeFillTime()));
       G.chargeCur = { pressMs: +heldMs.toFixed(1), t0: G.time, fullS: null };
-      haptic('promote'); // AFT-021 P8: the hold has become a charge — say so in the thumb
     }
     if (chargeHeld && G.overheat <= 0 && G.chargeCD <= 0) {
       charging = true;
@@ -5683,7 +5731,9 @@ function update(dt) {
       G.charge = Math.min(1, G.charge + dt * weaponScale() / chargeFillTime()); // ~1.1s to full (0.8 w/ Heavy Bolt — IMPACT owns charge)
       if (G.charge >= 1 && G.chargeCur && G.chargeCur.fullS == null) {
         G.chargeCur.fullS = +(((G.chargeCur.pressMs || 0) / 1000) + (G.time - G.chargeCur.t0)).toFixed(3);
-        haptic('full'); // the resonance window opens NOW
+        haptic('charge'); // one timing cue per hold: the shot is ready to release
+        SFX.chargeFull(); // AFT-027: …and the same cue by ear
+        if (SETTINGS.visualCues) addFloater(G.paddle.x, shipY() - 62, 'CHARGED', '#80ffea', 13);
       }
       // RESONANCE (Milestone 2): the instant the charge tops out, a short
       // sweet-spot window opens (RESONANCE_WINDOW) — release inside it for
@@ -5746,12 +5796,12 @@ function update(dt) {
     G.megaCalloutDone = true;
     setAnnounce('mega', '#ffd54f', lex('MEGA READY!'), lex(IS_TOUCH ? 'TAP THE GLOWING MEGA BUTTON TO UNLEASH' : 'PRESS E TO UNLEASH'), 2.6);
   }
-  // EVERY time the meter fills: a distinct haptic + a ring pulse on the MEGA
+  // EVERY time the meter fills: a restrained haptic + a ring pulse on the MEGA
   // button itself, so readiness registers without reading the corner meter
   {
     const megaReadyNow = G.mega >= 1 && G.megaT <= 0;
     if (megaReadyNow && !G.megaWasReady && G.state === 'play') {
-      haptic('mega');
+      haptic('ready');
       if (IS_TOUCH) {
         const B = touchButtons();
         G.uiTouchPulse = { x: B.mega.x, y: B.mega.y, label: 'MEGA READY', t: 0.9, max: 0.9 };
@@ -5787,7 +5837,7 @@ function update(dt) {
           jc.step === 3 ? G.chargedEver :
           jc.step === 4 ? orbNow :
           jc.step === 5 ? G.megaT > 0 : true;
-        if (done) { jc.doneT = 0.9; haptic('tap'); }
+        if (done) jc.doneT = 0.9;
       }
     }
     // course complete — or the player has flown far enough without the
@@ -5915,7 +5965,9 @@ function update(dt) {
           .map(b => b.flight.sq))];
         if (sqs.length) {
           const sq = sqs[Math.floor(gameRand() * sqs.length)];
-          const opts = (G.encounter && G.encounter.rotary) ? ['surge'] : ['scatter'];
+          // a rigid RANK (sq 99) never scatters — ×1.8 about its centre
+          // would throw its outer files off-screen; it SURGES its patrol
+          const opts = ((G.encounter && G.encounter.rotary) || sq === 99) ? ['surge'] : ['scatter'];
           if (regionsIn3 >= 2) opts.push('raid');
           const mv = { sq, kind: opts[Math.floor(gameRand() * opts.length)], t: 0 };
           if (mv.kind === 'raid') {
@@ -6012,9 +6064,17 @@ function update(dt) {
       // slot frame breathes ±5% on one squad-synced clock
       // ONE body: every squad shares the same patrol phase — concentric
       // families (carousel rings, eclipse, moons) must never drift apart
-      cx += Math.sin(et * 0.75) * W * 0.07;
-      cy += Math.sin(et * 0.5) * 5;
-      const breath = 1 + 0.05 * Math.sin(et * 1.4 + s * 0.9);
+      // ONE motion per body (the "drunk" fix): the patrol is a single
+      // lateral GLIDE that settles at each end — sin shaped through
+      // u(1.5−u²/2), flat at the turnarounds, brisk through the middle —
+      // and the throb rides the same clock at exactly 2:1, in phase for
+      // every squad. It used to be three unrelated sines (x 0.75, y 0.5,
+      // per-squad breath 1.4 + s·0.9): no beat ever repeated, so the
+      // formation wandered a slow Lissajous instead of patrolling. A ROTARY
+      // family's rotation IS its motion, so its patrol is halved.
+      const pu = Math.sin(et * 0.75);
+      cx += pu * (1.5 - 0.5 * pu * pu) * W * (E.rotary ? 0.035 : 0.07);
+      const breath = 1 + 0.04 * Math.cos(et * 1.5);
       rx *= breath; ry *= breath;
       if (S.silenceT > 0) S.silenceT = Math.max(0, S.silenceT - dt * ts);
       S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;
@@ -6166,7 +6226,13 @@ function update(dt) {
       // around its own center; a raid eases the whole flock down and back
       const mv = G.maneuver;
       if (mv && F.sq === mv.sq) {
-        const pr = Math.sin(Math.PI * Math.min(1, mv.t / mv.dur)); // 0→1→0
+        // 0→1→0: the half-sine, FEATHERED over its first and last 15% so
+        // the squad leaves and rejoins formation from rest. (The bare
+        // half-sine started and ended at full speed — a velocity snap at
+        // both ends of every scatter and raid.)
+        const mu = Math.min(1, mv.t / mv.dur);
+        const fe = q => { const x = Math.max(0, Math.min(1, q / 0.15)); return x * x * (3 - 2 * x); };
+        const pr = Math.sin(Math.PI * mu) * fe(mu) * fe(1 - mu);
         if (mv.kind === 'scatter') {
           pos.x = F.cx + (pos.x - F.cx) * (1 + 0.8 * pr);
           pos.y = F.cy + (pos.y - F.cy) * (1 + 0.8 * pr);
@@ -6227,12 +6293,30 @@ function update(dt) {
             // shallow for nested rings; let the smoothed solver add just the
             // breathing room the composition physically needs.
             && !(G.mode === 'junkie' && br.flight.choreo && !G.maneuver && H >= 560)) fl.push(br);
+        // A rider that just LEFT the solver (its squad's maneuver ended)
+        // still carries the offset the solver built. It used to be dropped
+        // in one frame — every rider in the squad snapped ~10px back onto
+        // its slot the instant a scatter/raid finished. Drain it instead.
+        else if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && (br.sepX || br.sepY)) {
+          const kd = 1 - Math.min(1, dt * ts * 5);
+          br.sepX *= kd; br.sepY *= kd;
+          if (Math.abs(br.sepX) + Math.abs(br.sepY) < 0.05) { br.sepX = 0; br.sepY = 0; }
+          br.bx += br.sepX; br.by += br.sepY;
+        }
       }
       const gr = G.mode !== 'junkie' ? G.gridRect : null;
       // SPACE JUNKIE separation is SMOOTHED: pushes build into a per-rider
       // offset that eases in AND out — so when a neighbour dies, the released
       // pressure drains over ~0.4s instead of snapping the survivor sideways
-      const eased = G.mode === 'junkie';
+      // (EVERY mode is WARM-STARTED since the motion pass: BLASTER ran the
+      // solver cold from the raw slots each frame, and wherever a late
+      // pattern crowded its riders the push order flipped from frame to
+      // frame — measured as riders vibrating between five or six positions
+      // ~15px apart. Starting from last frame's answer keeps the solution
+      // coherent. The walled modes still take the solver's output EXACTLY
+      // (k2 = 1 below): easing it let patterns blob, and the wall rule is
+      // re-applied after the blend, so flyer↔wall stays a strict zero.)
+      const eased = true;
       if (eased) {
         for (const br of fl) {
           br.sepX = (br.sepX || 0) * (1 - Math.min(1, dt * ts * 2.5));
@@ -6277,13 +6361,23 @@ function update(dt) {
         }
       }
       if (eased) { // blend the raw pushes into the persistent offset
-        const k2 = Math.min(1, dt * ts * 14);
+        // the build rate RAMPS over a maneuver's first 0.35s: choreographed
+        // squads only enter the solver when a maneuver begins, and at full
+        // rate that admission was itself a ~3px kick across the whole wave
+        const mvRamp = G.maneuver ? Math.min(1, 0.15 + G.maneuver.t / 0.35) : 1;
+        const k2 = G.mode !== 'junkie' ? 1 : Math.min(1, dt * ts * 14) * mvRamp;
         for (const br of fl) {
           const wantX = br.bx - br.slotX, wantY = br.by - br.slotY;
           br.sepX += (wantX - br.sepX) * k2;
           br.sepY += (wantY - br.sepY) * k2;
           br.bx = br.slotX + br.sepX;
           br.by = br.slotY + br.sepY;
+          // the blend may leave a rider a hair inside the static wall the raw
+          // pass had just cleared it from — the wall wins, immediately
+          if (gr && Math.abs(br.bx - gr.cx) < gr.hw + br.w / 2 &&
+              br.by + br.h / 2 > gr.top && br.by - br.h / 2 < gr.bottom) {
+            br.by = gr.bottom + br.h / 2 + 4; br.sepY = br.by - br.slotY;
+          }
         }
       }
     }
@@ -6437,16 +6531,30 @@ function update(dt) {
         if (dv.t / dv.dur < 0.5) dv.tx += ((G.paddle.x - G.fx) - dv.tx) * Math.min(1, dt * ts * 0.9);
         const p = Math.min(1, dv.t / dv.dur);
         const lowY = PADDLE_Y() - 130 - G.fy;
-        if (p < 0.5) {
-          const q = p / 0.5, u = 1 - q;
-          const cxp = br.hx + dv.dir * 160, cyp = br.hy + (lowY - br.hy) * 0.35;
-          br.bx = u * u * br.hx + 2 * u * q * cxp + q * q * dv.tx;
-          br.by = u * u * br.hy + 2 * u * q * cyp + q * q * lowY;
+        // ONE committed move in three beats, each starting and ending at
+        // rest (smoothstep), so there is no velocity snap anywhere:
+        //   WIND-UP + DIVE — peels out of its slot and swoops down a cubic;
+        //   HANG — holds the low line for a beat, drifting across the target
+        //          while it fires (the tell you aim at);
+        //   CLIMB — curls away and decelerates back into its slot.
+        // (Was two quadratics meeting in a hard V at the bottom, leaving the
+        // slot at full speed and stopping dead on return — three velocity
+        // snaps per dive.) Both low handles sit ON lowY, so the curve's hull —
+        // and therefore the diver — can never dip below the cap.
+        const ss = q => q * q * (3 - 2 * q);
+        const bez = (a, b, c2, d2, q) => { const u = 1 - q; return u * u * u * a + 3 * u * u * q * b + 3 * u * q * q * c2 + q * q * q * d2; };
+        const hang = Math.min(40, W * 0.09) * dv.dir, lead = 70 * dv.dir;
+        if (p < 0.42) {
+          const q = ss(p / 0.42);
+          br.bx = bez(br.hx, br.hx + dv.dir * 120, dv.tx - hang - lead, dv.tx - hang, q);
+          br.by = bez(br.hy, br.hy - 30, lowY, lowY, q);
+        } else if (p < 0.58) {
+          br.bx = dv.tx - hang + 2 * hang * ss((p - 0.42) / 0.16);
+          br.by = lowY;
         } else {
-          const q = (p - 0.5) / 0.5, u = 1 - q;
-          const cxp = dv.tx - dv.dir * 180, cyp = br.hy + (lowY - br.hy) * 0.35;
-          br.bx = u * u * dv.tx + 2 * u * q * cxp + q * q * br.hx;
-          br.by = u * u * lowY + 2 * u * q * cyp + q * q * br.hy;
+          const q = ss((p - 0.58) / 0.42);
+          br.bx = bez(dv.tx + hang, dv.tx + hang + lead, br.hx - dv.dir * 90, br.hx, q);
+          br.by = bez(lowY, lowY, br.hy + (lowY - br.hy) * 0.3, br.hy, q);
         }
         if (!dv.shot && p > 0.42 && G.mode !== 'classic') { // one aimed shot at the bottom of the swoop (never in calm BREAKER)
           dv.shot = true;
@@ -6541,7 +6649,7 @@ function update(dt) {
       if (!G.dangerWarned) { // first crossing per wave is a free warning
         G.dangerWarned = true;
         addFloater(W / 2, H / 2, 'PUSHED THEM BACK!', '#ffd54f', 26);
-        G.shake = 10; G.flashT = 0.15;
+        G.shake = 10; flashFx(0.15, '255,213,79');
         SFX.enrage();
       } else {
         addFloater(W / 2, H / 2, 'THEY GOT TOO CLOSE!', '#ff5252', 26);
@@ -6773,7 +6881,6 @@ function update(dt) {
           }
         }
       }
-      haptic('tap');
       G.combo = 0;
       // returning to the paddle banks the rally — celebrate a good one
       if (b.rally >= 5) addFloater(G.paddle.x, PADDLE_Y() - 32, 'NICE RALLY ×' + b.rally + '!', '#80d8ff', 15);
@@ -7061,6 +7168,19 @@ function update(dt) {
         // JUNKIE-mode bolts carry the pilot's element; the base blaster stays neutral
         damageBrick(br, dmg, L.x, L.y, L.element || (L.basic ? null : 'electric'),
           { source: L.charged ? 'charge' : L.basic ? 'bolt' : 'other' });
+        // AFT-027: the charged shot LANDS — a white impact ring on every
+        // pierce, and on first contact a dry report, a kick and a beat of
+        // hit-stop, so the big shot never feels like a fat normal bolt.
+        // Presentation only: nothing here touches damage, pierce or timing.
+        if (L.charged) {
+          ringFx(L.x, L.y, '#ffffff', 6, 30 + Math.min(40, (L.r || 12) * 1.1), 3, 0.3);
+          if (L.bhits === 1) {
+            sparkle(L.x, L.y, 4);
+            SFX.chargeHit();
+            G.shake = Math.min(G.shake + 5, 14);
+            G.freeze = Math.max(G.freeze, 0.04);
+          }
+        }
         // PSYSTRIKE interrupt: a charged hit lands mid-channel — the
         // desperation BREAKS and Mewtwo staggers open (bonus-damage window)
         if (L.charged && br.channel && !br.dead) {
@@ -7072,7 +7192,7 @@ function update(dt) {
           setCombatNotice('STAGGERED — STRIKE NOW!', '#80d8ff', 1.4);
           ringFx(bx, by, '#80d8ff', 8, 130, 4, 0.5);
           G.freeze = Math.max(G.freeze, 0.1);
-          SFX.wall(); haptic('boss');
+          SFX.wall(); haptic('success');
         }
         // MOMENTUM: in the shooter modes there are no paddle returns, so
         // blaster hits carry the whole tier — twice the classic trickle
@@ -7294,7 +7414,7 @@ function update(dt) {
           // PHANTOM PHASE gates damage) — clearing an intangibility timer on
           // channel open is safe for every boss (a no-op for those that never set it)
           setCombatNotice(chDef.name + ' CHANNEL — BREAK IT WITH A CHARGED SHOT!', '#ff5cf0', 2.4);
-          SFX.enrage(); haptic('boss');
+          SFX.enrage(); haptic('warning');
         }
         if (boss.channel) {
           const t0 = boss.channel.t;
@@ -7973,6 +8093,7 @@ function beginStageResolution() {
   // and stand-downs mutate it (completeFinale is idempotent; the settle
   // calls become confirmations)
   if (stageIdx(G.level) === 2) completeFinale();
+  if (G.rush) rushRecordSplit(); // BOSS RUSH: this Sovereign's split closes at the win moment
   const R = { t: 0, minHold: 0.65, timeout: 1.1, outcomes: { dispersed: 0, rescued: 0, neutralized: 0 } };
   // hostile presence dissolves NOW — a soft spark where each shot was
   let sparks = 0;
@@ -8149,7 +8270,9 @@ function settleStageResolution() {
     // the game's biggest beat — a full evolution ceremony plays before the
     // draft. The ceremony OWNS the partner evolution (bumps starterLvl now),
     // so buildLevel won't re-announce it with the plain banner later.
-    if (!G.trial && !secretVictory && actIdx(G.level) > actIdx(G.level - 1)) {
+    // (BOSS RUSH plays it too: a rush crosses the act boundaries for real,
+    // and the Forge that follows must see the partner's true Form)
+    if ((!G.trial || G.rush) && !secretVictory && actIdx(G.level) > actIdx(G.level - 1)) {
       const sm = SKIN.starterMon[G.starter];
       const newLvl = starterStage(G.level, G.starter);
       let evo = null;
@@ -8170,6 +8293,16 @@ function settleStageResolution() {
       // the ceremony PENDS behind the results screen: clear → results →
       // ceremony → draft. advanceResults() routes to it when set.
       G.ceremony = { act: actIdx(G.level), t: 0, evo, burst1: false, burst2: false };
+    }
+    // BOSS RUSH: the results read this Sovereign's split; the ninth ends the
+    // rush (no Forge), any earlier one arms the two armory hands
+    if (G.rush && clearedStage === 2) {
+      const sp = G.rush.splits[G.rush.splits.length - 1];
+      if (sp) { G.results.rushSplit = sp.t; G.results.rushIdx = G.rush.splits.length; }
+      // the next stop is the next SOVEREIGN — the ordinary stages are skipped
+      const nl = G.level + 2;
+      G.results.nextName = nl > 27 ? null : (stageTitle(nl) || genFor(nl).name + ' · ' + SKIN.stageNames[2]);
+      rushAfterFinaleClear();
     }
     SFX.levelUp();
     // (the clear confetti fires at RESOLUTION entry now — celebration plays

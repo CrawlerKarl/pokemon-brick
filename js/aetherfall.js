@@ -520,6 +520,9 @@
     riftDesc: "ONE OF THREE PIECES THAT REWRITES THE MARCHES' FINAL ROUND",
     partnerWord: 'VESSEL',
     regionWord: 'REALM',
+    rushName: 'SOVEREIGN RUSH', // the nine-finale timed mode (trial picker)
+    rushFoes: 'SOVEREIGNS',
+    dossierName: 'SOVEREIGNS', // AFT-013: the codex's boss-dossier tab
   };
 
   // ── THE SURGE LEXICON (AFT-003) ──────────────────────────────────────────
@@ -853,6 +856,7 @@
       meterLabel: 'BREAK METER', seraphShieldWord: 'THE CROWN SHIELDS IT',
       segmentWord: 'CROWN SEGMENT', boundName: 'VYRAKKA IS BOUND',
       freeWord: 'VYRAKKA UNBOUND — SHE TEARS THE CROWN!',
+      freeTip: 'OPTIONAL: BREAK EVERY VINE TO FREE VYRAKKA — SHE TEARS A CROWN SEGMENT OPEN', // AFT-013 dossier cue
       jobs: ['ENERGIZE', 'REINFORCE', 'FREEZE'],
     },
   };

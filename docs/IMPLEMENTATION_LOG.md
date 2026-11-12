@@ -5,6 +5,337 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-11-12 — AFT-028: THE MOTION PASS ("the enemies feel drunk") + AFT-013 CODEX BOSS DOSSIERS
+
+Owner report, verbatim: *"make the movement of the enemies feel more
+professional and gamelike. they feel drunk right now and there's a weird
+shift to center every time they are hit."* Diagnosed by MEASUREMENT, not by
+eye — three throwaway probes (scratch only): a frame-by-frame strip of a
+flyer being hit, 9-second trajectory plots per stage, and a per-frame
+second-difference ("velocity snap") logger. Suite 144/144 · gate GREEN (66
+scenes) · `npm run baseline -- --label aft028-motion` GREEN (187 scenarios).
+
+**§1 The "shift to centre" was the hit flash.** Every hit painted a
+translucent grey-white DISC at the sprite's centre and popped its scale 10%.
+The sim position never moved (probe: zero displacement through a hit). Now:
+the sprite's OWN silhouette flashes white (`getSilhouette(id,'#ffffff')`,
+cached per id), the sprite is KICKED 3.5–7px along the shot's direction and
+springs back (`br.kx/ky`, written in `damageBrick`, read only by render), and
+it squashes on impact. Presentation only — the suite asserts a hit moves
+nothing in the sim.
+
+**§2 "Drunk", cause one — the sprites.** Bank was ±17° off raw velocity plus
+a pitch term, so every rider leaned one way then the other as its squad
+swayed; gait roll ran up to ±9°; each sprite integrated its own gait phase
+and ALSO carried a second random-phase idle bob. Now (`updateSpriteKinematics`
++ the bare-flyer draw): a rider holding formation stays upright (bank
+deadzone 70px/s, cap 0.07 rad); only a COMMITTED move (dive, crosser,
+entrance) leans, up to 0.2; gait roll is 0.02–0.07; formation riders animate
+on the squad's clock (a wave travelling down the rank); the duplicate idle
+bob is gone for bare flyers.
+
+**§3 "Drunk", cause two — the solver was being asked the impossible.**
+`spawnReinforcement` dealt 11–20 riders onto ONE copy of the wave's pattern
+sized for five (rx ≈ 70px). The slots could not physically hold them, so the
+separation solver shoved the pack around every frame — measured as ragged,
+kinked paths. Reinforcements now arrive as THE RANK: a rigid hex-staggered
+lattice (new flight kind `'rank'`, per-rider `gx/gy` slots spaced at the
+solver's own minimum distance + 6%), gliding as one body on a single
+settle-at-the-ends patrol. Same riders, HP and density. A rank never
+`scatter`s (×1.8 would throw its files off-screen) — it surges.
+
+**§4 Real velocity snaps, all removed.** (a) A squad's solver offset was
+dropped in ONE frame when its maneuver ended (~10px teleport per rider) —
+it now drains. (b) Choreographed squads entering the solver at maneuver
+start kicked ~3px — the build rate ramps over 0.35s. (c) `scatter`/`raid`
+used a bare half-sine (full speed at both ends) — now feathered over its
+first/last 15%. (d) The DIVE was two quadratics meeting in a hard V, leaving
+the slot at full speed and stopping dead on return — now three smoothstep
+beats: wind-up + dive, a short HANG along the low line while it fires (the
+tell you aim at), climb. (e) BLASTER ran the solver cold each frame and
+crowded late patterns vibrated between 5–6 positions ~15px apart (mean
+acceleration 5803 → 515 px/s² at L10) — every mode is now WARM-STARTED from
+last frame's answer; the walled modes still take the solver's output exactly
+(easing it blobbed — the flyer↔flyer test caught that at 435 overlap-frames).
+
+**§5 One motion per body.** The STARFIGHTER patrol was three unrelated sines
+(x 0.75, y 0.5, per-squad breath 1.4 + s·0.9) — no beat ever repeated, so
+formations wandered a slow Lissajous. Now ONE lateral glide shaped
+u(1.5 − u²/2) (flat at the turnarounds, brisk through the middle) with the
+throb locked 2:1 to it, in phase for every squad. Rotary families rotate
+1.8× faster (×1.25, was ×0.7 — a ring took ~45s per turn, slower than its
+own patrol) and patrol half as far: rotation IS their motion.
+
+**§6 Balance attribution (do not re-derive).** A control probe
+(`BASE_QUERY` toggles, since removed) showed the solver change has ZERO
+effect on any finale cell; the first dive rewrite (a tangent-matched skim,
+no hang) alone slowed BLASTER finales ~14% (12-cell mean 65.7 → 74.8s) and
+tripped the L9 mode-ratio cap — the HANG brought the same cells to 59.2s.
+A sin² maneuver envelope moved J02 28.1 → 17.2s (under the 19s floor); the
+feathered half-sine restored 28.1. The realm-2 Challenge gets +1
+reinforcement rider (J05 sat 0.1s under its floor with the tidier rank).
+`tools/run-baseline.js` gained `BASE_QUERY=<query>` (appended to the
+scenario page URL) for exactly this kind of A/B probe.
+
+**§7 AFT-013 CODEX BOSS DOSSIERS (built by a subagent, reviewed here).** The
+codex has two tabs: the collection grid and a boss tab (`strings.dossierName`
+— SOVEREIGNS / LEGENDS). Nine realm rows of boss tiles; unmet bosses are
+silhouettes. A met boss opens a DOSSIER PAGE: the AFT-002 reveal portrait,
+name + epithet, realm · role · aspect, phase rule, attacks, the counterplay
+cue (wrapped, never ellipsized), the finale's title and beats, and YOUR
+RECORD (met / defeated / knockouts / fastest fall per mode with phase
+times / best BOSS RUSH split). Records live in one new per-skin store,
+`storeKey('bosslog')` (in `EXPORT_SKIN_KEYS`): `{ id|'secret': { seen, wins,
+kos, best{mode}, phase{mode{1..3}} } }`. The log is a PASSIVE OBSERVER —
+five one-line hooks (`bossLogEngage` at `damageBrick` entry, `bossLogFall`
+in the kill block, `bossLogKnockout` in `loseLife`, `bossLogFinaleComplete`
+in `completeFinale`, `bossLogPhase` inside `statsBossPhaseMark`); it never
+touches `gameRand`, score or brick fields, and only real journeys and BOSS
+RUSH write (trials, dailies and cheated runs never do). 5 suite tests + 2
+gate scenes (`dossier-list`, `dossier-page`).
+- The subagent flagged "first seeded run ≠ later runs". Reproduced and
+  explained: its repro forces `G.trial = false`, so run 1 writes a codex
+  catch and run 2's capture drop is suppressed (`!DEX.has(id)`) — designed
+  behaviour, not a stream leak.
+- Known soft spots: AETHERFALL still says LEGENDARY/MYTHICAL for boss roles
+  (the reveal scene does too) while the tab says SOVEREIGNS — a lexicon
+  decision for the owner; the pokemon skin has no epithets, so its dossier
+  subtitle reads "LEGENDARY OF KANTO".
+
+## 2026-11-12 — AFT-027: THE FEEL PASS, the Breaker wall, scenery depth, BOSS RUSH (AFT-014 slice), and AFT-015 (installable + offline)
+
+**Owner directive: "go to town — as fun and visually appealing as
+possible."** The round opened with a screen-by-screen review (a new
+headless screenshot tool, `tools/shot.js`, made that possible — the preview
+pane auto-pauses and throttles) plus three read-only scouts (feedback
+systems, meta surfaces, lifecycle). Five workstreams came out of it — two
+done in the lead session, three delegated to agents and reviewed.
+
+### 1. The combat feel pass (presentation-only — the sim is untouched)
+
+- **Combat text no longer prints on itself.** `addFloater` now (a) refreshes
+  a repeated call-out in place with a pop instead of stacking a ghost copy,
+  and (b) settles each new line into a free lane against estimated text
+  boxes (the old fixed 20px step ignored font size). Score pops route
+  through `addScoreFloater`, which SUMS a local burst of kills into one
+  growing number (`+2400 → +4800 → +7200`, warming to gold at four) instead
+  of four overlapping `+2400`s. Floaters pop in (`f.pop`, decayed in
+  update).
+- **The combo has a shape.** `COMBO_TIERS` (10/25/50/100): the HUD label
+  warms through tier colours and flares when a tier is crossed; the old
+  "COMBO xN" floater every fifth kill (which only repeated the HUD) is gone
+  — thresholds are called out once, with a rising `SFX.comboUp` arpeggio and
+  a ring. A real streak (≥10) lost to a hit is named at the ship.
+- **The screen flash carries meaning by colour** (`flashFx(t, rgb)` /
+  `G.flashCol`). Red is reserved for being hurt; a boss phase flashes in
+  the boss's own element, an evolution is white, Surge ignition is gold, a
+  ward save is cool blue. Every flash was hurt-red before, including the
+  evolution ceremony.
+- **Moments that shared a generic blip have their own beat:** an elite kill
+  (`br.elite ≥ 2` or `maxHp ≥ 3`) gets a second ring, `SFX.eliteDown` and a
+  longer hit-stop; the charged shot has its own release report
+  (`SFX.chargeShot`, was the tap blip), a white impact ring on every pierce,
+  and on first contact a dry `SFX.chargeHit`, a kick and 40ms of hit-stop;
+  the charge topping out chimes (`SFX.chargeFull`, mirrored as a `CHARGED`
+  floater under VISUAL SOUND CUES); Surge ignition gets a gold flash, a wide
+  double ring, a sub drop and 90ms of hit-stop; a ward eating a hit gets a
+  glassy `SFX.wardBreak`, a kick and a cool flash so a SAVE never reads as
+  the hurt beat. Kill sounds carry a few cents of random detune.
+- **Hit-stop is wall-clock only** (`G.freeze`, consumed in main.js), so none
+  of this moves sim time; the baseline bot zeroes it per frame.
+- **Skin leak fixed:** `drawPaddle` drew the capture-ball hub at the paddle
+  centre in EVERY skin — it shipped on AETHERFALL's Breaker and Blaster
+  rigs. Non-pokemon skins now carry an AETHER CORE (a faceted gem in the
+  vessel's aspect colour, flat fills only).
+- **Two HUD overlaps found by eye and fixed:** the narrow-screen COMBO
+  label printed under the lower edge of a live goal pill (it now drops one
+  row — the build line already yields that row); and classic's standing
+  REGION RULE pill printed through a live announce strip's detail line at
+  both phone and desktop sizes (the pill now yields to the strip, as it
+  already did to an objective banner).
+
+### 2. BREAKER's wall grows with the journey
+
+The review's biggest gameplay finding. `buildLevel`'s boxed-brick budget
+thins the wall region by region to make room for free-flyers — but classic
+has had NO flyers since the calm redesign, so Breaker's walls were simply
+shrinking: at phone portrait realm 6+ fielded **6–12 bricks**, and a
+ball-tracking probe (6 seeds per stage) measured **~40s stages in realm 1
+against ~18s in realms 8–9**. In the mode where the wall is the whole game,
+the campaign was getting thinner as it went.
+
+- Classic ordinary stages now build `3 + min(3, ⌊realm/2⌋)` rows (+1 on
+  CHALLENGE), capped at 7 and by `maxRows` so the lower field stays open —
+  3 rows early → 6 late (realm 9 phone portrait: ~28–36 bricks, was 6–12).
+- `CLASSIC_WALL_MUL` (state.js) is a Breaker-only durability curve for
+  ordinary walls (×1 early → ×1.9 at realm 9; realm 3 dips to ×0.85
+  because its region rule already slows it). Blaster walls and every finale
+  keep the shared numbers.
+- Measured after: realms 1–7 sit at ~30–50s for the probe bot; realms 8–9
+  rise from ~18s to ~20–35s. The late-game ball is so strong that duration
+  is no longer HP-bound there — pushing HP further would only punish weak
+  builds, so the curve stops at ×1.9 by design. **Open for the owner's
+  hands:** whether late Breaker stages now feel like real stages.
+- `npm run baseline` does not cover ordinary classic stages (its classic
+  cells are finales only) — the suite test and the probe are the evidence.
+
+### 3. AFT-015 — installable + offline (delegated, reviewed)
+
+`manifest.webmanifest`, `sw.js`, `assets/icons/*` (generated by
+`tools/build-icons.js`), head tags in `index.html`, and lifecycle handling.
+The worker is NETWORK-FIRST for navigations/html/js (a deploy lands
+immediately when online; cache fallback offline) and
+stale-while-revalidate for art/fonts/icons; non-GET, cross-origin and `dev`
+requests are untouched. The DIST build injects a version and a 714-entry
+precache (24 shell files + 690 WebP, 10.3 MB) that warms in the background
+after activation, so the standalone works offline after one online visit;
+the workshop only caches art as it is fetched. Registration is refused
+under `?dev`, test/gallery pages, automation and localhost unless the URL
+carries `?sw`. Lifecycle: hidden/pagehide suspend the AudioContext (the
+next gesture resumes it — any non-running state, for iOS's `interrupted`),
+bfcache restores re-run `resize()`, and `appinstalled` re-requests durable
+storage. Gate additions: a PWA static contract (workshop + dist), a
+"0 registrations under the gate" guard per skin, and a real OFFLINE BOOT
+check (load the dist with `?sw`, wait for the warm, kill the server,
+reload, assert the game boots).
+
+### 4. The scenery depth pass (delegated, reviewed by before/after sheets)
+
+The backdrops were the flattest surface in the game: one silhouette layer
+per realm, three stages that differed only by sky tint, a flat disc for a
+sun. All in `js/scenery.js` (+ two call sites in render.js):
+
+- **Depth:** a FAR layer for all nine scenes (`bgFar` / `drawFar[scene]` —
+  mountains, distant pagodas, towers, islands, buttes), blended toward the
+  horizon colour with valley haze and a slower parallax (±5px vs ±12px).
+  `cropToContent` trims both scenery canvases to the rows that hold pixels,
+  and `drawSceneryLayers(c, par)` is the one draw entry — so the far range
+  also folds into the rung-3 background plate. **Painted area went DOWN:
+  4.49 → 4.01 screens/frame at full (the storm ledger), 2.36 at the floor.**
+- **Stage identity:** per-stage weather recipes (`AMBIENT_STAGES`; new
+  leaf/ash kinds; rain now leans WITH its drift), low cloud banks on
+  storm/overcast stages, a faint aurora on three night finales, window
+  lights that follow the time of day (the City Blackout goes dark with red
+  aviation lamps), a soft accent glow behind the finale landmark.
+- **Celestial bodies** are baked into the sky canvas: a haloed, limb-darkened
+  sun, a shaded moon with seas and craters, an eclipse with corona streamers
+  and a diamond-ring bead. Low suns moved from 58% to 76% height — onto the
+  horizon, half behind the far range, out of the combat field.
+- **Fixes:** shooting stars only when `SCENE_DARK ≥ 0.45` (they crossed
+  noon skies); the Kanto flocks fly by day only; a 6px bare strip at the
+  screen edge when the paddle reached a wall on phones; and
+  `buildBackground` no longer bakes every ordinary wave twice.
+- Scenery randomness stays on its own seeded PRNG / `Math.random` — never
+  `gameRand`. Known soft spots (agent-flagged, accepted): night cloud banks
+  sit at ~0.6–0.74H; pre-existing near-layer art (Hoenn crater walls,
+  landscape skylines) still reaches mid-field on short screens.
+
+### 5. BOSS RUSH — the first AFT-014 slice (delegated, reviewed)
+
+The nine authored realm finales are the game's best content; BOSS RUSH
+(`SKIN.strings.rushName`: BOSS RUSH / SOVEREIGN RUSH) plays them back to
+back as a timed run on the CAMPAIGN'S OWN ECONOMY, so the finale balance
+the baseline already validates carries over untouched.
+
+- **Entry:** a button in the trial picker (`trialLayout().rush`), showing
+  the best time for the current mode + difficulty. `startBossRush()` is
+  exactly a trial launch of level 3 — `resetRun(3, true, { rush: true })` —
+  plus ONE state object, `G.rush` (null outside a rush; never touches
+  `gameRand`).
+- **Between Sovereigns:** RESOLVE → RESULTS → the AETHER FORGE as in the
+  journey, then **RUSH ARMORY 1/2 and 2/2** — the next realm's two ordinary
+  stages are skipped but still pay their real STAGE DIVIDEND hands
+  (`rushArmoryNext()`, the one branch, called just before every
+  post-decision `buildLevel`) — then the next finale. Three decisions per
+  realm, the same as a journey; each skipped level still counts for partner
+  form (`rushEvolveCheck`) and the act ceremonies play, so the Forge sees
+  the real Form. Every surface WAITS (the suite idles 3–5s at each).
+- **Clock:** `G.rush.t` runs only in live combat (play/serve — reveals,
+  pause, results, drafts and ceremonies are excluded); a knockout keeps the
+  finale-checkpoint resume and adds a fixed +20s. A split closes at each
+  win moment and shows on that finale's results.
+- **End:** the ninth results opens RUSH COMPLETE (the game-over summary
+  surface, rush branch): total, nine splits by realm, knockouts, NEW BEST,
+  RETRY / TITLE. A true game over shows the same panel marked FAILED.
+- **Record:** `storeKey('rush')` = `{ 'mode:preset': { best, date, kos,
+  splits[9], starter, runs } }`, in `EXPORT_SKIN_KEYS` so it rides the save
+  bundle. Only complete, uncheated rushes write it; a rush is otherwise a
+  TRIAL (no best score, medals, crests, codex, checkpoint or victory).
+- **Bot playthroughs (normal, fire, auto-fire):** STARFIGHTER 1051s / 7 KO
+  (the L24 raid alone 430s / 6 KO — the known bot-vs-raid limitation, not a
+  rush defect), BREAKER 1032s / 1 KO, BLASTER 563s / 2 KO. No soft-locks.
+- Suite +4 ("BOSS RUSH: …"), viewport sweep + `trialRush`/`rushRetry`/
+  `rushTitle`, gate scenes `rush-armory` and `rush-summary`.
+- Found, not changed: the AETHERFALL art-loading toast can draw over the
+  summary buttons at 667×375 while art streams (the existing generic
+  loading overlay).
+
+### 6. Tooling + a latent test flake
+
+- `tools/shot.js` — headless screenshots of any game state with a review
+  autopilot (`--q`, `--play N`, `--js`, `--multi a.png@4,b.png@9`, `--vp`).
+  Use it instead of the preview pane for any visual judgement.
+- The fuzz test "upgrade web: offer algorithm invariants" failed ~1% of
+  runs on a LEGAL hand: it counted every eligible fusion as a fillable slot
+  although a hand deals at most one fusion/apex. Reproduced under a
+  6000-build fuzz, corrected (the big pool fills one slot), and re-fuzzed
+  20,000 builds clean. A test-accounting bug, not a game one.
+
+### 7. Baseline: sim-identical, and one PRE-EXISTING red attributed
+
+`npm run baseline -- --label aft027` (187 scenarios, 133s →
+`baselines/matrix-aft027.json`): determinism PASS, and the three continuous
+campaigns are **bit-identical to the last commit** (S2: 2699.6s / 1045
+kills / 34762.8 dmg on both trees) — the whole round is sim-neutral for
+the shooter modes, as intended. The run is nevertheless **RED on one hard
+budget that this round did not cause**: `C-continuous-run-S2: a knockout
+attempt burned 175.4s (>150s)`. Stashed-control attribution in a throwaway
+worktree: `fc01eda` (HEAD) fails identically; `77bc93d` (AFT-026) fails;
+`ab92ea9` (its parent) is green — but only because S2 hit the 2700s sim
+cap there without finishing. AFT-026 let that defensive-draft seed finish
+the campaign, and in doing so exposed one 175s attempt at the L9 siege that
+ends in a knockout (a slow fight, not a broken checkpoint resume — the
+other nine knockouts in the run resume normally at 71–118s). AFT-026 only
+ran an L6 probe, so the full matrix never saw it. **Left untuned on
+purpose** (one chaotic seed; no new evidence) — the decision for the next
+balance pass is whether L9's siege needs a kinder floor for low-DPS builds
+or the 150s rail should read per-format.
+
+Coverage: suite 132 → **138** (Breaker wall growth + Blaster isolation;
+the feel-pass contract; four BOSS RUSH tests), gate scenes 29 → **31**
+(62 screenshots), plus the PWA static contract, the per-skin
+zero-registration guard and the dist offline-boot check. Full gate GREEN
+in 73s; storm ledger 4.01 screens/frame at full (was 4.48).
+
+---
+
+## 2026-10-17 — AFT-026c: essential-only mobile haptics
+
+**Owner report: "The haptic feedback is too much right now."** The prior
+AFT-026b pass reduced pulse length and rate-limited ambient combat feedback,
+but the underlying event map was still too noisy: manual FIRE presses,
+projectile hits, ordinary kills, pickups, paddle returns, two heat thresholds,
+and three moments inside one charged shot could all request vibration. Mature
+multi-weapon builds therefore still felt busy even when the gate dropped many
+individual requests.
+
+The redesign treats vibration as a scarce attention channel rather than combat
+telemetry. The vocabulary is now seven semantic events: UI decision, full
+charge, ability ready, urgent warning, real damage, major success, and ability
+activation. FIRE presses, hits, ordinary kills, pickups, paddle returns, 70%
+heat, charge promotion, and resonant release are silent. The normal cross-event
+floor increased from 120ms to 320ms; same-kind recovery is 0.75–2.0 seconds;
+and an urgent higher-priority event may interrupt a minor tick only after
+180ms. Unknown and retired event names fail silent so old per-hit vocabulary
+cannot accidentally reintroduce buzzing.
+
+Coverage: the headless gate fixture locks the seven-event vocabulary, retired
+event silence, pulse budgets (3ms routine, at most 22ms motor-on for the
+signature ability), the 320ms global floor, long warning/damage cooldowns, and
+the priority interrupt rule.
+
+---
+
 ## 2026-09-01 — AFT-026: two owner playtest reports — the eaten Forge, and the fall that never landed
 
 **Report 1: "The refine and reforge option at the end of each world only

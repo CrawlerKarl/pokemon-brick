@@ -112,12 +112,13 @@ suite test guards every rect across six sizes.
   bricked startup permanently.
 
 ## Verifying (there is no live human tester)
-**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~30–35s, fully
+**`npm test` IS the release gate (AFT-005A/B, 2026-07-22): ~70s, fully
 headless.** It runs, in order: syntax check → asset verification → the full
 invariant suite (test.html driven by system Chrome over raw CDP — no deps,
 Node 21+) → both-skin boot smoke → the runtime SURGE-vocabulary scan →
-`build-dist` requiring RESIDUE: none → a dist boot smoke → 29 mobile scenes
-at two phone viewports (58 screenshots + metadata sidecars → `.gate-shots/`),
+`build-dist` requiring RESIDUE: none → the PWA contract + a dist OFFLINE-BOOT
+check → a dist boot smoke → 33 mobile scenes
+at two phone viewports (66 screenshots + metadata sidecars → `.gate-shots/`),
 each PROVING its named state via an `expect` assertion, under FITTED-LABEL
 CONTAINMENT plus the AFT-021 overlap and single-actor-label contracts → the
 WAVE and BOSS artifact-storm benchmarks
@@ -150,11 +151,19 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   downtime, boss phase durations via `br.phaseClockT`). When adding a new
   damage path or weapon, wire it into the ledger (`meta.source`, and pass the
   shot object to `loseLife`) — the test suite asserts the ledger works.
+- **`node tools/shot.js` is how you LOOK at the game (AFT-027).** Headless
+  Chrome, zero deps: `--q "skin=aetherfall&level=20&mode=junkie&seed=A"`
+  `--play 12` (a review autopilot: weaves, fires, serves, skips reveals and
+  results) `--js "<setup>"` `--vp 667x375` `--multi "a.png@4,b.png@9"` →
+  PNGs you then Read. The preview pane auto-pauses on focus loss and
+  throttles rAF, so its screenshots go stale — judge art, clutter and
+  layout from shot.js frames, at phone portrait, landscape AND desktop.
+  The autopilot is a review aid, never balance evidence.
 - **`gallery.html`** renders every projectile through the real renderer over
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 132 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 144 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
@@ -798,6 +807,92 @@ phone — flag anything only verifiable there.
   ALWAYS speak, hold or not. A new haptic is either an arc/warning kind or
   it joins `HAPTIC_NOISE_KINDS` — never a fourth category that bypasses
   both rules.
+
+- **Combat text never prints on itself (AFT-027).** `addFloater` refreshes a
+  repeated call-out in place and settles new lines into free lanes;
+  **score pops go through `addScoreFloater`** (a local burst of kills SUMS
+  into one growing number — never call `addFloater('+' + pts)` directly).
+  The kill combo calls out its TIERS (`COMBO_TIERS` 10/25/50/100 — floater,
+  `SFX.comboUp`, HUD flare), never every Nth kill. All of it is
+  presentation: floaters/rings/SFX/`G.freeze` hit-stop are wall-clock and
+  sim-neutral — keep new juice on that side of the line (no `gameRand`, no
+  sim-time, no score or meter changes) or the baseline moves.
+- **The screen flash carries meaning by COLOUR (AFT-027).** Always
+  `flashFx(t, 'r,g,b')` — never write `G.flashT` raw. Red (`FLASH_HURT`) is
+  reserved for the player being hurt; a boss phase flashes in the boss's
+  element, evolution white, Surge gold, a ward save cool blue. A weaker
+  flash never recolours a stronger one.
+- **BREAKER's wall GROWS with the journey (AFT-027).** The shared
+  boxed-brick budget thins walls to make room for flyers — classic has none,
+  so its walls were shrinking to 6–12 bricks and ~18s stages by realm 8.
+  Classic ordinary stages build `3 + min(3, ⌊realm/2⌋)` rows (+1 CHALLENGE,
+  ≤7, ≤`maxRows`) with their own durability curve (`CLASSIC_WALL_MUL`,
+  capped ×2 by test — depth is more wall, never sponges). BLASTER walls and
+  all finales keep the shared numbers; the suite asserts both. `npm run
+  baseline` does NOT cover ordinary classic stages — retune from the probe
+  method in the AFT-027 log entry, not from the matrix.
+- **The service worker is an enhancement, never a dependency (AFT-015).**
+  `sw.js` is network-first for html/js (deploys land immediately) and
+  stale-while-revalidate for art; the DIST injects a version + precache
+  list. Registration (main.js) is refused under `?dev`, test/gallery,
+  automation and localhost unless the URL carries `?sw` — the gate asserts
+  ZERO registrations and runs a real offline-boot check on the dist. Keep
+  every URL RELATIVE (both sites live under a Pages sub-path) and keep icons
+  OUT of `art/aetherfall-production` (the 690-WebP art gate counts that dir).
+- **BOSS RUSH is a trial on the campaign's economy (AFT-027 / AFT-014).**
+  `startBossRush()` = `resetRun(3, true, { rush: true })` + ONE object,
+  `G.rush` (null otherwise; never touches `gameRand`). Between finales the
+  flow is Forge → RUSH ARMORY 1/2 → 2/2 → next finale: the skipped ordinary
+  stages still pay their real `dealStageDividend` hands through
+  `rushArmoryNext()`, which every post-decision `buildLevel` site calls
+  first — **a new level-advance site must call it too**, and `buildLevel`
+  is never forked. The clock (`G.rush.t`) runs only in live play/serve;
+  knockouts add a fixed +20s on top of the finale-checkpoint resume. The
+  record (`storeKey('rush')`, in `EXPORT_SKIN_KEYS`) is written only by a
+  complete, uncheated rush; everything else keeps trial semantics. It is
+  the one trial that plays act ceremonies (`!G.trial || G.rush`) so the
+  Forge sees the real partner Form.
+- **Scenery is layered and baked (AFT-027).** Each scene has a FAR range
+  (`drawFar[scene]` → `bgFar`) behind its landmarks plus per-stage weather
+  (`AMBIENT_STAGES`), cloud banks and baked celestial bodies; both scenery
+  canvases are cropped to their content rows (`cropToContent`) and drawn
+  through ONE entry, `drawSceneryLayers(c, par)`, which is also what the
+  rung-3 plate bakes. New backdrop detail belongs in the sky or the lower
+  ~35% of the screen, hazed toward the horizon colour — never brighter or
+  more saturated than gameplay actors. Scenery randomness is its own seeded
+  PRNG / `Math.random`, never `gameRand`.
+- **Enemy motion is ONE clean move per body, and it is measured (AFT-028).**
+  The owner's "they feel drunk" was layered, unrelated motion. Rules that
+  hold now: a rider HOLDING FORMATION is upright (bank deadzone, cap 0.07
+  rad) and animates on its squad's clock — only a committed move (dive,
+  crosser, entrance) leans; a formation body has ONE patrol (the shaped
+  lateral glide in the encounter controller, throb locked 2:1) and a rotary
+  family's rotation replaces most of it; **never spawn riders onto slots
+  tighter than the separation solver's minimum distance** (reinforcements
+  are a rigid `'rank'` lattice for exactly this reason — a pack the solver
+  must shove every frame is the drunk look); every authored move starts and
+  ends at rest (the dive's three smoothstep beats, the feathered maneuver
+  envelope, the draining solver offset). The solver is WARM-STARTED in every
+  mode; the walled modes take its output exactly (easing it blobs). The
+  suite's AFT-028 test measures velocity snaps as per-frame second
+  differences — add any new mover to it. Dive timing is balance: the HANG at
+  the low point is what keeps BLASTER finales in band (log §6).
+- **A hit is felt in the DRAW, never in the sim (AFT-028).** Bare flyers
+  flash their own white silhouette, recoil along the shot (`br.kx/ky`) and
+  squash — render-only fields. Never paint a shape over the sprite's centre
+  (the old grey disc read as the enemy lurching to its middle) and never
+  let hit feedback write `bx/by`.
+- **The boss log is a passive observer (AFT-013).** `storeKey('bosslog')`
+  is written only through the five `bossLog*` hooks, only on real journeys
+  and BOSS RUSH, and never touches `gameRand`, score, meters or brick
+  fields (the suite runs a seeded finale logged vs stubbed). The dossier
+  page and list share `dossierPageLayout`/`dossierListLayout`/`dexHeadLayout`
+  between render and input; copy comes from the skin (abilities, finale
+  beats) and `bossRevealCue` — the SAME cue the reveal scene shows.
+- **The paddle hub is skin art.** `drawPaddle` draws the capture-ball hub
+  only when `SKIN.id === 'pokemon'`; every other skin gets the AETHER CORE
+  gem. (It leaked onto AETHERFALL rigs until AFT-027 — a symbol check on
+  shared draw code is part of any skin review.)
 
 - **Accessibility rides the ACCESS settings tab (AFT-010 stage 1) and every
   option is INERT at its default** — a fresh install must play bit-identically

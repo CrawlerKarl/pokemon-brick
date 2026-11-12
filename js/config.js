@@ -505,6 +505,10 @@ function trialLayout() {
   const stageY = py + gridY + 3 * (chipH + g1) + Math.round(24 * k);
   const phaseY = stageY + stageH + 12 + roundRows * (roundH + g2) + 4;
   const phaseW = (pw - 60 - 10 * (phaseCount - 1)) / phaseCount;
+  // the tail row: START TRIAL beside the BOSS RUSH launcher (same height,
+  // same row — no extra height, so the busiest picker state still fits)
+  const btnH = short ? 34 : 44, btnY = py + ph - (short ? 46 : 60);
+  const rowW = Math.min(pw - 60, 470), btnW = (rowW - 12) / 2, btnX = W / 2 - rowW / 2;
   return {
     px, py, pw, ph, rounds, secretRound, roundCount, phases, phaseCount,
     region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + g1), w: chipW, h: chipH }),
@@ -514,7 +518,8 @@ function trialLayout() {
           y: stageY + stageH + 12 + Math.floor(i / 2) * (roundH + g2), w: (pw - 70) / 2, h: roundH })
       : ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
     phase: i => ({ x: px + 30 + i * (phaseW + 10), y: phaseY, w: phaseW, h: phaseH }),
-    start: { x: px + pw / 2 - 110, y: py + ph - (short ? 46 : 60), w: 220, h: short ? 34 : 44 },
+    start: { x: btnX, y: btnY, w: btnW, h: btnH },
+    rush: { x: btnX + btnW + 12, y: btnY, w: btnW, h: btnH },
     close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
   };
 }
@@ -552,6 +557,14 @@ function gameOverLayout() {
       y: by + Math.floor(i / (narrow ? 2 : 4)) * 50, w: bw, h: 42 }),
     share: { x: px + 16, y: py + ph - 164, w: pw - 32, h: 38 },
   };
+}
+// BOSS RUSH summary: the game-over panel's frame with two centred actions
+// (RETRY RUSH / TITLE); the nine splits live in the body above them
+function rushSummaryLayout() {
+  const L = gameOverLayout();
+  const gap = 12, bw = Math.min(220, (L.pw - 32 - gap) / 2), bh = L.narrow ? 44 : 42;
+  const by = L.py + L.ph - bh - 16, bx = W / 2 - bw - gap / 2;
+  return { ...L, retry: { x: bx, y: by, w: bw, h: bh }, title: { x: bx + bw + gap, y: by, w: bw, h: bh } };
 }
 // ---- CHEAT CODES: a small ornate chip on the PAUSE screen (visible when
 // you go looking, never on screen during play — no temptation mid-run)

@@ -63,7 +63,7 @@ function serveDir(root) {
       if (!p.startsWith(root)) { res.writeHead(403); res.end(); return; }
       fs.readFile(p, (err, data) => {
         if (err) { res.writeHead(404); res.end('Not found'); return; }
-        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
+        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
         res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
         res.end(data);
       });
@@ -258,12 +258,23 @@ const SCENES = [
     expect: `G.state==='results' && !!G.results && G.stateT>0.5` },
   { name: 'trial-picker', js: `G.state='menu'; trialOpen=true; trialSel.region=0; trialSel.stage=2; trialSel.round=1; trialSel.phase=1;`,
     expect: `G.state==='menu' && trialOpen===true` },
-  { name: 'codex', js: `G.state='dex'; trialOpen=false;`,
-    expect: `G.state==='dex'` },
+  { name: 'codex', js: `G.state='dex'; trialOpen=false; dexTab='grid'; dossierDetail=null; dexScroll=0;`,
+    expect: `G.state==='dex' && dexTab==='grid'` },
+  // AFT-013: the BOSS DOSSIER tab — a mix of met/unmet casts (in-memory log
+  // only, never saved), then a met Sovereign's page with a non-empty record
+  { name: 'dossier-list', js: `G.state='dex'; trialOpen=false; dexDetail=null; dossierDetail=null; dexTab='boss'; dexScroll=0; for(const k of Object.keys(bossLog())) delete bossLog()[k]; for(const r of [0,1]) for(const c of bossCast(r)) { if(c.role==='secret') continue; const e=bossLogTouch(c.key); e.seen=1; if(c.role!=='mythic') e.wins=1; } const e0=bossLogTouch(String(SKIN.gens[2].boss.id)); e0.seen=1;`,
+    expect: `G.state==='dex' && dexTab==='boss' && !dossierDetail && dossierTileRects.some(t=>t.seen) && dossierTileRects.some(t=>!t.seen)` },
+  { name: 'dossier-page', js: `const k0=String(SKIN.gens[0].boss.id); const e=bossLogTouch(k0); e.seen=1; e.wins=3; e.kos=2; e.best.junkie=83.4; e.phase.junkie={1:40.1,2:43.3}; e.best.classic=121.7; dossierDetail={key:k0};`,
+    expect: `G.state==='dex' && dexTab==='boss' && !!dossierDetail && !!dossierPageRects && bossDossier(dossierDetail.key).role==='legendary' && bossDossier(dossierDetail.key).record.wins===3 && bossDossier(dossierDetail.key).record.best.length===2` },
   { name: 'ending', js: `beginEnding(); paused=false; G.freeze=0; for(let i=0;i<60;i++)update(1/60);`,
     expect: `G.state==='ending'` },
   { name: 'gameover', js: `G.state='gameover'; G.stateT=1;`,
     expect: `G.state==='gameover'` },
+  // BOSS RUSH: a skipped-stage RUSH ARMORY hand, then the nine-split summary
+  { name: 'rush-armory', js: `upgradeTreeOpen=false; advOpen=false; DEV.launch({level:3,mode:'junkie',diff:'normal',seed:'SHOT'}); startBossRush('SHOT'); paused=false; G.freeze=0; G.reveal=null; for(let i=0;i<10;i++)update(1/60); G.level=4; G.rush.armory=2; rushArmoryNext(); G.stateT=1.5; draftSel=null;`,
+    expect: `G.state==='upgrade' && !!G.upgradeChoices && rushArmoryHand() && G.rush.armoryN===1` },
+  { name: 'rush-summary', js: `upgradeTreeOpen=false; advOpen=false; startBossRush('SHOT'); G.reveal=null; const R=G.rush; R.splits=[71.2,95.4,88.0,142.6,120.9,99.1,133.7,151.3,118.5].map((t,i)=>({lvl:3*(i+1),realm:i,t,kos:i===4?1:0})); R.idx=9; R.t=R.splits.reduce((a,s)=>a+s.t,0); R.kos=1; R.penalty=20; R.done=true; R.summary={complete:true,total:R.t+20,newBest:true,prior:null}; G.announce=null; G.announceQueue=[]; G.state='gameover'; G.stateT=1;`,
+    expect: `G.state==='gameover' && !!G.rush && G.rush.summary && G.rush.summary.complete && G.rush.splits.length===9` },
   // AFT-009R: the mid-wave ATTUNEMENT draft (frozen fight behind the cards)
   // AFT-024: the STAGE DIVIDEND hand — dealt at an ordinary clear, widened
   // by banked resonance (this scene captures the earned 5-card hand)
@@ -472,6 +483,27 @@ async function runStorm(cdp, port, reuse) {
   return { ...res, ms: Date.now() - t0 };
 }
 
+// AFT-015: cheap static PWA assertions for one site root (workshop or dist)
+function pwaStatic(siteRoot) {
+  const bad = [];
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(siteRoot, 'manifest.webmanifest'), 'utf8'));
+    if (!m.name || !m.short_name) bad.push('manifest name');
+    if (m.start_url !== './' || m.scope !== './') bad.push('manifest start_url/scope must be "./"');
+    if (!Array.isArray(m.icons) || !m.icons.some(i => i.purpose === 'maskable')) bad.push('manifest maskable icon');
+    for (const i of m.icons || []) if (/^\//.test(i.src) || !fs.existsSync(path.join(siteRoot, i.src))) bad.push('icon missing: ' + i.src);
+    const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
+    if (!/<link rel="manifest" href="manifest\.webmanifest">/.test(html)) bad.push('index.html lacks manifest link');
+    if (!/name="theme-color"/.test(html)) bad.push('theme-color');
+    const hrefs = [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map(x => x[1]).filter(u => /^\//.test(u));
+    if (hrefs.length) bad.push('absolute URL in index.html: ' + hrefs[0]);
+    const sw = path.join(siteRoot, 'sw.js');
+    if (!fs.existsSync(sw)) bad.push('sw.js missing');
+    else if (spawnSync(process.execPath, ['--check', sw]).status !== 0) bad.push('sw.js fails node --check');
+  } catch (e) { bad.push(e.message); }
+  return bad;
+}
+
 // ── the gate steps ─────────────────────────────────────────────────────────
 const report = { steps: [], failures: [] };
 function step(name, ok, detail, ms) {
@@ -497,6 +529,12 @@ async function main() {
     const v = runNpm('verify-assets');
     step('asset verification', v.ok, v.ok ? '' : v.out.split('\n').slice(-4).join(' '), v.ms);
     if (!v.ok) return finish(1);
+  }
+
+  {
+    const bad = pwaStatic(ROOT);
+    step('PWA static contract (workshop)', bad.length === 0, bad.join('; '));
+    if (bad.length) return finish(1);
   }
 
   const { srv, port } = await serveDir(ROOT);
@@ -544,6 +582,12 @@ async function main() {
       step('workshop boot: ' + skin, page.errors.length === 0,
         page.errors.length ? page.errors[0] : 'world assembled, 0 errors', Date.now() - t);
       if (page.errors.length) return finish(1);
+      // AFT-015: the registration guard — the gate must never be under a worker
+      {
+        const regs = await page.evaluate(`navigator.serviceWorker.getRegistrations().then(r => r.length)`);
+        step('service worker guard (' + skin + ')', regs === 0, regs === 0 ? '0 registrations under the gate' : regs + ' registration(s) leaked');
+        if (regs !== 0) return finish(1);
+      }
       if (skin === 'aetherfall') {
         const scan = JSON.parse(await page.evaluate(VOCAB_SCAN));
         const clean = scan.leftover.length === 0 && scan.lexSample === 'SURGE READY!';
@@ -563,6 +607,20 @@ async function main() {
       step('build-dist + RESIDUE: none', b.ok && residue,
         b.ok ? (residue ? '' : 'RESIDUE FOUND — see npm run build-dist') : b.out.split('\n').slice(-4).join(' '), b.ms);
       if (!b.ok || !residue) return finish(1);
+    }
+
+    {
+      const bad = pwaStatic(path.join(ROOT, 'dist-aetherfall'));
+      const sw = fs.readFileSync(path.join(ROOT, 'dist-aetherfall', 'sw.js'), 'utf8');
+      const pre = (sw.match(/\.webp"/g) || []).length;
+      if (pre !== 690) bad.push('precache lists ' + pre + ' WebP, expected 690');
+      if (/pok[e\u00e9]/i.test(fs.readFileSync(path.join(ROOT, 'dist-aetherfall', 'manifest.webmanifest', ''), 'utf8'))) bad.push('franchise term in dist manifest');
+      step('PWA static contract (dist)', bad.length === 0, bad.join('; ') || pre + ' WebP precached');
+      if (bad.length) return finish(1);
+      const o = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'check-offline.js')], { encoding: 'utf8', timeout: 180000 });
+      const line = ((o.stdout || '') + (o.stderr || '')).trim().split('\n').pop();
+      step('offline boot (dist, service worker)', o.status === 0, line);
+      if (o.status !== 0) return finish(1);
     }
 
     // AFT-011 package contract: the standalone ships the complete production

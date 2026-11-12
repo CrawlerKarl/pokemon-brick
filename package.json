@@ -8,6 +8,8 @@
     "test": "node tools/run-suite.js",
     "baseline": "node tools/run-baseline.js",
     "art-overrides": "node tools/build-art-overrides.js",
-    "build-dist": "node tools/build-aetherfall-dist.js"
+    "build-dist": "node tools/build-aetherfall-dist.js",
+    "build-icons": "node tools/build-icons.js",
+    "check-offline": "node tools/check-offline.js"
   }
 }

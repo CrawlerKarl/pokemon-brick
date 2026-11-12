@@ -18,7 +18,8 @@ function audio() {
       snareBuf = mk(0.13);
     } catch (e) {}
   }
-  if (AC && AC.state === 'suspended') AC.resume();
+  // AFT-015: anything not 'running' is resumable (iOS adds a non-standard 'interrupted')
+  if (AC && AC.state !== 'running' && AC.state !== 'closed') { try { const rp = AC.resume(); if (rp && rp.catch) rp.catch(() => {}); } catch (e) {} }
   return AC;
 }
 function tone(freq, dur, type = 'square', vol = 0.06, slide = 0) {
@@ -46,7 +47,9 @@ function noiseBurst(dur = 0.25, vol = 0.12) {
 }
 const SFX = {
   hit: c => tone(220 + Math.min(c, 12) * 40, 0.07, 'square', 0.05),
-  brick: () => { tone(520, 0.1, 'triangle', 0.07, -200); noiseBurst(0.12, 0.05); },
+  // AFT-027: a few cents of random detune per kill — a 30-kill streak no
+  // longer plays one identical blip thirty times (cosmetic Math.random only)
+  brick: () => { tone(520 * (0.93 + Math.random() * 0.14), 0.1, 'triangle', 0.07, -200); noiseBurst(0.12, 0.05); },
   paddle: () => tone(180, 0.08, 'sine', 0.08, 60),
   wall: () => tone(140, 0.05, 'sine', 0.04),
   laser: () => tone(880, 0.09, 'sawtooth', 0.035, -500),
@@ -79,6 +82,33 @@ const SFX = {
     setTimeout(() => { tone(294, 0.5, 'sine', 0.05, 20); tone(392, 0.55, 'triangle', 0.045); }, 260);
   },
   medal: () => [880, 1109, 1319].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'sine', 0.06), i * 70)),
+  // ---- AFT-027 (the feel pass): moments that used to share a generic blip ----
+  // an elite/evolved foe going down: a low thump under a bright two-note cap
+  eliteDown: () => {
+    tone(150, 0.22, 'triangle', 0.09, -70); noiseBurst(0.18, 0.07);
+    setTimeout(() => tone(784, 0.1, 'triangle', 0.06), 50);
+    setTimeout(() => tone(1175, 0.16, 'sine', 0.05), 120);
+  },
+  // combo tier crossed (1..4): a rising arpeggio that climbs with the tier
+  comboUp: t => {
+    const root = [523, 587, 659, 784][Math.max(0, Math.min(3, (t || 1) - 1))];
+    [1, 1.25, 1.5, 2].slice(0, 2 + Math.min(2, t || 1)).forEach((m, i) =>
+      setTimeout(() => tone(root * m, 0.11, 'triangle', 0.06), i * 55));
+  },
+  // the charged shot leaving the barrel: weight (low sweep) + crack (noise)
+  chargeShot: (c = 1) => {
+    tone(240, 0.26, 'sawtooth', 0.05 + 0.03 * c, -150);
+    tone(760, 0.12, 'square', 0.045, -420);
+    noiseBurst(0.14, 0.05 + 0.04 * c);
+  },
+  // …and landing: a short, dry impact so a charged hit never sounds like a tap
+  chargeHit: () => { tone(120, 0.16, 'triangle', 0.1, -50); noiseBurst(0.1, 0.09); },
+  // the charge topping out — a soft two-note "ready" so the arc reads by ear
+  chargeFull: () => { tone(880, 0.07, 'sine', 0.045); setTimeout(() => tone(1319, 0.12, 'sine', 0.045), 60); },
+  // Surge/overdrive ignition: a sub drop under the existing fanfare
+  surgeIgnite: () => { tone(110, 0.5, 'sawtooth', 0.09, -60); noiseBurst(0.35, 0.1); },
+  // a shield/ward eating a hit — glassy, clearly NOT the hurt sound
+  wardBreak: () => { tone(1320, 0.1, 'sine', 0.06, -500); tone(660, 0.2, 'triangle', 0.06, -260); noiseBurst(0.12, 0.05); },
 };
 // ---- music: an original nine-region creature-adventure score -------------
 // Each route has its own scale, pulse, motif, rhythm and instrument family.

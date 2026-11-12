@@ -1,9 +1,61 @@
 # HANDOFF — resume here
 
-> ## STATUS (2026-09-01 closeout) — everything below is SHIPPED
+> ## STATUS (2026-11-12, AFT-027 + AFT-028 + AFT-013) — implemented + gated, NOT YET COMMITTED
 >
-> **Suite 132/132 · gate GREEN (~52s full, 29 scenes × 2 viewports).**
-> The three newest rounds:
+> **Latest (same day, after AFT-027): AFT-028 THE MOTION PASS + AFT-013
+> CODEX BOSS DOSSIERS — suite 144/144, gate GREEN (33 scenes × 2), baseline
+> GREEN (`--label aft028-motion`).** The owner reported enemies "feel drunk"
+> and "shift to centre when hit": the hit flash is now the sprite's own
+> silhouette + a recoil (was a disc at its centre); formation riders stay
+> upright and in step; reinforcements arrive as a rigid lattice instead of
+> a pack the solver jostled; every velocity snap (maneuver start/end, dive
+> V, BLASTER solver vibration) is gone; the patrol is one clean glide. The
+> codex gained a boss tab with per-boss dossiers and a persistent boss log.
+> Log entry 2026-11-12 (AFT-028) has the measurements and the balance
+> attribution. **Owner checks on a real phone:** does enemy motion now read
+> as crisp (STARFIGHTER realms 1–4 and a late BLASTER stage); does the hit
+> recoil feel right or too strong; the dossier tab's touch-drag scroll.
+> **Open copy decision:** AETHERFALL boss roles still read LEGENDARY /
+> MYTHICAL (in the reveal too) while the tab says SOVEREIGNS.
+>
+> **Suite 138/138 at the AFT-027 checkpoint · gate GREEN (~73s full, 31 scenes × 2 viewports, incl.
+> a dist OFFLINE-BOOT check).** The working tree carries AFT-026c (the
+> 10-17 haptic round, found uncommitted) plus the whole AFT-027 round —
+> commit, push both repos, and rebuild/ship the dist when the owner says so.
+>
+> **AFT-027 in one paragraph** (full detail: log entry 2026-11-12): a
+> presentation-only COMBAT FEEL PASS (combat text never stacks — score pops
+> sum, call-outs refresh in place; combo tiers 10/25/50/100; colour-coded
+> screen flashes via `flashFx`; distinct elite-kill, charged-shot, Surge
+> and ward-save beats; the capture-ball paddle hub no longer leaks onto
+> AETHERFALL); **BREAKER's wall now GROWS with the journey** (it was
+> shrinking to 6–12 bricks / ~18s stages by realm 8 — rows 3→6 plus the
+> `CLASSIC_WALL_MUL` durability curve); the SCENERY DEPTH pass (a far
+> parallax range, per-stage weather/clouds/aurora, shaded suns and moons —
+> and overdraw went DOWN, 4.48 → 4.01 screens/frame); **BOSS RUSH**
+> (AFT-014's first slice: nine finales back to back on the campaign
+> economy, timed, best time saved under `storeKey('rush')`); and
+> **AFT-015** (manifest + icons + service worker: the standalone installs
+> and plays fully offline after one visit). New tool: `node tools/shot.js`
+> — headless screenshots of any state; use it for every visual judgement.
+>
+> **Waiting on the owner's phone (a simulator cannot answer these):**
+> (1) do late BREAKER stages feel like real stages now, or too long/short;
+> (2) the new kill/charge/Surge beats — satisfying or too much (hit-stop
+> lengths are the knobs: 25/50/140ms kill tiers, 40ms charge, 90ms Surge);
+> (3) Add-to-Home-Screen: icon, fullscreen, safe areas, audio after
+> backgrounding, an airplane-mode launch; (4) a human BOSS RUSH time vs the
+> bot's 9–17 minutes; (5) night cloud banks at ~0.6–0.74H — any readability
+> cost; plus the four items still open from AFT-025/026 below.
+>
+> **⚠ `npm run baseline` is RED on one budget — and it PREDATES this
+> round:** `C-continuous-run-S2: a knockout attempt burned 175.4s (>150s)`
+> (the L9 siege, defensive-draft seed). Control runs: HEAD `fc01eda` and
+> AFT-026 `77bc93d` fail identically; its parent is green only because
+> that seed hit the sim cap unfinished. This round's campaigns are
+> bit-identical to HEAD. Untuned on purpose — see log §7 of 2026-11-12.
+>
+> The three rounds before it:
 > **AFT-011** (mobile loading: 690 WebP / 10.3 MB dist, realm-first art
 > streaming, bounded decoded caches — found complete-but-uncommitted from
 > the 08-30 session and committed as its own round); **AFT-025 THE
@@ -28,7 +80,13 @@
 > **AFT-026b**: haptics were buzzing once per hit/kill/pickup, so a
 > big build drowned the charge arc — ambient ticks now mute while a
 > charge is armed and share one 450ms budget (`hapticGate`, a pure
-> function the suite drives headless).
+> function the suite drives headless). **AFT-026c (2026-10-17)** supersedes
+> that mitigation with an essential-only model after the owner still found
+> the phone too busy: FIRE, hits, ordinary kills, pickups, paddle returns,
+> charge promotion and resonant release are silent; only decisions, full
+> charge, ability readiness/activation, urgent danger, real damage and major
+> success vibrate. Global recovery is 320ms and same-kind cooldowns are
+> 0.75–2.0s.
 >
 > - workshop `CrawlerKarl/pokemon-brick` →
 >   https://crawlerkarl.github.io/pokemon-brick/
@@ -181,7 +239,12 @@
 >
 > </details>
 
-**NEXT UP:** AFT-019's remainder — the real-device pass. Four things now
+**NEXT UP (code):** AFT-013 is DONE (see the status banner). Next: more AFT-014 (run history, custom modifiers), AFT-010
+STAGE 2 (the DOM/screen-reader layer), and the rest of AFT-012 (enemy
+scale/shadow/rim standardisation — this round did scenery and VFX only).
+
+**NEXT UP (owner):** AFT-019's remainder — the real-device pass. Beyond the
+AFT-027 list in the status banner, four older things still
 wait on the owner's phone rather than on code: (1) the region-1 boss
 frame rate after AFT-025, (2) the Aether Forge is actually usable after
 AFT-026, (3) the relay Sovereign's fall reads as a kill, (4) the haptics
@@ -430,6 +493,11 @@ reopens it.
 ✅ AFT-010 STAGE 1 (the ACCESS settings tab — 7 settings-level accessibility wins)
 ✅ AFT-026  OWNER PLAYTEST (the Forge auto-skip; the relay Sovereign's fall beat)
 ✅ AFT-026b HAPTIC CALM (the hold owns the thumb; one shared noise budget)
+✅ AFT-026c ESSENTIAL-ONLY HAPTICS (2026-10-17)
+✅ AFT-027  THE FEEL PASS + BREAKER WALL GROWTH + SCENERY DEPTH (AFT-012 slice)
+✅ AFT-014  slice 1: BOSS RUSH (timed nine-finale run, saved best)
+✅ AFT-015  INSTALLABLE + OFFLINE (manifest, icons, service worker, lifecycle)
+→ AFT-013 codex boss dossiers (now has rush splits/KOs to show)
 → AFT-019 first-session pass — REAL-DEVICE REMAINDER ONLY (now incl. confirming AFT-025 killed the boss lag,
    the Forge is usable, the relay fall reads, and the haptics feel calm)
 → AFT-010 STAGE 2 (the DOM/screen-reader layer for menus/results/codex/web)
@@ -493,8 +561,8 @@ actual phone.
 
 Notes so you don't redo finished work:
 
-- **`npm test` is the gate** (~35s full, `--fast` ~15s, `--suite` ~12–18s):
-  syntax → assets → **132 invariants** headless → both-skin + dist boots →
+- **`npm test` is the gate** (~73s full, `--fast` ~20s, `--suite` ~17s):
+  syntax → assets → **138 invariants** headless → both-skin + dist boots →
   the vocabulary scan (no player-facing MEGA, and since AFT-023b no
   POKÉMON/POKÉDEX/POKEBALL in any copy table or `SKIN.strings`) → RESIDUE →
   **29 mobile scenes × 2 viewports (58 screenshots** → `.gate-shots/` +

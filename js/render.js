@@ -95,7 +95,7 @@ function drawBackground() {
     ctx.fillRect(s.x - par * s.z * 14, s.y, s.z * 2.2, s.z * 2.2);
   }
   ctx.globalAlpha = 1;
-  ctx.drawImage(bgScenery, -par * 12 - W * 0.015, 0, W * 1.03, H);
+  drawSceneryLayers(ctx, par); // far range (slow) + landmarks (fast), cropped bands
   // combat contrast wash + atmosphere (one cached canvas since AFT-025) —
   // bright skies never swallow the sprites; the menu keeps its postcard look
   if (!onMenu && bgWash) ctx.drawImage(bgWash, 0, 0, W, H);
@@ -119,7 +119,7 @@ function backgroundPlate() {
     }
     c.globalAlpha = 1;
   }
-  c.drawImage(bgScenery, -W * 0.015, 0, W * 1.03, H);
+  drawSceneryLayers(c, 0); // the far range folds into the plate too (frozen)
   if (bgWash) c.drawImage(bgWash, 0, 0, W, H);
   return bgPlate;
 }
@@ -1358,10 +1358,13 @@ function drawBricks() {
   frameActiveActor = activeCombatActor();
   for (const br of G.bricks) {
     if (br.dead || br.dormant) continue;
-    const x = br.bx + G.fx;
+    let x = br.bx + G.fx;
     // idle bob is OFF while a brick is entering (out-of-phase bobbing on top
-    // of the glide read as stutter) and eases back in once it lands (settleT)
-    const bobAmp = br.entry ? 0 : (br.settleT == null ? 1 : br.settleT);
+    // of the glide read as stutter) and eases back in once it lands (settleT).
+    // A BARE flyer carries its own squad-synced gait below — stacking this
+    // per-sprite bob on top of it was half of the "drunk" look.
+    const bareFly = !br.isBoss && bareMon(br);
+    const bobAmp = br.entry || bareFly ? 0 : (br.settleT == null ? 1 : br.settleT);
     let y = br.by + G.fy + Math.sin(G.time * 2 + br.wobble) * (br.isBoss ? 4 : 2.5) * bobAmp;
     if (br.isBoss && !br.gauntletEntering && !(G.gauntlet && G.mode === 'junkie')) y += introOff;
     const col = TYPE_COLORS[br.poke.t];
@@ -1397,7 +1400,14 @@ function drawBricks() {
       const img2 = getSprite(br.poke.id, br.shiny);
       ctx.save();
       ctx.globalAlpha = br.introAlpha == null ? 1 : br.introAlpha;
-      const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (1 + br.flash * 0.1) * (br.introScale ?? 1);
+      const s2 = Math.min(br.w, br.h * 1.15) * 1.25 * (br.introScale ?? 1);
+      // HIT REACTION (presentation only): the sprite is KICKED a few px along
+      // the shot's direction and springs back, squashing on impact, while its
+      // own silhouette flashes white. (The old reaction was a grey disc
+      // painted at the sprite's centre plus a 10% scale pop — it read as the
+      // enemy lurching toward its middle on every hit.)
+      const hk = br.flash > 0 ? br.flash * br.flash : 0;
+      if (hk > 0) { x += (br.kx || 0) * hk; y += (br.ky == null ? -4 : br.ky) * hk; }
       // ---- NATURAL LOCOMOTION: nothing floats like a stamp. All motion
       // state (velocity, facing, bank, gait phase) is computed in update()
       // with dt — render only READS it, so 60 Hz and 120 Hz look identical.
@@ -1410,21 +1420,21 @@ function drawBricks() {
       switch (motionProfile(br.poke)) {
         case 'winged': { // wing-beats: quick flap bob, body pumping each stroke
           const flap = Math.sin(ph3 * 2.2);
-          bobY = flap * 3.4;
-          sclY = 1 + 0.07 * Math.sin(ph3 * 4.4);
-          gaitRot = flap * 0.05;
+          bobY = flap * 3;
+          sclY = 1 + 0.05 * Math.sin(ph3 * 4.4);
+          gaitRot = flap * 0.02;
           break;
         }
         case 'swim': // slow full-body undulation, nosing along the path
-          gaitRot = Math.sin(ph3 * 1.5) * 0.12;
+          gaitRot = Math.sin(ph3 * 1.5) * 0.04;
           bobY = Math.sin(ph3 * 0.75) * 2.4;
           break;
         case 'hover': // eerie hover: deep slow bob with a lazy roll
-          bobY = Math.sin(ph3 * 0.55) * 3.8;
-          gaitRot = Math.sin(ph3 * 0.38) * 0.07;
+          bobY = Math.sin(ph3 * 1.1) * 3;
+          gaitRot = Math.sin(ph3 * 0.55) * 0.025;
           break;
         case 'serpentine': // the whole body threads side to side
-          gaitRot = Math.sin(ph3 * 1.7) * 0.16 * amp;
+          gaitRot = Math.sin(ph3 * 1.7) * 0.07 * amp;
           sclX = 1 + 0.05 * Math.sin(ph3 * 0.85);
           bobY = Math.sin(ph3 * 0.8) * 1.6;
           break;
@@ -1440,7 +1450,7 @@ function drawBricks() {
           bobY = -step * 3.4 * amp;
           sclY = 0.95 + step * 0.07 * amp;
           sclX = 1.03 - step * 0.03 * amp;
-          gaitRot = Math.sin(ph3 * 2) * 0.035 * amp;
+          gaitRot = Math.sin(ph3 * 2) * 0.02 * amp;
         }
       }
       const bank = br.bank || 0;
@@ -1453,17 +1463,20 @@ function drawBricks() {
         ctx.save();
         ctx.translate(x, yb);
         ctx.rotate(bank + gaitRot + (br.introRot || 0));
-        ctx.scale(face * sclX, sclY);
+        ctx.scale(face * sclX * (1 + 0.12 * hk), sclY * (1 - 0.1 * hk));
         ctx.drawImage(img2, -s2 / 2, -s2 / 2, s2, s2);
+        if (br.flash > 0.3) { // hit flash: the sprite's OWN shape goes white
+          const sil = getSilhouette(br.poke.id, '#ffffff');
+          if (sil) {
+            const a0 = ctx.globalAlpha;
+            ctx.globalAlpha = a0 * Math.min(0.92, (br.flash - 0.3) * 1.5);
+            ctx.drawImage(sil, -s2 / 2, -s2 / 2, s2, s2);
+            ctx.globalAlpha = a0;
+          }
+        }
         ctx.restore();
       } else {
         drawGlyph(ctx, SKIN.strings.dexGlyph, x, y, br.h * 0.4, '#ffffff33');
-      }
-      if (br.flash > 0.35) { // hit flash: white overlay pop on the sprite
-        ctx.globalAlpha = (br.flash - 0.35) * 0.9;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(x, yb, s2 * 0.45, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1;
       }
       // SPECTRAL VEIL shimmer: a breathing dashed halo while the veil is up —
       // the readable tell that charged shots will phase through right now
@@ -2737,14 +2750,33 @@ function drawPaddle() {
     }
     ctx.globalAlpha = 1;
   }
-  ctx.beginPath(); ctx.arc(x, py, 11, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, py, 11, Math.PI, 0, true);
-  ctx.fillStyle = '#ef5350'; ctx.fill();
-  ctx.beginPath(); ctx.arc(x, py, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#eceff1'; ctx.fill();
-  ctx.strokeStyle = '#263238'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(x, py, 11, 0, Math.PI * 2); ctx.stroke();
+  if (SKIN.id === 'pokemon') {
+    ctx.beginPath(); ctx.arc(x, py, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, py, 11, Math.PI, 0, true);
+    ctx.fillStyle = '#ef5350'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, py, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#eceff1'; ctx.fill();
+    ctx.strokeStyle = '#263238'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, py, 11, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    // AFT-027: every other skin carries its own hub — the AETHER CORE, a
+    // faceted gem in the vessel's aspect colour (the capture-ball emblem
+    // above belongs to the legacy skin and was leaking onto AETHERFALL rigs).
+    // Flat fills only: no gradient, no blur.
+    const cc = TYPE_COLORS[G.starter] || '#80d8ff';
+    const r = 11 + 0.8 * Math.sin(G.time * 3);
+    const gem = (rx, ry) => { ctx.beginPath(); ctx.moveTo(x, py - ry); ctx.lineTo(x + rx, py); ctx.lineTo(x, py + ry); ctx.lineTo(x - rx, py); ctx.closePath(); };
+    gem(r + 2, r + 3); ctx.fillStyle = '#0b1026'; ctx.fill();
+    ctx.strokeStyle = mixHex(cc, '#ffffff', 0.55); ctx.lineWidth = 1.6; ctx.stroke();
+    gem(r - 2.5, r - 1.5); ctx.fillStyle = cc; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, py - (r - 1.5)); ctx.lineTo(x, py); ctx.lineTo(x - (r - 2.5), py); ctx.closePath();
+    ctx.fillStyle = mixHex(cc, '#ffffff', 0.5); ctx.fill(); // lit upper-left facet
+    ctx.beginPath(); ctx.moveTo(x, py + (r - 1.5)); ctx.lineTo(x, py); ctx.lineTo(x + (r - 2.5), py); ctx.closePath();
+    ctx.fillStyle = mixHex(cc, '#020617', 0.4); ctx.fill(); // shaded lower-right facet
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - 3.5, py - 4.5, 2, 2); // glint
+  }
   if (G.fx_laser || mega) {
     ctx.fillStyle = '#ffd54f';
     for (const off of [-pw / 2 + 8, pw / 2 - 8]) {
@@ -4771,11 +4803,14 @@ function drawParticles() {
   for (const f of G.floaters) {
     if (PLATE_RENDER) break; // AFT-021 P2: no combat text bakes into the arena plate
     ctx.globalAlpha = Math.min(1, f.life);
+    // AFT-027: a floater POPS in (and again whenever it is refreshed/summed)
     ctx.font = `900 ${f.size}px Orbitron, sans-serif`;
     ctx.fillStyle = f.color;
     // AFT-001: floaters spawn at world coords — measure once, clamp on-screen
     if (f._w == null) f._w = ctx.measureText(f.text).width;
-    f._cx = Math.max(f._w / 2 + 4, Math.min(W - f._w / 2 - 4, f.x));
+    if (f.pop > 0) ctx.font = `900 ${(f.size * (1 + 0.32 * f.pop)).toFixed(1)}px Orbitron, sans-serif`;
+    const fhw = f._w * (f.pop > 0 ? 1 + 0.32 * f.pop : 1) / 2;
+    f._cx = Math.max(fhw + 4, Math.min(W - fhw - 4, f.x));
     ctx.fillText(f.text, f._cx, f.y);
   }
   ctx.shadowBlur = 0;
@@ -5487,10 +5522,15 @@ function drawHUD() {
   // combo + ball element live just below the bar, clear of the wave title
   if (G.combo > 1) {
     // pop-scale on every kill — the combo feels alive
-    const pop = G.comboPop;
-    ctx.fillStyle = pop > 0.6 ? '#fff' : '#ffd54f';
-    ctx.font = `700 ${13 + pop * 4}px Orbitron, sans-serif`;
-    ctx.fillText('COMBO x' + G.combo, 20, 72);
+    // AFT-027: the label warms through the combo TIERS (10/25/50/100) and
+    // flares for a beat when a tier is crossed — the streak has a shape
+    const pop = G.comboPop, tier = comboTierIdx(G.combo), flare = G.comboTierT || 0;
+    ctx.fillStyle = (pop > 0.6 || flare > 0.5) ? '#fff' : comboColor(G.combo);
+    ctx.font = `${tier >= 2 ? 900 : 700} ${13 + tier * 0.8 + pop * 4 + flare * 5}px Orbitron, sans-serif`;
+    // AFT-027: on narrow screens a live goal pill owns y44–70 across the
+    // centre — the combo label used to print under its lower edge. It drops
+    // one row (the build line already yields that row while a goal is live).
+    ctx.fillText('COMBO x' + G.combo, 20, (W < 560 && goalSurfaceLive()) ? 86 : 72);
   }
   const hudElem = G.mode === 'junkie'; // junkie always shows the live attack type
   // AFT-021 P2: on narrow/touch screens the element identity collapses to a
@@ -5568,7 +5608,12 @@ function drawHUD() {
   const hbLeft = W - 18 - (narrow ? 112 : 154); // drawPlayerHealthBar geometry
   const span0 = narrow ? 12 : 150, span1 = narrow ? W - 12 : hbLeft - 10;
   const waveY = narrow ? 48 : (G.modifier ? 22 : 28);
+  // BOSS RUSH: the title row IS rush progress — count + clock lead (must-
+  // read), the finale's own title trails and is the part that yields
+  const rushHead = G.rush ? rushName() + ' ' + Math.min(RUSH_FINALES, regionIdx(G.level) + 1) + '/' + RUSH_FINALES
+    + ' · ' + fmtRushTime(rushTotal(), false) : null;
   const waveText = G.secret.vmax ? 'SECRET RIFT · ' + SKIN.secret.name
+    : rushHead ? rushHead + ' · ' + (stageTitle(G.level) || gen.name)
     : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3 · ' + (stageTitle(G.level) || SKIN.stageNames[stg]);
   // AFT-021 P2: on narrow screens the title's second row IS the goal pill's
   // band — while a live goal exists, the GOAL owns the row and the stage
@@ -5584,6 +5629,7 @@ function drawHUD() {
     ctx.font = '900 9.5px Orbitron, sans-serif';
     if (ctx.measureText(waveText).width > (span1 - span0)) {
       titleText = G.secret.vmax ? 'SECRET RIFT'
+        : rushHead ? rushHead
         : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3';
     }
     const tb = fitLabel(titleText, (span0 + span1) / 2, waveY,
@@ -5709,6 +5755,10 @@ function drawBrickBehaviorLegend() {
   // AFT-001: the region rule is SECONDARY copy — it yields its band to a
   // live objective banner (the win condition outranks the flavor rule)
   if (G.objective && !G.objective.done && !G.objective.failed) return;
+  // AFT-027: …and to a live announce strip. In classic the strip lands on
+  // this exact band (both viewports), so the standing rule pill printed
+  // through the strip's detail line. The strip is transient; the rule returns.
+  if (G.announce && G.state === 'play' && !G.announce.hero) return;
   const key = BRICK_BEHAVIOR_ORDER[Math.min(BRICK_BEHAVIOR_ORDER.length - 1, regionIdx(G.level))];
   const info = BRICK_BEHAVIORS[key];
   if (!info) return;
@@ -8189,10 +8239,32 @@ function drawTrial() {
   bg.addColorStop(0, hov ? '#b3e5fc' : '#80d8ff'); bg.addColorStop(1, '#0288d1');
   ctx.fillStyle = bg; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.font = '900 16px Orbitron, sans-serif';
-  ctx.fillStyle = '#03202e';
-  ctx.fillText('START TRIAL', b.x + b.w / 2, b.y + b.h / 2 + 1);
+  fitLabel('START TRIAL', b.x + b.w / 2, b.y + b.h / 2 + 1,
+    { size: 16, min: 9.5, weight: 900, color: '#03202e', maxW: b.w - 12 });
   ctx.restore();
+  // BOSS RUSH launcher: all nine finales back to back with the CURRENT mode,
+  // difficulty and partner — its line names the best time for exactly that
+  // mode+difficulty pair when one exists
+  {
+    const rb = T.rush, hovR = inRect(mouseX, lastMouseY, rb);
+    const best = rushBest(SETTINGS.mode, SETTINGS.preset);
+    ctx.save();
+    roundRect(rb.x, rb.y, rb.w, rb.h, 12);
+    ctx.fillStyle = hovR ? 'rgba(255,213,79,0.32)' : 'rgba(255,213,79,0.16)'; ctx.fill();
+    ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2; ctx.stroke();
+    const two = rb.h >= 30;
+    fitLabel(rushName(), rb.x + rb.w / 2, rb.y + rb.h / 2 - (two ? rb.h * 0.17 : 0),
+      { size: rb.h >= 40 ? 14 : 12, min: 8.5, weight: 900, color: '#ffd54f', maxW: rb.w - 12 });
+    if (two) {
+      const modeName = ((MODES.find(m => m.key === SETTINGS.mode) || {}).label || SETTINGS.mode).toUpperCase();
+      const diffName = ((DIFFICULTY_UI[SETTINGS.preset] || {}).name || SETTINGS.preset).toUpperCase();
+      // phones: the time alone (the record is for the picked mode+difficulty)
+      fitLabel(best ? 'BEST ' + fmtRushTime(best.best) + (rb.w >= 200 ? ' · ' + modeName + ' ' + diffName : '') : '9 ' + rushFinaleWord() + ' · TIMED',
+        rb.x + rb.w / 2, rb.y + rb.h / 2 + rb.h * 0.24,
+        { size: rb.h >= 40 ? 9.5 : 8.5, min: 7, weight: 700, color: best ? '#fff3c4' : '#c9b37a', maxW: rb.w - 12 });
+    }
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -8336,20 +8408,24 @@ function drawSaveSettings(A) {
 function drawDex() {
   dim(0.85);
   dexCellRects = []; // rebuilt each frame — input hit-tests the same geometry
+  dossierTileRects = [];
+  const HL = dexHeadLayout(); // AFT-013: header + tab strip geometry (shared with input)
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (dexTab === 'boss') drawDossierList(HL);
+  else {
   // ---- scrolling region-by-region body ----
   const cellW = Math.max(72, Math.min(92, W / 5)), cellH = cellW + 16;
   const cols = Math.max(4, Math.floor(Math.min(W * 0.92, 1100) / cellW));
   const gw = cols * cellW;
   const x0 = W / 2 - gw / 2;
-  let y = 142 - dexScroll;
+  let y = HL.top - dexScroll;
   const headerH = 54;
   for (const g of SKIN.gens) {
     const roster = regionRoster(g);
     const caught = roster.filter(id => DEX.has(id)).length;
     const rows = Math.ceil(roster.length / cols);
     const sectionH = headerH + rows * cellH + 16;
-    if (y + sectionH > 132 && y < H) { // only draw visible sections
+    if (y + sectionH > HL.top - 10 && y < H) { // only draw visible sections
       // region header + progress bar
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.font = '900 17px Orbitron, sans-serif';
@@ -8369,7 +8445,7 @@ function drawDex() {
       roster.forEach((id, i) => {
         const cx = x0 + (i % cols) * cellW + cellW / 2;
         const cy = y + headerH + Math.floor(i / cols) * cellH + cellH / 2 - 8;
-        if (cy + cellH / 2 < 132 || cy - cellH / 2 > H) return;
+        if (cy + cellH / 2 < HL.top - 10 || cy - cellH / 2 > H) return;
         const has = DEX.has(id), shiny = DEXS.has(id);
         const half = cellW / 2 - 4;
         if (has) dexCellRects.push({ id, x: cx - half, y: cy - half - 6, w: half * 2, h: half * 2 + 12 });
@@ -8403,14 +8479,18 @@ function drawDex() {
     y += sectionH;
   }
   // clamp scroll to content
-  const maxScroll = Math.max(0, (y + dexScroll) - 142 - (H - 176));
+  const maxScroll = Math.max(0, (y + dexScroll) - HL.top - (H - HL.top - 34));
   dexScroll = Math.min(dexScroll, maxScroll);
+  }
   // ---- fixed header on top ----
-  const hg = ctx.createLinearGradient(0, 0, 0, 136);
-  hg.addColorStop(0, 'rgba(5,8,25,0.97)'); hg.addColorStop(0.8, 'rgba(5,8,25,0.9)'); hg.addColorStop(1, 'rgba(5,8,25,0)');
-  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 136);
+  const hb = HL.top - 2;
+  const hg = ctx.createLinearGradient(0, 0, 0, hb);
+  hg.addColorStop(0, 'rgba(5,8,25,0.97)'); hg.addColorStop(0.86, 'rgba(5,8,25,0.92)'); hg.addColorStop(1, 'rgba(5,8,25,0)');
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, hb);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  title(SKIN.strings.dexName, 44, Math.min(34, W / (W < 560 ? 16 : 12)), '#ef5350');
+  title(SKIN.strings.dexName, HL.titleY, Math.min(34, W / (W < 560 ? 16 : 12)), '#ef5350');
+  drawDexTabs(HL);
+  if (dexTab === 'boss') { drawDossierHeader(HL); drawDexBack(); drawDossierPage(); return; }
   ctx.font = '700 12px Orbitron, sans-serif';
   ctx.fillStyle = '#b0bec5';
   const total = dexTotal();
@@ -8418,23 +8498,27 @@ function drawDex() {
   // vocabulary and were reaching the AETHERFALL codex as raw literals
   ctx.fillText(DEX.size + ' / ' + total + ' ' + (SKIN.strings.caughtWord || 'CAUGHT')
     + (DEXS.size ? '  ·  ' + DEXS.size + ' ' + SKIN.strings.shinyTag : '')
-    + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, 82);
+    + '  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE', W / 2, HL.tallyY);
   const nextResearch = nextDexReward();
   if (nextResearch) {
     const prevAt = SKIN.dexRewards.filter(r => r.at < nextResearch.at).reduce((n, r) => Math.max(n, r.at), 0);
     const progress = Math.max(0, Math.min(1, (DEX.size - prevAt) / Math.max(1, nextResearch.at - prevAt)));
     ctx.font = '800 9.5px Orbitron, sans-serif';
     ctx.fillStyle = nextResearch.color;
-    ctx.fillText('NEXT RESEARCH REWARD · ' + nextResearch.name + ' · ' + Math.max(0, nextResearch.at - DEX.size) + ' TO GO', W / 2, 104, W * 0.84);
+    ctx.fillText('NEXT RESEARCH REWARD · ' + nextResearch.name + ' · ' + Math.max(0, nextResearch.at - DEX.size) + ' TO GO', W / 2, HL.researchY, W * 0.84);
     const rw = Math.min(360, W * 0.72), rx = W / 2 - rw / 2;
-    roundRect(rx, 118, rw, 5, 2.5); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
-    if (progress > 0) { roundRect(rx, 118, rw * progress, 5, 2.5); ctx.fillStyle = nextResearch.color; ctx.fill(); }
+    roundRect(rx, HL.barY, rw, 5, 2.5); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill();
+    if (progress > 0) { roundRect(rx, HL.barY, rw * progress, 5, 2.5); ctx.fillStyle = nextResearch.color; ctx.fill(); }
   } else {
     ctx.font = '800 10px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
-    ctx.fillText('★ ALL RESEARCH REWARDS UNLOCKED ★', W / 2, 106);
+    ctx.fillText('★ ALL RESEARCH REWARDS UNLOCKED ★', W / 2, HL.researchY + 2);
   }
-  // back button
+  drawDexBack();
+  drawDexDetail();
+}
+function drawDexBack() {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const cb = dexCloseGeom();
   roundRect(cb.x, cb.y, cb.w, cb.h, 10);
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
@@ -8442,7 +8526,180 @@ function drawDex() {
   ctx.font = '700 13px Orbitron, sans-serif';
   ctx.fillStyle = '#cfd8dc';
   ctx.fillText('◀ BACK', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
-  drawDexDetail();
+}
+
+// ── AFT-013: THE CODEX TABS + BOSS DOSSIERS ────────────────────────────────
+// Tab strip (collection | dossiers), the realm-by-realm cast list (unmet =
+// silhouette + ???), and the dossier page. Geometry: dexHeadLayout /
+// dossierListLayout / dossierPageLayout (input.js) — render writes the
+// per-frame tile + page rects, input reads them. Menu-only screen: the few
+// gradients/blurs here are per-frame singletons, never per-entity.
+function drawDexTabs(HL) {
+  const labels = [SKIN.strings.creatures || 'COLLECTION', SKIN.strings.dossierName || 'BOSSES'];
+  for (let i = 0; i < 2; i++) {
+    const r = HL.tabs[i], on = (dexTab === 'boss') === (i === 1);
+    roundRect(r.x, r.y, r.w, r.h, r.h / 2);
+    ctx.fillStyle = on ? 'rgba(239,83,80,0.22)' : 'rgba(255,255,255,0.05)'; ctx.fill();
+    ctx.strokeStyle = on ? '#ef5350' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = on ? 1.6 : 1; ctx.stroke();
+    ctx.textBaseline = 'middle';
+    fitLabel(labels[i], r.x + r.w / 2, r.y + r.h / 2 + 1,
+      { size: HL.compact ? 11 : 12, min: 8, weight: 800, color: on ? '#ffffff' : '#90a4ae', maxW: r.w - 16 });
+  }
+}
+function drawDossierHeader(HL) {
+  const rows = bossDossierRoster();
+  let met = 0, total = 0, won = 0;
+  for (const r of rows) { met += r.met; total += r.total; won += r.cast.filter(c => c.won).length; }
+  ctx.textBaseline = 'middle';
+  fitLabel(met + ' / ' + total + ' MET  ·  ' + won + ' DEFEATED  ·  ' + (IS_TOUCH ? 'DRAG' : 'SCROLL') + ' TO BROWSE',
+    W / 2, HL.tallyY, { size: 12, min: 8, weight: 700, color: '#b0bec5', maxW: W - 32 });
+  fitLabel(met ? 'TAP A MET ' + lex('LEGENDARY') + ', ' + lex('MYTHICAL') + ' OR ' + lex('SENTINEL') + ' TO READ ITS DOSSIER'
+    : 'MEET A FINALE CAST TO OPEN ITS DOSSIERS',
+    W / 2, HL.researchY + 2, { size: 9.5, min: 7.5, weight: 800, color: '#78909c', maxW: W - 32 });
+}
+function dossierShortName(c) {
+  const full = String(c.role === 'secret' ? SKIN.secret.name : (SKIN.names[c.id] || '#' + c.id));
+  const ci = full.indexOf(',');
+  return (ci > 0 ? full.slice(0, ci) : full).replace(/^the\s+/i, '').toUpperCase();
+}
+const DOSSIER_ROLE_COLORS = { mythic: '#ff80ab', secret: '#d780ff' };
+function drawDossierList(HL) {
+  const LL = dossierListLayout();
+  dexScroll = Math.min(dexScroll, LL.maxScroll);
+  const rows = bossDossierRoster();
+  rows.forEach((row, r) => {
+    const y = LL.rowY(r);
+    if (y + LL.rowH < HL.top - 10 || y > H) return;
+    ctx.textBaseline = 'middle';
+    fitLabel(row.name, LL.x0 + 4, y + 14, { align: 'left', size: 15, min: 10, weight: 900, color: row.accent, maxW: LL.gw * 0.62 });
+    fitLabel(row.met + ' / ' + row.total + ' MET', LL.x0 + LL.gw - 4, y + 14,
+      { align: 'right', size: 12, min: 9, weight: 700, color: row.met === row.total ? '#ffd54f' : '#90a4ae', maxW: LL.gw * 0.34 });
+    fitLabel(row.title, LL.x0 + 4, y + 32, { align: 'left', size: 10, min: 8, weight: 700, color: '#78909c', maxW: LL.gw - 8 });
+    const T = LL.tiles(row.cast, r);
+    row.cast.forEach((c, i) => {
+      const t = T[i];
+      if (t.y + t.h < HL.top - 4 || t.y > H) return;
+      dossierTileRects.push({ key: t.key, x: t.x, y: t.y, w: t.w, h: t.h, seen: c.seen });
+      const big = c.role === 'legendary';
+      const edge = big ? row.accent : DOSSIER_ROLE_COLORS[c.role] || 'rgba(255,255,255,0.22)';
+      roundRect(t.x, t.y, t.w, t.h, 10);
+      ctx.fillStyle = c.seen ? (big ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.06)') : 'rgba(255,255,255,0.025)';
+      ctx.fill();
+      ctx.globalAlpha = c.seen ? 1 : 0.45;
+      ctx.strokeStyle = edge; ctx.lineWidth = big ? 1.6 : 1; ctx.stroke();
+      ctx.globalAlpha = 1;
+      const sp = t.w - 10, sx = t.x + 5, sy = t.y + 4;
+      if (c.seen) {
+        const img = getSprite(c.id);
+        if (img.complete && img.naturalWidth) ctx.drawImage(img, sx, sy, sp, sp);
+      } else {
+        const sil = getSilhouette(c.id);
+        if (sil) ctx.drawImage(sil, sx, sy, sp, sp);
+        else {
+          ctx.beginPath(); ctx.arc(sx + sp / 2, sy + sp / 2, sp * 0.3, 0, Math.PI * 2);
+          ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+      ctx.textBaseline = 'middle';
+      fitLabelWrap(c.seen ? dossierShortName(c) : '???', t.x + t.w / 2, t.y + t.w + 2,
+        { size: big ? 9 : 8.5, min: 7, weight: 700, color: c.seen ? '#cfd8dc' : '#546e7a', maxW: t.w - 4, maxLines: 2 });
+      if (c.won) {
+        ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#ffd54f'; ctx.textAlign = 'center';
+        ctx.fillText('★', t.x + t.w - 9, t.y + 10);
+      }
+    });
+  });
+}
+let dossierModelMemo = null;
+function drawDossierPage() {
+  if (!dossierDetail) { dossierPageRects = null; return; }
+  if (!dossierModelMemo || dossierModelMemo.ref !== dossierDetail) { // re-read on every open / step
+    dossierModelMemo = { ref: dossierDetail, m: bossDossier(dossierDetail.key) };
+  }
+  const D = dossierModelMemo.m;
+  if (!D) { dossierPageRects = null; return; }
+  const P = dossierPageLayout();
+  const C = P.card, A = P.art, I = P.info;
+  const col = TYPE_COLORS[D.type] || '#90a4ae';
+  const roleCol = D.role === 'legendary' ? D.accent : DOSSIER_ROLE_COLORS[D.role] || col;
+  dim(0.72);
+  ctx.save(); ctx.shadowColor = roleCol + '66'; ctx.shadowBlur = 24;
+  roundRect(C.x, C.y, C.w, C.h, 20);
+  ctx.fillStyle = 'rgba(6,9,24,0.97)'; ctx.fill(); ctx.restore();
+  roundRect(C.x, C.y, C.w, C.h, 20);
+  ctx.strokeStyle = roleCol; ctx.lineWidth = 1.6; ctx.stroke();
+  // the portrait — never obstructed: info lives below (portrait) or beside it
+  const acx = A.x + A.w / 2, acy = A.y + A.h / 2;
+  const pg = ctx.createRadialGradient(acx, acy, 8, acx, acy, A.w * 0.6);
+  pg.addColorStop(0, col + '33'); pg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = pg; ctx.fillRect(A.x, A.y, A.w, A.h);
+  const rev = bossRevealImage(D.id);
+  const src = rev && rev.complete && rev.naturalWidth ? rev : getSprite(D.id);
+  if (src && src.complete && src.naturalWidth) {
+    const ar = (src.naturalHeight || src.height || src.naturalWidth) / src.naturalWidth;
+    const dw = ar > 1 ? A.w / ar : A.w, dh = ar > 1 ? A.h : A.h * ar;
+    ctx.drawImage(src, acx - dw / 2, acy - dh / 2, dw, dh);
+  }
+  // ---- info rows: optional rows yield first when the box is short ----
+  const k = Math.max(0.88, Math.min(1.3, I.h / 340, I.w / 300));
+  const rows = [];
+  const add = (text, o, opt = 0) => { if (text) rows.push({ text, o, opt }); };
+  const sec = (text, opt = 0) => rows.push({ text, o: { size: 8.5 * k, min: 7.5, weight: 800, color: '#78909c', gap: 7 }, opt, sec: true });
+  add(D.name, { size: (P.side ? 21 : 22) * k, min: 12, weight: 900, color: '#ffffff' });
+  add(D.epithet, { size: 11 * k, min: 8, weight: 800, color: roleCol });
+  add(D.realmName + '  ·  ' + D.roleWord + '  ·  ' + D.typeText, { size: 10 * k, min: 8, weight: 800, color: col });
+  add(D.phases, { size: 10 * k, min: 8, weight: 700, color: '#b0bec5' });
+  sec(D.attacksTitle);
+  for (const a of D.attacks) add(a.label + '  ·  ' + a.name, { size: 10.5 * k, min: 8, weight: 700, color: '#eceff1' });
+  sec('COUNTERPLAY');
+  add(D.cue, { size: 11 * k, min: 9, weight: 700, color: '#ffe082', wrap: 3, family: 'Verdana, system-ui, sans-serif' });
+  sec('FINALE', 1);
+  add(D.finale.title, { size: 10.5 * k, min: 8, weight: 800, color: D.accent }, 1);
+  add(D.finale.beats.map(b => b.label).filter(Boolean).join('  →  '), { size: 9 * k, min: 7.5, weight: 700, color: '#90a4ae' }, 3);
+  sec('YOUR RECORD');
+  const R = D.record;
+  add(R.metText + '  ·  ' + R.winText + '  ·  ' + R.koText, { size: 10.5 * k, min: 8, weight: 800, color: R.wins > 0 ? '#a5d6a7' : '#cfd8dc' });
+  if (!R.best.length && R.wins > 0) add('FASTEST FALL · NOT YET TIMED', { size: 9.5 * k, min: 7.5, weight: 700, color: '#90a4ae' }, 2);
+  for (const b of R.best) {
+    add('FASTEST FALL · ' + b.label + '  ' + b.text, { size: 10 * k, min: 8, weight: 800, color: '#ffd54f' });
+    if (b.phases) add(b.phases, { size: 9 * k, min: 7.5, weight: 700, color: '#90a4ae' }, 2);
+  }
+  if (R.rushText) add(R.rushText, { size: 9.5 * k, min: 7.5, weight: 800, color: '#80d8ff' }, 1);
+  const rowH = r => {
+    const o = r.o, lines = o.wrap ? Math.max(1, wrapLinesNeeded(r.text, { min: o.min, weight: o.weight, maxW: I.w, maxLines: o.wrap, family: o.family })) : 1;
+    return (o.gap || 0) + (lines > 1 ? lines * Math.round(o.min * 1.3) : Math.round(o.size * 1.32) + 2);
+  };
+  let kept = rows.slice();
+  const total = () => kept.reduce((n, r) => n + rowH(r), 0);
+  for (const lvl of [3, 2, 1]) if (total() > I.h) kept = kept.filter(r => r.opt < lvl);
+  // a section header never sits alone at the end of the list
+  kept = kept.filter((r, i) => !r.sec || (kept[i + 1] && !kept[i + 1].sec));
+  let y = I.y + (P.side ? Math.max(4, (I.h - total()) / 2) : 2);
+  const ax = P.side ? I.x : I.x + I.w / 2, align = P.side ? 'left' : 'center';
+  ctx.textBaseline = 'middle';
+  for (const r of kept) {
+    const h = rowH(r), o = r.o;
+    y += o.gap || 0;
+    const first = (h - (o.gap || 0));
+    const opts = { size: o.size, min: o.min, weight: o.weight, color: o.color, maxW: I.w, align, family: o.family };
+    if (o.wrap) fitLabelWrap(r.text, ax, y + Math.round(o.min * 0.65), { ...opts, maxLines: o.wrap });
+    else fitLabel(r.text, ax, y + first / 2, opts);
+    y += first;
+  }
+  // ---- bottom row: ‹ · close hint · › ----
+  const order = bossDossierSeenOrder();
+  const many = order.length > 1;
+  for (const [r, ch] of [[P.prev, '‹'], [P.next, '›']]) {
+    roundRect(r.x, r.y, r.w, r.h, 12);
+    ctx.fillStyle = many ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'; ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.font = '900 22px Orbitron, sans-serif'; ctx.fillStyle = many ? '#cfd8dc' : '#455a64';
+    ctx.fillText(ch, r.x + r.w / 2, r.y + r.h / 2);
+  }
+  const pos = Math.max(0, order.indexOf(D.key)) + 1;
+  fitLabel((many ? pos + ' / ' + order.length + '  ·  ' : '') + (IS_TOUCH ? 'TAP OUTSIDE TO CLOSE' : 'CLICK OUTSIDE OR ESC TO CLOSE'),
+    P.hint.x + P.hint.w / 2, P.hint.y + P.hint.h / 2, { size: 9, min: 7.5, weight: 700, color: '#78909c', maxW: P.hint.w });
+  dossierPageRects = { card: C, prev: P.prev, next: P.next };
 }
 
 // ---- THE CODEX GALLERY (2026-07-21): tap a recorded entry for a full-size
@@ -9396,7 +9653,63 @@ function drawJourneyMap(y, compact = false) {
   ctx.restore();
 }
 
+// BOSS RUSH summary — the game-over surface's rush branch: total (combat +
+// penalties), the nine splits by realm, knockouts, NEW BEST. A rush that
+// ended early (true game over) reads as FAILED and records nothing.
+function drawRushSummary() {
+  dim(0.72);
+  const L = rushSummaryLayout(), R = G.rush;
+  const S = R.summary || { complete: false, total: rushTotal(), newBest: false, prior: null };
+  const best = rushBest(R.mode, R.preset);
+  ctx.save();
+  roundRect(L.px, L.py, L.pw, L.ph, 22);
+  ctx.fillStyle = 'rgba(7,11,28,0.97)'; ctx.fill();
+  ctx.strokeStyle = S.newBest ? '#ffd54f' : S.complete ? '#80d8ff' : '#ff5252'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const short = L.ph < 400;
+  const cx = W / 2, inner = L.pw - 36;
+  fitLabel(S.newBest ? '★ NEW BEST ★' : rushName() + (S.complete ? ' COMPLETE' : ' FAILED'), cx, L.py + (short ? 26 : 36),
+    { size: L.narrow ? 24 : 30, min: 12, weight: 900, color: S.newBest ? '#ffd54f' : S.complete ? '#80d8ff' : '#ff6e6e', maxW: inner, zone: 'summary' });
+  fitLabel(fmtRushTime(S.total), cx, L.py + (short ? 58 : 76),
+    { size: short ? 24 : 32, min: 14, weight: 900, color: '#ffffff', maxW: inner, zone: 'summary' });
+  const modeName = ((MODES.find(m => m.key === R.mode) || {}).label || R.mode).toUpperCase();
+  const diffName = ((DIFFICULTY_UI[R.preset] || {}).name || R.preset).toUpperCase();
+  const info = 'COMBAT ' + fmtRushTime(R.t) + ' · ' + R.kos + ' KNOCKOUT' + (R.kos === 1 ? '' : 'S')
+    + (R.penalty ? ' (+' + R.penalty + 'S)' : '') + ' · ' + modeName + ' ' + diffName
+    + (S.complete && !S.newBest && best ? ' · BEST ' + fmtRushTime(best.best) : '')
+    + (G.cheated ? ' · CHEATS — NOT RECORDED' : '');
+  fitLabel(info, cx, L.py + (short ? 84 : 108),
+    { size: 10.5, min: 8, weight: 800, color: '#9fb3c8', maxW: inner, zone: 'summary' });
+  // the nine splits — one column on phones, three on wide panels
+  const cols = L.narrow ? 1 : 3, rows = Math.ceil(RUSH_FINALES / cols);
+  const gy0 = L.py + (short ? 100 : 128), gy1 = L.retry.y - 10;
+  const cellH = Math.min(40, (gy1 - gy0) / rows), cellW = (L.pw - 32 - (cols - 1) * 8) / cols;
+  for (let i = 0; i < RUSH_FINALES; i++) {
+    const col = cols === 1 ? 0 : i % cols, row = cols === 1 ? i : Math.floor(i / cols);
+    const x = L.px + 16 + col * (cellW + 8), y = gy0 + row * cellH;
+    const sp = R.splits[i], g = SKIN.gens[i] || {};
+    const here = !sp && i === R.splits.length && !S.complete; // where a failed rush fell
+    roundRect(x, y + 2, cellW, cellH - 4, 8);
+    ctx.fillStyle = sp ? 'rgba(128,216,255,0.10)' : here ? 'rgba(255,82,82,0.12)' : 'rgba(255,255,255,0.03)'; ctx.fill();
+    const my = y + cellH / 2;
+    const tTxt = sp ? fmtRushTime(sp.t) + (sp.kos ? ' · ' + sp.kos + ' KO' : '') : here ? 'FELL HERE' : '—';
+    const tb = fitLabel(tTxt, x + cellW - 8, my,
+      { size: cellH >= 30 ? 12 : 10, min: 8, weight: 900, align: 'right', color: sp ? '#e8eef6' : here ? '#ff8a80' : '#5c6f8a', maxW: cellW * 0.46, zone: 'summary' });
+    fitLabel((i + 1) + ' · ' + (g.name || ''), x + 8, my,
+      { size: cellH >= 30 ? 11 : 9.5, min: 7.5, weight: 800, align: 'left', color: sp ? (g.accent || '#cfd8dc') : '#6d7f96', maxW: Math.max(24, cellW - 24 - tb.w), zone: 'summary' });
+  }
+  const btns = [[L.retry, '↻ RETRY ' + rushName(), '#ffd54f'], [L.title, '⌂ TITLE', '#cfd8dc']];
+  for (const [b, label, col] of btns) {
+    const hov = inRect(mouseX, lastMouseY, b);
+    roundRect(b.x, b.y, b.w, b.h, 12);
+    ctx.fillStyle = hov ? 'rgba(255,213,79,0.25)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = b === L.retry ? 2 : 1.2; ctx.stroke();
+    fitLabel(label, b.x + b.w / 2, b.y + b.h / 2, { size: L.narrow ? 10 : 11, min: 8, weight: 800, color: col, maxW: b.w - 12, zone: 'summary' });
+  }
+  ctx.restore();
+}
 function drawGameOverSummary() {
+  if (G.rush) { drawRushSummary(); return; }
   dim(0.72);
   const L = gameOverLayout(), s = G.runSummary || {
     region: genFor(G.level).name, stage: stageIdx(G.level) + 1, level: G.level, score: G.score,
@@ -9792,7 +10105,9 @@ function drawResults() {
   // kills the player somehow missed.
   {
     const oc = R.outcomes || {};
-    const parts = ['TIME ' + Math.round(R.t) + 'S', R.kills + ' DEFEATED'];
+    const parts = [R.rushSplit != null
+      ? 'SPLIT ' + fmtRushTime(R.rushSplit) + ' (' + R.rushIdx + '/' + RUSH_FINALES + ')'
+      : 'TIME ' + Math.round(R.t) + 'S', R.kills + ' DEFEATED'];
     if (oc.dispersed) parts.push(oc.dispersed + ' DISPERSED');
     if (oc.rescued) parts.push(oc.rescued + ' RESCUED');
     if (oc.neutralized) parts.push(oc.neutralized + ' NEUTRALIZED');
@@ -10173,7 +10488,8 @@ function drawOverlays() {
     const draftAccent = secretDraft ? '#d780ff' : wasBossStage ? clearedGen.accent : '#66bb6a';
     drawDraftBackdrop(draftAccent);
     {
-      const tTxt = secretDraft ? 'RIFT CONQUERED!' : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!';
+      const tTxt = secretDraft ? 'RIFT CONQUERED!' : rushArmoryHand() ? 'RUSH ARMORY ' + G.rush.armoryN + '/2'
+        : wasBossStage ? clearedGen.name + ' CLEARED!' : 'STAGE CLEAR!';
       // AFT-009R P3: long realm names must FIT the phone width — size caps
       // by measured length, never by the fixed W/12 alone
       const tSize = Math.min(draftShort ? 30 : 40, W / 12, (W * 0.94) / (tTxt.length * 0.68));
@@ -10181,7 +10497,12 @@ function drawOverlays() {
     }
     ctx.font = '700 15px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd54f';
-    ctx.fillText(secretDraft ? '+3000 SECRET BOSS BONUS' : '+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS',
+    if (rushArmoryHand()) {
+      // the armory hand is a SKIPPED stage's dividend — say which finale it arms for
+      const fl = regionIdx(G.level) * STAGES + 3;
+      fitLabel('THE SKIPPED STAGE\'S DRAFT · NEXT: ' + (stageTitle(fl) || genFor(fl).name),
+        W / 2, clearY + (draftShort ? 28 : 34), { size: 15, min: 9, weight: 700, color: '#ffd54f', maxW: W * 0.92 });
+    } else ctx.fillText(secretDraft ? '+3000 SECRET BOSS BONUS' : '+' + (300 + (G.clearedStage || 0) * 250) + ' BONUS',
       W / 2, clearY + (draftShort ? 28 : 34));
     if (secretDraft && !draftShort) {
       ctx.font = '900 12px Orbitron, sans-serif'; ctx.fillStyle = '#80e8ff';
@@ -10639,7 +10960,7 @@ function drawOverlays() {
     if (advOpen) drawAdvanced();
   }
   if (G.flashT > 0) {
-    ctx.fillStyle = `rgba(255,60,60,${G.flashT * (SETTINGS.reduceFlash ? 0.18 : 0.6)})`;
+    ctx.fillStyle = `rgba(${G.flashCol || FLASH_HURT},${G.flashT * (SETTINGS.reduceFlash ? 0.18 : 0.6)})`;
     ctx.fillRect(0, 0, W, H);
   }
 }

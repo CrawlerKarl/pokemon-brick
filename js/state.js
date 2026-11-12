@@ -64,6 +64,13 @@ function sovereignHp(rIdx, cycle) {
 // the old (r-4)·0.22 left L10–L26 clearing in ~20-25s flat while build DPS
 // grew ×15 (measured, matrix-aft009r): midgame targets 30-45s, late 40-60s.
 function lateWaveMul(regionsIn) { return 1 + Math.max(0, regionsIn - 2) * 0.17; }
+// AFT-027: BREAKER wall durability by realm (ordinary stages only). Measured
+// with a ball-tracking probe at phone portrait, 6 seeds per stage: the old
+// flat curve ran ~40s in realm 1 and ~18s in realms 8–9. These multipliers
+// (with the growing row count in buildLevel) hold a gently RISING stage
+// length instead. Realm 3 dips because its region rule already slows it.
+const CLASSIC_WALL_MUL = [1, 1, 0.85, 1.1, 1.2, 1.35, 1.5, 1.75, 1.9];
+function classicWallMul(regionsIn) { return CLASSIC_WALL_MUL[Math.max(0, Math.min(8, regionsIn))]; }
 function earlyWaveMul(regionsIn) { return regionsIn === 0 ? 1.5 : regionsIn === 1 ? 1.75 : regionsIn === 2 ? 1.35 : 1; } // AFT-023: r1 1.6→1.75 — J05 measured 17.2s under the re-timed draft stream // AFT-022: r0 1.45→1.5 — the vent assist's lockout-free stream shaved the opening waves under the 20s floor
 function starterTierValue(key, tier) {
   const value = SKIN.starterMon[G.starter]?.mods?.[key];
@@ -379,7 +386,7 @@ function clearCheckpoint() { RUN_CKPT = null; saveStore(storeKey('run'), null); 
 // the current skin's checkpoint/codex/medals/victories/best/daily/coach
 // state. Import NEVER writes an unknown key, NEVER writes a checkpoint that
 // fails migrateCheckpoint, and always snapshots a pre-import backup first.
-const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach', 'relicNotice', 'crests'];
+const EXPORT_SKIN_KEYS = ['run', 'best', 'victory', 'medals', 'dex', 'dexs', 'daily', 'jcoach', 'relicNotice', 'crests', 'rush', 'bosslog'];
 const EXPORT_GLOBAL_KEYS = ['pkbrk-settings', 'pkbrk-music'];
 function exportBundle() {
   const keys = {};
@@ -424,6 +431,7 @@ function validateBundle(b) {
 function applyBundle(b) {
   saveStore(storeKey('preimport'), exportBundle()); // the recoverable pre-import backup
   for (const [k, v] of Object.entries(b.keys)) saveStore(k, v);
+  bossLogReload(); // AFT-013: the in-memory boss log follows the import
   return true;
 }
 function writeAutosave() { saveStore(storeKey('autosave'), exportBundle()); }
@@ -522,7 +530,8 @@ const G = {
   balls: [], bricks: [], powerups: [], lasers: [], missiles: [], enemyShots: [],
   relics: [], relicCount: 0, relicBank: 0, relicLane: 1, // AFT-007: the returning glaive
   particles: [], floaters: [], fragments: [], ghosts: [], rings: [],
-  scoreShown: 0, comboPop: 0, // HUD juice: counting score + combo pop-scale
+  scoreShown: 0, comboPop: 0, comboTierT: 0, // HUD juice: counting score + combo pop-scale + tier flare
+  flashCol: null, // AFT-027: the screen-flash colour (null = hurt-red)
   announce: null, announceQueue: [], modifier: null, combatNotice: null,
   reveal: null, revealDock: null, // AFT-002: the boss-reveal scene + HUD-lane dock
   // AFT-020: the finale director's state (null outside a finale; the old
@@ -546,6 +555,7 @@ const G = {
   rallyHintDone: false, bestRally: 0, barrierHintDone: false, coachStep: 0, jCoach: null,
   highGroundDone: false, waveFirstKill: false, elementOrbCD: 10,
   trial: false, daily: false, runSeed: null,
+  rush: null, // BOSS RUSH run state ({ idx, t, splits, kos, penalty, … }) — null outside a rush
   runStats: null, runSummary: null, runStartLevel: 1, lastDamageCause: 'MISSED BALL',
   results: null, // stage-results interstitial payload (buildStageResults)
   resolve: null, // AFT-021 P1: the stage-resolution beat between the win and results
@@ -852,6 +862,7 @@ function statsBossPhaseMark(br, endedPhase) {
   const L = statsCur(); if (!L || br.phaseClockT == null) return;
   const name = (br.poke && (br.poke.n || br.poke.id)) || 'BOSS';
   const key = name + ' P' + endedPhase;
+  bossLogPhase(br, endedPhase, G.time - br.phaseClockT); // AFT-013 boss log (passive)
   L.bossPhases[key] = +((L.bossPhases[key] || 0) + (G.time - br.phaseClockT)).toFixed(1);
   br.phaseClockT = G.time;
 }
@@ -1765,6 +1776,15 @@ function buildLevel(lvl) {
   const rows = hasBoss
     ? Math.min(2 + Math.min(3, Math.floor(regionsIn / 3)), 8, maxRows)
     : junkie ? 0
+    // AFT-027: BREAKER's wall GROWS with the journey. The thinning budget
+    // below exists to trade boxed bricks for free-flyers — but classic has
+    // had no flyers since the calm redesign, so its walls were simply
+    // shrinking: realm 6+ fielded 6–12 bricks and cleared in ~20s against
+    // ~40s in realm 1 (measured, phone portrait). In the mode where the wall
+    // IS the game, depth comes from more wall: 3 rows early → 6 late, +1 on
+    // CHALLENGE stages, still capped by the viewport (maxRows keeps the
+    // lower field open) — sequential depth, never spongier bricks.
+    : classic ? Math.max(2, Math.min(3 + Math.min(3, Math.floor(regionsIn / 2)) + (stage === 1 ? 1 : 0), 7, maxRows))
     // challenge waves add a row for pressure — but NOT when two stream squads
     // are already pouring in (regionsIn>=7): the streams supply the density, so
     // the extra boxed row would push a wide-viewport wave over the readability
@@ -1790,8 +1810,13 @@ function buildLevel(lvl) {
       // by wall chew (a 200s blaster L3 with only seven hits taken), late
       // ones by the same measured curves
       const finWallMul = hasBoss && G.mode !== 'junkie' ? ((FINALE_WORK_MODE[G.mode] || [])[rIdx] ?? 1) : 1;
-      let hp = Math.max(1, Math.round(((tier + cycle) * p.brickHp * BRICK_HP_MUL) * finWallMul) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
-      if (armored) hp = Math.min(9, Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp)));
+      // AFT-027: BREAKER ordinary walls carry their own durability curve
+      // (classicWallMul) — the shared formula is nearly flat across the
+      // journey while the ball's power is not, so realm 8–9 walls cleared in
+      // ~18s. Blaster walls and every finale keep the shared numbers.
+      const cMul = classic && !hasBoss ? classicWallMul(regionsIn) : 1;
+      let hp = Math.max(1, Math.round(((tier + cycle) * p.brickHp * BRICK_HP_MUL) * finWallMul * cMul) + (regionsIn >= 4 ? 1 : 0) + (regionsIn >= 7 ? 1 : 0));
+      if (armored) hp = Math.min(Math.round(9 * Math.max(1, cMul)), Math.max(3, Math.round((3 + Math.floor(rIdx / 2) + cycle * 2) * p.brickHp * cMul)));
       // Wave entrance: each ROW arrives as ONE line — every brick starts
       // directly above its own column (slight alternating diagonal drift per
       // row for life) and the whole rank glides down together, row after
@@ -2043,7 +2068,9 @@ function buildLevel(lvl) {
         // RIGID BODY, LIVING SLOTS: lattice families FREEZE their slots
         // (spd 0 — the anchor, breath and entrance trains do the moving);
         // only explicitly rotary families keep a capped, slow circulation
-        dir: (q.dir || 1) * mirror, spd: C.rotary ? (q.spd || 1) * 0.7 : 0,
+        // (×1.25, was ×0.7: at 0.7 a ring took ~45s per turn — slower than
+        // the body's own patrol, so it read as aimless drift, not a carousel)
+        dir: (q.dir || 1) * mirror, spd: C.rotary ? (q.spd || 1) * 1.25 : 0,
         ph: q.ph || 0, role: q.role || 'core',
       };
       // frozen LANES are clean rows: with slots rigid, 'lane''s ry is pure
@@ -2403,7 +2430,10 @@ function spawnReinforcement() {
   // swallows HP multipliers there — population is the honest floor lever;
   // J05 measured 17.2s under the 19s trivialization floor)
   const n = Math.min(junkie && regionsIn >= 5 ? 20 : 16,
-    8 + regionsIn + (junkie && regionsIn >= 5 ? 3 : 0) + (junkie && regionsIn <= 1 ? 3 : 0));
+    8 + regionsIn + (junkie && regionsIn >= 5 ? 3 : 0) + (junkie && regionsIn <= 1 ? 3 : 0)
+      // (+1 on the realm-2 Challenge: an orderly rank falls a little faster
+      // than the old jostling pack did, and J05 slipped 0.1s under its floor)
+      + (junkie && regionsIn === 1 && stageIdx(lvl) === 1 ? 1 : 0));
   const usable = W * 0.76;
   const kinds = ['ring', 'lane', 'chevron', 'arc', 'cross', 'carousel', 'swoop', 'diamond', 'helix', 'spiral', 'inf', 'liss', 'epi', 'rose', 'star', 'binary', 'vortex', 'zigzag', 'fountain', 'clover', 'butterfly'];
   const kind = (junkie && G.encounter && G.encounter.squads.length)
@@ -2420,6 +2450,33 @@ function spawnReinforcement() {
     : Math.max(84 + ry, Math.min(floorY - ry, 150 + Math.max(70, bh * 3)));
   const rw = junkie ? Math.min(56, Math.max(36, bw * 0.58)) : bw - Math.max(8, bw * 0.15);
   const rh = junkie ? Math.min(50, Math.max(32, bh * 0.82)) : bh;
+  // ---- THE RANK: reinforcements arrive as ONE rigid, staggered lattice.
+  // They used to be dealt onto a single copy of the wave's pattern sized for
+  // five riders (rx ≈ 70px for up to twenty): the slots were physically
+  // impossible, so the separation solver shoved the pack around every frame
+  // and the flight stumbled about as a jostling blob — the "drunk" second
+  // beat of every stage. Now every rider owns a slot the solver has no
+  // quarrel with (spacing = its own minimum distance + 6% daylight), and the
+  // block moves as one body on a single settle-at-the-ends glide ('rank',
+  // flightPos). Same riders, same HP, same density — just in formation.
+  const sizeTop = junkie ? 1.5 : 1;
+  const sw = rw * sizeTop, sh = rh * sizeTop;
+  const slotGap = Math.min(sw, sh) * 1.4 * 1.06;
+  const travel = Math.min(34, W * 0.07);
+  const colsFit = Math.max(2, Math.floor((W - 36 - sw - travel * 2) / slotGap) + 1);
+  const rankCols = Math.max(2, Math.min(colsFit, Math.ceil(Math.sqrt(n * 1.7))));
+  const rankSlots = []; // hex stagger: rows alternate rankCols / rankCols−1
+  for (let r = 0, left = n; left > 0; r++) {
+    const inRow = Math.min(left, r % 2 ? Math.max(1, rankCols - 1) : rankCols);
+    for (let c = 0; c < inRow; c++) rankSlots.push({ r, gx: (c - (inRow - 1) / 2) * slotGap });
+    left -= inRow;
+  }
+  const rankRows = rankSlots[rankSlots.length - 1].r + 1;
+  const yTop = 84 + sh / 2 + 10, yBot = floorY - sh / 2 - 10;
+  const rowGap = rankRows > 1 ? Math.min(slotGap * 0.87, Math.max(slotGap * 0.6, (yBot - yTop) / (rankRows - 1))) : 0;
+  const blockH = (rankRows - 1) * rowGap;
+  const rankCy = Math.max(yTop + blockH / 2, Math.min(yBot - blockH / 2, cy0));
+  const rankSpd = 1 / (7.5 * Math.max(0.01, G.pathSpeed)); // one full patrol every 7.5s
   for (let i = 0; i < n; i++) {
     const rTier = i % 3 === 0 ? 3 : 2;
     const pool = themedPool(gen, rTier, theme);
@@ -2429,7 +2486,7 @@ function spawnReinforcement() {
     const hp = Math.max(2, Math.round((2 + Math.floor(regionsIn / 2)) * p.brickHp * (junkie ? (rTier === 3 ? 1.7 : 1.25) : 1) * lateWaveMul(regionsIn)));
     G.bricks.push({
       bx: i % 2 ? -70 : W + 70, by: -50 - (i % 5) * 24,
-      hx: W / 2, hy: cy0, row: 0, col: i,
+      hx: W / 2, hy: rankCy, row: 0, col: i,
       w: rw * rMul, h: rh * rMul,
       hp, maxHp: hp,
       poke: { id, t },
@@ -2437,10 +2494,10 @@ function spawnReinforcement() {
       flash: 0, wobble: gameRand() * Math.PI * 2,
       entry: { t: 0.2 + i * 0.14, dur: 0.9, sx: i % 2 ? -70 : W + 70, sy: -50 - (i % 5) * 24 },
       flight: {
-        kind, state: 2, launch: 0, sq: 99,
-        cx: W / 2, cy: cy0, rx: wrap ? W / 2 + 90 : usable * (junkie ? 0.24 : 0.4), ry,
-        spd: (wrap ? 1.7 : 1) * (junkie ? 1.2 : 1),
-        phase: i / n, n, dir: 1, strand: i % 2,
+        kind: 'rank', family: kind, state: 2, launch: 0, sq: 99,
+        cx: W / 2, cy: rankCy, rx: travel, ry: 7,
+        gx: rankSlots[i].gx, gy: rankSlots[i].r * rowGap - blockH / 2,
+        spd: rankSpd, phase: 0, n, dir: 1, strand: i % 2,
       },
     });
   }
@@ -2473,7 +2530,7 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.attune = { level: 0, res: 0, need: attuneNeed(1), pending: 0, presented: 0 };
   G.forge = null;
   G.focus = 2; G.reforgeUsed = false; // AFT-009R P5: two Focus Charges to start
-  G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
+  G.score = 0; G.scoreShown = 0; G.comboPop = 0; G.comboTierT = 0; G.lives = p.lives; G.livesMax = p.lives; G.level = startLevel; G.combo = 0;
   G.shotsFired = 0; G.playT = 0;
   G.maxCombo = 0; G.caughtRun = 0; G.dropHint = 0; G.healthDropPity = 0; G.megaCalloutDone = false; G.megaWasReady = false;
   G.rallyHintDone = false; G.bestRally = 0; G.barrierHintDone = false; G.coachStep = 0; G.jCoach = null;
@@ -2547,6 +2604,12 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
   G.finaleCkpt = null; G.finaleResume = false; // AFT-023 knockout checkpoint
   G.specVeilTaught = false; // re-teach the veil once per journey
   G.daily = !!opts.daily; G.runSeed = opts.seed || null; G.runStartLevel = startLevel;
+  // BOSS RUSH: ONE object owns the run's clock, splits and penalties. It is
+  // pure bookkeeping (never touches gameRand), so a null rush leaves every
+  // seeded stream bit-identical.
+  G.rush = opts.rush ? { idx: 0, t: 0, splits: [], kos: 0, penalty: 0, done: false,
+    armory: 0, armoryN: 0, splitT0: 0, splitKo0: 0, mode: SETTINGS.mode, preset: SETTINGS.preset,
+    seed: opts.seed == null ? null : opts.seed, summary: null } : null;
   G.runStats = { bricksBroken: 0, bossesDefeated: 0, itemsCaught: 0, damageTaken: 0,
     knockouts: 0, levels: [], cur: null };
   G.runSummary = null; G.lastDamageCause = 'MISSED BALL'; G.shareToast = 0; G.uiTouchPulse = null;
@@ -2594,6 +2657,9 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
     if (G.daily) setAnnounce('star', '#ffd54f', 'DAILY CHALLENGE · ' + dailyDateKey(),
       'SAME WALLS · DROPS · STARTER · UPGRADES FOR EVERY PLAYER', 3.4,
       'LOCAL BEST ' + dailyBest() + ' · ONE SEEDED JOURNEY', null, false, false, 'trial');
+    else if (G.rush) setAnnounce('swift', '#ffd54f', rushName(),
+      'NINE ' + rushFinaleWord() + ' BACK TO BACK · THE CLOCK RUNS ONLY IN COMBAT', 1.6,
+      'EACH KNOCKOUT ADDS +' + RUSH_KO_PENALTY + 'S', null, false, false, 'trial');
     else setAnnounce('swift', '#80d8ff', 'TRIAL MODE',
       genFor(startLevel).name + ' · ' + SKIN.stageNames[stageIdx(startLevel)] + ' — SCORE & CATCHES NOT SAVED', 1.6,
       granted ? granted + ' UPGRADES GRANTED FOR THE JOURNEY SO FAR' : null, null, false, false, 'trial');
@@ -2611,6 +2677,417 @@ function resetRun(startLevel = 1, trial = false, opts = {}) {
 function startDailyRun() {
   SETTINGS.mode = 'classic'; SETTINGS.preset = 'normal'; SETTINGS.starter = 'fire';
   resetRun(1, false, { daily: true, seed: dailySeed() });
+}
+// ── BOSS RUSH ──────────────────────────────────────────────────────────────
+// All nine realm finales back to back, timed, on the campaign's own build
+// economy: a rush IS a trial launched at level 3 (fair granted build, no
+// saves of score/medals/crests/codex/checkpoints), plus ONE G.rush object.
+// Between finales the flow is the journey's exact three decisions per realm
+// — the Forge, then the two STAGE DIVIDEND hands of the realm's skipped
+// ordinary stages (rushArmoryNext) — so the finale balance the baseline
+// validates carries over. The clock runs on sim dt in live combat only.
+const RUSH_KO_PENALTY = 20;
+const RUSH_FINALES = 9;
+function rushName() { return (SKIN.strings && SKIN.strings.rushName) || 'BOSS RUSH'; }
+function rushFinaleWord() { return (SKIN.strings && SKIN.strings.rushFoes) || 'FINALES'; }
+function rushRecordKey(mode, preset) { return (mode || SETTINGS.mode) + ':' + (preset || SETTINGS.preset); }
+function loadRushRecords() {
+  const v = loadStore(storeKey('rush'), '{}');
+  return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+}
+function rushBest(mode, preset) {
+  const r = loadRushRecords()[rushRecordKey(mode, preset)];
+  return r && typeof r === 'object' && +r.best > 0 ? r : null;
+}
+// m:ss (HUD) or m:ss.t (records, splits)
+function fmtRushTime(s, tenths = true) {
+  s = Math.max(0, +s || 0);
+  if (!tenths) s = Math.floor(s);
+  const m = Math.floor(s / 60), r = s - m * 60;
+  const rs = tenths ? r.toFixed(1) : String(Math.floor(r));
+  return m + ':' + (r < 10 ? '0' : '') + rs;
+}
+function rushTotal() { return G.rush ? G.rush.t + G.rush.penalty : 0; }
+// is the hand on screen one of the two skipped-stage armory hands?
+function rushArmoryHand() {
+  return !!(G.rush && G.rush.armoryN > 0 && G.state === 'upgrade' && !G.forge && !G.recoveryDraft);
+}
+function startBossRush(seed) {
+  trialOpen = false;
+  resetRun(3, true, { rush: true, seed: seed == null ? null : seed });
+}
+// the win moment of a finale (beginStageResolution): close this Sovereign's split
+function rushRecordSplit() {
+  const R = G.rush;
+  if (!R || R.done || stageIdx(G.level) !== 2) return;
+  if (R.splits.some(s => s.lvl === G.level)) return; // idempotent
+  R.splits.push({ lvl: G.level, realm: regionIdx(G.level), t: +(R.t - R.splitT0).toFixed(2), kos: R.kos - R.splitKo0 });
+  R.idx = R.splits.length;
+  R.splitT0 = R.t; R.splitKo0 = R.kos;
+}
+// settle (post-increment): the ninth finale ends the rush at its results;
+// any earlier one arms the two armory hands that follow the Forge
+function rushAfterFinaleClear() {
+  const R = G.rush;
+  if (!R) return;
+  if (R.splits.length >= RUSH_FINALES || G.level > 27) {
+    R.done = true;
+    G.forge = null; G.upgradeChoices = null; G.ceremony = null;
+  } else R.armory = 2;
+}
+// The level advance after a decision surface funnels through here. In a rush
+// with armory hands pending, the next realm's ORDINARY stages are skipped —
+// but each still pays its real STAGE DIVIDEND hand (curated opening, banked
+// width, Focus, four-path cap all apply) and still counts toward the journey
+// (partner form keys off the level). Returns true when it opened a hand.
+function rushArmoryNext() {
+  const R = G.rush;
+  if (!R || R.done || !(R.armory > 0)) { if (R) R.armoryN = 0; return false; }
+  while (R.armory > 0) {
+    R.armory--;
+    R.armoryN = 2 - R.armory;
+    G.level++; // the skipped stage is behind us
+    rushEvolveCheck();
+    G.clearedStage = stageIdx(G.level - 1);
+    G.upgradeChoices = null; G.forge = null;
+    dealStageDividend();
+    if (G.upgradeChoices && G.upgradeChoices.length) {
+      G.state = 'upgrade'; G.stateT = 0; G.rerolled = false;
+      draftSel = null; upgradeTreeOpen = false;
+      return true;
+    }
+    G.upgradeChoices = null; // nothing draftable — that stage pays nothing, move on
+  }
+  R.armoryN = 0;
+  return false;
+}
+// partner form keys off the LEVEL: a skipped stage that crosses a form gate
+// (Pikachu's region-5 Raichu) evolves the partner exactly where the journey
+// would have, so the armory hands see the real Form (fusion/bridge gates)
+function rushEvolveCheck() {
+  const sm = SKIN.starterMon[G.starter];
+  if (!sm) return;
+  const sLvl = starterStage(G.level, G.starter);
+  if (sLvl <= G.starterLvl) return;
+  const prior = G.starterLvl;
+  applyStarterTierUpgrade(prior, sLvl);
+  G.starterLvl = sLvl;
+  getSprite(sm.ids[sLvl - 1]);
+  const sameForm = sm.ids[prior - 1] === sm.ids[sLvl - 1];
+  setAnnounce(G.starter, TYPE_COLORS[G.starter], sameForm
+    ? sm.names[sLvl - 1] + ' UNLEASHED ' + sm.ability + ' ' + romanTier(sLvl) + '!'
+    : sm.names[prior - 1] + ' ' + skinEvolveVerb(G.starter) + ' ' + sm.names[sLvl - 1] + '!',
+  sm.ability + ' ' + romanTier(sLvl) + ' — ' + sm.tiers[sLvl - 1], 3.4);
+}
+// the ninth finale's results → the RUSH COMPLETE summary (the game-over
+// summary surface, rush branch). Records only a full, uncheated rush.
+function finishRush() {
+  const R = G.rush;
+  if (!R) return;
+  R.done = true;
+  const total = +rushTotal().toFixed(2);
+  const complete = R.splits.length >= RUSH_FINALES;
+  const prior = rushBest(R.mode, R.preset);
+  let newBest = false;
+  if (complete && !G.cheated) {
+    const recs = loadRushRecords();
+    const key = rushRecordKey(R.mode, R.preset);
+    const cur = recs[key] && typeof recs[key] === 'object' ? recs[key] : {};
+    const runs = (Math.floor(+cur.runs) || 0) + 1;
+    if (!(+cur.best > 0) || total < +cur.best) {
+      recs[key] = { best: total, date: dailyDateKey(), kos: R.kos,
+        splits: R.splits.map(s => s.t), starter: G.starter || 'none', runs };
+      newBest = true;
+    } else recs[key] = { ...cur, runs };
+    saveStore(storeKey('rush'), recs);
+  }
+  R.summary = { complete, total, newBest, prior: prior ? +prior.best : null };
+  G.announce = null; G.announceQueue = []; G.combatNotice = null;
+  finalizeRun(); // trial: no best-score write
+  G.state = 'gameover'; G.stateT = 0;
+}
+
+// ── AFT-013: THE BOSS LOG + CODEX DOSSIERS ─────────────────────────────────
+// A PASSIVE OBSERVER of each realm's finale cast: who you have met, felled
+// and fallen to, plus your fastest falls per mode. One per-skin store
+// (storeKey('bosslog')), loaded once per skin through loadStore and
+// shape-checked (corrupt/absent → {}). It never touches gameRand, score,
+// meters or any field the sim reads: per-actor clocks live in a WeakMap OFF
+// the brick objects, so a state fingerprint cannot move. Writers: real
+// journeys and BOSS RUSH, finale stages only; practice trials, dailies and
+// cheated runs never write (the codex sandbox convention).
+// Store shape: { [key]: { seen, wins, kos, best: { [mode]: s },
+//   phase: { [mode]: { [phase]: s } } } } — key = the species id as a
+// string, or 'secret' (the rift secret shares its art id with realm 1's
+// mythic, so it needs its own key).
+const BOSSLOG_MODES = ['classic', 'blaster', 'junkie'];
+const BOSSLOG_CACHE = {};           // skin id → sanitized log
+const BOSSLOG_LIVE = new WeakMap(); // actor → { key, t0, sum, phases, fell }
+let BOSSLOG_RUN = null;             // this finale attempt: { stats, lvl, fallen, met }
+const BOSS_CAST_CACHE = {};
+function bossLogSanitize(v) {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  const pos = x => (Number.isFinite(+x) && +x > 0 ? +x : 0);
+  for (const k of Object.keys(v)) {
+    const e = v[k];
+    if (!e || typeof e !== 'object' || Array.isArray(e) || k.length > 24) continue;
+    const best = {}, phase = {};
+    if (e.best && typeof e.best === 'object') {
+      for (const m of BOSSLOG_MODES) if (pos(e.best[m])) best[m] = pos(e.best[m]);
+    }
+    if (e.phase && typeof e.phase === 'object') {
+      for (const m of BOSSLOG_MODES) {
+        const p = e.phase[m];
+        if (!p || typeof p !== 'object') continue;
+        const pm = {};
+        for (const i of [1, 2, 3]) if (pos(p[i])) pm[i] = pos(p[i]);
+        if (Object.keys(pm).length) phase[m] = pm;
+      }
+    }
+    out[k] = { seen: e.seen ? 1 : 0, wins: Math.floor(pos(e.wins)), kos: Math.floor(pos(e.kos)), best, phase };
+  }
+  return out;
+}
+function bossLog() {
+  const sid = SKIN.id;
+  if (!BOSSLOG_CACHE[sid]) BOSSLOG_CACHE[sid] = bossLogSanitize(loadStore(storeKey('bosslog'), '{}'));
+  return BOSSLOG_CACHE[sid];
+}
+function bossLogReload() { delete BOSSLOG_CACHE[SKIN.id]; return bossLog(); } // after an import / in tests
+function bossLogEntry(key) { return bossLog()[key] || null; }
+function bossLogTouch(key) {
+  const log = bossLog();
+  return log[key] || (log[key] = { seen: 0, wins: 0, kos: 0, best: {}, phase: {} });
+}
+function bossLogSave() { saveStore(storeKey('bosslog'), bossLog()); }
+function bossLogWritable() {
+  return !G.cheated && !G.daily && (!G.trial || !!G.rush) && G.level > 0 && stageIdx(G.level) === 2;
+}
+// a realm's finale cast in campaign order: sentinels → legendary → mythic
+// (→ the rift secret in realm 1). Memoized per skin + realm.
+function bossCast(r) {
+  const ck = SKIN.id + ':' + r;
+  if (BOSS_CAST_CACHE[ck]) return BOSS_CAST_CACHE[ck];
+  const g = SKIN.gens[r];
+  const out = [];
+  if (g) {
+    const subs = (g.gauntlet && g.gauntlet.subs) || [];
+    subs.forEach(([id, t], i) => out.push({ key: String(id), id, t, role: 'sentinel', realm: r, slot: i }));
+    out.push({ key: String(g.boss.id), id: g.boss.id, t: g.boss.t, role: 'legendary', realm: r });
+    if (g.gauntlet && g.gauntlet.myth) {
+      out.push({ key: String(g.gauntlet.myth[0]), id: g.gauntlet.myth[0], t: g.gauntlet.myth[1], role: 'mythic', realm: r });
+    }
+    if (r === 0 && SKIN.secret) out.push({ key: 'secret', id: SKIN.secret.id, t: SKIN.secret.t, role: 'secret', realm: r });
+  }
+  return (BOSS_CAST_CACHE[ck] = out);
+}
+function bossLogKey(br) {
+  if (!br || !br.poke || br.crosser || br.friendly) return null;
+  if (br.secretBoss) return 'secret';
+  if (!(br.isBoss || br.subBoss)) return null;
+  const k = String(br.poke.id);
+  return bossCast(regionIdx(G.level)).some(c => c.key === k && c.role !== 'secret') ? k : null;
+}
+function bossLogRun() {
+  const R = BOSSLOG_RUN;
+  if (!R || R.stats !== G.runStats || R.lvl !== G.level) {
+    BOSSLOG_RUN = { stats: G.runStats, lvl: G.level, fallen: new Set(), met: new Set() };
+  }
+  return BOSSLOG_RUN;
+}
+// SEEN: the first time a boss-class actor is engaged (damageBrick entry)
+function bossLogEngage(br) {
+  let L = BOSSLOG_LIVE.get(br);
+  if (L) return L;
+  if (!bossLogWritable()) return null;
+  const key = bossLogKey(br);
+  if (!key) return null;
+  L = { key, t0: G.time, sum: 0, phases: {}, fell: false };
+  BOSSLOG_LIVE.set(br, L);
+  bossLogRun().met.add(key);
+  const e = bossLogTouch(key);
+  if (!e.seen) { e.seen = 1; bossLogSave(); }
+  return L;
+}
+// one closed phase window (fed by statsBossPhaseMark — the ledger's clock)
+function bossLogPhase(br, phase, dur) {
+  const L = BOSSLOG_LIVE.get(br);
+  if (!L || !(dur >= 0)) return;
+  L.phases[phase] = (L.phases[phase] || 0) + dur;
+  L.sum += dur;
+}
+// WIN: the actor's kill path. Engagement time = its phase clocks (bosses)
+// or first-hit → fall (sentinels). A resumed retry never double-counts.
+function bossLogFall(br) {
+  const L = BOSSLOG_LIVE.get(br) || bossLogEngage(br);
+  if (!L || L.fell) return;
+  L.fell = true;
+  const R = bossLogRun();
+  if (R.fallen.has(L.key)) return;
+  R.fallen.add(L.key);
+  const e = bossLogTouch(L.key);
+  e.seen = 1; e.wins++;
+  const m = G.mode;
+  if (BOSSLOG_MODES.includes(m)) {
+    const t = br.isBoss && L.sum > 0 ? L.sum : G.time - L.t0;
+    if (t > 0.05 && (!e.best[m] || t < e.best[m])) e.best[m] = +t.toFixed(1);
+    for (const p of Object.keys(L.phases)) {
+      const d = L.phases[p];
+      if (!(d > 0.05) || !(+p >= 1 && +p <= 3)) continue;
+      const pm = e.phase[m] || (e.phase[m] = {});
+      if (!pm[p] || d < pm[p]) pm[p] = +d.toFixed(1);
+    }
+  }
+  bossLogSave();
+}
+// KO: the player was knocked out with the cast live — one KO to the actor
+// that owned the fight (the active target, else the live boss)
+function bossLogKnockout() {
+  if (!bossLogWritable()) return;
+  let br = typeof activeCombatActor === 'function' ? activeCombatActor() : null;
+  if (!bossLogKey(br)) br = G.bricks.find(b => !b.dead && !b.dormant && b.isBoss && bossLogKey(b));
+  const key = bossLogKey(br);
+  if (!key) return;
+  bossLogRun().met.add(key);
+  const e = bossLogTouch(key);
+  e.seen = 1; e.kos++;
+  bossLogSave();
+}
+// FINALE COMPLETE: the whole cast is met; members never felled as a health
+// bar in this format (coda presences, stood-down actors) take the win here.
+// The secret only counts when it was actually fought — and then it is the
+// realm-1 mythic that was never met (the rift replaced that round).
+function bossLogFinaleComplete(realm) {
+  if (!bossLogWritable()) return;
+  const R = bossLogRun();
+  const secretMet = R.met.has('secret');
+  for (const c of bossCast(realm)) {
+    if (c.role === 'secret' && !secretMet) continue;
+    if (c.role === 'mythic' && secretMet && !R.met.has(c.key)) continue;
+    const e = bossLogTouch(c.key);
+    e.seen = 1;
+    if (!R.fallen.has(c.key)) { R.fallen.add(c.key); e.wins++; }
+  }
+  bossLogSave();
+}
+
+// The reveal scene's counterplay cue — ONE source shared with the dossier
+function bossRevealCue(kind, armed) {
+  return kind === 'sentinels' ? 'STRIKE THE ONE THAT JUST ATTACKED — IT IS OPEN'
+    : kind === 'secret' ? 'DODGE MAX MIRAGE · WIN A FORBIDDEN UPGRADE'
+    : kind === 'mythic' ? 'THREE PHASES · DENY ITS SUMMONS — TWO HITS EACH'
+    : armed ? 'A CHARGED SHOT BREAKS ITS CHANNEL'
+    : 'THE BALL IS YOUR ONLY WEAPON — KEEP THE HIGH GROUND';
+}
+const DOSSIER_ROLE_WORDS = { sentinel: 'SENTINEL', legendary: 'LEGENDARY', mythic: 'MYTHICAL', secret: 'SECRET BOSS' };
+function dossierModeLabel(k) { const m = MODES.find(x => x.key === k); return m ? m.label : String(k).toUpperCase(); }
+// the dossier MODEL — pure (no drawing, no writes). Every field is a
+// non-empty player-facing string or array; copy rides the skin (names,
+// abilities, finale beats) and the reveal's cues, passed through lex().
+function bossDossier(key) {
+  key = String(key);
+  let c = null;
+  for (let r = 0; r < SKIN.gens.length && !c; r++) c = bossCast(r).find(x => x.key === key) || null;
+  if (!c) return null;
+  const g = SKIN.gens[c.realm];
+  const fp = finaleProfile(c.realm) || { format: 'ladder', title: g.name, beats: [] };
+  const fmt = fp.format || 'ladder';
+  const beats = fp.beats || [];
+  const full = String(c.role === 'secret' ? SKIN.secret.name : (SKIN.names[c.id] || (c.role === 'legendary' ? g.boss.n : '#' + c.id)));
+  const ci = full.indexOf(',');
+  const roleWord = lex(DOSSIER_ROLE_WORDS[c.role]);
+  const name = (ci > 0 ? full.slice(0, ci) : full).trim().toUpperCase();
+  const epithet = (ci > 0 ? full.slice(ci + 1).trim() : roleWord + ' OF ' + g.name).toUpperCase();
+  // phases — the engine's real rule per role and format (state.js build +
+  // the per-format summons in update.js)
+  const sf = dossierModeLabel('junkie');
+  const phases = c.role === 'sentinel' ? 'SINGLE PHASE'
+    : c.role === 'secret' ? '3 PHASES'
+    : c.role === 'legendary' ? (fmt === 'raid' ? 'SINGLE PHASE' : '3 PHASES · 2 IN ' + sf)
+    : fmt === 'ladder' ? '3 PHASES'
+    : (fmt === 'hourglass' || fmt === 'chase') ? 'SINGLE PHASE'
+    : 'NOT A HEALTH-BAR FIGHT';
+  // attacks: only kits the engine actually runs in THIS format. Actors a
+  // format re-casts (vows, colossi, coda presences…) list their ROLE — the
+  // finale beat they belong to — instead of a kit they never use there.
+  const attacks = [];
+  const mythFights = fmt === 'ladder' || fmt === 'hourglass' || fmt === 'chase';
+  const ab = c.role === 'legendary' ? SKIN.bossAbilities[c.id] : (c.role === 'mythic' && mythFights) ? SKIN.mythicAbilities[c.id] : null;
+  const ch = (c.role === 'legendary' || (c.role === 'mythic' && mythFights)) ? SKIN.bossChannels[c.id] : null;
+  if (ab && ab.name) attacks.push({ label: 'SIGNATURE', name: lex(ab.name) });
+  if (ch && ch.name) attacks.push({ label: 'CHANNEL', name: lex(ch.name) });
+  if (c.role === 'sentinel' && fmt === 'ladder') {
+    attacks.push({ label: 'VOLLEY', name: 'AIMED 3-SHOT FAN' });
+    attacks.push({ label: 'SPECIAL', name: typeLabel(c.t) + ' SPECIAL' });
+  }
+  if (c.role === 'secret') attacks.push({ label: 'SIGNATURE', name: 'MAX MIRAGE' });
+  if (!attacks.length) {
+    const bi = c.role === 'sentinel' ? 0 : c.role === 'legendary' ? (fmt === 'raid' ? 2 : 1) : 2;
+    const roleName = (c.role === 'mythic' && fmt === 'raid' && fp.raid && fp.raid.boundName)
+      || (beats[bi] && beats[bi].label) || fp.title || g.name;
+    attacks.push({ label: 'ROLE', name: lex(String(roleName).split(',')[0].trim()) });
+  }
+  const attacksTitle = attacks.some(a => a.label !== 'ROLE') ? 'ATTACKS' : 'IN THIS FINALE';
+  // counterplay: the authored beat tip of THIS actor's beat where the format
+  // has one; the reveal scene's cue on the ladder (and for the secret)
+  const tipOf = i => (beats[i] && beats[i].tip) || null;
+  const armed = SETTINGS.mode !== 'classic';
+  let cue = null;
+  if (c.role === 'sentinel') cue = fmt === 'ladder' ? null : tipOf(0);
+  else if (c.role === 'legendary') cue = fmt === 'ladder' ? null : fmt === 'raid' ? tipOf(2) : tipOf(1);
+  else if (c.role === 'mythic') cue = fmt === 'ladder' ? null : fmt === 'raid' ? ((fp.raid && fp.raid.freeTip) || null) : tipOf(2);
+  if (!cue) cue = bossRevealCue(c.role === 'sentinel' ? 'sentinels' : c.role, armed);
+  const e = bossLogEntry(key) || { seen: 0, wins: 0, kos: 0, best: {}, phase: {} };
+  const best = [];
+  for (const m of ['junkie', 'blaster', 'classic']) {
+    if (!(e.best[m] > 0)) continue;
+    const pm = e.phase[m] || {};
+    const pp = Object.keys(pm).sort().map(p => 'P' + p + ' ' + fmtRushTime(pm[p])).join(' · ');
+    best.push({ mode: m, label: dossierModeLabel(m), t: e.best[m], text: fmtRushTime(e.best[m]), phases: pp || null });
+  }
+  let rush = null;
+  const recs = loadRushRecords();
+  for (const rk of Object.keys(recs)) {
+    const sp = recs[rk] && Array.isArray(recs[rk].splits) ? +recs[rk].splits[c.realm] : 0;
+    if (sp > 0 && (!rush || sp < rush.t)) rush = { t: sp, text: fmtRushTime(sp), mode: dossierModeLabel(rk.split(':')[0]) };
+  }
+  return {
+    key, id: c.id, realm: c.realm, realmName: g.name, accent: g.accent || '#90a4ae',
+    role: c.role, roleWord, name, epithet, type: c.t,
+    typeText: typeLabel(c.t) + ' ' + typeWord(),
+    phases: lex(phases), attacks, attacksTitle, cue: lex(cue),
+    finale: { title: fp.title || g.name, format: fmt,
+      // a beat carries its tip only where the format authored one
+      beats: beats.map(b => (b.tip ? { label: String(b.label || '').split(',')[0].trim(), tip: b.tip }
+        : { label: String(b.label || '').split(',')[0].trim() })) },
+    seen: !!e.seen,
+    record: {
+      seen: !!e.seen, wins: e.wins, kos: e.kos, best, rush,
+      metText: e.seen ? 'MET' : 'NOT YET MET',
+      winText: e.wins > 0 ? 'DEFEATED ×' + e.wins : 'NOT YET DEFEATED',
+      koText: e.kos > 0 ? e.kos + (e.kos === 1 ? ' KNOCKOUT' : ' KNOCKOUTS') : 'NO KNOCKOUTS',
+      rushText: rush ? rushName() + ' BEST SPLIT · ' + rush.text + ' · ' + rush.mode : null,
+    },
+  };
+}
+// the boss tab's realm rows: cast in campaign order with seen/won flags
+function bossDossierRoster() {
+  return SKIN.gens.map((g, r) => {
+    const fp = finaleProfile(r);
+    const cast = bossCast(r).map(c => {
+      const e = bossLogEntry(c.key);
+      return { ...c, seen: !!(e && e.seen), won: !!(e && e.wins > 0) };
+    });
+    return { realm: r, name: g.name, accent: g.accent || '#90a4ae', title: (fp && fp.title) || g.name,
+      cast, met: cast.filter(c => c.seen).length, total: cast.length };
+  });
+}
+// SEEN dossiers in campaign order — the ‹ › browse order
+function bossDossierSeenOrder() {
+  const out = [];
+  for (const row of bossDossierRoster()) for (const c of row.cast) if (c.seen) out.push(c.key);
+  return out;
 }
 function serve() {
   // starter partner: its type rides the ball (or the blaster) from the start.
@@ -2668,16 +3145,89 @@ function compactInPlace(arr, keep) {
   arr.length = w;
   return arr;
 }
+// AFT-027 (the feel pass): combat text is INFORMATION, so it must never
+// print on top of itself. Three rules, all presentation-only:
+//   1. a repeat of the SAME call-out in the same spot refreshes the live one
+//      (with a pop) instead of stacking a ghost copy over it;
+//   2. a new floater is settled into a free lane against the estimated text
+//      boxes of its neighbours (the old fixed 20px step ignored font size,
+//      so a 26px line landed half-over a 15px one);
+//   3. score pops route through addScoreFloater, which SUMS a local burst of
+//      kills into one growing number rather than four overlapping "+2400"s.
+// Orbitron 900 runs ~0.72em per glyph — the estimate only has to be honest
+// enough to keep boxes apart; render still measures the real width.
+function floaterHalfW(text, size) { return String(text).length * size * 0.36 + 4; }
 function addFloater(x, y, text, color, size = 16) {
-  // Nearby rewards used to print directly on top of one another (rally, type,
-  // score, and power-up text could all land on the same ball). Give each local
-  // burst a tiny vertical lane and cap the transient queue.
-  // count, don't build an intermediate array (AFT-018)
-  let nearby = 0;
-  for (const f of G.floaters) if (f.life > 0.45 && Math.abs(f.x - x) < 90 && Math.abs(f.y - y) < 72) nearby++;
-  G.floaters.push({ x, y: Math.max(28, y - nearby * 20), text, color, size, life: 1.1 });
+  for (const f of G.floaters) {
+    if (!f.score && f.text === text && f.life > 0.55 && Math.abs(f.x - x) < 120 && Math.abs(f.y - y) < 90) {
+      f.life = 1.1; f.pop = 1;
+      return f;
+    }
+  }
+  const hw = floaterHalfW(text, size);
+  const cx = (typeof W === 'number' && W) ? Math.max(hw, Math.min(W - hw, x)) : x;
+  let fy = y;
+  for (let pass = 0; pass < 6; pass++) {
+    let moved = false;
+    for (const f of G.floaters) {
+      if (f.life <= 0.3) continue;
+      const fhw = floaterHalfW(f.text, f.size);
+      const fcx = (typeof W === 'number' && W) ? Math.max(fhw, Math.min(W - fhw, f.x)) : f.x;
+      const gapY = (size + f.size) * 0.58;
+      if (Math.abs(fcx - cx) < hw + fhw && Math.abs(f.y - fy) < gapY) { fy = f.y - gapY - 1; moved = true; }
+    }
+    if (!moved) break;
+  }
+  const fl = { x, y: Math.max(28, fy), text, color, size, life: 1.1, pop: 1, age: 0 };
+  G.floaters.push(fl);
   if (G.floaters.length > 14) G.floaters.splice(0, G.floaters.length - 14);
+  return fl;
 }
+// one growing number per local burst of kills: "+2400" → "+4800" → "+7200",
+// popping on every add and warming to gold once it is a real streak
+function addScoreFloater(x, y, pts, big) {
+  if (!big) {
+    for (const f of G.floaters) {
+      if (f.score && !f.big && f.life > 0.45 && f.age < 1.8 && Math.abs(f.x - x) < 130 && Math.abs(f.y - y) < 120) {
+        f.score += pts; f.n++;
+        f.text = '+' + f.score; f._w = null;
+        f.size = Math.min(23, 15 + f.n * 1.6);
+        f.color = f.n >= 4 ? '#ffd54f' : '#ffffff';
+        f.life = Math.max(f.life, 0.95); f.pop = 1;
+        return f;
+      }
+    }
+  }
+  const fl = addFloater(x, y, '+' + pts, '#fff', big ? 26 : 15);
+  fl.score = pts; fl.n = 1; fl.big = !!big;
+  return fl;
+}
+// AFT-027: the screen flash carries MEANING through colour — red is reserved
+// for "you were hurt"; a boss phase flashes in the boss's own element, a
+// Surge in gold. `rgb` is an "r,g,b" triple; update decays G.flashT as before.
+const FLASH_HURT = '255,60,60';
+function flashFx(t, rgb) {
+  if (t >= G.flashT) G.flashCol = rgb || FLASH_HURT;
+  G.flashT = Math.max(G.flashT, t);
+}
+function hexToRgbTriple(hex) {
+  const h = String(hex || '').replace('#', '');
+  if (h.length < 6) return '255,255,255';
+  return parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16);
+}
+// AFT-027: the kill combo reads in TIERS — the HUD label warms through them
+// and each threshold is a called-out moment (floater + chime), instead of a
+// "COMBO xN" floater every fifth kill duplicating the HUD.
+const COMBO_TIERS = [
+  { min: 100, color: '#ff5ea8' }, { min: 50, color: '#ff8a50' },
+  { min: 25, color: '#ffc947' }, { min: 10, color: '#fff176' },
+];
+function comboTierIdx(n) { // 0 = no tier … 4 = the top tier
+  for (let i = 0; i < COMBO_TIERS.length; i++) if (n >= COMBO_TIERS[i].min) return COMBO_TIERS.length - i;
+  return 0;
+}
+function comboColor(n) { const t = comboTierIdx(n); return t ? COMBO_TIERS[COMBO_TIERS.length - t].color : '#ffd54f'; }
+function comboMilestone(n) { return n === 10 || n === 25 || n === 50 || n === 100 || (n > 100 && n % 50 === 0); }
 // expanding shockwave ring — the modern "kill pop". Additive, cheap, capped.
 function ringFx(x, y, color, r0 = 6, r1 = 40, lw = 3, life = 0.38) {
   const lvl = effectsLevel();

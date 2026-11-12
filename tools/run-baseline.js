@@ -1383,7 +1383,7 @@ async function main() {
   process.on('exit', cleanup);
   const results = [];
   try {
-    const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev`);
+    const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev${process.env.BASE_QUERY ? '&' + process.env.BASE_QUERY : ''}`);
     await cdp.send('Emulation.setDeviceMetricsOverride',
       { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, page.sessionId);
     await waitFor(page.evaluate,

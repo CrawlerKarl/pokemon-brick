@@ -34,9 +34,13 @@
 > ~~AFT-011 mobile loading + WebP~~ **shipped 2026-08-30** →
 > ~~AFT-025 THE FLAT FRAME (the boss-lag fix: baked projectile halos,
 > the overdraw collapse, rung 3 + MINIMAL)~~ / ~~AFT-010 stage 1 (the
-> ACCESS settings tab)~~ / ~~AFT-026 + 026b (owner playtest: the Forge
-> auto-skip, the relay fall beat, calmer haptics)~~ **shipped
-> 2026-08-31 → 09-01 (suite 132/132)** →
+> ACCESS settings tab)~~ / ~~AFT-026 + 026b + 026c (owner playtest: the
+> Forge auto-skip, the relay fall beat, essential-only mobile haptics)~~
+> **shipped 2026-08-31 → 2026-10-17** →
+> ~~AFT-027 (combat feel pass, BREAKER wall growth, scenery depth) +
+> AFT-014 slice 1 (BOSS RUSH) + AFT-015 (installable/offline)~~
+> **implemented 2026-11-12** → ~~AFT-013 (boss dossiers)~~ + AFT-028 (THE MOTION
+> PASS — owner report "enemies feel drunk") **implemented 2026-11-12 (suite 144/144)** →
 > **AFT-019 real-device remainder (NEXT)** → AFT-010 stage 2 (the DOM
 > accessibility layer) → AFT-012. The executed AFT-021 spec is
 > `AETHERFALL_POST_AFT020_UX_PLAYTEST_REMEDIATION_PLAN.md`; its matrix
@@ -164,10 +168,10 @@ items have since shipped.
 | AFT-019 | P1 | ⬜ Open | First-session phone experience pass | A new player's first five minutes on the public site land clean | S–M | AFT-001 |
 | AFT-010 | P1 | ✅ Stage 1 shipped 08-31; stage 2 (DOM layer) open | Mobile accessibility, staged: settings first, DOM layer second | Broadens who can comfortably finish the campaign | M then L | AFT-001 |
 | AFT-011 | P1 | ✅ Shipped 2026-08-30; physical-device check open | Mobile loading, asset streaming, and WebP packaging | 690 WebP / 0 PNG / 10.3 MB; current-first stream; 13.63 MB decoded-art campaign peak proxy | L | AFT-005A |
-| AFT-012 | P1 | ⬜ Open | Whole-game visual integration pass | Carries the locked sprite style into scale, shadows, VFX, HUD, and scenery | L | AFT-001–003, AFT-017 |
-| AFT-013 | P2 | ⬜ Open | Codex boss combat dossiers (the sprite gallery already shipped) | Lets players revisit full boss art and learn counterplay | M | AFT-002 |
-| AFT-014 | P2 | ⬜ Open | Run history, boss rush, endless route, and custom modifiers | Converts campaign mastery into replayability | XL | AFT-008 |
-| AFT-015 | P2 | ⬜ Open | Installable/offline release package and phone lifecycle handling | Makes the phone experience app-like and resilient | L | AFT-006, AFT-011 |
+| AFT-012 | P1 | ◐ Scenery + combat VFX shipped 11-12 (AFT-027); actor scale/shadow/rim open | Whole-game visual integration pass | Carries the locked sprite style into scale, shadows, VFX, HUD, and scenery | L | AFT-001–003, AFT-017 |
+| AFT-013 | P2 | ✅ Implemented 2026-11-12 (uncommitted) | Codex boss combat dossiers (the sprite gallery already shipped) | Lets players revisit full boss art and learn counterplay | M | AFT-002 |
+| AFT-014 | P2 | ◐ BOSS RUSH shipped 11-12 (AFT-027); history/endless/modifiers open | Run history, boss rush, endless route, and custom modifiers | Converts campaign mastery into replayability | XL | AFT-008 |
+| AFT-015 | P2 | ✅ Shipped 11-12; real-phone install check open | Installable/offline release package and phone lifecycle handling | Makes the phone experience app-like and resilient | L | AFT-006, AFT-011 |
 | AFT-016 | P2 | ◐ Incremental | Architecture and documentation cleanup | Lowers the cost and risk of future content work | L | after feature churn |
 
 ## Detailed acceptance criteria

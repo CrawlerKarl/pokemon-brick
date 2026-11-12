@@ -247,6 +247,10 @@ for (const f of fs.readdirSync(jsDir).filter(f => f.endsWith('.js'))) {
 {
   let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   html = html.replace(/<title>[^<]*<\/title>/, '<title>AETHERFALL</title>');
+  // AFT-015: the dist carries its own app name + description in the head
+  html = html.replace(/(<meta name="apple-mobile-web-app-title" content=")[^"]*(")/, '$1Aetherfall$2');
+  html = html.replace(/(<meta name="description" content=")[^"]*(")/,
+    '$1AETHERFALL: a magitech arcade campaign across nine realms. Install it to play fullscreen and offline.$2');
   fs.writeFileSync(path.join(out, 'index.html'), html);
 }
 
@@ -286,6 +290,33 @@ for (const f of fs.readdirSync(weaponDir).filter(f => f.endsWith('.png'))) {
   weaponN++;
 }
 
+// 4b) AFT-015 — installable + offline: dist manifest, icons, and the service
+// worker with a generated precache list (shell + every WebP) so one online
+// visit makes the whole game playable offline.
+{
+  const man = JSON.parse(fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8'));
+  man.name = 'AETHERFALL'; man.short_name = 'Aetherfall';
+  man.description = 'A magitech arcade campaign across nine realms: brick-breaker, wall shooter, and flight shooter.';
+  fs.writeFileSync(path.join(out, 'manifest.webmanifest'), JSON.stringify(man, null, 2) + '\n');
+  for (const f of fs.readdirSync(path.join(root, 'assets', 'icons')).filter(f => f.endsWith('.png'))) {
+    copy(path.join(root, 'assets', 'icons', f), path.join(out, 'assets', 'icons', f));
+  }
+  const rel = d => fs.readdirSync(d, { recursive: true }).map(f => String(f).split(path.sep).join('/'))
+    .filter(f => fs.statSync(path.join(d, f)).isFile());
+  const shell = ['index.html', 'manifest.webmanifest', 'assets/fonts/orbitron.woff2']
+    .concat(rel(path.join(out, 'js')).map(f => 'js/' + f))
+    .concat(rel(path.join(out, 'assets', 'icons')).map(f => 'assets/icons/' + f));
+  const artFiles = rel(path.join(out, 'art')).filter(f => f.endsWith('.webp')).map(f => 'art/' + f).sort();
+  const hash = require('crypto').createHash('sha1');
+  for (const f of shell) hash.update(fs.readFileSync(path.join(out, f)));
+  let sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  sw = sw.replace("const VERSION = 'wb-dev';", "const VERSION = 'af-" + hash.digest('hex').slice(0, 10) + "';")
+    .replace('const PRECACHE = [];', 'const PRECACHE = ' + JSON.stringify(shell.concat(artFiles)) + ';');
+  if (!/const PRECACHE = \[".+/.test(sw)) throw new Error('sw.js precache injection failed');
+  fs.writeFileSync(path.join(out, 'sw.js'), sw);
+  console.log('PWA: ' + shell.length + ' shell files + ' + artFiles.length + ' WebP precache entries');
+}
+
 // 5) server + repo scaffolding
 copy(path.join(root, 'serve.js'), path.join(out, 'serve.js'));
 fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify({
@@ -308,6 +339,9 @@ engine:
 - **BREAKER** — a calm, pure brick-breaker. The ball is the only weapon.
 - **BLASTER** — ball-less wall clearing with a piercing charge shot.
 
+Finished a realm or nine? **SOVEREIGN RUSH** (in the Trial picker) strings
+all nine realm finales into one timed run and keeps your best time.
+
 Every creature, vessel, sentinel, sovereign, weapon relic, missile, and ship
 fitting ships hand-finished WebP art in the same Relicforge style, with true
 prismatic RADIANT vessel forms. 100% vanilla JS + Canvas — no build step, no
@@ -323,6 +357,16 @@ opacity, follow speed, left-handed mirroring, and haptics. Every
 accessibility option is off by default and changes nothing until you reach
 for it. If the frame rate ever struggles on an older phone, set **EFFECTS
 QUALITY** to AUTO (the default, which adapts on its own) or pin MINIMAL.
+
+## Install it — it plays offline
+
+AETHERFALL is an installable web app. On a phone, open the site and choose
+**Add to Home Screen** (Safari: Share → Add to Home Screen; Chrome: ⋮ →
+Install app). It then launches fullscreen from its own icon, and after one
+online visit the whole game — every realm's art included — is cached, so it
+plays with no connection at all. Updates arrive on their own the next time
+you open it online. Your saves stay in your browser; **Settings → SAVE** can
+export a backup file at any time.
 
 ## Running locally
 

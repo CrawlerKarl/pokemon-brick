@@ -70,6 +70,16 @@ const STORAGE_HEALTH = { writable: true, durable: null, noticed: false };
     }
   } catch (e) { /* unsupported — durable stays unknown */ }
 })();
+// AFT-015: installing grants a stronger case for durable storage — ask again
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('appinstalled', () => {
+    try {
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().then(g => { STORAGE_HEALTH.durable = g; }).catch(() => {});
+      }
+    } catch (e) { /* unsupported */ }
+  });
+}
 
 // AFT-018: the frame profiler — fixed rings for the last 120 frames' update /
 // render work AND the actual requestAnimationFrame cadence, written by main.js
@@ -149,74 +159,58 @@ if (document.fonts && document.fonts.load) {
 }
 const IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
   || new URLSearchParams(location.search).has('touch'); // ?touch forces mobile controls (testing)
-// Keep touch feedback legible without letting rapid-fire combat turn into a
-// continuous buzz. Routine actions are a light tick; important states retain
-// a short, distinct rhythm. The global floor prevents different event types
-// from stacking, while per-kind cooldowns tame repeated hits and pickups.
-const HAPTIC_GLOBAL_COOLDOWN = 120;
+// AFT-026c — ESSENTIAL-ONLY HAPTICS. Mobile vibration is a scarce attention
+// channel, not a second combat log. Hits, ordinary kills, pickups, paddle
+// returns, charge promotion and resonant release are intentionally silent.
+// Only decisions, timing-critical charge readiness, danger, damage, major
+// success and the signature ability may speak through the phone.
+const HAPTIC_GLOBAL_COOLDOWN = 320;
+const HAPTIC_CRITICAL_COOLDOWN = 180;
 const HAPTIC_PATTERNS = Object.freeze({
-  tap: 4,
-  hit: 3,
-  break: 6,
-  warn: [5, 45, 8],
-  item: [5, 36, 7],
-  damage: [12, 48, 14],
-  boss: [8, 42, 11],
-  mega: [8, 38, 9, 56, 15],
-  // AFT-021 P8: promotion, full charge, and release remain distinct,
-  // but no longer dominate the player's grip.
-  promote: [4, 30, 6],
-  full: [7, 36, 10],
-  resonant: [6, 32, 7, 48, 12],
+  ui: 3,
+  charge: 3,
+  ready: [3, 70, 4],
+  warning: [5, 80, 6],
+  damage: [7, 70, 9],
+  success: [4, 70, 6],
+  ability: [5, 65, 7, 90, 10],
 });
 const HAPTIC_COOLDOWNS = Object.freeze({
-  tap: 220,
-  hit: 160,
-  break: 220,
-  warn: 320,
-  item: 260,
-  damage: 380,
-  boss: 440,
-  mega: 520,
-  promote: 320,
-  full: 380,
-  resonant: 480,
+  ui: 320,
+  charge: 750,
+  ready: 1500,
+  warning: 1600,
+  damage: 1100,
+  success: 1200,
+  ability: 2000,
+});
+const HAPTIC_PRIORITIES = Object.freeze({
+  ui: 0, charge: 1, ready: 1, warning: 2, damage: 3, success: 2, ability: 3,
 });
 let lastHapticAt = -Infinity;
+let lastHapticPriority = -Infinity;
 const lastHapticByKind = Object.create(null);
-// AFT-026b (owner report: "multiple vibrations per charge hold — it gets
-// confusing, especially with more weapons"). Every damaging hit, kill, and
-// pickup fires a haptic, and autonomous weapons (relic, missiles, chains)
-// keep scoring THROUGH a charge hold — so the thumb reading the charge arc
-// was being buzzed by unrelated combat noise. Two rules on top of the
-// per-kind cooldowns:
-//   1) THE HOLD OWNS THE THUMB — while a charge is armed, the ambient
-//      combat ticks (tap/hit/break/item) are muted outright; the arc
-//      (promote → full → resonant) and true warnings (heat, massive,
-//      damage, boss, mega) still speak.
-//   2) ONE NOISE BUDGET — tap/hit/break/item share a single 450ms bucket,
-//      so a six-weapon build buzzes no more often than a starter one.
-const HAPTIC_NOISE_KINDS = new Set(['tap', 'hit', 'break', 'item']);
-const HAPTIC_NOISE_COOLDOWN = 450;
-let lastNoiseHapticAt = -Infinity;
 // the pure decision core — the suite drives this directly (no touch device,
 // no navigator.vibrate needed); returns the pattern to play, or null
 function hapticGate(kind, now) {
-  const resolvedKind = HAPTIC_PATTERNS[kind] ? kind : 'tap';
-  const noise = HAPTIC_NOISE_KINDS.has(resolvedKind);
-  if (noise
-    && ((typeof chargeHeld !== 'undefined' && chargeHeld)
-      || (typeof G !== 'undefined' && G && G.charge > 0))) return null;
+  // Unknown/retired event names fail silent. This makes it impossible for a
+  // future per-hit call using the old vocabulary to quietly restore buzzing.
+  if (!HAPTIC_PATTERNS[kind]) return null;
+  const resolvedKind = kind;
+  const priority = HAPTIC_PRIORITIES[resolvedKind];
   const lastKindAt = lastHapticByKind[resolvedKind] ?? -Infinity;
-  if (now - lastHapticAt < HAPTIC_GLOBAL_COOLDOWN
-    || now - lastKindAt < HAPTIC_COOLDOWNS[resolvedKind]
-    || (noise && now - lastNoiseHapticAt < HAPTIC_NOISE_COOLDOWN)) return null;
+  // Urgent feedback may interrupt a lower-priority tick after 180ms; nothing
+  // else can stack inside the calmer 320ms global recovery window.
+  const minGap = priority >= 2 && priority > lastHapticPriority
+    ? HAPTIC_CRITICAL_COOLDOWN : HAPTIC_GLOBAL_COOLDOWN;
+  if (now - lastHapticAt < minGap
+    || now - lastKindAt < HAPTIC_COOLDOWNS[resolvedKind]) return null;
   lastHapticAt = now;
+  lastHapticPriority = priority;
   lastHapticByKind[resolvedKind] = now;
-  if (noise) lastNoiseHapticAt = now;
   return HAPTIC_PATTERNS[resolvedKind];
 }
-function haptic(kind = 'tap') {
+function haptic(kind = 'ui') {
   if (!IS_TOUCH || typeof SETTINGS === 'undefined' || !SETTINGS.haptics || !navigator.vibrate) return;
   const p = hapticGate(kind, performance.now());
   if (p) navigator.vibrate(p);
@@ -251,6 +245,18 @@ function resize() {
   const pL = document.getElementById('safe-probe-l');
   const pR = document.getElementById('safe-probe-r');
   SAFE_T = pT ? Math.round(pT.getBoundingClientRect().height) : 0;
+  // PHANTOM NOTCH GUARD (owner photo, 2026-11-12): some Android browsers
+  // report the status-bar/cutout inset through env(safe-area-inset-top) even
+  // while their OWN toolbar is covering that part of the screen — the page
+  // starts below the address bar, yet the whole HUD was pushed another ~75px
+  // down into empty sky. The inset is only real when the page itself reaches
+  // the top of the display; if the browser's chrome is already at least as
+  // tall as the inset, the cutout is the browser's problem, not ours.
+  if (SAFE_T > 0 && window.screen && screen.height > 0) {
+    const tall = Math.max(screen.height, screen.width), wide = Math.min(screen.height, screen.width);
+    const chrome = (H >= W ? tall : wide) - (window.innerHeight || H);
+    if (chrome >= SAFE_T + 20) SAFE_T = 0;
+  }
   SAFE_L = pL ? Math.round(pL.getBoundingClientRect().width) : 0;
   SAFE_R = pR ? Math.round(pR.getBoundingClientRect().width) : 0;
   buildStars();
