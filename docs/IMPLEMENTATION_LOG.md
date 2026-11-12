@@ -39,6 +39,15 @@ baseline GREEN (`--label aft029-flight`).
   player judges the game by. Level 1 stays the calm tutorial.
 - **Phone HUD:** the stage name is a quiet 10.5px breadcrumb, not a second
   full-width headline.
+- **Slice 2 (same evening):** BREAKER/BLASTER take the deeper stage wash
+  (landmarks kept); the vessel draws 22% larger on tall phones
+  (`pilotRigSize` — art and edge clamp, hurtbox unchanged); Surge multiplies
+  star speed ×2.8 and streak length ×2.4 (warp); a cached gradient shelf
+  backs the touch controls; floaters that would print across the announce
+  strip step to its nearest side; and all audio now routes through
+  `audioBus(ac)` — a gentle compressor plus a generated-impulse room
+  reverb, each stage guarded so a missing node falls back to the plain
+  destination. The audio change is wired and smoke-tested but UNHEARD.
 
 ## 2026-11-12 — AFT-028: THE MOTION PASS ("the enemies feel drunk") + AFT-013 CODEX BOSS DOSSIERS
 

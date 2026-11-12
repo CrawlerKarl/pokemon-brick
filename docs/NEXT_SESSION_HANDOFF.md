@@ -14,7 +14,16 @@
 > streaming star field and take-off, the formation swing + level-2 dives,
 > quiet phone stage title.
 >
-> **The rest of the programme, in priority order (none started):**
+> **Slice 2 shipped the same evening:** vessel 22% larger on tall phones
+> (`pilotRigSize`, art + edge clamp only), Surge stretches the star field
+> into warp streaks, the touch controls sit on a backed dock gradient,
+> combat floaters step clear of the announce strip, BREAKER/BLASTER got the
+> deeper stage wash, and audio runs through a MASTER BUS (`audioBus` —
+> glue compressor + generated-impulse room reverb; smoke-tested for node
+> wiring only, NOT judged by ear — the owner must listen and say if the
+> reverb or loudness is wrong; sends are `sendM 0.2` / `sendS 0.07`).
+>
+> **The rest of the programme, in priority order (items 2 and part of 1, 4, 5 are done — see slice 2):**
 > 1. **Combat HUD rebuild (phone-first).** Still floating fragments: COMBO
 >    label, RIFT KEY row (enemies fly through it), RESONANCE bar + element
 >    chip bottom-left, hardpoint chips under the ship. Target: ONE top bar

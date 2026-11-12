@@ -22,6 +22,51 @@ function audio() {
   if (AC && AC.state !== 'running' && AC.state !== 'closed') { try { const rp = AC.resume(); if (rp && rp.catch) rp.catch(() => {}); } catch (e) {} }
   return AC;
 }
+// ---- THE MASTER BUS (AFT-029): every voice used to go straight to the
+// speaker — raw oscillators, bone dry, and a busy moment simply clipped.
+// Now SFX and music each feed one bus: a gentle glue compressor (it is the
+// limiter that stops a pile-up of kills from crackling) and a short
+// generated-impulse ROOM that both send a little signal into, so the synth
+// voices sit in a space instead of on top of the speaker. No samples, no
+// network: the impulse is decaying filtered noise built once per context.
+// Everything is guarded — if any node is unavailable the bus degrades to
+// the plain destination and the game sounds exactly as it did.
+let AUDIO_BUS = null;
+function audioBus(ac) {
+  if (AUDIO_BUS && AUDIO_BUS.ac === ac) return AUDIO_BUS;
+  const bus = { ac, sfx: ac.destination, music: ac.destination };
+  try {
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -11; comp.knee.value = 10; comp.ratio.value = 3;
+    comp.attack.value = 0.004; comp.release.value = 0.2;
+    comp.connect(ac.destination);
+    const sfx = ac.createGain(), music = ac.createGain();
+    sfx.connect(comp); music.connect(comp);
+    bus.sfx = sfx; bus.music = music;
+    try {
+      const len = Math.floor(ac.sampleRate * 1.5);
+      const ir = ac.createBuffer(2, len, ac.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        let lp = 0;
+        for (let i = 0; i < len; i++) {
+          const t = i / len;
+          lp += ((Math.random() * 2 - 1) - lp) * (0.55 - 0.4 * t); // the tail darkens as it decays
+          d[i] = lp * Math.pow(1 - t, 2.8) * (i < 300 ? i / 300 : 1);
+        }
+      }
+      const conv = ac.createConvolver(); conv.buffer = ir;
+      const wet = ac.createGain(); wet.gain.value = 0.9;
+      conv.connect(wet); wet.connect(comp);
+      const sendM = ac.createGain(); sendM.gain.value = 0.2;  // music breathes
+      const sendS = ac.createGain(); sendS.gain.value = 0.07; // SFX stay punchy
+      music.connect(sendM); sendM.connect(conv);
+      sfx.connect(sendS); sendS.connect(conv);
+    } catch (e) { /* no reverb — the dry bus still works */ }
+  } catch (e) { /* no bus — straight to the speaker, as before */ }
+  AUDIO_BUS = bus;
+  return bus;
+}
 function tone(freq, dur, type = 'square', vol = 0.06, slide = 0) {
   const ac = audio(); if (!ac) return;
   vol *= SETTINGS.sfx; if (vol <= 0.0005) return;
@@ -30,7 +75,7 @@ function tone(freq, dur, type = 'square', vol = 0.06, slide = 0) {
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), ac.currentTime + dur);
   g.gain.setValueAtTime(vol, ac.currentTime);
   g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
-  o.connect(g); g.connect(ac.destination);
+  o.connect(g); g.connect(audioBus(ac).sfx);
   o.start(); o.stop(ac.currentTime + dur);
 }
 function noiseBurst(dur = 0.25, vol = 0.12) {
@@ -43,7 +88,7 @@ function noiseBurst(dur = 0.25, vol = 0.12) {
   const src = ac.createBufferSource(); src.buffer = buf;
   const g = ac.createGain(); g.gain.value = vol;
   const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
-  src.connect(f); f.connect(g); g.connect(ac.destination); src.start();
+  src.connect(f); f.connect(g); g.connect(audioBus(ac).sfx); src.start();
 }
 const SFX = {
   hit: c => tone(220 + Math.min(c, 12) * 40, 0.07, 'square', 0.05),
@@ -188,7 +233,7 @@ let musicBus = null, musicEcho = null, musicFilter = null, musicFeedback = null;
 function musicOut() {
   if (!musicBus) {
     musicFilter = AC.createBiquadFilter(); musicFilter.type = 'lowpass'; musicFilter.frequency.value = 5200;
-    musicFilter.connect(AC.destination);
+    musicFilter.connect(audioBus(AC).music);
     musicBus = AC.createGain(); musicBus.gain.value = 0.92; musicBus.connect(musicFilter);
     musicEcho = AC.createDelay(0.8); musicEcho.delayTime.value = 0.24;
     musicFeedback = AC.createGain(); musicFeedback.gain.value = 0.28;
