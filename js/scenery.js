@@ -336,11 +336,17 @@ function buildBackground(genIdx, stage) {
     fg.addColorStop(1, mix(0.2) + '0.88)');
     wc.fillStyle = fg; wc.fillRect(0, 0, W, H);
   } else if (scene.dark < 0.85) {
-    const base = 0.44 * Math.pow(1 - scene.dark, 1.15);
+    // BREAKER / BLASTER keep their landmarks but play over the same DEEP
+    // stage idea (AFT-029): the old 44% navy veil left daytime realms a
+    // washed beige that swallowed bricks and bolts alike. Deeper up top
+    // where the wall sits, the realm accent warming the lower third.
+    const k = Math.pow(1 - scene.dark, 0.8);
+    const ac = g.accent || '#7ee08a';
+    const ar = parseInt(ac.slice(1, 3), 16), ag = parseInt(ac.slice(3, 5), 16), ab = parseInt(ac.slice(5, 7), 16);
     const wg = wc.createLinearGradient(0, 0, 0, H);
-    wg.addColorStop(0, 'rgba(6,11,30,' + Math.min(0.6, base * 1.2).toFixed(3) + ')');
-    wg.addColorStop(0.55, 'rgba(6,11,30,' + base.toFixed(3) + ')');
-    wg.addColorStop(1, 'rgba(6,11,30,' + (base * 0.6).toFixed(3) + ')');
+    wg.addColorStop(0, 'rgba(4,7,22,' + (0.84 * k).toFixed(3) + ')');
+    wg.addColorStop(0.55, 'rgba(5,9,26,' + (0.74 * k).toFixed(3) + ')');
+    wg.addColorStop(1, 'rgba(' + Math.round(5 + ar * 0.1) + ',' + Math.round(8 + ag * 0.1) + ',' + Math.round(24 + ab * 0.1) + ',' + (0.56 * k).toFixed(3) + ')');
     wc.fillStyle = wg; wc.fillRect(0, 0, W, H);
   }
   const accent = g.accent || '#7ee08a';
