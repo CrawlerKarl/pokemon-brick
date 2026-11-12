@@ -5524,6 +5524,11 @@ function drawRiftTracker() {
   const y = ((G.ballElement || hudElem) ? (G.combo > 1 ? 130 : 112) : (G.combo > 1 ? 112 : 94));
   ctx.save();
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  // backed plate (AFT-029): this row sits inside the flight lane, and bare
+  // text there merged with every enemy that flew through it
+  roundRect(12, y - 11, 158, 22, 11);
+  ctx.fillStyle = 'rgba(4,7,22,0.62)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(215,128,255,0.22)'; ctx.lineWidth = 1; ctx.stroke();
   ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = '#b6c3d8';
   ctx.fillText('RIFT KEY', 20, y);
   for (let i = 0; i < 3; i++) {
@@ -5593,7 +5598,14 @@ function drawHUD() {
     // AFT-027: on narrow screens a live goal pill owns y44–70 across the
     // centre — the combo label used to print under its lower edge. It drops
     // one row (the build line already yields that row while a goal is live).
-    ctx.fillText('COMBO x' + G.combo, 20, (W < 560 && goalSurfaceLive()) ? 86 : 72);
+    { // backed plate — same reason as the rift row: it lives in the lane
+      const cy2 = (W < 560 && goalSurfaceLive()) ? 86 : 72, cw2 = ctx.measureText('COMBO x' + G.combo).width;
+      const fs0 = ctx.fillStyle;
+      roundRect(12, cy2 - 12, cw2 + 16, 24, 12);
+      ctx.fillStyle = 'rgba(4,7,22,0.62)'; ctx.fill();
+      ctx.fillStyle = fs0;
+      ctx.fillText('COMBO x' + G.combo, 20, cy2);
+    }
   }
   const hudElem = G.mode === 'junkie'; // junkie always shows the live attack type
   // AFT-021 P2: on narrow/touch screens the element identity collapses to a
