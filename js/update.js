@@ -6072,9 +6072,26 @@ function update(dt) {
       // per-squad breath 1.4 + s·0.9): no beat ever repeated, so the
       // formation wandered a slow Lissajous instead of patrolling. A ROTARY
       // family's rotation IS its motion, so its patrol is halved.
-      const pu = Math.sin(et * 0.75);
-      cx += pu * (1.5 - 0.5 * pu * pu) * W * (E.rotary ? 0.035 : 0.07);
-      const breath = 1 + 0.04 * Math.cos(et * 1.5);
+      // THE SWING (owner: "expected a more drastic change"): a lattice body
+      // sweeps as far as its airspace allows — out to ~11% of the screen,
+      // not the old timid 7% — and SWOOPS as it crosses the middle, dipping
+      // toward the pilot and rising to settle at each end: a pendulum, not
+      // a drift. The reach is measured once per wave from the widest /
+      // lowest squad so the whole encounter still moves as one body and can
+      // never leave the screen or its floor.
+      if (E.swingX == null) {
+        let roomX = Infinity, roomY = Infinity;
+        for (const q of E.squads) {
+          roomX = Math.min(roomX, W / 2 - 24 - (Math.abs(q.cx0 - W / 2) + q.rx0 * 1.08));
+          roomY = Math.min(roomY, E.floorY - (q.cy0 + q.ry0 * 1.08));
+        }
+        E.swingX = Math.max(W * 0.04, Math.min(W * 0.11, roomX));
+        E.swingY = Math.max(0, Math.min(26, H * 0.035, roomY * 0.8));
+      }
+      const pu = Math.sin(et * 0.9);
+      cx += pu * (1.5 - 0.5 * pu * pu) * (E.rotary ? W * 0.035 : E.swingX);
+      if (!E.rotary) cy += (1 - pu * pu) * E.swingY;
+      const breath = 1 + 0.04 * Math.cos(et * 1.8);
       rx *= breath; ry *= breath;
       if (S.silenceT > 0) S.silenceT = Math.max(0, S.silenceT - dt * ts);
       S.cx = cx; S.cy = cy; S.rx = rx; S.ry = ry; S.blend = blend;

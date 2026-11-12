@@ -1,6 +1,46 @@
 # HANDOFF — resume here
 
-> ## STATUS (2026-11-12, AFT-027 + AFT-028 + AFT-013) — implemented + gated, NOT YET COMMITTED
+> ## STATUS (2026-11-12, late) — AFT-029 THE POLISH REBUILD is IN PROGRESS; everything is COMMITTED locally, nothing is pushed or deployed
+>
+> **Owner's standing brief (verbatim intent):** the game "still feels really
+> rough"; keep the concept, but redesign UI, intro screens, music and
+> movement as far as needed — "rebuild it from the ground up if you need
+> to". Full creative licence. They test on a real Android phone over the
+> LAN (`node serve.js` → `http://<mac-ip>:8741/?skin=aetherfall`; no deploy
+> needed for that) and want BIG visible change, not cleanups.
+>
+> **Slice 1 shipped (log entry AFT-029):** phantom-notch fix (HUD no longer
+> pushed down inside Android browsers), STARFIGHTER's deep flown sky with a
+> streaming star field and take-off, the formation swing + level-2 dives,
+> quiet phone stage title.
+>
+> **The rest of the programme, in priority order (none started):**
+> 1. **Combat HUD rebuild (phone-first).** Still floating fragments: COMBO
+>    label, RIFT KEY row (enemies fly through it), RESONANCE bar + element
+>    chip bottom-left, hardpoint chips under the ship. Target: ONE top bar
+>    (score · stage · HP) with a single status row beneath it, and ONE
+>    bottom control dock (meters left, SURGE + FIRE right) on a backed
+>    shelf; four type sizes only; nothing unbacked over the playfield.
+> 2. **Apply the deep stage to BREAKER and BLASTER** (their daytime skies
+>    are still washed-out beige — see `flightSky` in `buildBackground`;
+>    keep landmarks there, just deepen and saturate).
+> 3. **Title + vessel-select redesign.** The three-doors title works but
+>    reads as a settings list; the STARFIGHTER diorama's neon look is
+>    stronger than the real game. Want a real attract screen: logo
+>    lock-up, animated hero, one primary PLAY.
+> 4. **Actor scale on tall phones.** Vessel ≈45px and formations occupy
+>    ~27–51% of a 775px viewport; scale sprites/airspace with HEIGHT, not
+>    only width (hitboxes are balance — baseline after).
+> 5. **Music + SFX engine.** Still raw oscillators with no bus: add a
+>    master compressor/limiter, a generated-impulse reverb send, stereo
+>    width, a real drum kit and bass voice; keep `ADVENTURE_MUSIC` patterns.
+>    Cannot be judged by ear in-session — owner must listen.
+> 6. **Results / draft / Forge / pause** to the same panel language.
+> 7. **Entrances and exits:** landing beat on stage clear (mirror of the
+>    take-off), bolder authored entrances for realms 1–2.
+> 8. AETHERFALL role words (LEGENDARY/MYTHICAL vs SOVEREIGNS) — owner call.
+>
+> ## Earlier the same day — AFT-027 + AFT-028 + AFT-013 (all in the same local commits)
 >
 > **Latest (same day, after AFT-027): AFT-028 THE MOTION PASS + AFT-013
 > CODEX BOSS DOSSIERS — suite 144/144, gate GREEN (33 scenes × 2), baseline

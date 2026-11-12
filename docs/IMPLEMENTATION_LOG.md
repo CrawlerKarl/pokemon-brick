@@ -5,6 +5,41 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-11-12 — AFT-029 (slice 1): THE POLISH REBUILD begins — phantom notch, the flown sky, the swing
+
+Owner, after playing AFT-028 on a phone over the LAN (`node serve.js`,
+`http://<mac-ip>:8741/?skin=aetherfall`): *"It isn't using all the vertical
+space. I also expected a more drastic change… rebuild it from the ground up
+if you need to… I still feel like this is really rough"* — with full
+creative licence over UI, intro screens, music and movement, same concept.
+The session had ~25% of its usage left, so this is SLICE 1 of a longer
+programme (the rest is in the handoff). Suite 144/144 · gate GREEN ·
+baseline GREEN (`--label aft029-flight`).
+
+- **The vertical-space bug (owner photo: Android, DuckDuckGo browser).** The
+  HUD sat ~75px down in empty sky. Cause: that browser reports the
+  status-bar cutout through `env(safe-area-inset-top)` while its OWN toolbar
+  already covers it. `resize()` (setup.js) now zeroes `SAFE_T` whenever the
+  browser chrome above/below the page is at least as tall as the inset
+  (`screen` height − `innerHeight` ≥ inset + 20). A standalone/installed
+  page (no chrome) keeps the real inset. Not reproducible headless — owner
+  re-check on that phone.
+- **STARFIGHTER is a flight now.** The washed daytime skies swallowed every
+  sprite and nothing on screen moved but the enemies. In junkie the scene
+  bakes a near-opaque deep wash whose lower third carries the REALM ACCENT
+  (`buildBackground`, cache key includes the mode), the landmarks sink and
+  fade over the stage's first ~3s (`flightLift()` — a take-off; they are
+  back for each serve), and a two-depth star field streams past OVER the
+  wash, near stars racing as streaks. Render-only (reads `G.time`/`G.swayT`,
+  no `gameRand`); the rung-3 plate bakes the flown sky with frozen stars.
+- **The swing.** Lattice formations sweep up to 11% of the screen (was 7%)
+  and SWOOP toward the pilot through the middle of each pass (`E.swingX/Y`,
+  measured once per wave from the widest/lowest squad). Level 2 gets
+  peel-off dives (was realm 2+) — the first two stages are what every new
+  player judges the game by. Level 1 stays the calm tutorial.
+- **Phone HUD:** the stage name is a quiet 10.5px breadcrumb, not a second
+  full-width headline.
+
 ## 2026-11-12 — AFT-028: THE MOTION PASS ("the enemies feel drunk") + AFT-013 CODEX BOSS DOSSIERS
 
 Owner report, verbatim: *"make the movement of the enemies feel more

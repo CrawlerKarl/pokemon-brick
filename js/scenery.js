@@ -235,7 +235,10 @@ function buildBackground(genIdx, stage) {
   if (stage === undefined) {
     stage = (typeof G !== 'undefined' && G && G.level && regionIdx(G.level) === genIdx) ? stageIdx(G.level) : 2;
   }
-  const key = genIdx * 3 + stage;
+  // STARFIGHTER bakes its own (much deeper) combat wash — see FLIGHT below —
+  // so the mode is part of the cache key
+  const flightSky = typeof G !== 'undefined' && G && G.mode === 'junkie';
+  const key = genIdx * 3 + stage + (flightSky ? 100 : 0);
   if (bgGen === key && bgSky) return;
   bgGen = key;
   const g = SKIN.gens[genIdx];
@@ -314,7 +317,25 @@ function buildBackground(genIdx, stage) {
   // every frame. The menu never draws this canvas, as before.
   bgWash = document.createElement('canvas'); bgWash.width = W; bgWash.height = H;
   const wc = bgWash.getContext('2d');
-  if (scene.dark < 0.85) {
+  if (flightSky) {
+    // FLIGHT (owner: "really rough" — the washed daytime skies swallowed
+    // every sprite and nothing said you were FLYING): STARFIGHTER plays over
+    // a deep stage. The realm's sky survives as a tint, the accent glow
+    // below still names the realm, and the scrolling star field
+    // (drawBackground) supplies the motion.
+    // near-opaque: a translucent wash over a beige day sky went muddy olive.
+    // The lower third carries the REALM ACCENT instead, so every realm
+    // still flies under its own colour.
+    const ac = g.accent || '#7ee08a';
+    const ar = parseInt(ac.slice(1, 3), 16), ag = parseInt(ac.slice(3, 5), 16), ab = parseInt(ac.slice(5, 7), 16);
+    const mix = k => 'rgba(' + Math.round(5 + ar * k) + ',' + Math.round(8 + ag * k) + ',' + Math.round(26 + ab * k) + ',';
+    const fg = wc.createLinearGradient(0, 0, 0, H);
+    fg.addColorStop(0, 'rgba(3,5,18,0.95)');
+    fg.addColorStop(0.5, mix(0.03) + '0.93)');
+    fg.addColorStop(0.82, mix(0.1) + '0.9)');
+    fg.addColorStop(1, mix(0.2) + '0.88)');
+    wc.fillStyle = fg; wc.fillRect(0, 0, W, H);
+  } else if (scene.dark < 0.85) {
     const base = 0.44 * Math.pow(1 - scene.dark, 1.15);
     const wg = wc.createLinearGradient(0, 0, 0, H);
     wg.addColorStop(0, 'rgba(6,11,30,' + Math.min(0.6, base * 1.2).toFixed(3) + ')');

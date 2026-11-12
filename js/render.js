@@ -63,6 +63,11 @@ function bgDimWash() {
   ctx.fillStyle = 'rgba(2,4,12,' + d + ')';
   ctx.fillRect(0, 0, W, H);
 }
+// 0 on the ground (serve), easing to 1 once the stage has been live ~3.2s
+function flightLift() {
+  const u = Math.max(0, Math.min(1, (G.swayT || 0) / 3.2));
+  return u * u * (3 - 2 * u);
+}
 function drawBackground() {
   if (G.secret && (G.secret.vmax || G.secret.rewardDraft)) {
     drawRiftBackground();
@@ -87,7 +92,16 @@ function drawBackground() {
   }
   ctx.drawImage(bgSky, 0, 0, W, H);
   const par = (G.paddle.x - W / 2) / (W / 2); // parallax from paddle position
-  if (SCENE_DARK > 0.05) for (const s of stars) {
+  // ---- STARFIGHTER IS A FLIGHT: once the stage is live the ground falls
+  // away (the landmarks sink and fade over the first seconds — a take-off)
+  // and the star field streams past, near stars racing as streaks. The
+  // backdrop used to be a static postcard: nothing on screen said the
+  // vessel was moving. Render-only — G.time and G.swayT are read, never
+  // written, and no gameRand is involved.
+  const flight = !onMenu && G.mode === 'junkie';
+  const lift = flight ? flightLift() : 0;
+  if (flight) { /* the star field streams OVER the deep wash — drawn below */
+  } else if (SCENE_DARK > 0.05) for (const s of stars) {
     // stars only shine as dark as the scene allows — never at noon
     const tw = 0.75 + 0.25 * Math.sin(G.time * 1.2 + s.tw);
     ctx.globalAlpha = s.z * tw * 0.75 * SCENE_DARK;
@@ -95,32 +109,52 @@ function drawBackground() {
     ctx.fillRect(s.x - par * s.z * 14, s.y, s.z * 2.2, s.z * 2.2);
   }
   ctx.globalAlpha = 1;
-  drawSceneryLayers(ctx, par); // far range (slow) + landmarks (fast), cropped bands
+  if (lift < 0.995) { // far range (slow) + landmarks (fast), cropped bands
+    if (lift > 0) { ctx.save(); ctx.globalAlpha = 1 - lift; ctx.translate(0, lift * H * 0.42); }
+    drawSceneryLayers(ctx, par);
+    if (lift > 0) ctx.restore();
+  }
   // combat contrast wash + atmosphere (one cached canvas since AFT-025) —
   // bright skies never swallow the sprites; the menu keeps its postcard look
   if (!onMenu && bgWash) ctx.drawImage(bgWash, 0, 0, W, H);
+  if (flight) {
+    ctx.fillStyle = '#dfe6ff';
+    for (let pass = 0; pass < 2; pass++) for (const s of stars) {
+      const z = pass ? 1.3 - s.z : s.z; // the second pass re-deals depth so the field is twice as dense
+      const sp = 22 + z * z * 170;
+      const y = ((s.y / 0.75 + (pass ? H * 0.37 : 0) + G.time * sp) % (H + 24)) - 12;
+      const x = pass ? (s.x * 1.618 + 40) % W : s.x;
+      ctx.globalAlpha = Math.min(1, 0.34 + z * 0.62) * (0.6 + 0.4 * lift);
+      ctx.fillRect(x - par * z * 12, y, z > 0.72 ? 2.2 : 1.5, 2 + z * z * 17 * (0.3 + 0.7 * lift));
+    }
+    ctx.globalAlpha = 1;
+  }
   drawAmbient(genIdx);
   if (!onMenu) bgDimWash();
 }
 let bgPlate = null, bgPlateKey = '';
 function backgroundPlate() {
-  const key = bgGen + '|' + W + 'x' + H;
+  // STARFIGHTER: the plate is the flown sky (no landmarks) once airborne
+  const flown = G.mode === 'junkie' && flightLift() > 0.5;
+  const key = bgGen + '|' + W + 'x' + H + (flown ? '|f' : '');
   if (bgPlateKey === key && bgPlate) return bgPlate;
   bgPlateKey = key;
   bgPlate = document.createElement('canvas'); bgPlate.width = W; bgPlate.height = H;
   const c = bgPlate.getContext('2d');
   c.drawImage(bgSky, 0, 0, W, H);
-  if (SCENE_DARK > 0.05) {
+  const plateStars = () => {
     c.fillStyle = '#cfd8ff';
     for (const s of stars) {
       const tw = 0.75 + 0.25 * Math.sin(s.tw); // frozen mid-twinkle
-      c.globalAlpha = s.z * tw * 0.75 * SCENE_DARK;
-      c.fillRect(s.x, s.y, s.z * 2.2, s.z * 2.2);
+      c.globalAlpha = s.z * tw * 0.75 * (flown ? 0.8 : SCENE_DARK);
+      c.fillRect(s.x, flown ? s.y / 0.75 : s.y, s.z * 2.2, s.z * 2.2);
     }
     c.globalAlpha = 1;
-  }
-  drawSceneryLayers(c, 0); // the far range folds into the plate too (frozen)
+  };
+  if (!flown && SCENE_DARK > 0.05) plateStars();
+  if (!flown) drawSceneryLayers(c, 0); // the far range folds into the plate too (frozen)
   if (bgWash) c.drawImage(bgWash, 0, 0, W, H);
+  if (flown) plateStars(); // the flown sky's stars sit OVER its deep wash
   return bgPlate;
 }
 
@@ -5632,8 +5666,12 @@ function drawHUD() {
         : rushHead ? rushHead
         : (G.trial ? 'TRIAL · ' : '') + gen.name + ' ' + (stg + 1) + '/3';
     }
+    // phones: the stage name is a quiet breadcrumb under the score row, not
+    // a second headline shouting across the full width (the full title has
+    // its own intro card, results line and codex page)
     const tb = fitLabel(titleText, (span0 + span1) / 2, waveY,
-      { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
+      narrow ? { size: 10.5, min: 9.5, weight: 800, color: '#9fb2cc', maxW: span1 - span0, zone: 'topHud' }
+        : { size: Math.min(16, W / 30), min: 9.5, weight: 900, color: '#e3f2fd', maxW: span1 - span0, zone: 'topHud' });
     claimSurface('waveTitle', tb.x0, SAFE_T + waveY - tb.size * 0.75, tb.w, tb.size * 1.5);
   }
   // AFT-001: the modifier chip is SECONDARY copy — it yields its row to a

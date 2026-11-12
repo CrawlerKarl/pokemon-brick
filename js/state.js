@@ -2200,7 +2200,11 @@ function buildLevel(lvl) {
   // Galaga peel-off dives: hinted on early challenge stages, constant later.
   // SPACE JUNKIE keeps region 1 calm — the flocks just fly their patterns;
   // dives (and squad maneuvers) only start once the journey hardens
-  G.divers = classic ? false : junkie ? regionsIn >= 1 : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
+  // (STARFIGHTER's very first Challenge stage — level 2 — now gets its
+  // peel-off dives too: realm 1 was two stages of a formation that only ever
+  // drifted, and that is the stretch every new player judges the game by.
+  // Level 1 stays the calm tutorial; finales keep their own choreography.)
+  G.divers = classic ? false : junkie ? (regionsIn >= 1 || stage === 1) : (regionsIn >= 2 || (regionsIn >= 1 && stage >= 1));
   G.diveCD = 6;
   if (upgN('guard')) {
     const preGuard = G.shieldCharges;

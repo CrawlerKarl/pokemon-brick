@@ -861,6 +861,13 @@ phone — flag anything only verifiable there.
   ~35% of the screen, hazed toward the horizon colour — never brighter or
   more saturated than gameplay actors. Scenery randomness is its own seeded
   PRNG / `Math.random`, never `gameRand`.
+- **STARFIGHTER flies over a deep stage (AFT-029).** In junkie the scene
+  wash is near-opaque with the realm accent in its lower third, landmarks
+  take off (`flightLift()`), and the star field streams OVER the wash. All
+  render-only. New backdrop work for shooter modes starts from that deep
+  stage — never return to a bright daytime sky behind the actors. The
+  phantom-notch guard in `resize()` (browser chrome ≥ the top inset ⇒
+  `SAFE_T = 0`) is what keeps the HUD at the top inside Android browsers.
 - **Enemy motion is ONE clean move per body, and it is measured (AFT-028).**
   The owner's "they feel drunk" was layered, unrelated motion. Rules that
   hold now: a rider HOLDING FORMATION is upright (bank deadzone, cap 0.07
