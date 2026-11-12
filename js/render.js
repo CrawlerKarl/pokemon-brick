@@ -121,11 +121,14 @@ function drawBackground() {
     ctx.fillStyle = '#dfe6ff';
     for (let pass = 0; pass < 2; pass++) for (const s of stars) {
       const z = pass ? 1.3 - s.z : s.z; // the second pass re-deals depth so the field is twice as dense
-      const sp = 22 + z * z * 170;
+      // SURGE = WARP: while the overdrive burns, the field races and
+      // every star stretches into a long streak
+      const warp = G.megaT > 0 ? 2.8 : 1;
+      const sp = (22 + z * z * 170) * warp;
       const y = ((s.y / 0.75 + (pass ? H * 0.37 : 0) + G.time * sp) % (H + 24)) - 12;
       const x = pass ? (s.x * 1.618 + 40) % W : s.x;
       ctx.globalAlpha = Math.min(1, 0.34 + z * 0.62) * (0.6 + 0.4 * lift);
-      ctx.fillRect(x - par * z * 12, y, z > 0.72 ? 2.2 : 1.5, 2 + z * z * 17 * (0.3 + 0.7 * lift));
+      ctx.fillRect(x - par * z * 12, y, z > 0.72 ? 2.2 : 1.5, (2 + z * z * 17 * (0.3 + 0.7 * lift)) * (warp > 1 ? 2.4 : 1));
     }
     ctx.globalAlpha = 1;
   }
@@ -2256,7 +2259,7 @@ function drawPilotRig(x, py, preview = false) {
   const pil = pilotInfo();
   const col = TYPE_COLORS[attackElement()] || '#80d8ff';
   const mega = G.megaT > 0;
-  const s = preview ? 42 + G.starterLvl * 3 : 54 + G.starterLvl * 6;
+  const s = preview ? 42 + G.starterLvl * 3 : pilotRigSize(G.starterLvl);
   const bob = Math.sin(G.time * 3.2) * (preview ? 1.2 : 2.5);
   const y = py + bob;
   const tilt = preview ? 0 : Math.max(-0.34, Math.min(0.34, G.paddle.speed * 0.00028));
@@ -4845,7 +4848,14 @@ function drawParticles() {
     if (f.pop > 0) ctx.font = `900 ${(f.size * (1 + 0.32 * f.pop)).toFixed(1)}px Orbitron, sans-serif`;
     const fhw = f._w * (f.pop > 0 ? 1 + 0.32 * f.pop : 1) / 2;
     f._cx = Math.max(fhw + 4, Math.min(W - fhw - 4, f.x));
-    ctx.fillText(f.text, f._cx, f.y);
+    let fy = f.y;
+    if (stripRectLive && performance.now() - stripRectAt < 150) {
+      const R = stripRectLive, hh = f.size * 0.7;
+      if (f._cx + fhw > R.x && f._cx - fhw < R.x + R.w && fy + hh > R.y && fy - hh < R.y + R.h) {
+        fy = fy < R.y + R.h / 2 ? R.y - hh - 3 : R.y + R.h + hh + 3; // step clear, nearest side
+      }
+    }
+    ctx.fillText(f.text, f._cx, fy);
   }
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
@@ -4980,6 +4990,10 @@ function drawAnnounce() {
 // the in-combat variant of drawAnnounce: one tight strip under the HUD line,
 // name + one detail line (+ inline portrait for catches). It slides down from
 // the top so arrival messaging reads as HUD, not as a card over the pilot.
+// last drawn strip rect (and when) — combat floaters read it so a call-out
+// never prints across the banner (AFT-029: "HIGH GROUND" sat on top of the
+// TREASURE BRICKS strip). Wall-clock stamped, presentation only.
+let stripRectLive = null, stripRectAt = -1;
 function drawAnnounceStrip(a) {
   const fadeOut = a.max - a.t < 0.3 ? (a.max - a.t) / 0.3 : 1;
   const alpha = Math.min(fadeOut, a.t < 0.4 ? a.t / 0.4 : 1);
@@ -5021,6 +5035,7 @@ function drawAnnounceStrip(a) {
   const pillW = Math.min(W - 12, Math.max(nameW + lead, descW) + 44);
   const pillH = a.desc ? 46 : 30;
   claimSurface('announceStrip', W / 2 - pillW / 2, y - pillH / 2, pillW, pillH);
+  stripRectLive = { x: W / 2 - pillW / 2, y: y - pillH / 2, w: pillW, h: pillH }; stripRectAt = performance.now();
   ctx.globalAlpha = alpha * 0.9;
   roundRect(W / 2 - pillW / 2, y - pillH / 2, pillW, pillH, 13);
   ctx.fillStyle = 'rgba(6,9,24,0.85)'; ctx.fill();
@@ -5536,6 +5551,20 @@ function drawHUD() {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, 56 + SAFE_T);
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.beginPath(); ctx.moveTo(0, 56 + SAFE_T); ctx.lineTo(W, 56 + SAFE_T); ctx.stroke();
+  // THE CONTROL DOCK (AFT-029): on touch the pads, meters and chips used to
+  // float over open scenery. A soft shelf rising from the bottom edge gives
+  // them one backed surface — the mirror of the top bar. Cached per size.
+  if (IS_TOUCH && (G.state === 'play' || G.state === 'serve')) {
+    const dh = Math.min(190, H * 0.24);
+    const dk = 'huddock_' + H + '_' + dh;
+    let dg = fxCache[dk];
+    if (!dg) {
+      dg = ctx.createLinearGradient(0, H - dh, 0, H);
+      dg.addColorStop(0, 'rgba(4,7,22,0)'); dg.addColorStop(0.45, 'rgba(4,7,22,0.42)'); dg.addColorStop(1, 'rgba(4,7,22,0.86)');
+      fxCache[dk] = dg;
+    }
+    ctx.fillStyle = dg; ctx.fillRect(0, H - dh, W, dh);
+  }
   ctx.save();
   ctx.translate(0, SAFE_T);
 

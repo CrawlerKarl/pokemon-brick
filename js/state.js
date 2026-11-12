@@ -270,9 +270,16 @@ function dealStageDividend() {
 // build park ~25% of itself offscreen on portrait phones. This mirrors
 // drawPilotRig's geometry (sprite/rim, halo, rack slots); update() clamps
 // steering with a 14px visual margin on top.
+// The vessel's drawn size. On a TALL PHONE it is 22% larger (AFT-029): at
+// 54px on a 775px-tall screen the hero read as a speck. This is the ART and
+// its edge clamp only — the hurtbox is a separate, unchanged constant.
+function pilotRigSize(lvl) {
+  const tall = typeof W !== 'undefined' && W < 560 && H > W * 1.5;
+  return (54 + (lvl || 1) * 6) * (tall ? 1.22 : 1);
+}
 function shipFootprintHalf() {
   if (G.mode !== 'junkie') return 26;
-  const s = 54 + (G.starterLvl || 1) * 6;
+  const s = pilotRigSize(G.starterLvl);
   let half = s * 0.54; // sprite + rim light (drawn at 1.07× the sprite box)
   if (SETTINGS.affinity === 'light' || SETTINGS.affinity === 'dark') half = Math.max(half, s * 0.67 + 3); // oath halo ring ('none' = unsworn, no halo)
   let badges = 0;
