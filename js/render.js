@@ -10985,6 +10985,11 @@ function drawAetherArtLoading() {
   if (paused || G.state === 'upgrade' || G.state === 'results' || G.state === 'gameover') return;
   const s = AETHER_ART_STREAM.summary();
   if (!s || (!s.pending && !s.failed)) return;
+  // in live combat the plate sat squarely on the control dock (meters, chips
+  // and pad captions) every time a stage streamed its art — procedural art
+  // covers the gap, so a healthy stream stays silent while you play; only a
+  // FAILED one speaks up there
+  if (!s.failed && (G.state === 'play' || G.state === 'serve' || G.state === 'resolve')) return;
   const compact = G.state !== 'menu';
   const w = Math.min(W - 24 - SAFE_L - SAFE_R, compact ? 292 : 356);
   const h = compact ? 44 : 62;

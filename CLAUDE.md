@@ -163,7 +163,7 @@ preview pane sometimes lays out at 0×0 — call `resize()` and bail if `!W`.
   bright/dark backdrops with honest hitR overlays — check it after any
   projectile art change (readability is a design invariant).
 - **Automated invariants:** `npm test` (preferred) or open `/test.html`
-  fronted (slow — legacy path). 144 checks; `window.TEST_RESULTS` at
+  fronted (slow — legacy path). 146 checks; `window.TEST_RESULTS` at
   completion. Keep it green. New defect fixtures start as `xtest`
   (expected-fail) and are PROMOTED to `test` with the fix — an `xtest` left
   at completion is a red flag, never a resting state. Two overlap invariants:
