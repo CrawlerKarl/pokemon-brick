@@ -547,6 +547,8 @@
     [/\bPARTNER\b/g, 'VESSEL'],         // the last partnerWord leak in shared copy
     // this world's realm bosses are SOVEREIGNS — the reveal, the dossiers and
     // the stage label all said LEGENDARY while the codex tab said SOVEREIGNS
+    [/\bA HELD ITEM\b/g, 'A RELIC'],    // drafts hand out RELICS here, not held items
+    [/\bHELD ITEM\b/g, 'RELIC'],
     [/\bLEGENDARIES\b/g, 'SOVEREIGNS'],
     [/\bLEGENDARY\b/g, 'SOVEREIGN'],
     [/\bMYTHICAL\b/g, 'MYTHIC'],

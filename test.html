@@ -361,6 +361,57 @@ window.requestAnimationFrame = function () { return 0; };
     return '9 route themes + 9 boss arrangements · ' + brightScales + '/9 bright scales · unique motifs/voices/rhythms';
   });
 
+  test('audio engine (AFT-030): muted builds no nodes; a last-stand theme + SFX storm render clean and bounded', async () => {
+    if (typeof OfflineAudioContext === 'undefined' || typeof audioUseContext !== 'function') return 'no OfflineAudioContext — skipped';
+    const KINDS = ['createOscillator', 'createGain', 'createBiquadFilter', 'createBufferSource', 'createStereoPanner', 'createWaveShaper',
+      'createDelay', 'createConvolver', 'createDynamicsCompressor', 'createBuffer'];
+    const SR = 22050;
+    const counted = secs => {
+      const ctx = new OfflineAudioContext(2, Math.ceil(secs * SR), SR); let n = 0;
+      for (const k of KINDS) { const o = ctx[k] && ctx[k].bind(ctx); if (o) ctx[k] = function () { n++; return o.apply(null, arguments); }; }
+      return { ctx, nodes: () => n };
+    };
+    const scan = buf => { let peak = 0, bad = 0; for (let ch = 0; ch < buf.numberOfChannels; ch++) for (const x of buf.getChannelData(ch)) { if (!isFinite(x)) bad++; else if (Math.abs(x) > peak) peak = Math.abs(x); } return { peak, bad }; };
+    const sv = { music: SETTINGS.music, sfx: SETTINGS.sfx, on: MUSIC.on, paused, scene: window.currentMusicScene, heat: window.bossMusicHeat };
+    let prev = null; const hadHidden = Object.prototype.hasOwnProperty.call(document, 'hidden');
+    try {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      // 1) volume 0 = silence that costs nothing: not one node, music or SFX
+      let c = counted(1); prev = audioUseContext(c.ctx);
+      SETTINGS.music = 0; SETTINGS.sfx = 0; MUSIC.on = true; paused = false;
+      musicTick(); for (const k of Object.keys(SFX)) SFX[k](3); tone(440, 0.1); noiseBurst(0.1, 0.1);
+      assert(c.nodes() === 0, 'muted audio still built ' + c.nodes() + ' node(s)');
+      // 2) the densest arrangement (boss + last-stand heat) at max music volume
+      window.currentMusicScene = () => ({ genIdx: 8, boss: true, key: '8:boss' });
+      window.bossMusicHeat = () => 2;
+      SETTINGS.music = 1.5;
+      const cfg = musicTheme(8, true), stepDur = 60 / cfg.bpm / 4, bars = 2, span = bars * 16 * stepDur;
+      c = counted(span + 1); audioUseContext(c.ctx);
+      for (let t = 0.05; t < span - 0.3; t += 0.1) c.ctx.suspend(t).then(() => { musicTick(); c.ctx.resume(); });
+      musicTick();
+      const m = scan(await c.ctx.startRendering());
+      const perBar = c.nodes() / bars;
+      assert(m.bad === 0, 'music render produced ' + m.bad + ' NaN/Inf samples');
+      assert(m.peak > 0.02, 'music render is silent (peak ' + m.peak.toFixed(4) + ')');
+      assert(m.peak < 1, 'music clips at the destination (peak ' + m.peak.toFixed(3) + ')');
+      assert(perBar < 420, 'music node budget blown: ' + perBar.toFixed(0) + ' nodes per bar');
+      // 3) an SFX pile-up at max effects volume stays under full scale (bus limiter + voice cap)
+      SETTINGS.music = 0; SETTINGS.sfx = 1.5;
+      c = counted(1.5); audioUseContext(c.ctx);
+      for (let i = 0; i < 40; i++) { SFX.brick(); SFX.hit(i % 12); }
+      SFX.bossDown(); SFX.lifeLost();
+      const s = scan(await c.ctx.startRendering());
+      assert(s.bad === 0 && s.peak > 0.01 && s.peak < 1, 'SFX storm peak ' + s.peak.toFixed(3) + ' / bad ' + s.bad);
+      assert(c.nodes() < 160, 'SFX voice cap failed: ' + c.nodes() + ' nodes for one burst');
+      return 'music peak ' + m.peak.toFixed(2) + ' · ' + perBar.toFixed(0) + ' nodes/bar · SFX storm peak ' + s.peak.toFixed(2) + ' (' + c.nodes() + ' nodes)';
+    } finally {
+      audioUseContext(prev);
+      window.currentMusicScene = sv.scene; window.bossMusicHeat = sv.heat;
+      SETTINGS.music = sv.music; SETTINGS.sfx = sv.sfx; MUSIC.on = sv.on; paused = sv.paused;
+      if (!hadHidden) delete document.hidden;
+    }
+  });
+
   test('upgrade web camera: zoomed start, anchored zoom, fit range', async () => {
     // camera math is asserted at the canonical viewport — at unusual real
     // window shapes (e.g. very tall panes) the pan clamp can legitimately
@@ -3696,6 +3747,62 @@ window.requestAnimationFrame = function () { return 0; };
   test('flyer↔flyer non-overlap: junkie L4', flyerFlyerTest('junkie', 4));
   test('flyer↔flyer non-overlap: blaster L8', flyerFlyerTest('blaster', 8));
 
+  // AFT-029: THE WHOLE CAMPAIGN, AT A PHONE AND A DESKTOP. The test above
+  // flies one STARFIGHTER level — and level 4 happens to be the one authored
+  // family that was always clean. Measured across all eighteen ordinary
+  // stages, squads stood up to 79px INSIDE each other on most of them (on
+  // every screen size), a phone seated barely half the intended riders, and
+  // riders sat past the screen edge. This flies every stage at both sizes
+  // and holds: no standing overlap, nobody off-screen, and a phone fields
+  // most of its roster (ranks + reinforcement credit).
+  test('AFT-029: every STARFIGHTER stage — no standing overlap, on-screen, phones seat their roster', async () => {
+    const mode0 = SETTINGS.mode, W0 = W, H0 = H;
+    const report = [];
+    try {
+      SETTINGS.mode = 'junkie';
+      for (const [w, h] of [[412, 775], [1280, 800]]) {
+        W = w; H = h;
+        let worstBlob = 0, worstAt = '', seatedSum = 0, wantSum = 0;
+        for (let lvl = 1; lvl <= 27; lvl++) {
+          if (lvl % 3 === 0) continue;
+          resetRun(lvl, true, { seed: 'AFT029-' + lvl });
+          G.state = 'play'; G.reveal = null;
+          const rIn = Math.floor((lvl - 1) / 3);
+          wantSum += Math.min(26, 9 + rIn * 2 + ((lvl - 1) % 3 >= 1 ? 1 : 0));
+          seatedSum += G.bricks.filter(b => b.flight && b.flight.choreo).length + (G.reinfBonus || 0);
+          let blob = 0, off = 0;
+          for (let f = 0; f < 60 * 11; f++) {
+            G.lives = 9; G.invuln = 1; G.enemyShots.length = 0; mouseX = W / 2;
+            update(1 / 60);
+            if (G.state !== 'play') break;
+            if (f < 60 * 5) continue; // entrance trains are transient by design
+            const fl = G.bricks.filter(b => !b.dead && b.flight && b.flight.state >= 2 && !b.dive && !b.entry && !b.flight.entering && !b.crosser);
+            let deep = false;
+            for (let a = 0; a < fl.length && !deep; a++) {
+              const A = fl[a], ax = A.bx + G.fx;
+              if (ax - A.w / 2 < -1 || ax + A.w / 2 > W + 1) off++;
+              for (let b = a + 1; b < fl.length; b++) {
+                const B = fl[b];
+                const minD = (Math.min(A.w, A.h) + Math.min(B.w, B.h)) * 0.7;
+                if (minD - Math.hypot(ax - B.bx - G.fx, A.by - B.by) > 12) { deep = true; break; }
+              }
+            }
+            if (deep) blob++;
+          }
+          // (a rider may cross the edge for a frame or two as it leaves a dive or a train)
+          assert(off <= 6, w + 'x' + h + ' L' + lvl + ': a settled rider sat past the screen edge on ' + off + ' frames');
+          if (blob > worstBlob) { worstBlob = blob; worstAt = 'L' + lvl; }
+          if (lvl % 6 === 0 || lvl % 5 === 0) await tick();
+        }
+        // a blob is a STANDING overlap; a maneuver or a morph may brush for a moment
+        assert(worstBlob <= 50, w + 'x' + h + ' ' + worstAt + ': squads stood >12px inside each other for ' + worstBlob + ' of 360 frames');
+        if (w < 560) assert(seatedSum >= wantSum * 0.97, 'a phone fielded only ' + seatedSum + ' of ' + wantSum + ' riders (ranks + reinforcement credit)');
+        report.push(w + 'x' + h + ': worst standing overlap ' + worstBlob + '/360 frames (' + (worstAt || 'none') + ')' + (w < 560 ? ', roster ' + seatedSum + '/' + wantSum : ''));
+      }
+      return report.join(' · ');
+    } finally { W = W0; H = H0; SETTINGS.mode = mode0; resize(); }
+  });
+
   // AFT-028 THE MOTION PASS — "the enemies feel drunk" had three real causes
   // and each one gets a guard here: (1) reinforcements dealt onto slots too
   // tight to hold them, so the solver jostled the pack every frame; (2) a
@@ -3934,6 +4041,29 @@ window.requestAnimationFrame = function () { return 0; };
           SETTINGS.mode = m0; Object.assign(trialSel, r0);
         }
         { const RS = rushSummaryLayout(); rects.rushRetry = RS.retry; rects.rushTitle = RS.title; } // BOSS RUSH summary
+        { // AFT-029: the between-combat sheets — pause, game over, and the
+          // results screen under a MAXIMAL payload (every optional row live);
+          // results blocks must also never run under the CONTINUE slab
+          const PA = pauseActionLayout();
+          for (const k of ['panel', 'music', 'settings', 'quit', 'resume', 'cheat']) rects['pause.' + k] = PA[k];
+          const GO = gameOverLayout();
+          for (let i = 0; i < 4; i++) rects['gameover(' + i + ')'] = GO.button(i);
+          const r0 = G.results;
+          G.results = { lvl: 9, region: 'THE LONGEST REGION NAME', stage: 'LEGENDARY', stageTitle: 'A VERY LONG AUTHORED STAGE TITLE',
+            t: 99, kills: 40, score: 99999, hitsTaken: 3, topFam: 'heavy', shotsN: 300, shotsC: 20, overheats: 2,
+            objective: 'PROTECT THE WARD', objectiveDone: true, finaleMastery: 'mastered', finaleTitle: 'THE LONG FINALE',
+            finaleCounters: { passes: 3 }, outcomes: { dispersed: 4 }, medalsSaved: false,
+            objectives: [1, 2, 3].map(i => ({ name: 'OBJECTIVE ' + i, desc: 'A LONG DESCRIPTION OF WHAT THIS MASTERY OBJECTIVE ASKS OF THE PLAYER', done: i < 3 })),
+            nextName: 'THE LONGEST REGION NAME · ARRIVAL', flavor: 'A LINE OF FLAVOUR.' };
+          const RL = resultsLayout();
+          G.results = r0;
+          rects.resultsContinue = RL.btn;
+          for (const [k, r] of Object.entries(RL.rects)) {
+            rects['results.' + k] = r;
+            if (r.x < RL.btn.x + RL.btn.w && r.x + r.w > RL.btn.x && r.y < RL.btn.y + RL.btn.h && r.y + r.h > RL.btn.y)
+              bad.push(w + '×' + h + ' results.' + k + ' runs under CONTINUE');
+          }
+        }
         { // AFT-013: codex tabs, the realm-1 cast tiles (widest row), the dossier page
           const sc0 = dexScroll; dexScroll = 0;
           const HL = dexHeadLayout(), DL = dossierListLayout(), DP = dossierPageLayout();
@@ -6082,14 +6212,20 @@ window.requestAnimationFrame = function () { return 0; };
     ZONE_DEBUG = true;
     try {
       render();
-      const pillY0 = SAFE_T + 44, pillY1 = SAFE_T + 70;
-      const title = (zoneLog || []).find(b => b.zone === 'topHud' && b.y > 40 && b.y < 60);
-      if (title) {
-        const t0 = title.y - title.size * 0.75, t1 = title.y + title.size * 0.75;
-        assert(t1 < pillY0 || t0 > pillY1,
-          'stage title (y ' + t0.toFixed(1) + '–' + t1.toFixed(1) + ' "' + title.text + '") overlaps the goal pill band (y ' + pillY0 + '–' + pillY1 + ')');
+      // AFT-030: the goal pill lives in the STATUS ROW under the top bar —
+      // read its claimed rect (not a fixed pixel band) and prove every bar
+      // label (score, stage breadcrumb) stays clear of it
+      const pill = (surfaceLog || []).find(s => s.name === 'goalPill');
+      assert(pill, 'no goal pill drew while a goal was live');
+      assert(pill.y >= SAFE_T + HUD_BAR_H, 'the goal pill rode inside the top bar (y ' + pill.y + ')');
+      const pillY0 = pill.y, pillY1 = pill.y + pill.h;
+      // topHud labels drawn inside the bar's translate record LOCAL y
+      for (const title of (zoneLog || []).filter(b => b.zone === 'topHud' && b.y < HUD_BAR_H)) {
+        const t0 = SAFE_T + title.y - title.size * 0.75, t1 = SAFE_T + title.y + title.size * 0.75;
+        assert(t1 <= pillY0 || t0 >= pillY1,
+          'stage title (y ' + t0.toFixed(1) + '–' + t1.toFixed(1) + ' "' + title.text + '") overlaps the goal pill (y ' + pillY0 + '–' + pillY1 + ')');
       }
-      return 'the goal pill owns the second HUD row while a goal is live';
+      return 'the goal pill owns its own status row while a goal is live; the bar\'s labels stay clear';
     } finally { ZONE_DEBUG = oldZ; zoneLog = null; }
   });
 
@@ -6262,8 +6398,10 @@ window.requestAnimationFrame = function () { return 0; };
     render();
     let bad = overlaps();
     assert(bad.length === 0, 'overlapping surfaces with a live goal: ' + bad.join(' · '));
-    assert(!(zoneLog || []).some(b => b.zone === 'topHud' && b.y > 40 && b.y < 60),
-      'the stage title took the goal pill\'s row');
+    // AFT-030: the goal owns its own STATUS ROW under the bar (the overlap
+    // sweep above already proves nothing else sits on it)
+    const pillClaim = (surfaceLog || []).find(s => s.name === 'goalPill');
+    assert(!pillClaim || pillClaim.y >= SAFE_T + HUD_BAR_H, 'the goal pill rode inside the top bar');
     // 2) a combat notice never stacks with an announcement
     setCombatNotice('SUPER EFFECTIVE!', '#ffab40', 2.5);
     setAnnounce('star', '#ffd54f', 'A CARD', 'ONE OWNER PER LANE', 1.2);
@@ -6545,6 +6683,9 @@ window.requestAnimationFrame = function () { return 0; };
     spawnReinforcement();
     assert(pending() === 1, 'the first reinforcement wave did not announce');
     const f1 = G.floaters.length;
+    // AFT-029: a flight only arrives into FREE AIR — the first one has to
+    // fall (as it does in play) before the next can take its place
+    for (const b of G.bricks) if (b.flight && b.flight.sq === 99) b.dead = true;
     spawnReinforcement();
     assert(pending() === 1, 'a second reinforcement wave queued another banner');
     assert(G.floaters.length > f1, 'the second reinforcement wave lost its call-out');

@@ -861,6 +861,32 @@ phone — flag anything only verifiable there.
   ~35% of the screen, hazed toward the horizon colour — never brighter or
   more saturated than gameplay actors. Scenery randomness is its own seeded
   PRNG / `Math.random`, never `gameRand`.
+- **MEASURE AT A PHONE (AFT-029).** The owner plays on a ~412×775 phone and
+  the balance matrix only ever ran at 1280×900 — a phone was fielding half
+  the riders and squads overlapped on most stages before anyone looked.
+  `BASE_VP=412x775 BASE_QUERY=touch BASE_ONLY=A-sweep-J npm run baseline --
+  --label <x>` is the phone probe; `tools/shot.js --vp 412x775` is the phone
+  eye. Any layout, population or pacing change gets both. On tall phones
+  (`W < 560 && H > 1.5·W`) lattice squads stand in up to three RANKS
+  (`F.rowDy`), the floor starts at 50%, and unseated riders are owed to the
+  reinforcements (`G.reinfBonus`) — never cut a phone's roster to fit.
+- **Every settled flyer is solved; nothing is exempt (AFT-029).** Authored
+  choreography used to skip the separation solver and overlapped on most
+  stages. The solver is warm-started, takes the solve exactly unless the
+  offset is growing (only GROWTH is eased), and clamps riders on-screen.
+  Build-time feasibility does the heavy lifting so the solver rarely has
+  to: nested rings keep a sprite gap, rings seat what their minor axis
+  holds, phalanx slots have a floor (`F.cell`), and a reinforcement rank
+  arrives only into FREE AIR. The suite flies all eighteen ordinary
+  STARFIGHTER stages at phone and desktop size — a new formation family or
+  morph must pass it.
+- **One panel language (AFT-029).** Every menu, sheet, card, chip and dock
+  draws from the kit at the top of render.js (`UI` tokens, `uiPanel`,
+  `uiButton`, `uiChip`, `uiEnter`, `uiStage`): dark panels with a hairline
+  edge and at most one accent bar, ONE solid primary action per surface,
+  ink/sub/mute text, gold = reward, red = danger only, no neon outer glows
+  (one hero glow per screen at most), four phone type sizes. A new surface
+  that invents its own boxes is a regression.
 - **STARFIGHTER flies over a deep stage (AFT-029).** In junkie the scene
   wash is near-opaque with the realm accent in its lower third, landmarks
   take off (`flightLift()`), and the star field streams OVER the wash. All

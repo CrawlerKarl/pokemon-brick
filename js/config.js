@@ -232,204 +232,283 @@ function pilotFreshSession() {
 // footer line. `quick` aliases the SELECTED mode's card so the primary
 // CTA contract (and its test) is unchanged; `preview`/`hero` alias the
 // whole card band. Rendering and hit-testing share these rectangles.
+// AFT-029 TITLE REBUILD (2026-11-13): the same three doors, rebuilt on the
+// deep-stage UI kit. Portrait phones stack three full-width cards (diorama
+// window left, copy right) between a logo lock-up and a utility row; wide
+// screens put the wordmark + utilities on one header row and stand the
+// cards in three columns. Every card is ONE panel; the card the player last
+// chose carries the screen's single PRIMARY slab (CONTINUE takes that role
+// when a checkpoint exists). `parts(i)` hands render the diorama window,
+// copy column and play slab so nothing is re-derived in the draw code.
+// Render and hit-testing share every rect here (skin pill included).
 function menuLayout() {
   const hasCkpt = typeof RUN_CKPT !== 'undefined' && !!RUN_CKPT;
   const narrow = W < 720;
-  const short = H < 560 || (narrow && H < 650);
-  const pad = narrow ? 12 : short ? 18 : Math.max(24, Math.min(40, W * 0.03));
-  const gap = narrow ? 10 : 14;
-  const headerH = short ? 38 : narrow ? 50 : 56;
-  const headerY = short ? 8 : narrow ? 10 : 16;
-  const titleSize = short ? Math.min(24, W / 18) : narrow ? Math.min(30, W / 11) : Math.min(34, W / 24);
-  const titleY = headerY + headerH / 2;
-  // footer: desktop keeps one calm journey line; phones keep two utilities
-  const footerH = short ? 34 : narrow ? 52 : 42;
-  const footerY = H - (short ? 8 : pad * 0.7) - footerH;
-  // continue band (only with a checkpoint) sits between header and cards
-  const resumeH = hasCkpt ? (short ? 30 : narrow ? 42 : 46) : 0;
-  const zoneY = headerY + headerH + (short ? 6 : 12) + (hasCkpt ? resumeH + (short ? 6 : 10) : 0);
-  const zone = { x: pad, y: zoneY, w: W - pad * 2, h: footerY - zoneY - (short ? 6 : 12) };
-  // three equal cards: columns on wide screens, stacked rows on phones
-  const stacked = narrow && W < H;
+  const stacked = narrow && W < H;           // portrait phone: stacked rows
+  const short = H < 600;
+  const tight = stacked && H < 700;          // small portrait (320×568…)
+  const touch = typeof IS_TOUCH !== 'undefined' && IS_TOUCH;
+  const pad = stacked ? (W < 360 ? 12 : 16) : short ? 16 : Math.max(24, Math.min(40, W * 0.03));
+  const gap = stacked ? (tight ? 10 : 12) : short ? 10 : 16;
+  const tapH = 44;
+  const top = (typeof SAFE_T !== 'undefined' ? SAFE_T : 0) + (stacked ? (tight ? 10 : 18) : short ? 6 : 16);
+  const botInset = (typeof SAFE_B !== 'undefined' ? SAFE_B : 0) + (stacked ? (tight ? 10 : 14) : short ? 6 : 16);
+  const hasSkin = typeof skinToggleAvailable === 'function' && skinToggleAvailable();
+  const brand = (typeof SKIN !== 'undefined' && SKIN.brand) || GAME_TITLE;
+  let titleSize, titleY, skin = null, headerY, headerH, dex, adv, zoneTop;
+  const footerH = tapH;
+  let footerY = H - botInset - footerH;
+  if (stacked) {
+    // logo lock-up: wordmark centred, the edition pill (skin toggle) under it
+    titleSize = Math.min(tight ? 30 : 40, (W - pad * 2) / (brand.length * 0.86));
+    titleY = top + titleSize * 0.55;
+    headerY = top; headerH = titleSize * 1.1;
+    let hb = titleY + titleSize * 0.55;
+    if (hasSkin) {
+      skin = { x: W / 2 - 92, y: hb + (tight ? 0 : 4), w: 184, h: touch ? tapH : 32 };
+      hb = skin.y + skin.h;
+    }
+    zoneTop = hb + (tight ? 8 : 14);
+    // phones keep the two utilities as one row at the bottom
+    const uw = (W - pad * 2 - gap) / 2;
+    dex = { x: pad, y: footerY, w: uw, h: footerH };
+    adv = { x: pad + uw + gap, y: footerY, w: uw, h: footerH };
+  } else {
+    // one header row: wordmark (+ pill) left, the two utilities right
+    headerY = top; headerH = tapH;
+    titleSize = short ? Math.min(24, W / 22) : Math.min(36, W / 26);
+    titleY = headerY + headerH / 2;
+    const utilityW = short ? 128 : 140;
+    dex = { x: W - pad - utilityW * 2 - gap * 0.75, y: headerY, w: utilityW, h: tapH };
+    adv = { x: W - pad - utilityW, y: headerY, w: utilityW, h: tapH };
+    if (hasSkin) {
+      let bw = brand.length * titleSize * 0.82;
+      if (typeof ctx !== 'undefined' && ctx && ctx.measureText) {
+        const f0 = ctx.font; ctx.font = `900 ${titleSize}px Orbitron, sans-serif`;
+        bw = ctx.measureText(brand).width; ctx.font = f0;
+      }
+      const sw = Math.max(120, Math.min(196, dex.x - (pad + bw + 18) - 12));
+      skin = { x: pad + bw + 18, y: headerY + (headerH - (touch ? tapH : 32)) / 2, w: sw, h: touch ? tapH : 32 };
+    }
+    zoneTop = headerY + headerH + gap;
+  }
+  // the CONTINUE band: the screen's primary action whenever a checkpoint exists
+  const resumeH = hasCkpt ? (tight || short ? tapH : 52) : 0;
+  const resume = hasCkpt ? { x: pad, y: zoneTop, w: W - pad * 2, h: resumeH } : null;
+  if (hasCkpt) zoneTop += resumeH + gap;
+  // desktop keeps one calm journey line under the cards
+  const progress = (!narrow && !short) ? { x: pad, y: footerY, w: Math.max(280, W - pad * 2), h: footerH } : null;
+  const zoneBot = stacked || progress ? footerY - gap : H - botInset;
+  const zone = { x: pad, y: zoneTop, w: W - pad * 2, h: Math.max(60, zoneBot - zoneTop) };
   const cardW = stacked ? zone.w : (zone.w - gap * 2) / 3;
   const cardH = stacked ? (zone.h - gap * 2) / 3 : zone.h;
   const card = i => stacked
     ? { x: zone.x, y: zone.y + i * (cardH + gap), w: cardW, h: cardH }
     : { x: zone.x + i * (cardW + gap), y: zone.y, w: cardW, h: cardH };
+  const ins = stacked ? 6 : 8;
+  const parts = i => {
+    const c = card(i);
+    let dio, text;
+    if (stacked) {
+      const dw = Math.min(c.w * 0.5, (c.h - ins * 2) * 1.2);
+      dio = { x: c.x + ins, y: c.y + ins, w: dw, h: c.h - ins * 2 };
+      text = { x: dio.x + dio.w + 14, y: c.y + 12, w: c.x + c.w - (dio.x + dio.w + 14) - 12, h: c.h - 24 };
+    } else {
+      // the copy needs ~170px; the diorama takes everything else (no dead band)
+      const dh = Math.max(60, short ? (c.h - ins * 2) * 0.52 : Math.max((c.h - ins * 2) * 0.6, c.h - ins - 160));
+      dio = { x: c.x + ins, y: c.y + ins, w: c.w - ins * 2, h: dh };
+      text = { x: c.x + 16, y: dio.y + dio.h + 10, w: c.w - 32, h: c.y + c.h - (dio.y + dio.h + 10) - 12 };
+    }
+    const ph = Math.min(tight || short ? 34 : 40, Math.max(28, text.h * 0.32));
+    const pw = stacked ? Math.min(text.w, 150) : Math.min(text.w, 220);
+    const play = stacked ? { x: text.x, y: text.y + text.h - ph, w: pw, h: ph }
+      : { x: c.x + c.w / 2 - pw / 2, y: text.y + text.h - ph, w: pw, h: ph };
+    return { card: c, dio, text, play };
+  };
   const selIdx = Math.max(0, MODES.findIndex(m => m.key === SETTINGS.mode));
-  // the daily chip rides the Breaker card's diorama corner (it IS a
-  // Breaker run) — badge-style, like the preview badges
-  const bc = card(Math.max(0, MODES.findIndex(m => m.key === 'classic')));
-  const dailyH = short ? 18 : 22;
-  const dailyW = Math.min(bc.w * 0.62, 170);
-  const daily = { x: bc.x + bc.w - dailyW - 14, y: bc.y + 14, w: dailyW, h: dailyH };
-  const utilityW = short ? 92 : 118;
-  const dex = narrow
-    ? { x: pad, y: footerY, w: (W - pad * 2 - gap) / 2, h: footerH }
-    : { x: W - pad - utilityW * 2 - gap, y: headerY + 8, w: utilityW, h: headerH - 16 };
-  const adv = narrow
-    ? { x: pad + (W - pad * 2 - gap) / 2 + gap, y: footerY, w: (W - pad * 2 - gap) / 2, h: footerH }
-    : { x: W - pad - utilityW, y: headerY + 8, w: utilityW, h: headerH - 16 };
+  // the daily chip rides the Breaker card's diorama corner (it IS a Breaker
+  // run); its rect is a full touch target, the pill draws inside it
+  const bp = parts(Math.max(0, MODES.findIndex(m => m.key === 'classic')));
+  const dailyH = touch ? tapH : 34;
+  const dailyW = Math.min(bp.dio.w - 8, 156);
+  const daily = { x: bp.dio.x + 4, y: bp.dio.y + 2, w: dailyW, h: Math.min(dailyH, bp.dio.h * 0.5) };
   return {
-    s: Math.max(0.72, Math.min(1, H / 760)), short, narrow, stacked,
-    pad, gap, headerY, headerH, titleY, titleSize,
+    s: Math.max(0.72, Math.min(1, H / 760)), short, narrow, stacked, tight,
+    pad, gap, headerY, headerH, titleY, titleSize, brand,
     hero: zone, preview: zone, copy: zone, modeY: zone.y,
-    card,
+    card, parts,
     quick: card(selIdx),
-    daily,
-    resume: hasCkpt ? { x: pad, y: headerY + headerH + (short ? 6 : 12), w: W - pad * 2, h: resumeH } : null,
-    progress: narrow ? null : { x: pad, y: footerY, w: Math.max(280, W - pad * 2 - 0), h: footerH },
-    dex, adv,
+    daily, skin, resume, progress, dex, adv,
   };
 }
-// PAGE 2 — a two-step setup wizard. Pilot choice gets the whole screen so all
-// 18 partners are visible together; difficulty gets a separate, calmer screen
-// with a selected-pilot recap, four clear intensity choices, Trial, and launch.
+// PAGE 2 — a two-step setup wizard (vessel → challenge), rebuilt on the
+// deep-stage UI kit (AFT-029, 2026-11-13). One frame for both steps:
+//   · a header row — a 44px BACK, the mode name, and a two-segment step bar;
+//   · a HERO surface (the chosen vessel, big) and a CHOICES column — stacked
+//     on portrait phones (hero on top, choices anchored to the bottom so tall
+//     phones hand their slack to the portrait), side by side on landscape
+//     phones and desktop (hero left, choices right);
+//   · ONE bottom bar: a quiet secondary (FLY SOLO / PRACTICE) beside the
+//     screen's single PRIMARY slab (CONTINUE / LAUNCH).
+// Every touch target is ≥44px tall. Render and hit-testing share these rects.
 function setupLayout() {
   const short = H < 560;
   const narrow = W < 620;
   const compactPhone = narrow && H < 760;
+  const twoCol = W > H * 1.15 && W >= 560;
+  const tapH = 44;
   const s = Math.max(0.72, Math.min(1.1, H / 780, W / 720));
   const cx = W / 2;
-  const contentW = Math.min(W - (narrow ? 20 : 36), 1120);
-  const headSize = short ? Math.min(22, W / 18) : narrow ? Math.min(32, W / 10) : Math.min(42, W / 15);
-  const headY = short ? 22 : narrow ? 38 : 46;
-  const subY = headY + headSize * 0.78 + (short ? 4 : 9);
-  const sectionY = subY + (short ? 22 : narrow ? 34 : 38);
-  const back = { x: 12, y: 10, w: short ? 78 : 94, h: 34 };
-  const bottomPad = short ? 8 : narrow ? 12 : 18;
+  const gut = W < 360 ? 12 : 16;
+  const gap = short ? 8 : 12;
+  const safeT = typeof SAFE_T !== 'undefined' ? SAFE_T : 0;
+  const safeB = typeof SAFE_B !== 'undefined' ? SAFE_B : 0;
+  const contentW = Math.min(W - gut * 2, twoCol ? 1180 : 600);
+  const x0 = cx - contentW / 2;
+  // header: BACK + mode name on one row; the step bar under it (portrait) or
+  // at the row's right end (two-column)
+  const top = safeT + (short ? 6 : 12);
+  const back = { x: Math.max(6, x0 - 6), y: top, w: narrow || short ? tapH : 112, h: tapH };
+  const headY = back.y + back.h / 2;
+  const headSize = short ? 15 : narrow ? 17 : 22;
+  const subY = twoCol ? headY : back.y + back.h + (short ? 6 : 10);
+  const step = twoCol
+    ? { x: x0 + contentW - Math.min(300, contentW * 0.34), y: headY - 3, w: Math.min(300, contentW * 0.34), h: 6 }
+    : { x: x0, y: subY, w: contentW, h: 5 };
+  const sectionY = twoCol ? headY : subY + 18; // the step caption's baseline row
+  const bodyTop = twoCol ? back.y + back.h + gap : sectionY + (short ? 12 : 16);
+  const bottom = H - safeB - (short ? 8 : 16);
+  const barH = short ? tapH : 52;
+  const barY = bottom - barH;
+  const heroW = twoCol ? Math.round(contentW * (short ? 0.4 : 0.42)) : contentW;
+  const colX = twoCol ? x0 + heroW + gap * 1.5 : x0;
+  const colW = twoCol ? contentW - heroW - gap * 1.5 : contentW;
+  const bar = { x: colX, y: barY, w: colW, h: barH };
+  const secW = Math.round(Math.min(colW * 0.38, 200));
+  const barSec = { x: bar.x, y: bar.y, w: secW, h: bar.h };
+  const barPri = { x: bar.x + secW + gap, y: bar.y, w: bar.w - secW - gap, h: bar.h };
+  const colTop = bodyTop, colBot = barY - gap;     // the choices column's room
+  const base = { s, short, narrow, compactPhone, twoCol, headY, headSize, subY, sectionY, contentW, back, stepBar: step, gap, bar };
 
   if (setupStep === 'pilot') {
-    // CALM ROSTER (title overhaul): one DETAIL HERO card up top carries all
-    // the reading; below it the 18 partners are three labeled SHELVES of six
-    // small identity tiles (sprite + name only). Tap a tile → the hero
-    // explains it. The skin names the shelves (disciplines on AETHERFALL).
-    const heroW = Math.min(contentW, 860);
-    const heroY = sectionY + (short ? 2 : 8);
-    const nextH = short ? 38 : narrow ? 52 : 54;
-    const nextW = narrow ? contentW : Math.min(420, contentW * 0.46);
-    const nextY = H - bottomPad - nextH;
-    const noneH = short ? 20 : 24;
-    const noneY = nextY - noneH - (short ? 4 : 8);
-    const gap = short ? 4 : narrow ? 6 : 8;
-    const labelH = short ? 11 : 16;
-    const vgap = short ? 4 : 8;
-    // AFT-023: the guided FIRST-SESSION view — four archetype cards in a
-    // 2×2 grid plus a BROWSE ALL band, sharing the hero/none/next chrome.
+    // AFT-023: the guided FIRST-SESSION view — four archetype cards in a 2×2
+    // grid plus a BROWSE ALL door, sharing the hero/none/next chrome.
     // Render and hit-testing both key off L.simple, same-geometry rule.
     if (!pilotBrowseAll && pilotFreshSession()) {
-      const browseH = short ? 22 : 28;
-      const browseY = noneY - browseH - (short ? 4 : 8);
-      const room = browseY - (short ? 4 : 10) - heroY; // hero + grid split the room above the browse band
-      const heroH = Math.max(short ? 56 : 102, Math.min(short ? 66 : 200, room * 0.44));
-      const hero = { x: cx - heroW / 2, y: heroY, w: heroW, h: heroH };
-      const archTop0 = hero.y + hero.h + (short ? 6 : 10);
-      const archRoom = browseY - (short ? 4 : 8) - archTop0;
-      const archW = (Math.min(contentW, 640) - gap) / 2;
-      const archH = Math.max(short ? 34 : 52, Math.min(short ? 44 : 104, (archRoom - gap) / 2));
-      // center the 2×2 block in its room — tall phones breathe evenly
-      const archTop = archTop0 + Math.max(0, (archRoom - (2 * archH + gap)) * 0.35);
-      const archX0 = cx - Math.min(contentW, 640) / 2;
+      let browse, archH, archTop, hero;
+      const archW = (colW - gap) / 2;
+      if (twoCol) {
+        const room = colBot - colTop;
+        archH = Math.max(48, Math.min(short ? 120 : 210, (room - tapH - gap * 2) / 2));
+        const blockH = 2 * archH + gap + gap + tapH;
+        archTop = colTop + Math.max(0, (room - blockH) * 0.4);
+        browse = { x: colX, y: archTop + 2 * archH + gap * 2, w: colW, h: tapH };
+        hero = { x: x0, y: bodyTop, w: heroW, h: bottom - bodyTop };
+      } else {
+        browse = { x: colX, y: colBot - tapH, w: colW, h: tapH };
+        const room = browse.y - gap - colTop;
+        const heroMin = short ? 84 : 150;
+        archH = Math.max(52, Math.min(short ? 64 : 108, (room - heroMin - gap * 2) / 2));
+        archTop = browse.y - gap - (2 * archH + gap);
+        hero = { x: x0, y: bodyTop, w: contentW, h: archTop - gap - bodyTop };
+      }
       return {
-        step: 'pilot', simple: true, s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
+        ...base, step: 'pilot', simple: true,
         hero, info: hero,
-        arch: i => ({ x: archX0 + (i % 2) * (archW + gap), y: archTop + Math.floor(i / 2) * (archH + gap), w: archW, h: archH }),
-        browse: { x: cx - Math.min(340, contentW * 0.86) / 2, y: browseY, w: Math.min(340, contentW * 0.86), h: browseH },
-        none: { x: cx - Math.min(290, contentW * 0.72) / 2, y: noneY, w: Math.min(290, contentW * 0.72), h: noneH },
-        next: { x: cx - nextW / 2, y: nextY, w: nextW, h: nextH },
+        arch: i => ({ x: colX + (i % 2) * (archW + gap), y: archTop + Math.floor(i / 2) * (archH + gap), w: archW, h: archH }),
+        browse,
+        none: barSec,
+        next: barPri,
       };
     }
-    // THE VESSEL SHOWCASE (2026-07-22): the shelves cap their tile size, so a
-    // tall phone used to leave a dead band under the hero. Reserve what the
-    // three shelves actually want, then hand the leftover to the HERO card —
-    // the detail portrait grows instead of the emptiness.
-    const tileW0h = (contentW - gap * 5) / 6;
-    const tileWant = Math.max(short ? 34 : 44,
-      Math.min(narrow ? 84 : 96, tileW0h * 1.35 + 14));
-    const shelvesWant = 3 * (labelH + tileWant) + 2 * vgap;
-    const heroRoom = noneY - (short ? 4 : 10) - heroY - (short ? 4 : 10) - shelvesWant;
-    const heroH = Math.max(short ? 56 : narrow ? 102 : 122,
-      Math.min(short ? 62 : narrow ? 208 : 190, heroRoom));
-    const hero = { x: cx - heroW / 2, y: heroY, w: heroW, h: heroH };
-    const shelfRoom = noneY - (short ? 4 : 10) - (hero.y + hero.h + (short ? 4 : 10));
-    const rowH = (shelfRoom - 3 * labelH - 2 * vgap) / 3;
-    const tileW0 = (contentW - gap * 5) / 6;
-    const tileH = Math.max(short ? 34 : 44, Math.min(narrow ? 84 : 96, rowH, tileW0 * 1.35 + 14));
-    const tileW = Math.min(tileW0, tileH * 1.15);
-    const rowW = tileW * 6 + gap * 5;
-    // center the shelf block in its room — tall phones breathe evenly
-    // instead of leaving one dead band above the bottom-pinned actions
-    const shelvesH = 3 * (labelH + tileH) + 2 * vgap;
-    const shelfTop = hero.y + hero.h + (short ? 4 : 10) + Math.max(0, (shelfRoom - shelvesH) * 0.38);
+    // THE FULL CATALOG: three labelled shelves of six identity tiles. The
+    // shelves take what they need (tiles capped at a readable size) and the
+    // HERO absorbs everything else — a tall phone grows the portrait, never
+    // a dead band.
+    const tg = short ? 5 : narrow ? 6 : 8;
+    const labelH = short ? 13 : 18;
+    const vg = short ? 4 : 8;
+    const tileW0 = (colW - tg * 5) / 6;
+    let tileH, hero, shelfTop;
+    if (twoCol) {
+      const room = colBot - colTop;
+      tileH = Math.max(40, Math.min(tileW0 * 1.3, (room - 3 * labelH - 2 * vg) / 3, 132));
+      const shelvesH = 3 * (labelH + tileH) + 2 * vg;
+      shelfTop = colTop + Math.max(0, (room - shelvesH) * 0.4);
+      hero = { x: x0, y: bodyTop, w: heroW, h: bottom - bodyTop };
+    } else {
+      const room = colBot - colTop;
+      const heroMin = short ? 70 : 140;
+      tileH = Math.max(40, Math.min(tileW0 * 1.3, 96, (room - heroMin - gap - 3 * labelH - 2 * vg) / 3));
+      const shelvesH = 3 * (labelH + tileH) + 2 * vg;
+      shelfTop = colBot - shelvesH;
+      hero = { x: x0, y: bodyTop, w: contentW, h: shelfTop - gap - bodyTop };
+    }
+    const tileW = Math.min(tileW0, tileH * 1.1);
+    const rowW = tileW * 6 + tg * 5;
+    const rx = colX + (colW - rowW) / 2;
     return {
-      step: 'pilot', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
-      hero, rowW, labelH, tileW, tileH,
-      shelf: g => ({ x: cx - rowW / 2, y: shelfTop + g * (labelH + tileH + vgap), w: rowW, h: labelH }),
+      ...base, step: 'pilot', hero, rowW, labelH, tileW, tileH,
+      shelf: g => ({ x: rx, y: shelfTop + g * (labelH + tileH + vg), w: rowW, h: labelH }),
       starter: i => {
         const g = Math.floor(i / 6), col = i % 6;
-        return { x: cx - rowW / 2 + col * (tileW + gap),
-          y: shelfTop + g * (labelH + tileH + vgap) + labelH, w: tileW, h: tileH };
+        return { x: rx + col * (tileW + tg), y: shelfTop + g * (labelH + tileH + vg) + labelH, w: tileW, h: tileH };
       },
-      none: { x: cx - Math.min(290, contentW * 0.72) / 2, y: noneY, w: Math.min(290, contentW * 0.72), h: noneH },
+      none: barSec,
       info: hero, // API alias: the hero IS the info surface now
-      next: { x: cx - nextW / 2, y: nextY, w: nextW, h: nextH },
+      next: barPri,
     };
   }
 
-  const trialH = short ? 22 : 28;
-  const trialY = H - bottomPad - trialH;
-  const startH = short ? 42 : narrow ? 58 : 58;
-  const startW = narrow ? contentW : Math.min(430, contentW * 0.48);
-  const startY = trialY - startH - (short ? 5 : 9);
-  const summaryY = sectionY + (short ? 10 : 20);
-  const summaryW = Math.min(contentW, narrow ? contentW : 760);
-  const editW = short ? 64 : narrow ? 78 : 118;
-  // a skin with affinities (AETHERFALL) adds the LIGHT/DARK pick between
-  // the pilot summary and the difficulty chips; other skins reserve no room
+  // ---- step 2: CHALLENGE ----
+  // a skin with affinities (AETHERFALL) adds the oath row: the two
+  // ceremonial LIGHT/DARK cards plus the quiet UNSWORN third card (AFT-023)
   const hasAff = typeof SKIN !== 'undefined' && !!SKIN.affinities;
-  // the LIGHT/DARK choice is a REQUIRED, ceremonial pick on affinity skins —
-  // two tall mirrored cards, not a slim optional toggle (2026-07-21)
-  const affH = hasAff ? (short ? 40 : 58) : 0;
-  // AFT-023: the UNSWORN chip — a quiet third way under the two oath cards.
-  // A first-session player may launch neutral and swear later; the two
-  // ceremonial cards keep their size and drama.
-  const affNoneH = hasAff ? (short ? 15 : 19) : 0;
-  const affW = Math.min(summaryW, 560);
-  const cols = narrow ? 2 : 4, rows = Math.ceil(Object.keys(PRESETS).length / cols);
-  const gap = short ? 7 : 12;
-  const chipW = (contentW - gap * (cols - 1)) / cols;
-  // THE VESSEL SHOWCASE (2026-07-22): the summary card absorbs the screen's
-  // leftover height instead of leaving a dead gap above the launch button —
-  // a tall card means a BIG portrait of the thing you're choosing. Space is
-  // budgeted bottom-up: reserve what the affinity cards, labels and chips
-  // need at a comfortable size, then hand the remainder to the card (clamped).
-  const chipWant = short ? 34 : narrow ? 96 : 108;
-  const gapAff = short ? 6 : 10, gapLabel = short ? 14 : 25, gapChips = short ? 10 : 20;
-  const reserved = (hasAff ? affH + gapAff + affNoneH + 3 : 0) + gapLabel + gapChips
-    + rows * chipWant + gap * (rows - 1) + (short ? 8 : 18);
-  const summaryH = Math.max(short ? 54 : narrow ? 84 : 96,
-    Math.min(short ? 74 : narrow ? 230 : 210, startY - summaryY - reserved));
-  const affY = summaryY + summaryH + gapAff;
-  const diffLabelY = summaryY + summaryH + (hasAff ? affH + affNoneH + 3 + (short ? 12 : 18) : 0) + gapLabel;
-  const chipY = diffLabelY + gapChips;
-  const chipRoom = startY - (short ? 8 : 18) - chipY;
-  const chipH = Math.max(short ? 34 : 58, Math.min(narrow ? 92 : 108, (chipRoom - gap * (rows - 1)) / rows));
+  const nP = Object.keys(PRESETS).length;
+  const cols = twoCol && colW >= 620 ? 4 : 2, rows = Math.ceil(nP / cols);
+  const chipW = (colW - gap * (cols - 1)) / cols;
+  const labelH = short ? 16 : 22;
+  let summary, affY, affH, chipH, chipY;
+  if (twoCol) {
+    summary = { x: x0, y: bodyTop, w: heroW, h: bottom - bodyTop };
+    const room = colBot - colTop;
+    affH = hasAff ? (short ? 50 : 76) : 0;
+    const affBlock = hasAff ? affH + gap : 0;
+    chipH = Math.max(tapH, Math.min(short ? 84 : 120, (room - affBlock - labelH - gap * (rows - 1)) / rows));
+    const blockH = affBlock + labelH + rows * chipH + gap * (rows - 1);
+    affY = colTop + Math.max(0, (room - blockH) * 0.4);
+    chipY = affY + affBlock + labelH;
+  } else {
+    chipH = Math.max(tapH, Math.min(short ? 54 : 92, (colBot - colTop) * 0.15));
+    chipY = colBot - (rows * chipH + gap * (rows - 1));
+    affH = hasAff ? (short ? 50 : Math.max(58, Math.min(92, (colBot - colTop) * 0.14))) : 0;
+    affY = chipY - labelH - gap - affH;
+    const sTop = bodyTop, sBot = (hasAff ? affY : chipY - labelH) - gap;
+    summary = { x: x0, y: sTop, w: contentW, h: Math.max(60, sBot - sTop) };
+  }
+  const editW = narrow ? 104 : 132;
+  const showcase = summary.h >= 130;
+  // the same vertical/side rule drawVesselHero uses — CHANGE sits centred
+  // under a vertical recap, bottom-right on a wide one, right-centre on a slim one
+  const vertical = summary.h >= summary.w * 0.9 && summary.h >= 240;
+  const editPilot = vertical
+    ? { x: summary.x + summary.w / 2 - editW / 2, y: summary.y + summary.h - tapH - 12, w: editW, h: tapH }
+    : showcase
+      ? { x: summary.x + summary.w - editW - 12, y: summary.y + summary.h - tapH - 12, w: editW, h: tapH }
+      : { x: summary.x + summary.w - editW - 10, y: summary.y + summary.h / 2 - tapH / 2, w: editW, h: tapH };
+  const noneW = hasAff ? Math.round(Math.max(64, Math.min(120, colW * 0.22))) : 0;
+  const oathW = (colW - noneW - gap * 2) / 2;
   return {
-    step: 'difficulty', s, short, narrow, compactPhone, headY, headSize, subY, sectionY, contentW, back,
-    summary: { x: cx - summaryW / 2, y: summaryY, w: summaryW, h: summaryH },
-    // on a SHOWCASE card the change button drops to the bottom-right corner so
-    // the identity text can use the card's full width beside the big portrait
-    editPilot: { x: cx + summaryW / 2 - editW - 10,
-      y: summaryH >= 130 ? summaryY + summaryH - (short ? 26 : 34) - 12
-        : summaryY + summaryH / 2 - (short ? 13 : 17),
-      w: editW, h: short ? 26 : 34 },
-    affinity: hasAff ? i => ({ x: cx - affW / 2 + i * (affW / 2 + 5), y: affY, w: affW / 2 - 5, h: affH }) : null,
-    affNone: hasAff ? { x: cx - Math.min(300, affW * 0.7) / 2, y: affY + affH + 3, w: Math.min(300, affW * 0.7), h: affNoneH } : null,
-    chipsLabelY: diffLabelY,
+    ...base, step: 'difficulty',
+    summary, editPilot, showcase, vertical,
+    affinity: hasAff ? i => ({ x: colX + i * (oathW + gap), y: affY, w: oathW, h: affH }) : null,
+    affNone: hasAff ? { x: colX + 2 * (oathW + gap), y: affY, w: noneW, h: affH } : null,
+    chipsLabelY: chipY - labelH / 2 - 2,
+    chipsLabelX: colX,
     chip: i => { const c = i % cols, r = Math.floor(i / cols);
-      return { x: cx - contentW / 2 + c * (chipW + gap), y: chipY + r * (chipH + gap), w: chipW, h: chipH }; },
-    start: { x: cx - startW / 2, y: startY, w: startW, h: startH },
-    trial: { x: cx - startW / 2, y: trialY, w: startW, h: trialH },
+      return { x: colX + c * (chipW + gap), y: chipY + r * (chipH + gap), w: chipW, h: chipH }; },
+    start: barPri,
+    trial: barSec,
   };
 }
 // advanced settings overlay (sliders + accessibility toggles)
@@ -527,52 +606,260 @@ function presetGeom(i) { return setupLayout().chip(i); }
 function sliderGeom(i) { return advLayout().slider(i); }
 function startBtnGeom() { return setupLayout().start; }
 function dexBtnGeom() { return menuLayout().dex; }
-// Pause actions share one row. SETTINGS is available mid-run so touch players
+// ── AFT-029 BETWEEN-COMBAT PANELS: the shared sheet frame ───────────────────
+// Every between-combat surface (results, draft, Forge, pause, game over,
+// BOSS RUSH) lays out inside ONE content column: safe-area aware, a 16px
+// gutter (12 on the narrowest phones), a max width per surface. The bottom
+// edge is where the single PRIMARY action anchors, above SAFE_B.
+function sheetFrame(maxW = 560) {
+  const gut = W < 360 ? 12 : 16, short = H < 520;
+  const w = Math.max(200, Math.min(maxW, W - SAFE_L - SAFE_R - gut * 2));
+  const x = SAFE_L + (W - SAFE_L - SAFE_R - w) / 2;
+  const top = SAFE_T + (short ? 10 : gut), bottom = H - SAFE_B - (short ? 10 : gut);
+  return { x, w, top, bottom, cx: x + w / 2, gut, short, narrow: W < 560,
+    wide: W >= 600 && W > H * 1.25 };
+}
+// The primary slab's height: ≥44 on touch everywhere, roomier on tall phones.
+function sheetBtnH() { return H < 520 ? 44 : IS_TOUCH ? 52 : 48; }
+// A vertical stack layouter: blocks {k, h, gap, opt} are placed top-down in
+// [top, bottom]. Optional blocks drop (highest `opt` first) until it fits,
+// then gaps tighten; spare room widens the gaps a little and the rest sits
+// `bias` of the way down (0 = top-weighted, 0.5 = centred). Returns k→rect.
+function stackBlocks(blocks, top, bottom, x, w, bias = 0.3) {
+  let list = blocks.filter(b => b && b.h > 0);
+  const need = l => l.reduce((s, b, i) => s + b.h + (i ? b.gap || 0 : 0), 0);
+  while (need(list) > bottom - top) {
+    const opt = list.filter(b => b.opt).sort((a, b) => b.opt - a.opt)[0];
+    if (!opt) break;
+    list = list.filter(b => b !== opt);
+  }
+  let total = need(list), avail = bottom - top;
+  let gapK = 1;
+  if (total > avail) {
+    const gaps = list.reduce((s, b, i) => s + (i ? b.gap || 0 : 0), 0);
+    gapK = gaps > 0 ? Math.max(0.3, 1 - (total - avail) / gaps) : 1;
+  }
+  let extraGap = 0;
+  if (total < avail && list.length > 1) extraGap = Math.min(16, (avail - total) / (list.length - 1) * 0.5);
+  total = list.reduce((s, b, i) => s + b.h + (i ? (b.gap || 0) * gapK + extraGap : 0), 0);
+  let y = top + Math.max(0, (avail - total) * bias);
+  const out = {};
+  list.forEach((b, i) => {
+    if (i) y += (b.gap || 0) * gapK + extraGap;
+    out[b.k] = { x, y, w, h: b.h };
+    y += b.h;
+  });
+  return out;
+}
+// ── STAGE RESULTS layout (AFT-029): headline · 3 stat tiles · combat ledger
+// · encounter/finale rows · mastery list · NEXT · the CONTINUE slab. One
+// column on phones; two (summary | mastery) on landscape and desktop. The
+// whole screen advances on one tap (advanceResults) — the slab is the
+// affordance, so nothing here gates input; the rects exist for render and
+// for the viewport sweep.
+function resultsLayout() {
+  const R = G.results || {};
+  const F = sheetFrame(resultsSheetW());
+  const short = F.short, wide = F.wide;
+  // desktop: one composed block, centred — never content pinned to the
+  // top edge with the action stranded at the bottom of a tall window
+  if (wide && F.bottom - F.top > 560) {
+    const mid = (F.top + F.bottom) / 2;
+    F.top = mid - 280; F.bottom = mid + 280;
+  }
+  const bh = sheetBtnH();
+  const colGap = 24;
+  const colW = wide ? (F.w - colGap) / 2 : F.w;
+  const lx = F.x, rx = wide ? F.x + colW + colGap : F.x;
+  const btn = { x: rx, y: F.bottom - bh, w: colW, h: bh };
+  const bodyFam = "Verdana, 'Segoe UI', system-ui, sans-serif";
+  const lines = (txt, o) => (typeof wrapLinesNeeded === 'function' && txt) ? wrapLinesNeeded(txt, o) : 1;
+  const subTxt = resultsSubline(R);
+  const subN = lines(subTxt, { size: 12, min: 10, weight: 700, maxW: colW - 8, maxLines: 2 });
+  const rowW = colW;
+  const descN = (R.objectives || []).map(o => lines(o.desc, { size: 10.5, min: 10, weight: 600, family: bodyFam, maxW: rowW - 54, maxLines: 2 }));
+  const outcomes = R.outcomes && (R.outcomes.dispersed || R.outcomes.rescued || R.outcomes.neutralized);
+  const finN = R.finaleMastery ? lines(resultsFinaleCopy(R).line, { size: 10.5, min: 10, weight: 600, family: bodyFam, maxW: rowW - 30, maxLines: 2 }) : 0;
+  const finV = !!(R.finaleCounters && Object.values(R.finaleCounters).some(v => v > 0)); // the verbs line
+  const nextN = R.nextName ? lines('NEXT  ' + R.nextName, { size: 13, min: 10, weight: 800, maxW: rowW - 32, maxLines: 2 }) : 0;
+  // two metric sets: the roomy one, and a COMPACT one used only when a
+  // maximal payload (objective + finale + three two-line medals) would not
+  // fit a small phone. Past that, optional rows drop in `opt` order (flavor
+  // → note → eyebrow → outcomes → ledger); must-read rows never drop.
+  const build = c => ({
+    A: [ // the summary column
+      { k: 'eyebrow', h: 22, opt: short || c ? 7 : 0 },
+      { k: 'hero', h: c ? 34 : short ? 36 : Math.round(Math.min(40, W / 10)) + 8, gap: 4 },
+      { k: 'sub', h: 15 * subN, gap: 2 },
+      { k: 'tiles', h: c ? 50 : short ? 54 : 74, gap: c || short ? 8 : 14 },
+      { k: 'ledger', h: c || short ? 32 : 40, gap: 8, opt: c ? 5 : 0 },
+      outcomes ? { k: 'outcomes', h: 20, gap: 6, opt: c ? 6 : 0 } : null,
+    ],
+    B: [ // the mastery column (continues the summary on phones)
+      R.objective ? { k: 'objective', h: c || short ? 34 : 40, gap: c ? 8 : 10 } : null,
+      R.finaleMastery ? { k: 'finale', h: (c ? 34 : 40) + finN * 13 + (finV ? 14 : 0), gap: 8 } : null,
+      (R.objectives || []).length ? { k: 'mlabel', h: 16, gap: c || short ? 8 : 14 } : null,
+      ...descN.map((n, i) => ({ k: 'obj' + i, h: (c ? 26 : short ? 30 : 36) + n * 13, gap: c ? 4 : 6 })),
+      !R.medalsSaved ? { k: 'note', h: 14, gap: 6, opt: 8 } : null,
+    ],
+    tail: [
+      R.nextName ? { k: 'next', h: 26 + nextN * 14, gap: c ? 8 : 12 } : null,
+      R.flavor ? { k: 'flavor', h: 34, gap: 10, opt: 9 } : null,
+    ],
+  });
+  const minNeed = list => list.filter(b => b && !b.opt).reduce((s, b, i) => s + b.h + (i ? (b.gap || 0) * 0.3 : 0), 0);
+  let S = build(false), compact = false;
+  const fits = s => wide
+    ? Math.max(minNeed([...s.A, ...s.tail]), minNeed(s.B)) <= btn.y - 12 - F.top
+    : minNeed([...s.A, ...s.B, ...s.tail]) <= btn.y - 12 - F.top;
+  if (!fits(S)) { S = build(true); compact = true; }
+  const { A, B, tail } = S;
+  let rects;
+  if (wide) {
+    const left = stackBlocks([...A, ...tail], F.top, F.bottom, lx, colW, 0.5);
+    // the mastery column starts level with the stat tiles when it fits there
+    const needB = B.filter(Boolean).reduce((s, b, i) => s + b.h + (i ? b.gap || 0 : 0), 0);
+    const rTop = left.tiles && left.tiles.y + needB <= btn.y - 12 ? left.tiles.y : F.top;
+    const right = stackBlocks(B, rTop, btn.y - 12, rx, colW, rTop === F.top ? 0.5 : 0);
+    rects = { ...left, ...right };
+  } else rects = stackBlocks([...A, ...B, ...tail], F.top, btn.y - 12, F.x, F.w, 0.3);
+  return { F, wide, short, compact, btn, colW, rects, objN: descN.length };
+}
+function resultsSheetW() { return W >= 600 && W > H * 1.25 ? 1000 : 520; }
+// the results copy both the layout (line counts) and render read
+function resultsSubline(R) { return (R.stageTitle ? R.stageTitle + '  ·  ' : '') + (R.region || ''); }
+// AFT-020: a finale clear names the MASTERY the encounter taught — countered
+// (the signature answered) or mastered (every major beat)
+function resultsFinaleCopy(R) {
+  const m = R.finaleMastery;
+  return m === 'mastered' ? { verdict: '★ MASTERED', color: '#ffd54f', line: 'EVERY MAJOR BEAT ANSWERED — YOUR REROLL WILL PIN ITS BEST OFFER' }
+    : m === 'countered' ? { verdict: 'COUNTERED', color: '#80d8ff', line: 'SIGNATURE COUNTERED — A FIFTH OFFER AWAITS IN THE DRAFT' }
+      : { verdict: 'CLEARED', color: '#9fb2cc', line: 'COUNTER THE SIGNATURE NEXT TIME FOR A WIDER DRAFT' };
+}
+// Pause help lines: the input → action rows the pause card lists. CLASSIC
+// is ball-only — no gun exists, so its help never mentions one.
+function pauseHelpLines() {
+  return G.mode === 'classic'
+    ? (IS_TOUCH
+      ? ['DRAG — MOVE PADDLE', 'TAP THE PLAYFIELD — LAUNCH THE BALL', 'MEGA BUTTON — BALL OVERDRIVE WHEN THE RING IS FULL', 'THE BALL — YOUR ONLY WEAPON, KEEP IT ALIVE']
+      : ['MOUSE — MOVE PADDLE', 'CLICK / SPACE — LAUNCH THE BALL', 'E — MEGA BALL OVERDRIVE WHEN METER IS FULL', 'M — MUSIC ON / OFF', 'P / ESC — PAUSE', 'Q — QUIT TO MENU'])
+    : (IS_TOUCH
+      ? ['DRAG ANYWHERE — MOVE', SETTINGS.autoFire ? 'AUTO-FIRE — ON' : 'TAP FIRE — SHOOT', 'HOLD FIRE — CHARGE A BIG SHOT', 'MEGA BUTTON — EVOLVE WHEN THE RING IS FULL']
+      : ['MOUSE — MOVE', 'CLICK / SPACE — FIRE', 'RIGHT-CLICK / SHIFT — CHARGE A BIG SHOT', 'E — MEGA EVOLVE WHEN METER IS FULL', 'M — MUSIC ON / OFF', 'P / ESC — PAUSE', 'Q — QUIT TO MENU']);
+}
+// PAUSE (AFT-029): ONE centred sheet — header, the controls card, the MUSIC
+// row, SETTINGS | QUIT, the primary RESUME slab, and the quiet cheat chip.
+// Short landscape splits header+help | actions into two columns. A tap
+// anywhere outside a control still resumes (input.js), so RESUME is the
+// affordance, not a gate. SETTINGS stays available mid-run so touch players
 // can fix follow speed / button placement without abandoning their journey.
 function pauseActionLayout() {
-  const gap = 12, totalW = Math.min(520, W * 0.9), h = 46;
-  const w = (totalW - gap) / 2, x = W / 2 - totalW / 2, y = H * 0.72;
+  const F = sheetFrame(pauseSheetW());
+  const short = F.short, wide = W > H * 1.3 && H < 560;
+  const bh = IS_TOUCH ? (short ? 44 : 48) : 44, gap = short ? 8 : 10, pad = 16;
+  const cheatH = IS_TOUCH ? 44 : 32;
+  const nL = pauseHelpLines().length, lineH = short ? 22 : 30;
+  const headH = short ? 40 : 58;
+  const actH = bh * 3 + cheatH + gap * 3;
+  const pw = F.w, px = F.x;
+  if (wide) {
+    const colW = (pw - pad * 3) / 2;
+    const helpH = nL * lineH + 14;
+    const ph = Math.min(F.bottom - F.top, pad * 2 + Math.max(headH + gap + helpH, actH));
+    const py = F.top + Math.max(0, (F.bottom - F.top - ph) / 2);
+    const ax = px + pad * 2 + colW, ay = py + pad + Math.max(0, (ph - pad * 2 - actH) / 2);
+    const half = (colW - gap) / 2;
+    return {
+      wide, panel: { x: px, y: py, w: pw, h: ph },
+      head: { x: px + pad, y: py + pad, w: colW, h: headH },
+      help: { x: px + pad, y: py + pad + headH + gap, w: colW, h: Math.min(helpH, ph - pad * 2 - headH - gap) },
+      music: { x: ax, y: ay, w: colW, h: bh },
+      settings: { x: ax, y: ay + bh + gap, w: half, h: bh },
+      quit: { x: ax + half + gap, y: ay + bh + gap, w: half, h: bh },
+      resume: { x: ax, y: ay + (bh + gap) * 2, w: colW, h: bh },
+      cheat: { x: ax + colW / 2 - 90, y: ay + (bh + gap) * 3, w: 180, h: cheatH },
+    };
+  }
+  const iw = pw - pad * 2;
+  let helpH = nL * lineH + 14;
+  let ph = pad * 2 + headH + gap + helpH + gap + actH;
+  if (ph > F.bottom - F.top) { helpH = 0; ph = pad * 2 + headH + gap + actH; }
+  const py = F.top + Math.max(0, (F.bottom - F.top - ph) / 2);
+  let y = py + pad + headH + gap;
+  const help = helpH ? { x: px + pad, y, w: iw, h: helpH } : null;
+  if (helpH) y += helpH + gap;
+  const half = (iw - gap) / 2;
   return {
-    settings: { x, y, w, h },
-    quit: { x: x + w + gap, y, w, h },
+    wide, panel: { x: px, y: py, w: pw, h: ph },
+    head: { x: px + pad, y: py + pad, w: iw, h: headH }, help,
+    music: { x: px + pad, y, w: iw, h: bh },
+    settings: { x: px + pad, y: y + bh + gap, w: half, h: bh },
+    quit: { x: px + pad + half + gap, y: y + bh + gap, w: half, h: bh },
+    resume: { x: px + pad, y: y + (bh + gap) * 2, w: iw, h: bh },
+    cheat: { x: px + pw / 2 - 90, y: y + (bh + gap) * 3, w: 180, h: cheatH },
   };
 }
+function pauseSheetW() { return W > H * 1.3 && H < 560 ? 720 : 440; }
 function pauseSettingsGeom() { return pauseActionLayout().settings; }
 function pauseQuitGeom() { return pauseActionLayout().quit; }
 // AFT-021 P2: the live SOUND circle moved off the combat screen — this is
 // its pause-screen home (one tap to mute, same as before, minus the overlap)
-function pauseMusicGeom() {
-  const s = pauseSettingsGeom();
-  return { x: s.x, y: s.y - 44, w: s.w + 12 + s.w, h: 32 };
-}
+function pauseMusicGeom() { return pauseActionLayout().music; }
+// GAME OVER (AFT-029): one sheet — header + score, the cause card, stat
+// tiles, then the action stack: three secondaries above ONE primary slab.
+// The primary is CONTINUE when a journey checkpoint exists (progress is
+// never lost), RETRY otherwise. button(i) keeps its index → action meaning
+// (0 retry · 1 continue/new run · 2 trial · 3 title) so input never moves.
 function gameOverLayout() {
-  const narrow = W < 620, pw = Math.min(620, W * 0.94);
-  const ph = Math.min(H * 0.86, narrow ? 560 : 500);
-  const px = W / 2 - pw / 2, py = Math.max(22, H / 2 - ph / 2);
-  const gap = 10, by = py + ph - (narrow ? 116 : 62);
-  const bw = narrow ? (pw - 42) / 2 : (pw - 70) / 4;
+  const F = sheetFrame(W >= 600 && W > H * 1.25 ? 860 : 560);
+  const narrow = W < 620, wide = F.wide && H < 620 || (W >= 900 && W > H * 1.25);
+  const pw = F.w, px = F.x;
+  const ph = Math.min(F.bottom - F.top, wide ? 470 : 680);
+  const py = F.top + Math.max(0, (F.bottom - F.top - ph) / 2);
+  const pad = 16, gap = 10, bh = sheetBtnH();
+  const pi = (RUN_CKPT && !G.daily && !G.trial) ? 1 : 0;
+  const order = [0, 1, 2, 3].filter(i => i !== pi);
+  const iw = pw - pad * 2;
+  let rects = {};
+  let actionsTop;
+  if (wide) { // one row: three secondaries + the wider primary at the right
+    const unit = (iw - gap * 3) / 4.6;
+    const y = py + ph - pad - bh;
+    order.forEach((i, k) => { rects[i] = { x: px + pad + k * (unit + gap), y, w: unit, h: bh }; });
+    rects[pi] = { x: px + pad + 3 * (unit + gap), y, w: unit * 1.6, h: bh };
+    actionsTop = y;
+  } else {
+    const yP = py + ph - pad - bh, yS = yP - gap - bh;
+    const sw = (iw - gap * 2) / 3;
+    rects[pi] = { x: px + pad, y: yP, w: iw, h: bh };
+    order.forEach((i, k) => { rects[i] = { x: px + pad + k * (sw + gap), y: yS, w: sw, h: bh }; });
+    actionsTop = yS;
+  }
+  const share = { x: px + pad, y: actionsTop - gap - 44, w: iw, h: 44 };
   return {
-    px, py, pw, ph, narrow,
-    button: i => ({ x: px + 16 + (i % (narrow ? 2 : 4)) * (bw + gap),
-      y: by + Math.floor(i / (narrow ? 2 : 4)) * 50, w: bw, h: 42 }),
-    share: { x: px + 16, y: py + ph - 164, w: pw - 32, h: 38 },
+    px, py, pw, ph, narrow, wide, pad, primary: pi,
+    button: i => rects[i],
+    share,
+    body: { x: px + pad, y: py + pad, w: iw, h: (G.daily ? share.y - gap : actionsTop - gap) - (py + pad) },
   };
 }
-// BOSS RUSH summary: the game-over panel's frame with two centred actions
-// (RETRY RUSH / TITLE); the nine splits live in the body above them
+// BOSS RUSH summary: the game-over sheet's frame with two actions on one
+// row — ⌂ TITLE (secondary) and the primary RETRY slab; the nine splits
+// live in the body above them
 function rushSummaryLayout() {
   const L = gameOverLayout();
-  const gap = 12, bw = Math.min(220, (L.pw - 32 - gap) / 2), bh = L.narrow ? 44 : 42;
-  const by = L.py + L.ph - bh - 16, bx = W / 2 - bw - gap / 2;
-  return { ...L, retry: { x: bx, y: by, w: bw, h: bh }, title: { x: bx + bw + gap, y: by, w: bw, h: bh } };
+  const gap = 10, bh = sheetBtnH(), iw = L.pw - L.pad * 2;
+  const by = L.py + L.ph - L.pad - bh;
+  const tw = Math.min(150, iw * 0.34);
+  return { ...L, retry: { x: L.px + L.pad + tw + gap, y: by, w: iw - tw - gap, h: bh },
+    title: { x: L.px + L.pad, y: by, w: tw, h: bh },
+    body: { x: L.px + L.pad, y: L.py + L.pad, w: iw, h: by - gap - (L.py + L.pad) } };
 }
 // ---- CHEAT CODES: a small ornate chip on the PAUSE screen (visible when
-// you go looking, never on screen during play — no temptation mid-run)
+// you go looking, never on screen during play — no temptation mid-run).
+// AFT-029: it rides the pause sheet's layout, under the RESUME slab.
 let cheatOpen = false;
-function cheatBtnGeom() {
-  const q = pauseQuitGeom();
-  return { x: W / 2 - 84, y: Math.min(H - 44, q.y + q.h + 16), w: 168, h: 30 };
-}
+function cheatBtnGeom() { return pauseActionLayout().cheat; }
 function cheatLayout() {
   const pw = Math.min(440, W * 0.94), cols = 3;
   const rows = Math.ceil(SKIN.cheatItems.length / cols);

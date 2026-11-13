@@ -5,6 +5,74 @@ decisions. Newest entries first. Roadmap: `FULL_GAME_ROADMAP.md`.
 
 ---
 
+## 2026-11-13 — AFT-029 (slice 3): the game was never measured at a phone — ranks, the overlap truth, the audio rebuild, the screen redesigns
+
+Owner: "limit reset. fix all that remains." Four builders ran in parallel
+(title/vessel-select, results/draft/Forge/pause, combat HUD, music engine)
+on a shared design kit (`UI`, `uiPanel`, `uiButton`, `uiChip`, `uiEnter`,
+`uiStage` — top of render.js) while the motion/layout work below was done
+by measurement. `tools/run-baseline.js` gained `BASE_VP=412x775` (pair with
+`BASE_QUERY=touch`): **the balance matrix had only ever run at 1280×900.**
+
+**§1 A phone fielded half the game.** The squad builder's spacing guarantee
+caps riders by the formation's WIDTH. At 412px: level 1 seated 5 of 9
+riders, level 17 seated 10 of 20, level 26 seated 9 of 26; the STARFIGHTER
+sweep averaged 34.9s a stage against ~46s on desktop and level 2 could end
+in 5 seconds. Fix (tall phones only — `W < 560 && H > 1.5·W`): the airspace
+floor starts at 50% of the screen instead of 42% (still ≥170px clear of the
+vessel), sprites run 18% larger, lattice squads (arc/chevron/lane) are
+seated HONESTLY (a row holds what its real width holds at the solver's own
+minimum distance) and stand in up to THREE RANKS, slot beneath slot
+(`F.rowDy`); riders that still cannot be seated are owed to the
+reinforcement flights (`G.reinfBonus`, +1 flight when the debt is large).
+Phone roster: 314/315 of the intended riders. Phone sweep mean 34.9 → 39.0s.
+
+**§2 Squads were standing inside each other — everywhere.** A probe over
+all eighteen ordinary STARFIGHTER stages counted settled riders closer than
+90% of the solver's own distance: thousands of pair-frames per stage, up to
+79px deep, at 1280×900 as well as on a phone, plus riders parked past the
+screen edge. Three causes: (a) authored choreography was EXEMPT from the
+separation solver ("it holds its own clean slots" — it does not: nested
+rings sat 40px apart for 60px sprites, pincer wings close onto each other,
+the mastery phalanx spaced riders rx·0.42 apart); (b) the eased blend
+settled at ~88% of the needed separation, so every standing neighbour sat a
+few px inside the other forever; (c) AFT-028's rank spawned every SURVIVE
+top-up flight onto the SAME slots as the one before. Fixes: every settled
+flyer is solved on every screen; the blend takes the solve exactly unless
+the offset is GROWING (only growth is eased); a ring under a larger ring
+sharing its centre is pulled in to a full sprite gap, a ring seats only what
+its minor axis holds, and one too small for three riders is not manned;
+phalanx slots have a floor (`F.cell`); a rank arrives into FREE AIR above or
+below the living flyers (fewer ranks if only part fits, skipped if none);
+riders are clamped on-screen. The suite flew ONE junkie level in its
+overlap test — level 4, the one clean family. It now flies all eighteen at
+412×775 and 1280×800 (`AFT-029: every STARFIGHTER stage…`): worst standing
+overlap 4/360 frames on a phone, 17/360 on desktop.
+
+**§3 Also in this slice.** The LANDING (landmarks rise back during
+`resolve`, mirror of the take-off); AETHERFALL's realm bosses are
+SOVEREIGNS everywhere (lexicon + `stageNames` + the reveal line through
+`lex`); `swingX` may be zero (a body that already spans the screen holds
+still); level-2 wardbreak can still be finished in under ten seconds by a
+player who beelines the three sources — that is the authored "outsmart the
+wave" rule, left alone.
+
+**§4 The audio rebuild (builder report, measured not heard).** Compositions
+untouched (`ADVENTURE_MUSIC`, `buildMusicPattern`, `bossMusicHeat`). Voices:
+subtractive leads (two detuned oscillators → resonant lowpass with its own
+envelope, vibrato on long notes), FM bell/marimba/glass, soft-clipped
+guitar/drive, a stereo detuned pad that ducks on the kick, sub+harmonic
+bass, a synthesized kit per region (`MUSIC_KITS`), arps/sparkle/counter in
+the stereo field. Bus: glue compressor → limiter → soft clip; `musicDry` for
+bass/kick; highpassed reverb return. Measured: themes −40…−34.5 →
+−29.9…−27.4 LUFS (2.5 dB spread), stereo correlation 0.99 → 0.78–0.94, a
+40-hit SFX pile-up peaked 2.8–3.3 (hard clipping) → 0.91, envelope click
+flags 16–57 per theme → 0; polyphony capped (24 melodic slots, 44 SFX).
+Music gained ~3 dB on SFX (`MUSIC_TRIM` 0.12 is the one knob).
+`audioUseContext(ctx)` is the offline-measurement hook. **What nobody has
+heard:** patch character, low end on a phone speaker, the kick ducking, the
+reverb amount — owner listening notes are in the handoff.
+
 ## 2026-11-12 — AFT-029 (slice 1): THE POLISH REBUILD begins — phantom notch, the flown sky, the swing
 
 Owner, after playing AFT-028 on a phone over the LAN (`node serve.js`,

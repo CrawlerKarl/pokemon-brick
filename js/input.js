@@ -19,21 +19,28 @@ function touchButtons() {
   // AFT-021 P2: ONE top corner target — pause. The sound toggle moved to the
   // pause screen (it was a second large circle floating over the formation
   // zone; live combat keeps only what live combat needs).
+  // AFT-030 (HUD rebuild): the two thumb pads share ONE centre line (the
+  // dock grid), and pause lives IN the top bar's right end (render.js
+  // hudBarLayout reads this rect; HP sits left of it).
+  const armed = blasterArmed();
+  const pr = Math.min(24, 22 * scale);
   const b = {
-    mega:  { x: edge(138), y: base - 40, r: 30 * scale }, // beside FIRE — paddle rides above both
+    // beside FIRE — or, in CLASSIC (no FIRE pad), in FIRE's own corner slot
+    // (the gap scales with the pads, so their captions never run together)
+    mega:  { x: edge(armed ? 58 + 72 * scale + 16 : 58), y: base - 42, r: 30 * scale },
     // AFT-022 F3: pause NEVER mirrors. Only the lower thumb pads follow
     // handedness — the upper-LEFT column belongs to score/COMBO/RIFT KEY and
     // the objective band, and a mirrored pause circle sat right on top of
     // them. Pause is a rare deliberate reach, not a thumb control; the
-    // upper-right slot under the lives cluster is reserved for it in every
-    // layout, so left- and right-handed play share one top row.
-    pause: { x: W - 28 - SAFE_R, y: 86 + SAFE_T, r: 22 * scale }, // ≥44 px visible targets
+    // upper-right slot of the top bar is reserved for it in every layout,
+    // so left- and right-handed play share one top row.
+    pause: { x: W - SAFE_R - 12 - pr, y: 24 + SAFE_T, r: pr }, // ≥44 px visible target at scale 1
   };
   // FIRE only when the blaster is armed — CLASSIC has none until you earn it,
   // and the ball is launched by tapping the playfield, not this pad. In the
   // shooter modes this ONE pad also charges when held, so there is no separate
   // CHARGE pad and the other thumb is free to fly/steer.
-  if (blasterArmed()) b.fire = { x: edge(58), y: base - 42, r: 42 * scale };
+  if (armed) b.fire = { x: edge(58), y: base - 42, r: 42 * scale };
   return b;
 }
 function inCircle(x, y, b, slop = 8) { return Math.hypot(x - b.x, y - b.y) < b.r + slop; }
@@ -690,36 +697,63 @@ function handleSavePress(x, y, A) {
     return;
   }
 }
-// between-wave upgrade cards: 3 across on desktop, stacked rows on phones
+// THE DRAFT SHEET (AFT-029) — the one layout behind every hand (stage
+// dividend, recovery, rush armory, Forge steps) AND the Forge action menu.
+// Header at the top; on phones the cards stack BOTTOM-anchored (thumb
+// reach) with the build strip above them and the journey map in the spare
+// room; landscape/desktop deal the cards in a row. ONE action bar anchors
+// at the bottom above SAFE_B: REROLL/BACK · the primary INSTALL · VIEW BUILD.
+// Render and every hit-test read this function only.
 function upgradeLayout() {
+  const forgeMenu = !!(G.forge && G.forge.step === 'menu' && !G.upgradeChoices);
   // AFT-020: finale VICTORY DRAFTS deal 4 (or, countered, 5) offers — the
-  // layout reads the live hand size so both branches stay contained
-  const n = Math.max(3, (G.upgradeChoices || []).length || 3);
+  // layout reads the live hand size so both branches stay contained; the
+  // Forge menu reads its live action count (unavailable actions are omitted)
+  const n = forgeMenu ? Math.max(1, typeof forgeActions === 'function' ? forgeActions().length : 3)
+    : Math.max(3, (G.upgradeChoices || []).length || 3);
   const short = H < 520;
   const stacked = W < 560 && !short;
-  if (stacked) {
-    const ch = Math.min(108, Math.max(58, (H - 210) / n - 14));
-    const cw = Math.min(380, W * 0.92);
-    const x = W / 2 - cw / 2, y0 = Math.min(H * 0.38, H - n * (ch + 14) - 100);
-    const ay = Math.min(y0 + n * (ch + 14) + 6, H - 86), aw = Math.min(150, (W - 36) / 2);
-    const cbw = Math.min(240, aw * 2);
-    return { stacked, short, card: i => ({ x, y: y0 + i * (ch + 14), w: cw, h: ch }),
-      confirm: { x: W / 2 - cbw / 2, y: ay, w: cbw, h: 36 },
-      reroll: { x: W / 2 - aw - 6, y: ay + 44, w: aw, h: 32 },
-      tree: { x: W / 2 + 6, y: ay + 44, w: aw, h: 32 } };
+  const F = sheetFrame(stacked ? 560 : 1120);
+  if (!stacked && F.bottom - F.top > 640) { // desktop: one composed block, centred
+    const mid = (F.top + F.bottom) / 2;
+    F.top = mid - 320; F.bottom = mid + 320;
   }
-  const gap = n > 3 ? 14 : 22;
-  const cw = Math.min(250, (W - 60 - (n - 1) * gap) / n), ch = Math.min(252, H * 0.4);
-  const total = cw * n + gap * (n - 1);
-  const cy = Math.min(H * 0.4, H - ch - 60);
-  const ay = Math.min(cy + ch + 16, H - 48);
-  // three-button row: REROLL · CONFIRM (widest — it's the primary action) · TREE
-  const bw = Math.min(150, (W - 72) / 3.5), cbw = Math.min(200, bw * 1.35), bgap = 12;
-  const row = bw * 2 + cbw + bgap * 2;
-  return { stacked, short, card: i => ({ x: W / 2 - total / 2 + i * (cw + gap), y: cy, w: cw, h: ch }),
-    reroll: { x: W / 2 - row / 2, y: ay, w: bw, h: 34 },
-    confirm: { x: W / 2 - cbw / 2, y: ay, w: cbw, h: 34 },
-    tree: { x: W / 2 + row / 2 - bw, y: ay, w: bw, h: 34 } };
+  const bh = sheetBtnH(), gap = short ? 8 : 10;
+  const headH = short ? 40 : 58, metaH = 24;
+  const head = { x: F.x, y: F.top, w: F.w, h: headH };
+  const barW = stacked ? F.w : Math.min(640, F.w);
+  const bar = { x: F.cx - barW / 2, y: F.bottom - bh, w: barW, h: bh };
+  const sw = Math.round((barW - gap * 2) * (W < 360 ? 0.28 : 0.27));
+  const reroll = { x: bar.x, y: bar.y, w: sw, h: bh };
+  const confirm = { x: bar.x + sw + gap, y: bar.y, w: barW - sw * 2 - gap * 2, h: bh };
+  const tree = { x: bar.x + barW - sw, y: bar.y, w: sw, h: bh };
+  const cardsBottom = forgeMenu ? F.bottom : bar.y - (short ? 10 : 14);
+  const regionTop = head.y + headH + gap;
+  if (stacked) {
+    const cgap = n > 3 ? 8 : 10;
+    const avail = cardsBottom - regionTop - metaH - 8;
+    const ch = Math.max(58, Math.min(forgeMenu ? 116 : 124, (avail - (n - 1) * cgap) / n));
+    const y0 = cardsBottom - (n * ch + (n - 1) * cgap);
+    const meta = { x: F.x, y: y0 - metaH - 8, w: F.w, h: metaH };
+    const room = meta.y - regionTop;
+    // the map + its prompt line sit centred in the spare room
+    const map = room >= 56 ? { x: F.x, y: regionTop + Math.max(0, (room - 48 - 34) * 0.5), w: F.w, h: 48 } : null;
+    return { stacked, short, n, forgeMenu, head, meta, map, bar, reroll, confirm, tree,
+      card: i => ({ x: F.x, y: y0 + i * (ch + cgap), w: F.w, h: ch }) };
+  }
+  const cgap = n > 3 ? 12 : 16;
+  const cw = Math.min(short ? 210 : 260, (F.w - (n - 1) * cgap) / n);
+  const total = cw * n + cgap * (n - 1);
+  const avail = cardsBottom - regionTop - metaH - 8;
+  const mapH = !short && avail >= 300 + 64 ? 48 : 0;
+  const ch = Math.max(120, Math.min(short ? 260 : forgeMenu ? 240 : 310, avail - (mapH ? mapH + 16 : 0)));
+  const free = Math.max(0, avail - (mapH ? mapH + 16 : 0) - ch);
+  const metaY = regionTop + (mapH ? mapH + 16 : 0) + free * 0.45;
+  const x0 = F.cx - total / 2;
+  const map = mapH ? { x: F.cx - Math.min(F.w, 720) / 2, y: regionTop + free * 0.3, w: Math.min(F.w, 720), h: mapH } : null;
+  return { stacked, short, n, forgeMenu, head, map, bar, reroll, confirm, tree,
+    meta: { x: x0, y: metaY, w: total, h: metaH },
+    card: i => ({ x: x0 + i * (cw + cgap), y: metaY + metaH + 8, w: cw, h: ch }) };
 }
 // which tree node the player last tapped, so the detail panel can explain it.
 // kind: 'tier' (pi,ti) · 'bridge' (bi) · 'fusion' (fi) · 'apex' (ai) · 'sat' (si)
@@ -1228,7 +1262,7 @@ function pickUpgrade(i) {
     serve();
     setAnnounce(c.stack.icon, c.stack.color,
       c.stack.name + ' ×' + G.stacks[c.stack.key],
-      c.stack.desc, 2.4, G.mode === 'junkie' ? 'HELD ITEM STACKED — CHECK YOUR PILOT' : 'MASTERY STACKED — CHECK YOUR BUILD RAIL');
+      c.stack.desc, 2.4, G.mode === 'junkie' ? lex('HELD ITEM STACKED — CHECK YOUR PILOT') : 'MASTERY STACKED — CHECK YOUR BUILD RAIL');
     queueSecretRewardNotice();
     return;
   }
@@ -1254,7 +1288,7 @@ function pickUpgrade(i) {
   setAnnounce(tier.icon, c.path.color,
     (capped ? '★ ' : '') + shownName + (capped ? ' ★' : ''),
     tierDesc(c.pathKey, c.tierIdx), capped ? 3 : 2.2,
-    (G.mode === 'junkie' ? 'HELD ITEM EQUIPPED · ' : '') + skinPathName(c.pathKey) + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
+    (G.mode === 'junkie' ? lex('HELD ITEM EQUIPPED · ') : '') + skinPathName(c.pathKey) + ' PATH ' + pathLvl(c.pathKey) + '/4' + (capped ? ' — CAPSTONE UNLOCKED!' : ''));
   queueSecretRewardNotice();
   if (capped) SFX.mega();
 }

@@ -1,6 +1,40 @@
 # HANDOFF — resume here
 
-> ## STATUS (2026-11-12, late) — AFT-029 THE POLISH REBUILD is IN PROGRESS; everything is COMMITTED locally, nothing is pushed or deployed
+> ## STATUS (2026-11-13) — AFT-029 THE POLISH REBUILD, slice 3: every screen redesigned on one kit, phone layout measured and fixed, music rebuilt. Committed locally; NOT pushed or deployed.
+>
+> **Read the 2026-11-13 log entry first.** In one paragraph: the game had
+> never been measured at a phone. At 412×775 it fielded half its riders and
+> squads overlapped on most stages (on desktop too — the suite's overlap
+> test only flew level 4). Tall phones now stand formations in up to three
+> RANKS with larger sprites and a lower floor; every settled flyer is
+> solved; rings keep a sprite gap; reinforcements arrive into free air.
+> The title, vessel-select, results, draft, Forge, pause and combat HUD
+> were rebuilt on the shared kit at the top of render.js; the music engine
+> has real instrument voices behind a limiter.
+>
+> **OWNER, ON YOUR PHONE — the things no tool here can judge:**
+> 1. **Listen.** Patch character per realm (FM bell/marimba/glass may be
+>    metallic; brass/strings attack may feel late; drive may be harsh), low
+>    end on the phone speaker, the kick ducking (pulse, not seasick), the
+>    reverb/echo amount, music vs enemy-shot cues (music gained ~3 dB —
+>    `MUSIC_TRIM` in audio.js is the knob), and any hiccup the first time
+>    audio starts.
+> 2. **Feel.** Do ranks of larger enemies read well; is the lower phone
+>    floor still comfortably clear of your vessel; do boss fights on the
+>    phone feel right (finales were NOT re-laid-out, only ordinary stages).
+> 3. **Look.** Every redesigned screen at your real size, and that the HUD
+>    sits at the very top inside your browser (the phantom-notch fix).
+>
+> **Not done / known rough:** finale (boss) stages have had no phone
+> layout pass; BREAKER/BLASTER were not measured at a phone at all (only
+> STARFIGHTER — run `BASE_VP=412x775 BASE_QUERY=touch` on them next); the
+> trial picker's chips and the journal/constellation frame keep their old
+> styling; level 2's ward objective can still end in ~9s for a player who
+> beelines the three sources (authored rule, left alone); nothing is
+> pushed — `git push`, the Pages build, and the AETHERFALL dist release
+> all wait on the owner's word.
+>
+> ## Earlier — slice 1 and 2 (2026-11-12, late)
 >
 > **Owner's standing brief (verbatim intent):** the game "still feels really
 > rough"; keep the concept, but redesign UI, intro screens, music and
