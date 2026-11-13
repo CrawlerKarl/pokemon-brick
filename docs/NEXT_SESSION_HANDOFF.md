@@ -32,10 +32,9 @@
 > owner's word — both sites.
 >
 > **AFT-031 FULL SONGS (evening):** every realm, boss and the menu now
-> plays a 64–79s composed piece (log entry AFT-031). COMMITTED LOCALLY,
-> NOT DEPLOYED — the owner was sent five audio previews and decides after
-> listening. If they approve: push, trigger both Pages builds, rebuild and
-> ship the dist. If they want changes, the levers are `MUSIC_SONGS`
+> plays a 64–79s composed piece (log entry AFT-031). The owner was sent
+> five audio previews and said "Deploy them" — PUSHED AND LIVE on both
+> sites (2026-11-13). If they later want changes, the levers are `MUSIC_SONGS`
 > (form/progressions/voices per theme), `SONG_LEVELS` (section mix) and
 > the patches (`horn`, `harp`, `musicString`); re-render previews with the
 > harness in the session scratch `songs/` folder's pattern (offline

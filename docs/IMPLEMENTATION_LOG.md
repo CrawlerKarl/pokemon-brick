@@ -79,8 +79,8 @@ Owner: "can we upgrade the music?" → chose **write full songs** in an **epic
 fantasy adventure** style. The instruments were rebuilt in AFT-030; the
 compositions were still one 8-note motif rotated over four chords for 8
 bars (~15s) on a loop. Built by a subagent to a written musical spec;
-measured, not heard. Gate GREEN, suite 146/146. **Committed locally, NOT
-deployed — the owner listens to the previews first.**
+measured, not heard. Gate GREEN, suite 146/146. The owner was sent five
+audio previews and approved the deploy the same evening — live on both sites.
 
 - **`buildMusicPattern(genIdx, boss, variant?)` is now a deterministic
   ARRANGER** (no randomness; two builds are identical). It returns a whole
