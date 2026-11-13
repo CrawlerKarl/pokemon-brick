@@ -31,6 +31,16 @@
 > first seconds without one reserve flight. PUSHED AND DEPLOYED at the
 > owner's word — both sites.
 >
+> **AFT-031 FULL SONGS (evening):** every realm, boss and the menu now
+> plays a 64–79s composed piece (log entry AFT-031). COMMITTED LOCALLY,
+> NOT DEPLOYED — the owner was sent five audio previews and decides after
+> listening. If they approve: push, trigger both Pages builds, rebuild and
+> ship the dist. If they want changes, the levers are `MUSIC_SONGS`
+> (form/progressions/voices per theme), `SONG_LEVELS` (section mix) and
+> the patches (`horn`, `harp`, `musicString`); re-render previews with the
+> harness in the session scratch `songs/` folder's pattern (offline
+> render → WAV → `afconvert`).
+>
 > **Not done / known rough:** BREAKER/BLASTER were not measured at a phone
 > at all (owner deferred — run `BASE_VP=412x775 BASE_QUERY=touch` on them
 > next); the journal is cramped at 667×375; long realm/stage names

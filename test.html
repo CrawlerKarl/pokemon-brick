@@ -349,6 +349,19 @@ window.requestAnimationFrame = function () { return 0; };
       assert(boss.cfg.bpm > route.cfg.bpm, route.cfg.region + ' boss arrangement is not more urgent');
       assert(route.melody.filter(n => n != null).length >= 40 && boss.melody.filter(n => n != null).length >= 64,
         route.cfg.region + ' pattern is too sparse to carry a theme');
+      // the song arranger: every theme is a whole song with a form, played
+      // note-for-note identically on every build (phase-agnostic, no randomness)
+      for (const pat of [route, boss]) {
+        const kinds = new Set(pat.sections.map(x => x.kind)), stepDur = 60 / pat.cfg.bpm / 4;
+        const loopSecs = (pat.steps - pat.loopStart) * stepDur;
+        assert(['intro', 'verse', 'chorus', 'bridge'].every(k => kinds.has(k)), pat.cfg.title + ' is missing a section: ' + [...kinds].join(','));
+        assert(loopSecs >= 60 && loopSecs <= 90, pat.cfg.title + ' loop is ' + loopSecs.toFixed(1) + 's (want 60–90s)');
+        assert(pat.loopStart === pat.sections[1].bar * 16 && pat.loopStart > 0, pat.cfg.title + ' loop must return to the first verse, past the intro');
+        const mel = kind => { const ns = []; for (const sec of pat.sections) if (sec.kind === kind) for (let st = sec.bar * 16; st < (sec.bar + sec.bars) * 16; st++) if (pat.melody[st]) ns.push(pat.melody[st].n); return ns.reduce((a, b) => a + b, 0) / ns.length; };
+        assert(mel('chorus') - mel('verse') >= 4, pat.cfg.title + ' chorus does not lift above the verse');
+      }
+      const again = buildMusicPattern(i, true), key = p => JSON.stringify(p.melody) + JSON.stringify(p.bass) + JSON.stringify(Array.from(p.kick));
+      assert(key(again) === key(boss), route.cfg.region + ' boss song is not deterministic');
       assert(route.cfg.voice !== boss.cfg.voice || route.cfg.motif.join(',') !== boss.cfg.motif.join(','),
         route.cfg.region + ' boss reuses the route identity unchanged');
       if (route.cfg.scale.includes(4)) brightScales++;
@@ -358,7 +371,9 @@ window.requestAnimationFrame = function () { return 0; };
     assert(routeSignatures.size === 9 && bossSignatures.size === 9,
       'regional themes are not musically unique');
     assert(brightScales >= 7, 'exploration score does not lean happy/major enough (' + brightScales + '/9 bright scales)');
-    return '9 route themes + 9 boss arrangements · ' + brightScales + '/9 bright scales · unique motifs/voices/rhythms';
+    const menu = buildMusicPattern(0, false, 'menu');
+    assert(menu.cfg.bpm < ADVENTURE_MUSIC[0].bpm && menu.sections.some(x => x.kind === 'chorus'), 'the title overture is missing or not calmer than realm 1');
+    return '9 route songs + 9 boss songs + overture · ' + brightScales + '/9 bright scales · unique motifs/voices/rhythms · 60–90s loops';
   });
 
   test('audio engine (AFT-030): muted builds no nodes; a last-stand theme + SFX storm render clean and bounded', async () => {
@@ -381,12 +396,17 @@ window.requestAnimationFrame = function () { return 0; };
       SETTINGS.music = 0; SETTINGS.sfx = 0; MUSIC.on = true; paused = false;
       musicTick(); for (const k of Object.keys(SFX)) SFX[k](3); tone(440, 0.1); noiseBurst(0.1, 0.1);
       assert(c.nodes() === 0, 'muted audio still built ' + c.nodes() + ' node(s)');
-      // 2) the densest arrangement (boss + last-stand heat) at max music volume
+      // 2) the densest arrangement — the boss song's FINAL chorus under
+      // last-stand heat — at max music volume (the scheduler is seeked there)
       window.currentMusicScene = () => ({ genIdx: 8, boss: true, key: '8:boss' });
       window.bossMusicHeat = () => 2;
       SETTINGS.music = 1.5;
       const cfg = musicTheme(8, true), stepDur = 60 / cfg.bpm / 4, bars = 2, span = bars * 16 * stepDur;
       c = counted(span + 1); audioUseContext(c.ctx);
+      musicPat = buildMusicPattern(8, true); MUSIC.scene = '8:boss';
+      musicApplyScene(musicGraph(c.ctx), musicPat.cfg, 8, 0);
+      const finalChorus = musicPat.sections.filter(x => x.kind === 'chorus').pop();
+      MUSIC.step = (finalChorus.bar + 4) * 16; MUSIC.nextT = 0.05; MUSIC.heat = -1; // its summit bars
       for (let t = 0.05; t < span - 0.3; t += 0.1) c.ctx.suspend(t).then(() => { musicTick(); c.ctx.resume(); });
       musicTick();
       const m = scan(await c.ctx.startRendering());

@@ -73,6 +73,58 @@ Music gained ~3 dB on SFX (`MUSIC_TRIM` 0.12 is the one knob).
 heard:** patch character, low end on a phone speaker, the kick ducking, the
 reverb amount — owner listening notes are in the handoff.
 
+### 2026-11-13, evening — AFT-031: FULL SONGS (the arranger)
+
+Owner: "can we upgrade the music?" → chose **write full songs** in an **epic
+fantasy adventure** style. The instruments were rebuilt in AFT-030; the
+compositions were still one 8-note motif rotated over four chords for 8
+bars (~15s) on a loop. Built by a subagent to a written musical spec;
+measured, not heard. Gate GREEN, suite 146/146. **Committed locally, NOT
+deployed — the owner listens to the previews first.**
+
+- **`buildMusicPattern(genIdx, boss, variant?)` is now a deterministic
+  ARRANGER** (no randomness; two builds are identical). It returns a whole
+  song as step tracks (melody, harm, counter, desc, glock, harp, bass, stab
+  — each `{n, len, v, i}`), pad voices, drum lanes (kick, snare, hat, tom,
+  timp, roll, swell, crash), per-step section levels, `sections`, the
+  chord per bar, `steps` and `loopStart`. `ADVENTURE_MUSIC` and
+  `bossMusicHeat` are byte-identical; heat still layers at schedule time in
+  any section. New authored data lives in `MUSIC_SONGS` (`route[9]`,
+  `boss[9]`, `menu`): form, chorus + bridge progressions, hero/harmony/
+  counter voices, contrast devices, bass figure, pad colour. `SONG_LEVELS`
+  holds the per-section mix.
+- **Form.** Exploration: INTRO 4 → A 8 → A2 8 → B 8 → BRIDGE 4–6 → B2 8
+  (some realms A·B·A2 or with an A3), looping to A; 64–79s loops. Boss:
+  RISER 2 → A → B → A2 → BREAK (half-time) → A3 → B2 (two add a B3). The
+  MENU is its own scene: realm 1's verse and chorus as a slow overture
+  (96 bpm, strings and horn, no kit).
+- **Melody.** The verse opens on the theme's own motif and rhythm, then
+  develops in 2-bar phrases (statement → sequence → contrast → cadenced
+  return); A ends on a half cadence, A2/B2 on a held tonic. The chorus
+  leaps up a 4th/5th into a higher register, uses longer notes, reaches the
+  song's highest note in its bar 5–6, and is harmonised a third below with
+  bells at the peak; the final chorus adds a flute descant.
+- **Orchestration.** Voice-led strings pad, harp arpeggios under verses,
+  horn or strings+flute chorus lead, timpani on chord roots, snare roll +
+  cymbal swell + crescendo into each chorus, crash on its downbeat, tom
+  fill every 8th bar; boss themes add a staccato eighth-note ostinato and
+  brass stabs. New patches: `horn`, `harp`, `musicString`, `drumTimp`,
+  `cymbalSwell`.
+- **Measured (all 19 pieces).** Structure: strong-beat chord tones 100%,
+  no leap over an octave, voice range ≤ 19 semitones, A vs A2 differ
+  33–57%, chorus 5.5–8.8 semitones above the verse, highest note always in
+  a chorus, realm-to-realm melody similarity ≤ 0.016. Audio: peaks
+  0.17–0.32, −29.6…−27.6 LUFS, chorus +2.8…+4.6 dB over the verse, bridges
+  3 dB under, no click at the loop seam. Nodes per bar 132–185 (was
+  90–155); the suite's densest-arrangement cap (420) is unchanged and now
+  measured at the boss song's final chorus at heat 2 (238).
+- **Known shortfalls.** Boss BREAKs at heat 2 dip only 1.3–1.9 dB (the heat
+  layers stay audible by design). Peak simultaneous sources rose 19–30 →
+  39–49 — NOT checked on a phone (battery/CPU). Re-entering a scene
+  restarts its song from the intro.
+- **Previews for the owner** (rendered offline, AAC): menu overture, realms
+  1/4/7 exploration, realm-1 boss stepping heat 0→1→2.
+
 ### 2026-11-13, later — slice 4: boss stages at a phone, the last two screens, the five-second stage
 
 Owner: "let's do all now except the 2nd bullet [BREAKER/BLASTER phone

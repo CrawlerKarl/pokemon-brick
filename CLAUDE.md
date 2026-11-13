@@ -344,6 +344,17 @@ phone — flag anything only verifiable there.
   an unavailable node may add the dashed inspection ring but must not brighten
   its fill/icon. Keep all node types routed through `treeNodeVisualState` and
   preserve the strict `TREE_NODE_ALPHA` ordering.
+- **Every theme is a full SONG, composed by a deterministic arranger
+  (AFT-031).** `buildMusicPattern` builds intro / verse / varied verse /
+  chorus / bridge / final chorus (64–79s loops) from each theme's own
+  `ADVENTURE_MUSIC` signature plus its `MUSIC_SONGS` entry (form, chorus and
+  bridge progressions, voices). No randomness in composition; `ADVENTURE_MUSIC`
+  stays byte-identical (the dist builder string-swaps it); heat layers at
+  schedule time. A new theme needs a `MUSIC_SONGS` entry and must pass the
+  suite's song-structure assertions (sections present, 60–90s loop, chorus
+  above the verse, determinism). Nobody can hear it in this environment —
+  render previews (`audioUseContext` + an OfflineAudioContext, `afconvert`
+  to .m4a) and send them to the owner before changing musical character.
 - **Music is original and scene-authored.** `ADVENTURE_MUSIC` contains nine
   exploration identities and nine boss overrides. A regional change must vary
   more than pitch: preserve unique scale/motif/rhythm/voice signatures, and do
