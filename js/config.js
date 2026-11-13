@@ -546,14 +546,9 @@ let trialOpen = false;
 const trialSel = { region: 0, stage: 0, round: 0, phase: 1 };
 function trialLayout() {
   // AFT-001 follow-up (2026-07-23, user report): the panel overflowed short
-  // landscape phones once rounds+phases expanded, and it never scaled. The
-  // vertical metrics now SQUEEZE by one factor k so the fully-open picker
-  // always fits the viewport; short screens also widen the panel so the
-  // chips get broader while rows compress (labels stay readable — and they
-  // are all fitted now, never overlapping).
+  // landscape phones once rounds+phases expanded — the fully-open picker
+  // must always fit the viewport (see the AFT-029 notes below for how).
   const short = H < 560;
-  const pw = Math.min(short ? 640 : 470, W * 0.94);
-  const chipW = (pw - 60 - 20) / 3;
   // picking a LEGENDARY stage reveals a round row; Kanto junkie adds the
   // secret fourth tile. Picking a boss round reveals the PHASE row.
   const rounds = trialSel.stage === 2;
@@ -563,43 +558,86 @@ function trialLayout() {
   // jumps at all), so those rows adapt per format
   const fmtT = ((typeof finaleProfile === 'function' && finaleProfile(trialSel.region)) || {}).format || 'ladder';
   const roundCount = fmtT === 'raid' ? 1 : secretRound ? 4 : 3;
-  const roundRows = secretRound ? 2 : 1;
   const phases = rounds && trialSel.round >= 1 && fmtT !== 'raid'
     && !((fmtT === 'relay' || fmtT === 'siege') && trialSel.round >= 2); // reward codas have no phases
   const phaseCount = trialSel.round >= 2 ? 3 : 2;
-  const gridY = short ? 74 : 96, tail = short ? 56 : 84;
-  // base row metrics -> one squeeze factor fits the busiest state on-screen
-  const baseRows = 3 * (48 + 10) + 30 + 38
-    + (rounds ? roundRows * (34 + 8) + 6 : 0)
-    + (phases ? 30 + 16 : 0);
-  const k = Math.max(0.58, Math.min(1, (H - 20 - gridY - tail) / baseRows));
-  const chipH = Math.round(48 * k), stageH = Math.round(38 * k);
-  const roundH = Math.round(34 * k), phaseH = Math.round(30 * k);
-  const g1 = Math.max(5, Math.round(10 * k)), g2 = Math.max(4, Math.round(8 * k));
-  const mid = Math.round(30 * k), pgap = Math.round(16 * k);
-  const roundGap = rounds ? roundRows * (roundH + g2) + 6 : 0;
-  const phaseGap = phases ? phaseH + pgap : 0;
-  const ph = gridY + 3 * (chipH + g1) + mid + stageH + roundGap + phaseGap + tail;
-  const px = W / 2 - pw / 2, py = Math.max(8, H / 2 - ph / 2);
-  const stageY = py + gridY + 3 * (chipH + g1) + Math.round(24 * k);
-  const phaseY = stageY + stageH + 12 + roundRows * (roundH + g2) + 4;
-  const phaseW = (pw - 60 - 10 * (phaseCount - 1)) / phaseCount;
-  // the tail row: START TRIAL beside the BOSS RUSH launcher (same height,
-  // same row — no extra height, so the busiest picker state still fits)
-  const btnH = short ? 34 : 44, btnY = py + ph - (short ? 46 : 60);
-  const rowW = Math.min(pw - 60, 470), btnW = (rowW - 12) / 2, btnX = W / 2 - rowW / 2;
+  // AFT-029 kit pass: every chip is a ≥44px tap target at its natural size,
+  // the picker sits in ONE safe-area-aware column on portrait phones and in
+  // TWO columns (realm grid | stage → round → phase) on landscape/desktop,
+  // with the action row (BOSS RUSH | START) spanning the foot. Section
+  // labels drop first, then — only if a viewport is truly too short — the
+  // chip heights squeeze by one factor. Label/squeeze decisions are taken
+  // against the BUSIEST state so nothing pops while the player taps around.
+  const roundRows = roundCount === 1 ? 1 : 2; // FULL on its own row, chapters in pairs
+  const gut = W < 360 ? 10 : 16;
+  const availW = W - SAFE_L - SAFE_R - gut * 2;
+  const availH = H - SAFE_T - SAFE_B - (short ? 16 : gut * 2);
+  const wide = W >= 600 && W > H * 1.2;
+  const pad = W < 360 ? 12 : wide ? 20 : 16, gap = 8, sec = 12;
+  const headH = H < 420 ? 52 : 70;
+  const btnH = H < 520 ? 44 : 48;
+  const lblH = 18;
+  const nat = { region: 52, stage: 46, round: 44, phase: 44 };
+  // column needs (busiest = legendary stage, two round rows, phase row)
+  const rightNeed = (lbl, k, busy) => (lbl ? lblH : 0) + nat.stage * k
+    + ((busy || rounds) ? sec + (lbl ? lblH : 0) + (busy ? 2 : roundRows) * (nat.round * k) + gap : 0)
+    + ((busy || phases) ? sec + (lbl ? lblH : 0) + nat.phase * k : 0);
+  const gridNeed = (lbl, k) => (lbl ? lblH : 0) + 3 * nat.region * k + 2 * gap;
+  const bodyNeed = (lbl, k, busy) => wide
+    ? Math.max(gridNeed(lbl, k), rightNeed(lbl, k, busy))
+    : gridNeed(lbl, k) + sec + rightNeed(lbl, k, busy);
+  const total = (lbl, k, busy) => headH + bodyNeed(lbl, k, busy) + sec + 4 + btnH + pad;
+  const labels = total(true, 1, true) <= availH;
+  let k = 1; // only chip heights scale — step down until the busiest state fits
+  if (!labels) while (k > 0.6 && total(false, k, true) > availH) k -= 0.02;
+  const rH = Math.round(nat.region * k), sH = Math.round(nat.stage * k);
+  const rdH = Math.round(nat.round * k), pH = Math.round(nat.phase * k);
+  const pw = Math.round(Math.min(wide ? 860 : 480, availW));
+  // wide: the panel holds its busiest height (stable while rows appear);
+  // portrait: it hugs the live content so START sits right under the rows
+  const ph = Math.round(Math.min(availH, total(labels, k, wide)));
+  const px = Math.round(SAFE_L + (W - SAFE_L - SAFE_R - pw) / 2);
+  const py = Math.round(SAFE_T + Math.max(short ? 8 : gut, (H - SAFE_T - SAFE_B - ph) / 2));
+  const innerX = px + pad, innerW = pw - pad * 2, bodyY = py + headH;
+  const colGap = 18;
+  const leftW = wide ? Math.round((innerW - colGap) * 0.5) : innerW;
+  const rightX = wide ? innerX + leftW + colGap : innerX, rightW = wide ? innerW - leftW - colGap : innerW;
+  const lb = labels ? lblH : 0;
+  // left/top: the realm grid
+  const gridY = bodyY + lb;
+  const gridH = wide ? Math.max(3 * rH + 2 * gap, rightNeed(labels, k, true) - lb) : 3 * rH + 2 * gap;
+  const cellH = wide ? Math.min(Math.round(nat.region * 1.3), (gridH - 2 * gap) / 3) : rH;
+  const cellW = (leftW - 2 * gap) / 3;
+  // right/below: stage → rounds → phases, top-down
+  let y = wide ? bodyY : gridY + 3 * rH + 2 * gap + sec;
+  const lblStage = { x: rightX, y, w: rightW, h: lb }; y += lb;
+  const stageY = y; y += sH;
+  let lblRound = null, roundY = 0, lblPhase = null, phaseY = 0;
+  if (rounds) { y += sec; lblRound = { x: rightX, y, w: rightW, h: lb }; y += lb; roundY = y; y += roundRows * rdH + (roundRows - 1) * gap; }
+  if (phases) { y += sec; lblPhase = { x: rightX, y, w: rightW, h: lb }; y += lb; phaseY = y; y += pH; }
+  const btnY = py + ph - pad - btnH;
+  const stW = (rightW - 2 * gap) / 3;
+  const halfW = (rightW - gap) / 2;
+  const phaseW = (rightW - gap * (phaseCount - 1)) / phaseCount;
+  const actW = wide ? null : (innerW - gap) / 2;
+  const closeS = IS_TOUCH ? 44 : 36;
   return {
-    px, py, pw, ph, rounds, secretRound, roundCount, phases, phaseCount,
-    region: i => ({ x: px + 30 + (i % 3) * (chipW + 10), y: py + gridY + Math.floor(i / 3) * (chipH + g1), w: chipW, h: chipH }),
-    stage: i => ({ x: px + 30 + i * (chipW + 10), y: stageY, w: chipW, h: stageH }),
-    round: i => secretRound
-      ? ({ x: px + 30 + (i % 2) * ((pw - 70) / 2 + 10),
-          y: stageY + stageH + 12 + Math.floor(i / 2) * (roundH + g2), w: (pw - 70) / 2, h: roundH })
-      : ({ x: px + 30 + i * (chipW + 10), y: stageY + stageH + 12, w: chipW, h: roundH }),
-    phase: i => ({ x: px + 30 + i * (phaseW + 10), y: phaseY, w: phaseW, h: phaseH }),
-    start: { x: btnX, y: btnY, w: btnW, h: btnH },
-    rush: { x: btnX + btnW + 12, y: btnY, w: btnW, h: btnH },
-    close: { x: px + pw - 44, y: py + 10, w: 34, h: 34 },
+    px, py, pw, ph, rounds, secretRound, roundCount, phases, phaseCount, wide, labels,
+    head: { x: px, y: py, w: pw, h: headH },
+    lblRegion: labels ? { x: innerX, y: bodyY, w: leftW, h: lb } : null,
+    lblStage: labels ? lblStage : null, lblRound: labels ? lblRound : null, lblPhase: labels ? lblPhase : null,
+    region: i => ({ x: innerX + (i % 3) * (cellW + gap), y: gridY + Math.floor(i / 3) * (cellH + gap), w: cellW, h: cellH }),
+    stage: i => ({ x: rightX + i * (stW + gap), y: stageY, w: stW, h: sH }),
+    round: i => roundCount === 1 ? { x: rightX, y: roundY, w: rightW, h: rdH }
+      : secretRound
+        ? { x: rightX + (i % 2) * (halfW + gap), y: roundY + Math.floor(i / 2) * (rdH + gap), w: halfW, h: rdH }
+        : i === 0 ? { x: rightX, y: roundY, w: rightW, h: rdH }
+          : { x: rightX + (i - 1) * (halfW + gap), y: roundY + rdH + gap, w: halfW, h: rdH },
+    phase: i => ({ x: rightX + i * (phaseW + gap), y: phaseY, w: phaseW, h: pH }),
+    // the foot: the quiet BOSS RUSH launcher beside the ONE primary (right)
+    rush: wide ? { x: innerX, y: btnY, w: leftW, h: btnH } : { x: innerX, y: btnY, w: actW, h: btnH },
+    start: wide ? { x: rightX, y: btnY, w: rightW, h: btnH } : { x: innerX + actW + gap, y: btnY, w: actW, h: btnH },
+    close: { x: px + pw - closeS - (IS_TOUCH ? 6 : 10), y: py + (IS_TOUCH ? 6 : 10), w: closeS, h: closeS },
   };
 }
 function presetGeom(i) { return setupLayout().chip(i); }

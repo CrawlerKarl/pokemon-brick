@@ -48,14 +48,22 @@ function journeyDmgMul() { return 1 + 0.06 * megaRegions(); }
 // not the work vector, is what killed the 424.9s L27 outlier).
 const FINALE_WORK = [1.15, 1.95, 2.3, 2.7, 4.2, 4.8, 16, 24, 9.0];
 const FINALE_WORK_MODE = {
-  classic: [0.28, 0.30, 0.55, 0.68, 0.85, 1.50, 0.85, 1.40, 0.90],
+  // (r3 0.55→0.66, AFT-029: BREAKER's siege sat UNDER its own 70–180s
+  // target at a 62s mean in every recent matrix; when the knife-edge
+  // STARFIGHTER siege cell landed on its slow branch — a seed reshuffle,
+  // attributed with a control run, not a real shift — the mode ratio
+  // crossed its cap. The fix belongs to the mode that was short.)
+  classic: [0.28, 0.30, 0.66, 0.68, 0.85, 1.50, 0.85, 1.40, 0.90],
   blaster: [0.22, 1.0, 0.24, 0.85, 0.62, 2.75, 1.08, 0.45, 0.9],
 };
 function sovereignHp(rIdx, cycle) {
   const p = preset();
   const modeMul = (FINALE_WORK_MODE[G.mode] || [])[rIdx] ?? 1;
+  // (tall phones: the 30% larger boss-class hitboxes land more of every
+  // volley — measured over the 27 phone finale cells, 57.9s → 54.2s — so
+  // the pool there carries +12% to hold the same fight length)
   return Math.max(9, Math.round((19 + rIdx * 9 + cycle * 32) * p.bossHp
-    * (FINALE_WORK[rIdx] ?? 1) * modeMul));
+    * (FINALE_WORK[rIdx] ?? 1) * modeMul * (bossScale() > 1 ? 1.12 : 1)));
 }
 // Late ordinary waves grow real durability too (the L23 6-second stage):
 // flyer/elite/reinforcement HP compounds past the campaign's midpoint —
@@ -273,6 +281,12 @@ function dealStageDividend() {
 // The vessel's drawn size. On a TALL PHONE it is 22% larger (AFT-029): at
 // 54px on a 775px-tall screen the hero read as a speck. This is the ART and
 // its edge clamp only — the hurtbox is a separate, unchanged constant.
+// Boss-class actors on a TALL PHONE in STARFIGHTER run 30% larger (AFT-029):
+// a Sovereign at 97px on a 412px screen was 23% of the width — smaller than
+// its own guards' formation and no kind of event. 1 everywhere else.
+function bossScale() {
+  return (typeof G !== 'undefined' && G.mode === 'junkie' && W < 560 && H > W * 1.5) ? 1.3 : 1;
+}
 function pilotRigSize(lvl) {
   const tall = typeof W !== 'undefined' && W < 560 && H > W * 1.5;
   return (54 + (lvl || 1) * 6) * (tall ? 1.22 : 1);
@@ -1458,7 +1472,7 @@ function buildLevel(lvl) {
   }
   // ---- BOSS (legendary stage only — the finale of each region) ----
   if (hasBoss) {
-    const bossW = Math.min(bw * 1.9, W * 0.4), bossH = bh * 1.75;
+    const bossW = Math.min(bw * 1.9, W * 0.4) * bossScale(), bossH = bh * 1.75 * bossScale();
     const bossY = 102 + bossH / 2;
     // real boss-fight durability: three phases need room to breathe
     // (AFT-021 P5: the measured work coefficients live in sovereignHp)
@@ -1514,7 +1528,7 @@ function buildLevel(lvl) {
         const [sid, st2] = subs[i];
         G.bricks.push({
           bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -2, col: i,
-          w: Math.min(92, bw * 1.25), h: Math.min(80, bh * 1.4),
+          w: Math.min(92, bw * 1.25) * (bossScale() > 1 ? 1.2 : 1), h: Math.min(80, bh * 1.4) * (bossScale() > 1 ? 1.2 : 1),
           hp: subHp, maxHp: subHp, bare: true, subBoss: true, elite: 3,
           roundRole: 'sentinel', phaseCount: 1, phase: 1,
           subIdx: i, subN: subs.length,

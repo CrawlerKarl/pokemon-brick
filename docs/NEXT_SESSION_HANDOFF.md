@@ -25,14 +25,16 @@
 > 3. **Look.** Every redesigned screen at your real size, and that the HUD
 >    sits at the very top inside your browser (the phantom-notch fix).
 >
-> **Not done / known rough:** finale (boss) stages have had no phone
-> layout pass; BREAKER/BLASTER were not measured at a phone at all (only
-> STARFIGHTER — run `BASE_VP=412x775 BASE_QUERY=touch` on them next); the
-> trial picker's chips and the journal/constellation frame keep their old
-> styling; level 2's ward objective can still end in ~9s for a player who
-> beelines the three sources (authored rule, left alone); nothing is
-> pushed — `git push`, the Pages build, and the AETHERFALL dist release
-> all wait on the owner's word.
+> **Slice 4 (same day):** boss stages got their phone pass (larger
+> Sovereigns, guards/sentinels/stations kept apart), the trial picker and
+> journal frame joined the kit, and a stage can no longer be ended in its
+> first seconds without one reserve flight. PUSHED AND DEPLOYED at the
+> owner's word — both sites.
+>
+> **Not done / known rough:** BREAKER/BLASTER were not measured at a phone
+> at all (owner deferred — run `BASE_VP=412x775 BASE_QUERY=touch` on them
+> next); the journal is cramped at 667×375; long realm/stage names
+> ellipsize in the trial picker at 320px.
 >
 > ## Earlier — slice 1 and 2 (2026-11-12, late)
 >

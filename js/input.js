@@ -970,11 +970,15 @@ function nextReachableTransformation() {
 }
 function treeListLayout(T) {
   const rowH = Math.max(46, Math.min(56, T.map.h / 8));
-  const chipW = (Math.min(T.map.w, 420) - 16) / 3;
+  // short map boxes (landscape phones) dock the filters BESIDE the camera
+  // row and drop the identity line, so the rows keep the room they need
+  const camR = T.list.x + T.list.w + 10, inline = T.map.h < 220 && T.map.x + T.map.w - 8 - camR >= 3 * 64;
+  const chipW = inline ? Math.min(120, (T.map.x + T.map.w - 8 - camR - 12) / 3) : (Math.min(T.map.w, 420) - 28) / 3;
   const chips = ['all', 'owned', 'next'].map((f, i) => ({ f,
-    x: T.map.x + 8 + i * (chipW + 4), y: T.map.y + 40, w: chipW, h: 26 }));
-  const top = T.map.y + 74;
-  return { rowH, chips, top,
+    x: (inline ? camR : T.map.x + 8) + i * (chipW + 6), y: inline ? T.list.y : T.list.y + T.list.h + 26,
+    w: chipW, h: inline ? T.list.h : 34 })); // kit chips, below the camera row + build line
+  const top = chips[0].y + chips[0].h + (inline ? 6 : 10);
+  return { rowH, chips, top, inline,
     row: i => ({ x: T.map.x + 6, y: top + i * rowH - treeListScroll, w: T.map.w - 12, h: rowH - 6 }),
     maxScroll: n => Math.max(0, n * rowH - (T.map.y + T.map.h - top) + 8) };
 }
@@ -1045,16 +1049,17 @@ function upgradeTreeLayout() {
   const buttonY = detail.y + detail.h - buttonH - 10;
   const buttonGap = 8;
   const buttonW = (detail.w - 20 - buttonGap) / 2;
-  const camY = map.y + 8, camH = 30, camGap = 5;
-  const camX = map.x + 8;
+  // AFT-029: kit-sized camera buttons — 36px tall on touch (was 30)
+  const camY = map.y + 8, camH = IS_TOUCH ? 36 : 32, camGap = 6;
+  const camX = map.x + 8, sq = camH, fitW = 46, focW = 60, listW = 52;
   return {
     panel, compact, sideDetail, map, detail, center: { x: cx, y: cy }, radius, inner, step, drawR, panLim, zoom: treeZoom,
-    close: { x: panel.x + panel.w - 44, y: panel.y + 9, w: 34, h: 34 },
-    zoomOut: { x: camX, y: camY, w: 30, h: camH },
-    zoomIn: { x: camX + 30 + camGap, y: camY, w: 30, h: camH },
-    fit: { x: camX + 60 + camGap * 2, y: camY, w: 42, h: camH },
-    focus: { x: camX + 102 + camGap * 3, y: camY, w: 52, h: camH },
-    list: { x: camX + 154 + camGap * 4, y: camY, w: 44, h: camH }, // AFT-009R P4: the phone list view
+    close: IS_TOUCH ? { x: panel.x + panel.w - 48, y: panel.y + 6, w: 42, h: 42 } : { x: panel.x + panel.w - 46, y: panel.y + 9, w: 36, h: 36 },
+    zoomOut: { x: camX, y: camY, w: sq, h: camH },
+    zoomIn: { x: camX + sq + camGap, y: camY, w: sq, h: camH },
+    fit: { x: camX + sq * 2 + camGap * 2, y: camY, w: fitW, h: camH },
+    focus: { x: camX + sq * 2 + fitW + camGap * 3, y: camY, w: focW, h: camH },
+    list: { x: camX + sq * 2 + fitW + focW + camGap * 4, y: camY, w: listW, h: camH }, // AFT-009R P4: the phone list view
     reroll: { x: detail.x + 10, y: buttonY, w: buttonW, h: buttonH },
     confirm: { x: detail.x + detail.w - 10 - buttonW, y: buttonY, w: buttonW, h: buttonH },
     spokeA,

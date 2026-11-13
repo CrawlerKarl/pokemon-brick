@@ -83,6 +83,31 @@ function uiChip(x, y, text, o = {}) {
   ctx.fillText(text, x0 + w / 2, y + 1);
   return w;
 }
+// A SELECTABLE tile (picker chips, filters, list rows) in rect R. o: {
+// accent, sel, hov, bar:'left'|'top', r, dim }. Selected = accent edge +
+// accent bar over a faint accent-tinted fill (the drawSetupTile language) —
+// never an outer glow. Unselected = a quiet soft panel. Returns nothing.
+function uiTile(R, o = {}) {
+  const ac = o.accent || UI.player;
+  uiPanel(R.x, R.y, R.w, R.h, { r: o.r == null ? Math.min(12, R.h * 0.28) : o.r,
+    accent: o.sel ? ac : null, sel: !!o.sel, lift: !!(o.sel || o.hov), soft: !o.sel && !o.hov,
+    fill: o.sel ? mixHex(ac, '#070b1e', 0.8) : undefined, bar: o.sel ? (o.bar || 'left') : null,
+    alpha: o.dim ? 0.55 : null });
+}
+// The kit's close affordance: a quiet secondary button carrying a DRAWN ×
+// (font glyphs read as specks at phone size). R is the shared hit rect.
+function uiClose(R) {
+  const hov = !IS_TOUCH && inRect(mouseX, lastMouseY, R);
+  // the DRAWN plate stays ≤36px; a touch rect may be bigger (44px target)
+  const sz = Math.min(36, R.w, R.h), V = { x: R.x + (R.w - sz) / 2, y: R.y + (R.h - sz) / 2, w: sz, h: sz };
+  uiButton(V, '', { accent: hov ? UI.ink : UI.sub, r: 10 });
+  const s = sz * 0.19, cx = V.x + sz / 2, cy = V.y + sz / 2;
+  ctx.strokeStyle = hov ? UI.ink : UI.sub; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+  ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+  ctx.stroke(); ctx.lineCap = 'butt';
+}
 // Surface entrance: t = seconds the surface has been open → { a, dy } to
 // fade it in and settle it 10px upward over 180ms. Screens that animate in
 // multiply their alpha by `a` and translate by `dy`.
@@ -8389,59 +8414,71 @@ function drawCheats() {
 function drawTrial() {
   dim(0.6);
   const T = trialLayout();
+  const body = "Verdana, 'Segoe UI', system-ui, sans-serif";
+  const rw = (SKIN.strings && SKIN.strings.regionWord) || 'REGION';
+  const hovOn = R => !IS_TOUCH && inRect(mouseX, lastMouseY, R);
   ctx.save();
-  // AFT-029: the picker rides the deep-stage panel language
+  // AFT-029: the picker rides the deep-stage panel language end to end —
+  // selectable tiles (accent edge + accent bar), mute section labels, the
+  // quiet BOSS RUSH launcher and ONE solid primary (START)
   uiPanel(T.px, T.py, T.pw, T.ph, { accent: UI.player, bar: 'top', r: 18, fill: 'rgba(7,11,30,0.97)' });
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  fitLabel('PRACTICE · TRIAL MODE', T.px + T.pw / 2, T.py + 30, { size: 15, min: 11, weight: 900, color: UI.ink, maxW: T.pw - 100 });
-  fitLabel('Jump into any region. Score and catches are not saved.', T.px + T.pw / 2, T.py + 54,
-    { size: 10.5, min: 8.5, weight: 500, family: "Verdana, 'Segoe UI', system-ui, sans-serif", color: UI.sub, maxW: T.pw - 40 });
-  // close ✕
-  const cb = T.close;
-  ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(cb.x + 10, cb.y + 10); ctx.lineTo(cb.x + cb.w - 10, cb.y + cb.h - 10);
-  ctx.moveTo(cb.x + cb.w - 10, cb.y + 10); ctx.lineTo(cb.x + 10, cb.y + cb.h - 10);
-  ctx.stroke();
-  // region grid — each chip shows the region and its legendary
+  const Hd = T.head, tight = Hd.h < 60;
+  const closeRoom = T.close.w + 18;
+  fitLabel('PRACTICE · TRIAL MODE', Hd.x + Hd.w / 2, Hd.y + (tight ? 22 : 28), { size: UI.title, min: 11, weight: 900, color: UI.ink, maxW: Hd.w - closeRoom * 2 });
+  fitLabel('Jump into any ' + rw.toLowerCase() + ' and stage. Nothing here is saved.', Hd.x + Hd.w / 2, Hd.y + (tight ? 40 : 52),
+    { size: 10.5, min: 8.5, weight: 500, family: body, color: UI.sub, maxW: Hd.w - (tight ? closeRoom * 2 : 40) });
+  uiClose(T.close);
+  const section = (R, text) => {
+    if (!R) return;
+    const b = fitLabel(text, R.x + 2, R.y + R.h / 2 - 2, { size: 9, min: 7.5, weight: 800, color: UI.mute, align: 'left', maxW: R.w * 0.8 });
+    ctx.strokeStyle = UI.lineSoft; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(b.x1 + 10, R.y + R.h / 2 - 2); ctx.lineTo(R.x + R.w, R.y + R.h / 2 - 2); ctx.stroke();
+  };
+  section(T.lblRegion, rw);
+  section(T.lblStage, 'STAGE');
+  section(T.lblRound, 'FINALE ROUND');
+  section(T.lblPhase, 'START AT PHASE');
+  // a two-line tile: an eyebrow (mute → accent when picked) over the name
+  const twoLine = (r, eyebrow, name, sel, ac) => {
+    const two = r.h >= 38 && eyebrow;
+    const tx = r.x + r.w / 2 + (sel ? 1.5 : 0), tw = r.w - 14;
+    if (two) {
+      fitLabel(eyebrow, tx, r.y + r.h / 2 - r.h * 0.2, { size: 8.5, min: 7, weight: 800, color: sel ? ac : UI.mute, maxW: tw });
+      fitLabel(name, tx, r.y + r.h / 2 + r.h * 0.16, { size: Math.min(11.5, r.w / 8.5), min: 7.5, weight: 900, color: sel ? UI.ink : UI.sub, maxW: tw });
+    } else {
+      fitLabel(name, tx, r.y + r.h / 2 + 1, { size: Math.min(11, r.w / 9), min: 7.5, weight: 900, color: sel ? UI.ink : UI.sub, maxW: tw });
+    }
+  };
+  // region grid — each tile names the realm (in its accent) and its legendary
   for (let i = 0; i < SKIN.gens.length; i++) {
     const g = SKIN.gens[i], r = T.region(i), sel = trialSel.region === i;
-    const hov = inRect(mouseX, lastMouseY, r);
-    ctx.save();
-    if (sel) { ctx.shadowColor = g.accent; ctx.shadowBlur = 12; }
-    roundRect(r.x, r.y, r.w, r.h, 10);
-    ctx.fillStyle = sel ? g.accent + '33' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
-    ctx.fill();
-    ctx.lineWidth = sel ? 2 : 1;
-    ctx.strokeStyle = sel ? g.accent : 'rgba(255,255,255,0.22)';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    uiTile(r, { accent: g.accent, sel, hov: hovOn(r) });
+    if (!sel) { // the realm's own colour, quietly: a short accent tick
+      ctx.fillStyle = g.accent; ctx.globalAlpha = 0.7;
+      roundRect(r.x + 6, r.y + r.h / 2 - Math.min(9, r.h * 0.22), 2.5, Math.min(18, r.h * 0.44), 1.25); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    const tx = r.x + r.w / 2 + 2, tw = r.w - 18;
+    const two = r.h >= 36;
     // fitted, never overlapping (2026-07-23 user report: long realm names
     // ran across three chips) — shrink to a readable floor, then ellipsize
-    fitLabel(g.name, r.x + r.w / 2, r.y + r.h / 2 - r.h * 0.18,
-      { size: Math.min(13, r.w / 8), min: 7.5, weight: 900, color: sel ? '#fff' : '#cfd8dc', maxW: r.w - 12 });
-    fitLabel(g.boss.n.toUpperCase(), r.x + r.w / 2, r.y + r.h / 2 + r.h * 0.22,
-      { size: 9, min: 7, weight: 500, color: sel ? g.accent : '#78909c', maxW: r.w - 10 });
-    ctx.restore();
+    fitLabel(g.name, tx, r.y + r.h / 2 - (two ? r.h * 0.16 : 0),
+      { size: Math.min(11.5, r.w / 8.5), min: 7.5, weight: 900, color: sel ? UI.ink : UI.sub, maxW: tw });
+    if (two) fitLabel(g.boss.n.toUpperCase(), tx, r.y + r.h / 2 + r.h * 0.2,
+      { size: 8.5, min: 7, weight: 700, color: sel ? g.accent : UI.mute, maxW: tw });
   }
-  // stage picker
+  const gsel = SKIN.gens[trialSel.region];
+  // stage picker — STAGE n over the authored stage title
   for (let i = 0; i < STAGES; i++) {
     const r = T.stage(i), sel = trialSel.stage === i;
-    const hov = inRect(mouseX, lastMouseY, r);
-    roundRect(r.x, r.y, r.w, r.h, 9);
-    ctx.fillStyle = sel ? 'rgba(255,213,79,0.22)' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
-    ctx.fill();
-    ctx.lineWidth = sel ? 2 : 1;
-    ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.22)';
-    ctx.stroke();
-    fitLabel((i + 1) + '/3 ' + (stageTitle(trialSel.region * STAGES + i + 1) || SKIN.stageNames[i]),
-      r.x + r.w / 2, r.y + r.h / 2 + 1,
-      { size: Math.min(11, r.w / 10), min: 7.5, weight: 900, color: sel ? '#ffd54f' : '#cfd8dc', maxW: r.w - 8 });
+    uiTile(r, { accent: gsel.accent, sel, hov: hovOn(r) });
+    const name = stageTitle(trialSel.region * STAGES + i + 1) || SKIN.stageNames[i];
+    twoLine(r, 'STAGE ' + (i + 1) + '/3', String(name).toUpperCase(), sel, gsel.accent);
   }
   // LEGENDARY stage → pick a gauntlet round. STARFIGHTER Kanto also exposes
   // the secret replacement fight directly so it can be practiced on demand.
   if (T.rounds) {
-    const gsel = SKIN.gens[trialSel.region];
     // AFT-020: the round chips carry the finale's NAMED CHAPTERS from the
     // skin's profile (title / core / coda labels), falling back to the old
     // generic wording where no profile exists
@@ -8450,63 +8487,37 @@ function drawTrial() {
     const labels = [(fpT && fpT.title) || 'FULL GAUNTLET',
       '★ ' + (chapT(1) || gsel.boss.n.toUpperCase()),
       '✦ ' + (chapT(2) || (gsel.gauntlet ? (SKIN.names[gsel.gauntlet.myth[0]] || 'MYTHICAL').toUpperCase() : 'MYTHICAL')),
-      '◆ ' + SKIN.secret.name + ' · SECRET'];
+      '◆ ' + SKIN.secret.name];
+    const brows = [T.roundCount === 1 ? 'THE WHOLE ENCOUNTER' : 'FROM THE TOP', 'ROUND 2', 'ROUND 3', 'SECRET'];
     for (let i = 0; i < T.roundCount; i++) {
-      const rr2 = T.round(i), sel2 = trialSel.round === i;
-      const hov2 = inRect(mouseX, lastMouseY, rr2);
-      roundRect(rr2.x, rr2.y, rr2.w, rr2.h, 9);
-      const secret = i === 3;
-      ctx.fillStyle = sel2 ? (secret ? 'rgba(128,216,255,0.24)' : 'rgba(255,128,171,0.22)')
-        : hov2 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
-      ctx.fill();
-      ctx.lineWidth = sel2 ? 2 : 1;
-      ctx.strokeStyle = sel2 ? (secret ? '#80d8ff' : '#ff80ab') : 'rgba(255,255,255,0.22)';
-      ctx.stroke();
-      fitLabel(labels[i], rr2.x + rr2.w / 2, rr2.y + rr2.h / 2 + 1,
-        { size: Math.min(10, rr2.w / 11), min: 7.5, weight: 900, color: sel2 ? (secret ? '#80d8ff' : '#ff80ab') : '#cfd8dc', maxW: rr2.w - 8 });
+      const r = T.round(i), sel = trialSel.round === i;
+      const ac = i === 3 ? UI.player : gsel.accent;
+      uiTile(r, { accent: ac, sel, hov: hovOn(r) });
+      twoLine(r, brows[i], String(labels[i]).toUpperCase(), sel, ac);
     }
   }
   // PHASE picker — practice a boss round from any phase (mid-band HP).
   if (T.phases) {
     for (let i = 0; i < T.phaseCount; i++) {
-      const pr = T.phase(i), sel = trialSel.phase === i + 1;
-      const hovp = inRect(mouseX, lastMouseY, pr);
-      roundRect(pr.x, pr.y, pr.w, pr.h, 8);
-      ctx.fillStyle = sel ? 'rgba(255,213,79,0.22)' : hovp ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
-      ctx.fill();
-      ctx.lineWidth = sel ? 2 : 1;
-      ctx.strokeStyle = sel ? '#ffd54f' : 'rgba(255,255,255,0.22)';
-      ctx.stroke();
-      ctx.font = `900 ${Math.min(10, pr.w / 7)}px Orbitron, sans-serif`;
-      ctx.fillStyle = sel ? '#ffd54f' : '#cfd8dc';
-      ctx.fillText('PHASE ' + (i + 1), pr.x + pr.w / 2, pr.y + pr.h / 2 + 1, pr.w - 8);
+      const r = T.phase(i), sel = trialSel.phase === i + 1;
+      uiTile(r, { accent: gsel.accent, sel, hov: hovOn(r) });
+      fitLabel('PHASE ' + (i + 1), r.x + r.w / 2 + (sel ? 1.5 : 0), r.y + r.h / 2 + 1,
+        { size: 11, min: 8, weight: 900, color: sel ? UI.ink : UI.sub, maxW: r.w - 14 });
     }
   }
-  // start button
-  uiButton(T.start, 'START TRIAL  ▶', { primary: true, accent: UI.player, size: T.start.h >= 40 ? 14 : 12 });
   // BOSS RUSH launcher: all nine finales back to back with the CURRENT mode,
-  // difficulty and partner — its line names the best time for exactly that
-  // mode+difficulty pair when one exists
+  // difficulty and partner — a quiet gold secondary (gold = reward); its
+  // line names the best time for exactly that mode+difficulty pair
   {
-    const rb = T.rush, hovR = inRect(mouseX, lastMouseY, rb);
+    const rb = T.rush;
     const best = rushBest(SETTINGS.mode, SETTINGS.preset);
-    ctx.save();
-    roundRect(rb.x, rb.y, rb.w, rb.h, 12);
-    ctx.fillStyle = hovR ? 'rgba(255,213,79,0.32)' : 'rgba(255,213,79,0.16)'; ctx.fill();
-    ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2; ctx.stroke();
-    const two = rb.h >= 30;
-    fitLabel(rushName(), rb.x + rb.w / 2, rb.y + rb.h / 2 - (two ? rb.h * 0.17 : 0),
-      { size: rb.h >= 40 ? 14 : 12, min: 8.5, weight: 900, color: '#ffd54f', maxW: rb.w - 12 });
-    if (two) {
-      const modeName = ((MODES.find(m => m.key === SETTINGS.mode) || {}).label || SETTINGS.mode).toUpperCase();
-      const diffName = ((DIFFICULTY_UI[SETTINGS.preset] || {}).name || SETTINGS.preset).toUpperCase();
-      // phones: the time alone (the record is for the picked mode+difficulty)
-      fitLabel(best ? 'BEST ' + fmtRushTime(best.best) + (rb.w >= 200 ? ' · ' + modeName + ' ' + diffName : '') : '9 ' + rushFinaleWord() + ' · TIMED',
-        rb.x + rb.w / 2, rb.y + rb.h / 2 + rb.h * 0.24,
-        { size: rb.h >= 40 ? 9.5 : 8.5, min: 7, weight: 700, color: best ? '#fff3c4' : '#c9b37a', maxW: rb.w - 12 });
-    }
-    ctx.restore();
+    const modeName = ((MODES.find(m => m.key === SETTINGS.mode) || {}).label || SETTINGS.mode).toUpperCase();
+    const diffName = ((DIFFICULTY_UI[SETTINGS.preset] || {}).name || SETTINGS.preset).toUpperCase();
+    const sub = rb.h >= 40 ? (best ? 'BEST ' + fmtRushTime(best.best) + (rb.w >= 220 ? ' · ' + modeName + ' ' + diffName : '')
+      : '9 ' + rushFinaleWord() + ' · TIMED') : null;
+    uiButton(rb, rushName(), { accent: UI.gold, sub, size: 12 });
   }
+  uiButton(T.start, 'START TRIAL  ▶', { primary: true, accent: UI.player, size: T.start.h >= 46 ? 14 : 12.5 });
   ctx.restore();
 }
 
@@ -9072,15 +9083,9 @@ function drawFullUpgradeTree() {
   ctx.save();
   ctx.globalAlpha = 1;
   dim(0.82);
-  ctx.shadowColor = '#80d8ff'; ctx.shadowBlur = 30;
-  roundRect(p.x, p.y, p.w, p.h, 22);
-  const pg = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
-  pg.addColorStop(0, 'rgba(8,14,38,0.992)');
-  pg.addColorStop(0.55, 'rgba(5,9,27,0.992)');
-  pg.addColorStop(1, 'rgba(12,7,31,0.992)');
-  ctx.fillStyle = pg; ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(128,216,255,0.65)'; ctx.lineWidth = 2; ctx.stroke();
+  // AFT-029: the journal frame is a kit panel — dark, hairline edge, ONE
+  // accent bar; the old 30px neon outer glow and per-frame gradient are gone
+  uiPanel(p.x, p.y, p.w, p.h, { r: 18, accent: UI.player, bar: 'top', fill: 'rgba(6,10,28,0.99)' });
 
   // restrained star field inside the panel: enough depth to sell a star map,
   // deterministic so it never flickers while the player is reading.
@@ -9097,23 +9102,22 @@ function drawFullUpgradeTree() {
   ctx.restore();
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 ${Math.min(T.compact ? 18 : 24, p.w / (T.compact ? 20 : 26))}px Orbitron, sans-serif`;
-  ctx.fillStyle = '#e3f2fd';
-  // maxWidth keeps the title clear of the close button on phones
-  ctx.fillText(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION',
-    p.x + p.w / 2, p.y + (T.compact ? 18 : 22), p.w - 116);
+  // the title stays clear of the close button on phones (fitted, both sides)
+  const closeRoom = (p.x + p.w - T.close.x) + 8;
+  fitLabel(G.mode === 'junkie' ? 'STARFIGHTER CONSTELLATION' : 'UPGRADE CONSTELLATION',
+    p.x + p.w / 2, p.y + (T.compact ? 20 : 24), { size: T.compact ? UI.title : 18, min: 10, weight: 900, color: UI.ink, maxW: p.w - closeRoom * 2 });
   // the build count spans the whole web: 24 tiers + 6 bridges + 15 fusions
   // + 2 apexes + 3 satellites (a satellite counts once at any rank) = 50
   const satOwnedN = activeSatellites().filter(s => (G.stacks && G.stacks[s.stackKey]) > 0).length;
   const ownedN = totalBuildLevels() + satOwnedN;
   const activeN = PATH_KEYS.filter(pk => pathLvl(pk) > 0).length;
-  ctx.font = `700 ${T.compact ? 9 : 9.5}px Orbitron, sans-serif`; ctx.fillStyle = '#80d8ff';
   const buildLine = T.compact
     ? 'BUILD ' + ownedN + '/50 · ' + activeN + ' PATHS · ONLY OPTION TAGS INSTALL'
     : 'BUILD ' + ownedN + '/50 · ' + activeN + ' ACTIVE ' + (activeN === 1 ? 'PATH' : 'PATHS') +
       ' · ONLY THE ' + (['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][(G.upgradeChoices || []).length - 1] || 'WHITE') +
       ' WHITE OPTION TAGS CAN BE INSTALLED THIS STAGE';
-  ctx.fillText(buildLine, p.x + p.w / 2, p.y + (T.compact ? 37 : 45), p.w - 96);
+  fitLabel(buildLine, p.x + p.w / 2, p.y + (T.compact ? 39 : 46),
+    { size: T.compact ? 9 : 9.5, min: 7.5, weight: 800, color: UI.sub, maxW: p.w - closeRoom * 2 });
 
   if (!treeSel.kind) treeSel.kind = 'tier';
   treeSel.pi = Math.max(0, Math.min(PATH_KEYS.length - 1, treeSel.pi | 0));
@@ -9516,18 +9520,12 @@ function drawFullUpgradeTree() {
 
   // OPTION tags last of all — above every hexagon and the pilot core, so the
   // three installable choices are always fully legible
-  offerPills.forEach(p => drawOfferPill(p[0], p[1], p[2]));
+  if (!treeListMode) offerPills.forEach(p => drawOfferPill(p[0], p[1], p[2])); // the list sheet covers the map — and its tags
 
   if (treeListMode) drawTreeList(T); // AFT-009R P4: the phone list reading covers the map
   drawTreeCameraControls(T);
   drawTreeDetail(T);
-  const cb = T.close;
-  roundRect(cb.x, cb.y, cb.w, cb.h, 9);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.font = '900 16px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#cfd8dc';
-  ctx.fillText('×', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
+  uiClose(T.close);
   ctx.restore();
 }
 
@@ -9540,22 +9538,20 @@ function drawFullUpgradeTree() {
 function drawTreeList(T) {
   const LL = treeListLayout(T);
   ctx.save();
+  // AFT-029: an opaque kit sheet over the map (the camera keeps its state)
+  uiPanel(T.map.x, T.map.y, T.map.w, T.map.h, { r: 14, fill: 'rgba(7,11,30,0.99)' });
   roundRect(T.map.x, T.map.y, T.map.w, T.map.h, 14);
-  ctx.fillStyle = 'rgba(7,12,32,0.985)'; ctx.fill();
   ctx.clip();
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   const ownedPaths = PATH_KEYS.filter(k => pathLvl(k) > 0);
   const idName = ownedPaths.slice().sort((a, b) => pathLvl(b) - pathLvl(a)).slice(0, 2).map(skinPathName).join(' · ');
-  fitLabel((idName || 'FIRST ATTUNEMENT') + '  ·  NEXT: ' + nextReachableTransformation(),
-    T.map.x + 10, T.map.y + 28, { size: 9, min: 7.5, weight: 800, color: '#9fb2c8', align: 'left', maxW: T.map.w - 20 });
+  const camBottom = T.list.y + T.list.h;
+  if (!LL.inline) fitLabel((idName || 'FIRST ATTUNEMENT') + '  ·  NEXT: ' + nextReachableTransformation(),
+    T.map.x + 10, (camBottom + LL.chips[0].y) / 2, { size: 9, min: 7.5, weight: 800, color: UI.sub, align: 'left', maxW: T.map.w - 20 });
   for (const ch of LL.chips) {
     const on = treeListFilter === ch.f;
-    roundRect(ch.x, ch.y, ch.w, ch.h, 13);
-    ctx.fillStyle = on ? 'rgba(128,216,255,0.26)' : 'rgba(255,255,255,0.06)'; ctx.fill();
-    ctx.lineWidth = 1.2; ctx.strokeStyle = on ? '#80d8ff' : 'rgba(255,255,255,0.25)'; ctx.stroke();
-    ctx.textAlign = 'center';
-    ctx.font = '800 9px Orbitron, sans-serif'; ctx.fillStyle = on ? '#e0f7ff' : '#8fa4bd';
-    ctx.fillText(ch.f.toUpperCase(), ch.x + ch.w / 2, ch.y + ch.h / 2 + 1);
+    uiTile(ch, { accent: UI.player, sel: on, bar: 'top', r: Math.min(10, ch.h / 2) });
+    fitLabel(ch.f.toUpperCase(), ch.x + ch.w / 2, ch.y + ch.h / 2 + 1, { size: 10, min: 8, weight: 800, color: on ? UI.ink : UI.sub, maxW: ch.w - 10 });
   }
   const entries = treeListEntries();
   for (let i = 0; i < entries.length; i++) {
@@ -9563,44 +9559,47 @@ function drawTreeList(T) {
     if (r.y + r.h < LL.top - 2 || r.y > T.map.y + T.map.h) continue;
     const en = entries[i];
     const sel = sameTreeSel(treeSel, en.sel);
-    roundRect(r.x, r.y, r.w, r.h, 10);
-    ctx.fillStyle = sel ? 'rgba(26,22,56,0.95)' : 'rgba(12,16,38,0.85)'; ctx.fill();
-    ctx.lineWidth = sel ? 2 : 1.1;
-    ctx.strokeStyle = sel ? '#ffffff' : en.owned ? en.color : en.reachable ? en.color + '99' : 'rgba(255,255,255,0.14)';
-    ctx.stroke();
+    // kit row: the selected row carries the node's colour as edge + bar;
+    // owned rows keep a quiet accent hairline, locked rows stay soft
+    uiPanel(r.x, r.y, r.w, r.h, { r: 10, accent: sel || en.owned ? en.color : null, sel, lift: sel || en.owned,
+      soft: !sel && !en.owned, bar: sel ? 'left' : null, fill: sel ? mixHex(en.color, '#070b1e', 0.82) : undefined });
     const bd = iconBadge(en.icon, en.color, 13, en.owned || en.reachable ? 'lit' : 'dim');
     ctx.globalAlpha = en.owned ? 1 : en.reachable ? 0.85 : 0.5;
-    ctx.drawImage(bd, r.x + 10, r.y + r.h / 2 - bd.height / 2);
+    const bs = Math.min(bd.width, r.h - 8); // the badge bake carries halo padding — fit it in a fixed icon column
+    ctx.drawImage(bd, r.x + 30 - bs / 2, r.y + r.h / 2 - bs / 2, bs, bs);
     ctx.globalAlpha = 1;
-    ctx.textAlign = 'left';
-    ctx.font = '900 11px Orbitron, sans-serif';
-    ctx.fillStyle = en.owned ? '#fff' : en.reachable ? '#e3f2fd' : '#7e93ad';
-    ctx.fillText(en.name, r.x + 44, r.y + r.h / 2 - 9, r.w * 0.5);
-    ctx.font = '800 8px Orbitron, sans-serif'; ctx.fillStyle = en.color;
-    ctx.fillText(en.status, r.x + 44, r.y + r.h / 2 + 5, r.w * 0.45);
-    fitLabel(en.hint || '', r.x + r.w - 10, r.y + r.h / 2 + 5,
-      { size: 8.5, min: 7, weight: 600, family: 'Verdana, sans-serif', color: '#7e93ad', align: 'right', maxW: r.w * 0.42 });
+    const tx = r.x + 54;
+    fitLabel(en.name, tx, r.y + r.h / 2 - 8, { size: 11.5, min: 8, weight: 900, align: 'left',
+      color: en.owned || sel ? UI.ink : en.reachable ? UI.ink : UI.mute, maxW: r.w * 0.5 });
+    fitLabel(en.status, tx, r.y + r.h / 2 + 8, { size: 8.5, min: 7, weight: 800, align: 'left',
+      color: en.owned || en.reachable ? en.color : UI.mute, maxW: r.w * 0.45 });
+    fitLabel(en.hint || '', r.x + r.w - 10, r.y + r.h / 2 + 8,
+      { size: 9, min: 7, weight: 600, family: "Verdana, 'Segoe UI', system-ui, sans-serif", color: UI.mute, align: 'right', maxW: r.w * 0.42 });
   }
   ctx.restore();
 }
 function drawTreeCameraControls(T) {
   const controls = [[T.zoomOut, '−'], [T.zoomIn, '+'], [T.fit, 'FIT'], [T.focus, 'FOCUS'], [T.list, treeListMode ? 'MAP' : 'LIST']];
   ctx.save();
+  // AFT-029: kit secondary buttons (the LIST/MAP toggle reads as the one
+  // "on" control while the list covers the map); hover only on a mouse
   for (const [b, label] of controls) {
-    const hov = inRect(mouseX, lastMouseY, b);
-    roundRect(b.x, b.y, b.w, b.h, 8);
-    ctx.fillStyle = hov ? 'rgba(128,216,255,0.24)' : 'rgba(4,9,25,0.86)'; ctx.fill();
-    ctx.strokeStyle = hov ? '#b3e5fc' : 'rgba(128,216,255,0.48)'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `800 ${label.length > 1 ? 7.5 : 15}px Orbitron, sans-serif`;
-    ctx.fillStyle = '#e3f2fd'; ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + (label === '−' ? -1 : 0));
+    const hov = !IS_TOUCH && inRect(mouseX, lastMouseY, b);
+    const on = b === T.list && treeListMode;
+    if (on) uiTile(b, { accent: UI.player, sel: true, bar: 'top', r: 10 });
+    else uiButton(b, '', { accent: hov ? UI.ink : UI.player, r: 10 });
+    if (label.length > 1) fitLabel(label, b.x + b.w / 2, b.y + b.h / 2 + 1, { size: 9.5, min: 7.5, weight: 800, color: on || hov ? UI.ink : UI.sub, maxW: b.w - 8 });
+    else { // drawn − / + (font glyphs sit off-centre at phone size)
+      const s = Math.min(b.w, b.h) * 0.2, cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+      ctx.strokeStyle = hov ? UI.ink : UI.sub; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(cx - s, cy); ctx.lineTo(cx + s, cy);
+      if (label === '+') { ctx.moveTo(cx, cy - s); ctx.lineTo(cx, cy + s); }
+      ctx.stroke(); ctx.lineCap = 'butt';
+    }
   }
-  const last = T.list;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '700 7.5px Orbitron, sans-serif';
-  ctx.fillStyle = 'rgba(179,229,252,0.75)';
-  ctx.fillText(treeListMode ? 'DRAG SCROLLS' : Math.round(treeZoom * 100) + '% · DRAG · PINCH',
-    last.x + last.w + 8, last.y + last.h / 2,
-    Math.max(0, T.map.x + T.map.w - (last.x + last.w + 14)));
+  const last = T.list, room = treeListMode && treeListLayout(T).inline ? 0 : T.map.x + T.map.w - (last.x + last.w + 14);
+  if (room > 96) fitLabel(treeListMode ? 'DRAG SCROLLS' : Math.round(treeZoom * 100) + '% · DRAG · PINCH',
+    last.x + last.w + 8, last.y + last.h / 2 + 1, { size: 8.5, min: 7, weight: 700, color: UI.mute, align: 'left', maxW: room });
   ctx.restore();
 }
 
@@ -9608,28 +9607,19 @@ function drawTreeCameraControls(T) {
 // details both end in exactly these two actions.
 function drawTreeDetailButtons(T, offered, chosen, offer, accent) {
   const rr = T.reroll, canRR = (G.focus || 0) > 0 && !G.secret.rewardDraft && !!G.upgradeChoices;
-  const hovRR = canRR && inRect(mouseX, lastMouseY, rr);
-  roundRect(rr.x, rr.y, rr.w, rr.h, 11);
-  ctx.fillStyle = hovRR ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.07)'; ctx.fill();
-  ctx.lineWidth = 1.3; ctx.strokeStyle = canRR ? (hovRR ? '#ffd54f' : 'rgba(255,213,79,0.55)') : 'rgba(255,255,255,0.15)'; ctx.stroke();
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `800 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = canRR ? '#ffd54f' : '#546e7a';
-  ctx.fillText(canRR ? 'FOCUS ×' + G.focus + (IS_TOUCH ? '' : ' · R') : 'NO FOCUS', rr.x + rr.w / 2, rr.y + rr.h / 2 + 1, rr.w - 10);
+  // AFT-029 kit buttons: FOCUS is the gold (reward currency) secondary
+  uiButton(rr, canRR ? 'FOCUS ×' + G.focus + (IS_TOUCH ? '' : ' · R') : 'NO FOCUS',
+    { accent: canRR ? UI.gold : UI.mute, disabled: !canRR, size: 11 });
 
   // AFT-009R P4: the constellation is a JOURNAL — the action slot returns
   // to the cards (the one installation surface); selecting an offer here
   // still primes the card screen's INSTALL.
   const cf = T.confirm;
-  const hovCF = inRect(mouseX, lastMouseY, cf);
   const hasHand = !!G.upgradeChoices;
-  if (chosen) { ctx.shadowColor = accent; ctx.shadowBlur = hovCF ? 18 : 10; }
-  roundRect(cf.x, cf.y, cf.w, cf.h, 11);
-  ctx.fillStyle = hovCF ? accent + '3c' : 'rgba(255,255,255,0.08)'; ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = chosen ? 2 : 1.3; ctx.strokeStyle = chosen ? '#ffffff' : 'rgba(255,255,255,0.3)'; ctx.stroke();
-  ctx.font = `900 ${T.compact ? 10 : 9}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
-  ctx.fillText(hasHand ? (chosen ? 'BACK TO CARDS — INSTALL THERE' : 'BACK TO CARDS') : 'CLOSE JOURNAL',
-    cf.x + cf.w / 2, cf.y + cf.h / 2 + 1, cf.w - 10);
+  // the return slab turns PRIMARY (in the picked offer's colour) once an
+  // offer is selected — the one action that leads to its install
+  uiButton(cf, hasHand ? (chosen ? 'BACK TO CARDS — INSTALL THERE' : 'BACK TO CARDS') : 'CLOSE JOURNAL',
+    { primary: chosen, accent: chosen ? accent : UI.ink, size: 11 });
 }
 
 // Detail panel for the WEB nodes (bridges / superskills / satellites): name,
@@ -9649,7 +9639,7 @@ function drawTreeDetailWeb(T) {
     locks = owned || offered || eligible ? [] : webLockReason(b, 'bridge');
     status = owned ? 'OWNED' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
       : eligible ? 'REACHABLE · NOT OFFERED' : 'LOCKED';
-    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
+    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : UI.mute;
   } else if (kind === 'fusion') {
     const f = WEB_FUSIONS[treeSel.fi];
     const owned = !!upgN(f.key), eligible = fusionEligible(f);
@@ -9664,7 +9654,7 @@ function drawTreeDetailWeb(T) {
     status = owned ? '★ FUSION ONLINE · SLOT ' + fusionsOwnedCount() + '/2'
       : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
         : eligible ? 'RECIPE COMPLETE · NOT OFFERED' : 'LOCKED';
-    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
+    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : UI.mute;
   } else if (kind === 'apex') {
     const x = WEB_APEXES[treeSel.ai];
     const owned = !!upgN(x.key), eligible = apexEligible(x);
@@ -9677,7 +9667,7 @@ function drawTreeDetailWeb(T) {
     locks = owned || offered || eligible ? [] : webLockReason(x, 'apex');
     status = owned ? '★★ APEX ONLINE' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
       : eligible ? 'RECIPE COMPLETE · NOT OFFERED' : 'LOCKED';
-    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : '#78909c';
+    statusCol = owned ? color : offered ? '#ffffff' : eligible ? color : UI.mute;
   } else {
     const sat = activeSatellites()[treeSel.si], item = stackItem(sat.stackKey);
     const rank = (G.stacks && G.stacks[sat.stackKey]) || 0;
@@ -9690,12 +9680,12 @@ function drawTreeDetailWeb(T) {
     locks = unlocked || offered || rank ? [] : webLockReason(sat, 'sat');
     status = rank ? 'OWNED ×' + rank : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
       : unlocked ? 'REACHABLE · OFFERED WHEN SLOTS REMAIN' : 'LOCKED';
-    statusCol = rank ? color : offered ? '#ffffff' : unlocked ? color : '#78909c';
+    statusCol = rank ? color : offered ? '#ffffff' : unlocked ? color : UI.mute;
   }
   const pad = T.compact ? 11 : 16;
-  roundRect(d.x, d.y, d.w, d.h, 14);
-  ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
-  ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? color : color + '88'; ctx.stroke();
+  // AFT-029: a kit sheet — the node's colour as the one accent bar; an
+  // OFFERED node also takes the selected (accent) edge
+  uiPanel(d.x, d.y, d.w, d.h, { r: 14, accent: color, bar: 'top', sel: offered, fill: 'rgb(9,14,34)' });
   const iconSize = T.sideDetail ? 44 : T.compact ? 40 : 38;
   const detailState = offered ? 'offered' : /^OWNED|ONLINE/.test(status) || status.includes('APEX ONLINE') || status.includes('FUSION ONLINE')
     ? 'owned' : status === 'LOCKED' ? 'locked' : 'reachable';
@@ -9706,7 +9696,7 @@ function drawTreeDetailWeb(T) {
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = color;
   ctx.fillText(heading, d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
-  ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = UI.ink;
   ctx.fillText(name, d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
   ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
   ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
@@ -9715,7 +9705,7 @@ function drawTreeDetailWeb(T) {
   // description at body size with a height-aware line budget — same rule as
   // the tier panel (the lock list below keeps first claim on its rows)
   const lineH = T.compact ? 16 : 18;
-  ctx.font = bodyFont(T.compact ? 12 : 13, 650); ctx.fillStyle = '#d8e2ee';
+  ctx.font = bodyFont(T.compact ? 12 : 13, 650); ctx.fillStyle = UI.ink;
   const rowH = T.compact ? 13 : 14;
   const reserveW = locks.length
     ? rowH + Math.min(4, locks.length) * rowH + 10
@@ -9731,8 +9721,11 @@ function drawTreeDetailWeb(T) {
     ctx.fillText('TO UNLOCK', d.x + pad, y, d.w - pad * 2);
     y += T.compact ? 13 : 14;
     ctx.font = bodyFont(10.5, 650); ctx.fillStyle = '#ffcdb8';
-    for (const reason of locks.slice(0, 4)) {
-      ctx.fillText('· ' + reason, d.x + pad, y, d.w - pad * 2);
+    const lockRows = locks.slice(0, 4), lockMax = Math.max(1, Math.floor((T.reroll.y - 6 - y) / rowH));
+    for (let li = 0; li < Math.min(lockRows.length, lockMax); li++) { // never under the action row
+      const more = lockMax >= 2 && li === lockMax - 1 && lockRows.length > lockMax; // the first unmet requirement always shows
+      const reason = more ? '+' + (lockRows.length - li) + ' MORE REQUIREMENTS' : lockRows[li];
+      fitLabel('· ' + reason, d.x + pad, y, { size: 10.5, min: 8, weight: 650, family: "Verdana, 'Segoe UI', system-ui, sans-serif", color: '#ffcdb8', align: 'left', maxW: d.w - pad * 2 });
       y += rowH;
     }
     y += 4;
@@ -9740,12 +9733,12 @@ function drawTreeDetailWeb(T) {
     ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = color;
     ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
     y += T.compact ? 13 : 14;
-    ctx.font = bodyFont(10.5, 650); ctx.fillStyle = '#aebdca';
+    ctx.font = bodyFont(10.5, 650); ctx.fillStyle = UI.sub;
     const visualLines = wrapText(visual, d.w - pad * 2).slice(0, T.sideDetail ? 2 : 1);
     visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * rowH, d.w - pad * 2));
     y += visualLines.length * rowH + 5;
     if (T.sideDetail && proc) {
-      ctx.fillStyle = '#90a4ae';
+      ctx.fillStyle = UI.sub;
       const procLines = wrapText('PROC · ' + proc, d.w - pad * 2).slice(0, 2);
       procLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * rowH, d.w - pad * 2));
     }
@@ -9764,12 +9757,12 @@ function drawTreeDetail(T) {
   const offered = offer >= 0, chosen = offered && draftSel === offer;
   const status = owned ? 'OWNED' : offered ? 'OFFER ' + (offer + 1) + (chosen ? ' · SELECTED' : ' · AVAILABLE')
     : next ? 'REACHABLE · NOT OFFERED' : 'LOCKED · REQUIRES TIER ' + ti;
-  const statusCol = owned ? P.color : offered ? '#ffffff' : next ? P.color : '#78909c';
+  const statusCol = owned ? P.color : offered ? '#ffffff' : next ? P.color : UI.mute;
   const choice = offered ? G.upgradeChoices[offer] : null;
   const pad = T.compact ? 11 : 16;
-  roundRect(d.x, d.y, d.w, d.h, 14);
-  ctx.fillStyle = 'rgba(10,17,39,0.975)'; ctx.fill();
-  ctx.lineWidth = offered ? 2 : 1.4; ctx.strokeStyle = offered ? P.color : P.color + '88'; ctx.stroke();
+  // AFT-029: a kit sheet — the node's colour as the one accent bar; an
+  // OFFERED node also takes the selected (accent) edge
+  uiPanel(d.x, d.y, d.w, d.h, { r: 14, accent: P.color, bar: 'top', sel: offered, fill: 'rgb(9,14,34)' });
 
   const iconSize = T.sideDetail ? 44 : T.compact ? 40 : 38;
   const detailState = treeNodeVisualState(owned, offered, next);
@@ -9780,7 +9773,7 @@ function drawTreeDetail(T) {
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `800 ${T.compact ? 9 : 9}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
   ctx.fillText(skinPathName(pk) + ' · ' + pathRole(pk) + ' · TIER ' + (ti + 1) + '/4' + (ti === 3 ? ' · CAPSTONE' : ''), d.x + pad + iconSize + 9, d.y + pad + 2, d.w - pad * 2 - iconSize - 10);
-  ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = '#fff';
+  ctx.font = `900 ${T.compact ? 15 : Math.min(18, d.w / 19)}px Orbitron, sans-serif`; ctx.fillStyle = UI.ink;
   ctx.fillText(junkieTierName(pk, ti), d.x + pad + iconSize + 9, d.y + pad + 17, d.w - pad * 2 - iconSize - 10);
   ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = statusCol;
   ctx.fillText(status, d.x + pad + iconSize + 9, d.y + pad + (T.compact ? 34 : 39), d.w - pad * 2 - iconSize - 10);
@@ -9790,7 +9783,7 @@ function drawTreeDetail(T) {
   // the sheet's real height allows (tall maps reclaim a dead band into this
   // panel — the old fixed 3-line cap left that space blank)
   const lineH = T.compact ? 16 : 18;
-  ctx.font = bodyFont(T.compact ? 12 : 13, 650); ctx.fillStyle = '#d8e2ee';
+  ctx.font = bodyFont(T.compact ? 12 : 13, 650); ctx.fillStyle = UI.ink;
   const reserveT = (T.compact ? 13 : 14) + (T.sideDetail ? 3 : 1) * (T.compact ? 13 : 14) + (T.sideDetail ? 118 : 16);
   const maxDescT = Math.max(2, Math.floor((T.reroll.y - 10 - y - reserveT) / lineH));
   const descLines = wrapText(tierDesc(pk, ti), d.w - pad * 2).slice(0, maxDescT);
@@ -9800,7 +9793,7 @@ function drawTreeDetail(T) {
   ctx.font = `800 ${T.compact ? 8.5 : 8}px Orbitron, sans-serif`; ctx.fillStyle = P.color;
   ctx.fillText(G.mode === 'junkie' ? 'VISIBLE ON PILOT' : 'VISIBLE ON RIG', d.x + pad, y, d.w - pad * 2);
   y += T.compact ? 13 : 14;
-  ctx.font = bodyFont(10.5, 650); ctx.fillStyle = '#aebdca';
+  ctx.font = bodyFont(10.5, 650); ctx.fillStyle = UI.sub;
   const visualLines = wrapText(tier.visual || P.tell, d.w - pad * 2).slice(0, T.sideDetail ? 3 : 1);
   visualLines.forEach((line, li) => ctx.fillText(line, d.x + pad, y + li * (T.compact ? 13 : 14), d.w - pad * 2));
   y += visualLines.length * (T.compact ? 13 : 14) + 7;
@@ -9809,7 +9802,7 @@ function drawTreeDetail(T) {
     ctx.font = '800 7.5px Orbitron, sans-serif'; ctx.fillStyle = '#80d8ff';
     ctx.fillText((choice.tags || []).join('  +  '), d.x + pad, y, d.w - pad * 2);
     y += 15;
-    ctx.fillStyle = '#90a4ae';
+    ctx.fillStyle = UI.sub;
     ctx.fillText(choice.synergy || pathSummary(pk), d.x + pad, y, d.w - pad * 2);
   }
 
@@ -9820,7 +9813,7 @@ function drawTreeDetail(T) {
     const stripY = T.reroll.y - 96;
     if (stripY > y + 24) {
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = '#78909c';
+      ctx.font = '700 8px Orbitron, sans-serif'; ctx.fillStyle = UI.mute;
       ctx.fillText('PATH PROGRESS · ' + pathLvl(pk) + '/4 OWNED', d.x + pad, stripY - 10, d.w - pad * 2);
       const gap2 = 8, cellW = (d.w - pad * 2 - gap2 * 3) / 4, cellH = 62;
       for (let tt = 0; tt < 4; tt++) {
@@ -9829,8 +9822,7 @@ function drawTreeDetail(T) {
         const offT = choiceIndexForTreeNode(treeSel.pi, tt) >= 0;
         const reachT = tt === pathLvl(pk);
         const stripState = treeNodeVisualState(ownedT, offT, reachT);
-        ctx.save();
-        if (offT) { ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 8; }
+        ctx.save(); // (no per-cell shadowBlur — the white offer edge carries it)
         roundRect(cx2, stripY, cellW, cellH, 9);
         ctx.fillStyle = ownedT ? mixHex(P.color, '#071022', 0.6) : offT ? mixHex(P.color, '#071022', 0.72) : 'rgba(255,255,255,0.035)'; ctx.fill();
         ctx.lineWidth = offT ? 2.2 : ownedT ? 1.3 : 1;

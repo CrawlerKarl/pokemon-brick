@@ -73,6 +73,48 @@ Music gained ~3 dB on SFX (`MUSIC_TRIM` 0.12 is the one knob).
 heard:** patch character, low end on a phone speaker, the kick ducking, the
 reverb amount — owner listening notes are in the handoff.
 
+### 2026-11-13, later — slice 4: boss stages at a phone, the last two screens, the five-second stage
+
+Owner: "let's do all now except the 2nd bullet [BREAKER/BLASTER phone
+measurement], then push and deploy."
+
+- **Boss stages, measured at 412×775 (STARFIGHTER).** Sovereigns were 97px
+  on a 412px screen (23% of the width); wing guards overlapped on thousands
+  of pair-frames per fight (their arc slots are spaced by screen width — a
+  whole wing shared ~45px on a phone, ~100px on desktop); the duel's
+  stood-down paladins and the chase's sealed vessels froze on top of each
+  other; the sentinel battle line patrolled past both edges. Fixes:
+  `bossScale()` (state.js) — boss-class actors 30% larger on tall phones in
+  junkie (sentinels 20%), with `sovereignHp` ×1.12 there because the larger
+  hitboxes cut the 27 phone finale cells from 57.9s to 54.2s;
+  `separateBossBodies()` (update.js) — a soft projection for FOLLOW-driven
+  bodies (wing guards, ladder sentinels) and frozen stations, never for
+  actors whose controller writes an absolute position; the battle line is
+  spaced to fit. Guard overlap 3270 → 2 pair-frames at level 3, terminals
+  2018 → 1, vessels 861 → 1. The remaining "sentinel overlap" in the probe
+  is the entrance (three invisible actors leaving one off-screen point).
+- **Baseline attribution (do not re-derive).** The first full run went red
+  on the L9 mode ratio (×2.83). A `nosep` control over 15 junkie finale
+  cells: 68.6s with separation, 69.0s without — no systematic shift; the
+  knife-edge L9 siege cell (S2) had flipped to its slow branch. BREAKER's
+  L9 had sat under its own 70–180s target (62s mean) in every recent
+  matrix, so `FINALE_WORK_MODE.classic[2]` went 0.55 → 0.66: ratio ×2.27,
+  baseline GREEN (`--label aft029-bosses`).
+- **The five-second stage.** `completeNonAttrition` ended the stage the
+  moment an objective was solved. A pilot who beelines the three ward
+  sources finished level 2 in 5s on a phone (8.6s after the roster fix).
+  Now an objective solved inside the stage's first 15 seconds leaves ONE
+  reserve flight ("THEIR RESERVES COMMIT"); later solves end the stage as
+  before. Phone J02 8.6 → 34.5s. (`disperseSwarm` zeroes `G.reinforce` —
+  read it BEFORE dispersing.)
+- **The last two screens on the kit** (builder): the trial picker (realm /
+  stage / round / phase tiles via new `uiTile`, 44px+ targets, two-column
+  on landscape) and the journal's FRAME (panel, header, `uiClose`, camera
+  buttons, filter chips, list rows, detail panel — the map itself, node
+  states and camera maths untouched).
+- **Still open:** BREAKER and BLASTER have not been measured at a phone
+  (the owner deferred it); the journal is cramped at 667×375.
+
 ## 2026-11-12 — AFT-029 (slice 1): THE POLISH REBUILD begins — phantom notch, the flown sky, the swing
 
 Owner, after playing AFT-028 on a phone over the LAN (`node serve.js`,

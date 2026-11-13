@@ -4021,7 +4021,10 @@ window.requestAnimationFrame = function () { return 0; };
           constellation: T.panel, constellationDetail: T.detail,
           constellationZoomOut: T.zoomOut, constellationZoomIn: T.zoomIn,
           constellationFit: T.fit, constellationFocus: T.focus,
-          constellationReroll: T.reroll, constellationInstall: T.confirm };
+          constellationReroll: T.reroll, constellationInstall: T.confirm,
+          constellationList: T.list, constellationClose: T.close };
+        // the journal's camera row must stay inside the map box (shared rects)
+        if (T.list.x + T.list.w > T.map.x + T.map.w) bad.push(w + '×' + h + ' constellation camera row overflows the map');
         if (L.progress) rects.progress = L.progress;
         // the TRIAL picker (2026-07-23 user report: it overflowed short
         // landscape) — asserted in its busiest state: legendary stage +
@@ -4038,6 +4041,11 @@ window.requestAnimationFrame = function () { return 0; };
           for (let i = 0; i < 3; i++) rects['trialStage(' + i + ')'] = TR.stage(i);
           for (let i = 0; i < TR.roundCount; i++) rects['trialRound(' + i + ')'] = TR.round(i);
           for (let i = 0; i < TR.phaseCount; i++) rects['trialPhase(' + i + ')'] = TR.phase(i);
+          // AFT-029 kit pass: every picker chip + both actions is a ≥44px
+          // tap target, even in the busiest state on short landscape
+          for (const [k, r] of Object.entries(rects)) {
+            if (/^trial(Region|Stage|Round|Phase|Start|Rush)/.test(k) && (r.h < 44 || r.w < 44)) bad.push(w + '×' + h + ' ' + k + ' tap target ' + (r.w | 0) + '×' + (r.h | 0) + ' < 44');
+          }
           SETTINGS.mode = m0; Object.assign(trialSel, r0);
         }
         { const RS = rushSummaryLayout(); rects.rushRetry = RS.retry; rects.rushTitle = RS.title; } // BOSS RUSH summary

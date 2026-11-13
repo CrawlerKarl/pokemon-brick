@@ -3285,7 +3285,12 @@ function updateSentinels(dt, ts) {
       tx2 = W / 2 + Math.cos(a3) * W * 0.22;
       ty2 = 176 + Math.sin(a3) * 66;
     } else if (formIdx === 1) { // battle line sweeping the full width
-      tx2 = W / 2 + Math.sin(t4 * 0.7) * W * 0.28 + (k2 - (n2 - 1) / 2) * 118;
+      // (the line is spaced to FIT: at a fixed 118px a phone's outer
+      // sentinels patrolled past both screen edges — the sweep takes only
+      // the room the line leaves)
+      const lineGap = Math.min(118, (W - 40 - br2.w) / Math.max(1, n2 - 1));
+      const lineSway = Math.max(0, Math.min(W * 0.28, W / 2 - 20 - br2.w / 2 - lineGap * (n2 - 1) / 2));
+      tx2 = W / 2 + Math.sin(t4 * 0.7) * lineSway + (k2 - (n2 - 1) / 2) * lineGap;
       ty2 = 150 + (k2 % 2) * 36;
     } else { // spread sentry posts, each weaving its own watch
       tx2 = W * (0.5 + (k2 - (n2 - 1) / 2) * 0.3) + Math.sin(t4 * 0.9 + k2 * 2.1) * 44;
@@ -3297,6 +3302,7 @@ function updateSentinels(dt, ts) {
     br2.hx = br2.bx; br2.hy = br2.by;
     if (br2.openT > 0) br2.openT = Math.max(0, br2.openT - dt * ts); // OPENING window decays on the sentinel clock
   }
+  if (G.mode === 'junkie') separateBossBodies(G.bricks.filter(b => !b.dead && !b.dormant && b.subBoss));
   // typed specials on a shared cadence — round 1 presses the attack
   if (G.state === 'play') {
     gj2.subAbilityCD -= dt * ts;
@@ -3566,6 +3572,9 @@ function completeNonAttrition(O, name) {
   resEvent('objective'); // AFT-009R P2: an authored win is resonance
   statsObjective(O.type, true);
   G.score += Math.round(600 * scoreMult());
+  // (read BEFORE the dispersal below — disperseSwarm zeroes G.reinforce)
+  const stageT = (statsCur() && statsCur().t) || 0;
+  const reserves = G.mode !== 'classic' && stageT < 15 && G.reinforce > 0;
   if (G.mode === 'classic') {
     for (const b of G.bricks) {
       if (b.dead || b.barrier || b.isBoss || b.subBoss || b.crosser || b.friendly) continue;
@@ -3573,8 +3582,13 @@ function completeNonAttrition(O, name) {
       b.dead = true;
     }
   } else disperseSwarm();
-  G.reinforce = 0; // outsmarting the wave ENDS it — never a grind epilogue
-  setAnnounce('star', '#9CFF57', name, '+600 — THE WAVE STANDS DOWN', 2.6);
+  // outsmarting the wave ENDS it — never a grind epilogue. One exception:
+  // an objective solved inside the stage's first seconds (a pilot who
+  // beelines the three ward sources finished level 2 in FIVE seconds on a
+  // phone, nine after the roster fix) has only met a third of the stage —
+  // their reserves still commit, ONE flight, and then it is over.
+  G.reinforce = reserves ? 1 : 0;
+  setAnnounce('star', '#9CFF57', name, reserves ? '+600 — THEIR RESERVES COMMIT' : '+600 — THE WAVE STANDS DOWN', 2.6);
   SFX.stageClear();
 }
 function updateObjective(dt) {
@@ -4519,7 +4533,7 @@ function chaseLink(boss) {
   const mid = gen2.gauntlet && gen2.gauntlet.myth;
   if (boss) boss.chaseLinked = true;
   if (mid) {
-    const mw = Math.min(140, Math.max(92, W * 0.15));
+    const mw = Math.min(140, Math.max(92, W * 0.15)) * bossScale();
     const mar = {
       bx: W * 0.3, by: Math.max(170, H * 0.3), hx: W * 0.3, hy: Math.max(170, H * 0.3),
       row: -1, col: 1, w: mw, h: mw * 0.92,
@@ -5062,7 +5076,7 @@ function hourglassInvade() {
   const regent = G.bricks.find(b => b.isBoss && !b.dead && !b.mythic && !b.secretBoss);
   if (regent) regent.hourActor = 'regent';
   if (mid) {
-    const mw = Math.min(150, Math.max(96, W * 0.16)), mh2 = mw * 0.92;
+    const mw = Math.min(150, Math.max(96, W * 0.16)) * bossScale(), mh2 = mw * 0.92;
     const noct = {
       bx: W * 0.75, by: Math.max(150, H * 0.24), hx: W * 0.75, hy: Math.max(150, H * 0.24),
       row: -1, col: 1, w: mw, h: mh2,
@@ -5390,7 +5404,7 @@ function gauntletSummonMythic(forceSecret = false) {
     * (G.mode === 'junkie' ? (codaTrim ? 0.5 : 0.82) : (codaTrim ? 0.45 : 0.6))));
   G.bricks.push({
     bx: W / 2, by: 150, hx: W / 2, hy: 150, row: -1, col: -1,
-    w: Math.min(G.brickW * 1.6, W * 0.3), h: G.brickH * 1.4,
+    w: Math.min(G.brickW * 1.6, W * 0.3) * bossScale(), h: G.brickH * 1.4 * bossScale(),
     hp: mHp, maxHp: mHp, phase: 1, phaseCount: 3, roundRole: 'mythical', mythic: true,
     poke: { id: mid, t: mt2, n: SKIN.names[mid] },
     isBoss: true, flash: 0, wobble: gameRand() * Math.PI * 2,
@@ -5450,6 +5464,40 @@ function updateSpriteKinematics(dt) {
     const bankTgt = Math.sign(br.vvx) * Math.min(cap, over * 0.0011);
     br.bank = (br.bank ?? 0) + (bankTgt - (br.bank ?? 0)) * Math.min(1, dt * 9);
   }
+}
+
+// ---- SOFT SEPARATION for boss-wave bodies that FOLLOW a target (wing
+// guards, ladder sentinels) or stand frozen (sealed stations): a few
+// projection passes over their CURRENT positions. Their controllers ease
+// toward their slots from wherever they are, so the correction persists
+// from frame to frame on its own — no offset bookkeeping, no jostle. Never
+// used on actors whose controller writes an absolute position.
+function separateBossBodies(list) {
+  if (list.length < 2) return;
+  for (let it = 0; it < 6; it++) {
+    let moved = false;
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j];
+        const minD = (Math.min(a.w, a.h) + Math.min(b.w, b.h)) * 0.7;
+        let dx = b.bx - a.bx, dy = b.by - a.by, d = Math.hypot(dx, dy);
+        if (d < minD) {
+          if (d < 0.01) { dx = Math.cos(i * 2.4 + j); dy = Math.sin(i * 2.4 + j); d = 1; }
+          const push = (minD - d) / 2;
+          a.bx -= dx / d * push; a.by -= dy / d * push;
+          b.bx += dx / d * push; b.by += dy / d * push;
+          moved = true;
+        }
+      }
+    }
+    for (const b of list) {
+      const lo = b.w / 2 + 3 - G.fx, hi = W - b.w / 2 - 3 - G.fx;
+      if (b.bx < lo) { b.bx = lo; moved = true; } else if (b.bx > hi) { b.bx = hi; moved = true; }
+      if (b.by + G.fy < 50) { b.by = 50 - G.fy; moved = true; }
+    }
+    if (!moved) break;
+  }
+  for (const b of list) { b.hx = b.bx; b.hy = b.by; }
 }
 
 function nearestBrick(x, y) {
@@ -6199,6 +6247,11 @@ function update(dt) {
         br.by += (ty - br.by) * kk;
         br.hx = br.bx; br.hy = br.by;
       }
+      // the wings' slots are spaced by screen width — on a phone a whole
+      // wing shares ~45px — so the guards themselves keep their distance
+      // (measured: thousands of overlapping guard pair-frames per boss
+      // fight). Not while they are compressing INTO a teleporting boss.
+      if (!(boss.reformT > 0)) separateBossBodies(G.bricks.filter(b => !b.dead && !b.dormant && b.guard));
     } else {
       // ORPHANED WINGS fall with their legendary. Their anchor is gone (the
       // round's final boss felled mid-sweep), and an untethered guard simply
@@ -6429,6 +6482,11 @@ function update(dt) {
         }
       }
     }
+  }
+  // sealed stations (the duel's stood-down paladins, the chase's sealed
+  // vessels) freeze wherever their patrol left them — often on each other
+  if (G.mode === 'junkie' && G.finale && (G.state === 'play' || G.state === 'serve')) {
+    separateBossBodies(G.bricks.filter(b => !b.dead && !b.dormant && (b.gridTerminal || b.vesselSealed)));
   }
   if (G.state === 'play' || G.state === 'serve') {
     for (const br of G.bricks) {
