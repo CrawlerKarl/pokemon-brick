@@ -1385,7 +1385,10 @@ async function main() {
   try {
     const page = await openPage(cdp, `http://127.0.0.1:${port}/index.html?skin=aetherfall&dev${process.env.BASE_QUERY ? '&' + process.env.BASE_QUERY : ''}`);
     await cdp.send('Emulation.setDeviceMetricsOverride',
-      { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false }, page.sessionId);
+      // BASE_VP=412x775 measures a PHONE viewport (pair with BASE_QUERY=touch) —
+      // sprite scale and formation width are viewport-dependent since AFT-029
+      (vp => ({ width: vp[0] || 1280, height: vp[1] || 900, deviceScaleFactor: 1, mobile: false }))(
+        String(process.env.BASE_VP || '').split('x').map(Number)), page.sessionId);
     await waitFor(page.evaluate,
       `typeof DEV !== 'undefined' && typeof G !== 'undefined' && typeof SKIN !== 'undefined' && SKIN.id === 'aetherfall'`,
       BOOT_TIMEOUT_MS, 'boot');

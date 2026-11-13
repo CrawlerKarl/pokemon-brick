@@ -545,6 +545,11 @@
     [/\bBUTTON — EVOLVE\b/g, 'BUTTON — UNLEASH'], // vessels ASCEND, they don't evolve
     [/\bMEGA\b/g, 'SURGE'],             // \b keeps the OMEGA SERAPH intact
     [/\bPARTNER\b/g, 'VESSEL'],         // the last partnerWord leak in shared copy
+    // this world's realm bosses are SOVEREIGNS — the reveal, the dossiers and
+    // the stage label all said LEGENDARY while the codex tab said SOVEREIGNS
+    [/\bLEGENDARIES\b/g, 'SOVEREIGNS'],
+    [/\bLEGENDARY\b/g, 'SOVEREIGN'],
+    [/\bMYTHICAL\b/g, 'MYTHIC'],
   ];
 
   // the rift-secret encounter (engine flow; species + copy are skin data)
@@ -921,6 +926,7 @@
     mythicAbilities, mythicEntranceStyles, mythicBattleStyles, legendaryEntranceStyles,
     motionById, encounterObjectives, stageObjectiveSets, bonusFlock,
     strings, secret, weaponArt, lexicon,
+    stageNames: ['ARRIVAL', 'CHALLENGE', 'SOVEREIGN'],
   });
   // derived sets refresh from the REAL gens (assembly ran on the stub)
   AF.bossOnlyIds = new Set(AF.gens.flatMap(g => [

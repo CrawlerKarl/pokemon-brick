@@ -1542,8 +1542,10 @@ function flightPos(F, tAbs) {
       const idx = Math.round(F.phase * (n - 1));
       const rows = Math.max(1, Math.ceil(n / cols));
       const gx = (idx % cols) - (cols - 1) / 2, gy = Math.floor(idx / cols) - (rows - 1) / 2;
-      return { x: F.cx + gx * F.rx * 0.42 + Math.sin(t * Math.PI * 2) * F.rx * 0.4,
-        y: F.cy + gy * F.ry * 0.5 + Math.abs(Math.cos(t * Math.PI * 2)) * F.ry * 0.12 };
+      // F.cell (tall phones): a floor on the block's slot spacing — a phone
+      // squad's rx is too small for rx·0.42 to clear a sprite
+      return { x: F.cx + gx * Math.max(F.rx * 0.42, F.cell || 0) + Math.sin(t * Math.PI * 2) * F.rx * 0.4,
+        y: F.cy + gy * Math.max(F.ry * 0.5, F.cell || 0) + Math.abs(Math.cos(t * Math.PI * 2)) * F.ry * 0.12 };
     }
     // ---- busy showpieces (later regions): riders cross a shared center, the
     // separation solver packs them so they stay distinct
@@ -3811,7 +3813,7 @@ function beginBossReveal(kind, brs) {
     kind, brs, ids: brs.map(b => b.poke.id), t: 0, phase: 'hold',
     holdDur: reduced ? 1.5 : 2.4, flyDur: reduced ? 0.28 : 0.65, reduced,
     title: brs.map(b => b.poke.n.toUpperCase()).join(' · '),
-    sub: roleLine + ' · ' + gen.name + ' · ' + bossPhaseCount(primary) + (bossPhaseCount(primary) > 1 ? ' PHASES' : ' PHASE'),
+    sub: lex(roleLine) + ' · ' + gen.name + ' · ' + bossPhaseCount(primary) + (bossPhaseCount(primary) > 1 ? ' PHASES' : ' PHASE'),
     cue,
   };
   // CONTINUITY: a revealed boss ENTERS where the portrait lands. The junkie
@@ -5306,7 +5308,7 @@ function gauntletWake() {
   const gen2 = genFor(G.level);
   const legendStyle = SKIN.legendaryEntranceStyles[gen2.boss.id] || 'psybreak';
   setAnnounce('alert', TYPE_COLORS[gen2.boss.t], gen2.boss.n.toUpperCase() + ' DESCENDS!',
-    'ROUND 2 — THE LEGENDARY' + (G.mode === 'junkie' ? ' · 2 PHASES' : ''), 3,
+    lex('ROUND 2 — THE LEGENDARY') + (G.mode === 'junkie' ? ' · 2 PHASES' : ''), 3,
     G.mode === 'junkie' ? gauntletEntranceName(legendStyle) : null, null, false, true);
   beginBossReveal('legendary', [legend]); // AFT-002
 }
@@ -6042,7 +6044,9 @@ function update(dt) {
           break;
         }
         case 'eclipse': { // rings align (radii converge), darken, separate
-          const e2 = Math.pow(Math.max(0, Math.sin(et * 0.3)), 2);
+          // (a narrow phone has no radial room to spare — the rings there
+          // lean toward each other instead of meeting)
+          const e2 = Math.pow(Math.max(0, Math.sin(et * 0.3)), 2) * (W < 560 ? 0.3 : 1);
           if (S.role === 'wing') rx = S.rx0 * (1 - 0.28 * e2), ry = S.ry0 * (1 - 0.28 * e2);
           else if (S.role === 'core') rx = S.rx0 * (1 + 0.3 * e2), ry = S.ry0 * (1 + 0.3 * e2);
           break;
@@ -6083,9 +6087,9 @@ function update(dt) {
         let roomX = Infinity, roomY = Infinity;
         for (const q of E.squads) {
           roomX = Math.min(roomX, W / 2 - 24 - (Math.abs(q.cx0 - W / 2) + q.rx0 * 1.08));
-          roomY = Math.min(roomY, E.floorY - (q.cy0 + q.ry0 * 1.08));
+          roomY = Math.min(roomY, E.floorY - (q.cy0 + q.ry0 * 1.08 + (q.rowDy || 0)));
         }
-        E.swingX = Math.max(W * 0.04, Math.min(W * 0.11, roomX));
+        E.swingX = Math.max(0, Math.min(W * 0.11, roomX)); // a body that already spans the screen holds still
         E.swingY = Math.max(0, Math.min(26, H * 0.035, roomY * 0.8));
       }
       const pu = Math.sin(et * 0.9);
@@ -6102,7 +6106,7 @@ function update(dt) {
       const S = E.squads[br.flight.sq];
       if (!S) continue;
       const F = br.flight;
-      F.cx = S.cx; F.cy = S.cy; F.rx = S.rx; F.ry = S.ry;
+      F.cx = S.cx; F.cy = S.cy + (F.rowDy || 0); F.rx = S.rx; F.ry = S.ry; // rowDy: a phone squad's second rank
       F.kind2 = S.kind2; F.blend = S.blend || 0;
     }
   }
@@ -6304,12 +6308,14 @@ function update(dt) {
         // every frame while the glide lerp snapped them back — a visible
         // jitter on every wave entrance. Entries are transient; the overlap
         // invariant (and its test) covers settled flyers (state 2).
-        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && !br.flight.entering
-            // Authored choreography normally holds its own clean slots. On a
-            // short landscape screen, however, the airspace band is too
-            // shallow for nested rings; let the smoothed solver add just the
-            // breathing room the composition physically needs.
-            && !(G.mode === 'junkie' && br.flight.choreo && !G.maneuver && H >= 560)) fl.push(br);
+        // (Authored choreography used to be EXEMPT here on the theory that it
+        // "holds its own clean slots". Measured across the campaign (AFT-029)
+        // it does not — nested and neighbouring squads stood up to 79px inside
+        // each other on most stages, on every screen size; only the one
+        // family the suite happened to fly was clean. Every settled flyer is
+        // solved now. The warm-started, eased solve keeps rigid bodies rigid:
+        // a static clash settles into a static offset, not a jostle.)
+        if (!br.dead && br.flight && br.flight.state >= 2 && !br.dive && !br.entry && !br.flight.entering) fl.push(br);
         // A rider that just LEFT the solver (its squad's maneuver ended)
         // still carries the offset the solver built. It used to be dropped
         // in one frame — every rider in the squad snapped ~10px back onto
@@ -6336,8 +6342,9 @@ function update(dt) {
       const eased = true;
       if (eased) {
         for (const br of fl) {
-          br.sepX = (br.sepX || 0) * (1 - Math.min(1, dt * ts * 2.5));
-          br.sepY = (br.sepY || 0) * (1 - Math.min(1, dt * ts * 2.5));
+          br.sepPX = br.sepX || 0; br.sepPY = br.sepY || 0; // last frame's offset, before the decay probe
+          br.sepX = br.sepPX * (1 - Math.min(1, dt * ts * 2.5));
+          br.sepY = br.sepPY * (1 - Math.min(1, dt * ts * 2.5));
           br.slotX = br.bx; br.slotY = br.by;
           br.bx += br.sepX; br.by += br.sepY;
         }
@@ -6366,6 +6373,13 @@ function update(dt) {
           // INSIDE the loop so the NEXT pass re-spreads them along the wall's
           // underside instead of stacking on one line. 'square' loops around
           // the wall legitimately, so it's never inside the rect.
+          // no push may shove a rider off the screen edge
+          if (G.mode === 'junkie') {
+            for (const br of fl) {
+              const lo = br.w / 2 + 3 - G.fx, hi = W - br.w / 2 - 3 - G.fx;
+              if (br.bx < lo) { br.bx = lo; moved = true; } else if (br.bx > hi) { br.bx = hi; moved = true; }
+            }
+          }
           if (gr) {
             for (const br of fl) {
               if (Math.abs(br.bx - gr.cx) < gr.hw + br.w / 2 &&
@@ -6385,8 +6399,19 @@ function update(dt) {
         const k2 = G.mode !== 'junkie' ? 1 : Math.min(1, dt * ts * 14) * mvRamp;
         for (const br of fl) {
           const wantX = br.bx - br.slotX, wantY = br.by - br.slotY;
-          br.sepX += (wantX - br.sepX) * k2;
-          br.sepY += (wantY - br.sepY) * k2;
+          // The solve started from a slightly DECAYED copy of last frame's
+          // offset (the release probe). If the answer is no larger than
+          // what the rider already held, take it exactly: a standing clash
+          // holds its full separation (the old blend-from-the-decayed-value
+          // settled at ~88% of it — every persistent neighbour sat a few px
+          // inside the other, forever), and a released one drains at the
+          // probe's rate. Only GROWTH is eased.
+          if (Math.hypot(wantX, wantY) <= Math.hypot(br.sepPX || 0, br.sepPY || 0) + 0.01) {
+            br.sepX = wantX; br.sepY = wantY;
+          } else {
+            br.sepX = (br.sepPX || 0) + (wantX - (br.sepPX || 0)) * k2;
+            br.sepY = (br.sepPY || 0) + (wantY - (br.sepPY || 0)) * k2;
+          }
           br.bx = br.slotX + br.sepX;
           br.by = br.slotY + br.sepY;
           // the blend may leave a rider a hair inside the static wall the raw
@@ -6394,6 +6419,12 @@ function update(dt) {
           if (gr && Math.abs(br.bx - gr.cx) < gr.hw + br.w / 2 &&
               br.by + br.h / 2 > gr.top && br.by - br.h / 2 < gr.bottom) {
             br.by = gr.bottom + br.h / 2 + 4; br.sepY = br.by - br.slotY;
+          }
+          // …and STARFIGHTER never leaves a rider past the screen edge (an
+          // authored phase offset or a push can seat a slot out there)
+          if (G.mode === 'junkie') {
+            const lo = br.w / 2 + 3 - G.fx, hi = W - br.w / 2 - 3 - G.fx;
+            if (br.bx < lo) { br.bx = lo; br.sepX = br.bx - br.slotX; } else if (br.bx > hi) { br.bx = hi; br.sepX = br.bx - br.slotX; }
           }
         }
       }
